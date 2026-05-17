@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>한국마이크로닉 현장관리 v5</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{--bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;--bd:#252a38;--ac:#3d7fff;--gr:#00c896;--wa:#f5a623;--da:#ff4d4d;--tx:#e8ecf4;--tx2:#8892a8;--tx3:#4a5568;--pu:#a78bfa;--or:#ff8c42;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.hdr{background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 12px;height:48px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:8px;}
+.lm{width:24px;height:24px;background:var(--ac);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+.ln{font-size:12px;font-weight:700;}.ls{font-size:9px;color:var(--tx2);}
+.hbtns{display:flex;gap:5px;align-items:center;}
+.hdate{font-size:10px;color:var(--tx2);font-family:'JetBrains Mono',monospace;}
+.hbtn{padding:4px 9px;border-radius:5px;font-size:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;}
+.layout{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:195px;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0;}
+.sbtop{padding:8px;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:5px;}
+.addbtn{width:100%;padding:6px;background:rgba(61,127,255,0.12);border:1px dashed rgba(61,127,255,0.4);border-radius:7px;color:var(--ac);font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+.ssearch{width:100%;padding:6px 9px;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:11px;font-family:'Noto Sans KR',sans-serif;outline:none;}
+.ssearch::placeholder{color:var(--tx3);}
+.ssec{padding:5px 9px 2px;font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:0.06em;}
+.slwrap{flex:1;overflow-y:auto;padding:5px;}
+.slwrap::-webkit-scrollbar{width:2px;}
+.slwrap::-webkit-scrollbar-thumb{background:var(--bd);}
+.si{padding:8px 9px;border-radius:7px;cursor:pointer;margin-bottom:2px;transition:background 0.15s;border-left:2px solid transparent;}
+.si:hover{background:var(--bg3);}
+.si.active{background:rgba(61,127,255,0.12);border-left-color:var(--ac);}
+.sin{font-size:12px;font-weight:500;}
+.sim{font-size:10px;color:var(--tx2);margin-top:1px;}
+.sibs{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap;}
+.mb{font-size:9px;padding:1px 4px;border-radius:6px;}
+.mb-r{background:rgba(255,77,77,0.15);color:var(--da);}
+.mb-w{background:rgba(245,166,35,0.15);color:var(--wa);}
+.mb-g{background:rgba(0,200,150,0.12);color:var(--gr);}
+.mb-b{background:rgba(61,127,255,0.12);color:var(--ac);}
+.main-area{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.tabbar{background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;padding:0 12px;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.tabbar::-webkit-scrollbar{display:none;}
+.tab{padding:9px 10px;font-size:11px;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all 0.15s;}
+.tab.active{color:var(--ac);border-bottom-color:var(--ac);font-weight:500;}
+.content{flex:1;overflow-y:auto;padding:12px;}
+.content::-webkit-scrollbar{width:3px;}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:12px;}
+.chdr{padding:10px 13px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px;}
+.ctit{font-size:12px;font-weight:500;}
+.cbtn{font-size:10px;color:var(--ac);cursor:pointer;background:none;border:none;font-family:'Noto Sans KR',sans-serif;}
+.shdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.shdr h2{font-size:16px;font-weight:700;}
+.shdr p{font-size:11px;color:var(--tx2);margin-top:2px;}
+.spill{font-size:11px;padding:3px 9px;border-radius:18px;background:rgba(61,127,255,0.15);color:var(--ac);white-space:nowrap;}
+/* 대시보드 */
+.kgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:12px;}
+.kcard{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px;}
+.klbl{font-size:10px;color:var(--tx2);margin-bottom:5px;}
+.kval{font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+.ksub{font-size:10px;color:var(--tx3);margin-top:3px;}
+/* 알림배너 */
+.alert-banner{padding:10px 13px;display:flex;align-items:center;gap:8px;font-size:12px;}
+.alert-banner.danger{background:rgba(255,77,77,0.1);border-left:3px solid var(--da);color:var(--da);}
+.alert-banner.warn{background:rgba(245,166,35,0.1);border-left:3px solid var(--wa);color:var(--wa);}
+.alert-banner.info{background:rgba(61,127,255,0.1);border-left:3px solid var(--ac);color:var(--ac);}
+/* 이슈/행 */
+.ri{padding:10px 13px;border-bottom:1px solid var(--bd);display:flex;gap:8px;align-items:flex-start;}
+.ri:last-child{border-bottom:none;}
+.dot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.rtit{font-size:12px;font-weight:500;}
+.rmeta{font-size:10px;color:var(--tx2);margin-top:2px;}
+/* D-day 배지 */
+.dday{font-size:9px;padding:1px 6px;border-radius:10px;font-family:'JetBrains Mono',monospace;}
+.dd-ok{background:rgba(0,200,150,0.1);color:var(--gr);}
+.dd-wa{background:rgba(245,166,35,0.15);color:var(--wa);}
+.dd-da{background:rgba(255,77,77,0.15);color:var(--da);}
+/* 액션 그리드 */
+.ag{display:grid;grid-template-columns:1fr 70px 60px 50px;gap:7px;padding:10px 13px;border-bottom:1px solid var(--bd);align-items:center;}
+.ag:last-child{border-bottom:none;}
+.ag.hdr{background:var(--bg3);}
+.cll{font-size:10px;color:var(--tx3);text-transform:uppercase;}
+.chk{width:17px;height:17px;border:1px solid var(--bd);border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.chk.done{background:var(--gr);border-color:var(--gr);color:#fff;}
+/* 회의록 */
+.mll{padding:10px 11px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background 0.15s;}
+.mll:hover{background:var(--bg3);}
+.mll.active{background:rgba(61,127,255,0.1);border-left:2px solid var(--ac);}
+.mlt{font-size:11px;font-weight:500;line-height:1.4;}
+.mlm{font-size:9px;color:var(--tx2);margin-top:2px;}
+.mv{padding:18px;overflow-y:auto;}
+.mdoc{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:20px 24px;max-width:680px;}
+.mdtit{font-size:16px;font-weight:700;margin-bottom:5px;}
+.mdmeta{font-size:11px;color:var(--tx2);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bd);}
+.mdbody{font-size:13px;line-height:1.9;}
+.mdbody h2{font-size:14px;font-weight:600;margin:14px 0 7px;}
+.mdbody h3{font-size:13px;font-weight:600;margin:12px 0 6px;}
+.mdbody table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px;}
+.mdbody th{background:var(--bg3);padding:7px 11px;text-align:left;border:1px solid var(--bd);font-weight:500;}
+.mdbody td{padding:7px 11px;border:1px solid var(--bd);}
+.mdbody ul,.mdbody ol{padding-left:18px;margin-bottom:9px;}
+.mdbody li{margin-bottom:3px;}
+.mdbody strong{font-weight:600;}
+.mdact{display:flex;gap:7px;margin-top:16px;padding-top:12px;border-top:1px solid var(--bd);flex-wrap:wrap;}
+.dbtn{padding:6px 12px;border-radius:7px;font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:1px solid;}
+.dok{background:rgba(0,200,150,0.1);border-color:var(--gr);color:var(--gr);}
+.ddel{background:rgba(255,77,77,0.1);border-color:var(--da);color:var(--da);}
+.dai{background:rgba(167,139,250,0.1);border-color:var(--pu);color:var(--pu);}
+.dwa{background:rgba(245,166,35,0.1);border-color:var(--wa);color:var(--wa);}
+/* 꼬리표 */
+.qtag{display:inline-block;font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(0,200,150,0.15);color:var(--gr);margin-top:4px;border:1px solid rgba(0,200,150,0.3);}
+/* 메모 */
+.memrow{padding:11px 13px;border-bottom:1px solid var(--bd);}
+.memrow:last-child{border-bottom:none;}
+.mtag{font-size:9px;padding:2px 5px;border-radius:6px;margin-right:5px;}
+.mt-mail{background:rgba(167,139,250,0.15);color:var(--pu);}
+.mt-kakao{background:rgba(245,166,35,0.15);color:var(--wa);}
+.mt-sms{background:rgba(255,140,66,0.15);color:var(--or);}
+.mt-etc{background:rgba(74,85,104,0.15);color:var(--tx3);}
+/* 수량표 */
+.qtytbl{width:100%;border-collapse:collapse;}
+.qtytbl th{padding:8px 11px;font-size:10px;color:var(--tx3);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--bd);background:var(--bg3);}
+.qtytbl td{padding:9px 11px;font-size:12px;border-bottom:1px solid var(--bd);vertical-align:middle;}
+.mono{font-family:'JetBrains Mono',monospace;}
+.cg{color:var(--gr);}.cw{color:var(--wa);}.cr{color:var(--da);}
+#excelArea{width:100%;overflow:auto;max-height:450px;background:var(--bg3);border-radius:6px;margin-top:8px;}
+#excelArea table{border-collapse:collapse;white-space:nowrap;font-size:11px;color:var(--tx);width:max-content;}
+#excelArea td,#excelArea th{border:1px solid var(--bd);padding:6px 9px;text-align:center;}
+#excelArea td.editable:hover{background:rgba(61,127,255,0.1);cursor:pointer;}
+.cell-changed{background:rgba(255,77,77,0.15)!important;color:var(--da)!important;font-weight:600!important;}
+/* 업무일지 */
+.wjli{padding:9px 11px;border-bottom:1px solid var(--bd);cursor:pointer;}
+.wjli:hover{background:var(--bg3);}
+.wjli.active{background:rgba(61,127,255,0.1);border-left:2px solid var(--ac);}
+.wjdoc{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:22px;max-width:680px;}
+.wjhdr{font-size:17px;font-weight:700;margin-bottom:14px;color:var(--ac);}
+.wjsec{margin-bottom:14px;}
+.wjsect{font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:7px;padding-bottom:4px;border-bottom:1px solid var(--bd);}
+.wjit{font-size:13px;font-weight:500;margin-bottom:3px;}
+.wjic{font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-wrap;padding-left:11px;}
+.wjro{font-size:11px;color:var(--tx3);margin-top:7px;padding:5px 9px;background:var(--bg3);border-radius:5px;display:inline-block;}
+.wjnx{font-size:11px;color:var(--wa);margin-top:5px;}
+/* 파일 */
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:9px;padding:12px;}
+.fcard{background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:11px;cursor:pointer;}
+.fcard:hover{border-color:var(--ac);}
+.fico{font-size:26px;margin-bottom:7px;}
+.fname{font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fmeta{font-size:9px;color:var(--tx2);margin-top:3px;}
+.fadda{border:2px dashed var(--bd);border-radius:9px;padding:26px;text-align:center;cursor:pointer;margin:12px;}
+.fadda:hover{border-color:var(--ac);}
+/* 사진 */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:7px;padding:12px;}
+.pit{aspect-ratio:1;border-radius:7px;overflow:hidden;background:var(--bg3);position:relative;}
+.pit img{width:100%;height:100%;object-fit:cover;}
+.pdel{position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.65);border:none;border-radius:3px;color:#fff;font-size:10px;padding:2px 4px;cursor:pointer;display:none;}
+.pit:hover .pdel{display:block;}
+.padd{aspect-ratio:1;border-radius:7px;border:1px dashed var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:3px;color:var(--tx3);font-size:10px;}
+.padd:hover{border-color:var(--ac);color:var(--ac);}
+/* 계산 */
+.calct{width:100%;border-collapse:collapse;}
+.calct th{padding:8px 11px;font-size:10px;color:var(--tx3);text-transform:uppercase;background:var(--bg3);border-bottom:1px solid var(--bd);text-align:left;}
+.calct td{padding:9px 11px;border-bottom:1px solid var(--bd);font-size:12px;}
+.calct tfoot td{font-weight:700;background:var(--bg3);}
+/* 파이프라인 */
+.pcols{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;min-width:680px;}
+.pcol{background:var(--bg3);border-radius:9px;padding:9px;}
+.pcolt{font-size:11px;font-weight:500;margin-bottom:8px;color:var(--tx2);}
+.pcard{background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:9px;margin-bottom:7px;}
+.pcn{font-size:12px;font-weight:500;}
+.pcm{font-size:10px;color:var(--tx2);margin-top:2px;}
+.padd2{width:100%;padding:6px;background:transparent;border:1px dashed var(--bd);border-radius:7px;color:var(--tx3);font-size:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+/* AI 채팅 */
+.aichat{padding:12px;}
+.aimsgs{min-height:80px;margin-bottom:10px;}
+.aiq{background:var(--bg3);border-radius:9px 9px 9px 2px;padding:7px 11px;font-size:12px;display:inline-block;max-width:80%;margin-bottom:7px;}
+.aia{background:rgba(61,127,255,0.08);border:1px solid rgba(61,127,255,0.2);border-radius:9px 9px 2px 9px;padding:7px 11px;font-size:12px;display:inline-block;max-width:85%;float:right;clear:both;line-height:1.7;}
+.cf::after{content:'';display:table;clear:both;}
+.airow{display:flex;gap:7px;}
+.aiinp{flex:1;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:8px 11px;font-size:12px;color:var(--tx);font-family:'Noto Sans KR',sans-serif;outline:none;}
+.aiinp:focus{border-color:var(--ac);}
+.aiinp::placeholder{color:var(--tx3);}
+.aisend{background:var(--ac);border:none;border-radius:7px;padding:8px 14px;color:#fff;font-size:12px;cursor:pointer;}
+/* 캘린더 */
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.calh{text-align:center;font-size:10px;color:var(--tx2);padding:7px 0;}
+.calc{min-height:55px;background:var(--bg3);border-radius:5px;padding:3px;}
+.calc.today{border:1px solid var(--ac);}
+.calc.om{opacity:0.35;}
+.cald{font-size:10px;color:var(--tx2);margin-bottom:2px;}
+.calev{font-size:9px;padding:1px 3px;border-radius:2px;margin-bottom:1px;line-height:1.4;background:rgba(61,127,255,0.2);color:var(--ac);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 작업의뢰서 */
+.wodoc{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:22px;max-width:660px;}
+.wotit{font-size:17px;font-weight:700;text-align:center;margin-bottom:4px;}
+.wosub{font-size:11px;color:var(--tx2);text-align:center;margin-bottom:18px;}
+.wotbl{width:100%;border-collapse:collapse;margin-bottom:12px;}
+.wotbl th{background:var(--bg3);padding:8px 11px;text-align:left;border:1px solid var(--bd);font-size:11px;width:100px;}
+.wotbl td{padding:8px 11px;border:1px solid var(--bd);font-size:12px;}
+.wosign{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:14px;}
+.wosignb{border:1px solid var(--bd);border-radius:7px;padding:10px;text-align:center;}
+.wosignl{font-size:10px;color:var(--tx2);margin-bottom:18px;}
+/* 이력표 */
+.histt{width:100%;border-collapse:collapse;font-size:11px;}
+.histt th{background:var(--bg3);position:sticky;top:0;padding:9px;text-align:left;color:var(--tx2);font-weight:500;border-bottom:1px solid var(--bd);}
+.histt td{padding:9px;border-bottom:1px solid var(--bd);color:var(--tx);}
+/* 모달 */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:none;align-items:center;justify-content:center;}
+.overlay.show{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--bd);border-radius:13px;padding:18px;width:92%;max-width:500px;max-height:92vh;overflow-y:auto;}
+.mtitle{font-size:14px;font-weight:600;margin-bottom:12px;}
+.modal input,.modal select,.modal textarea{width:100%;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:8px 11px;color:var(--tx);font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;margin-bottom:7px;}
+.modal textarea{resize:vertical;min-height:80px;}
+.mbtns{display:flex;gap:7px;margin-top:5px;}
+.bok{flex:1;background:var(--ac);border:none;border-radius:7px;padding:9px;color:#fff;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+.bwa{flex:1;background:var(--wa);border:none;border-radius:7px;padding:9px;color:#000;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+.bca{flex:1;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:9px;color:var(--tx2);font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+/* AI 추출 결과 */
+.ai-extract-item{padding:8px 11px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;gap:8px;}
+.ai-extract-item:last-child{border-bottom:none;}
+.ai-extract-item input[type=checkbox]{width:16px;height:16px;margin-top:2px;flex-shrink:0;cursor:pointer;}
+.ai-extract-text{font-size:12px;flex:1;}
+.ai-extract-sub{font-size:10px;color:var(--tx2);margin-top:2px;}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--bd);color:var(--tx);padding:8px 16px;border-radius:7px;font-size:12px;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+.ai-loading{display:flex;align-items:center;gap:8px;padding:12px;color:var(--tx2);font-size:12px;}
+.spin{width:16px;height:16px;border:2px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media(max-width:600px){.kgrid{grid-template-columns:repeat(2,1fr);}.sidebar{width:155px;}.pcols{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="logo">
+    <div class="lm">KM</div>
+    <div><div class="ln">한국마이크로닉</div><div class="ls">현장관리 v5 — AI 자동화</div></div>
+  </div>
+  <div class="hbtns">
+    <span class="hdate" id="todayDate"></span>
+    <button class="hbtn" style="background:rgba(61,127,255,0.15);border:1px solid rgba(61,127,255,0.4);color:var(--ac)" onclick="loadCloud()">불러오기</button>
+    <button class="hbtn" style="background:var(--ac);color:#fff" onclick="saveCloud()">저장</button>
+    <button class="hbtn" id="editBtn" style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx2)" onclick="toggleEdit()">✏️ 수정모드</button>
+  </div>
+</div>
+<div class="layout">
+  <div class="sidebar">
+    <div class="sbtop">
+      <button class="addbtn" onclick="om('addSite')">+ 현장 추가</button>
+      <input class="ssearch" placeholder="현장 검색..." oninput="filterSites(this.value)"/>
+    </div>
+    <div class="slwrap" id="siteList"></div>
+  </div>
+  <div class="main-area">
+    <div class="tabbar" id="tabBar"></div>
+    <div class="content" id="mainContent"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<!-- 모달: 현장추가 -->
+<div class="overlay" id="addSite"><div class="modal"><div class="mtitle">현장 추가</div>
+  <input id="ns-n" placeholder="현장명"/><input id="ns-a" placeholder="주소"/><input id="ns-p" placeholder="제품 (RCU, BSP, 챠임벨...)"/><input id="ns-c" placeholder="발주처/시공사"/>
+  <select id="ns-s"><option value="0">설계중</option><option value="1">CB외함 납품</option><option value="2">분전함 설치</option><option value="3">결선 작업</option><option value="4">제품 설치</option><option value="5">테스트</option><option value="6">완료/수금</option></select>
+  <div class="mbtns"><button class="bok" onclick="addSite()">추가</button><button class="bca" onclick="cm('addSite')">취소</button></div>
+</div></div>
+
+<!-- 모달: 수량변경 -->
+<div class="overlay" id="qcModal"><div class="modal">
+  <div class="mtitle" style="color:var(--wa)">⚠️ 수량 변경 — 사유 필수</div>
+  <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">기존값: <strong id="qcOld" style="color:var(--tx)"></strong></div>
+  <input id="qcNew" placeholder="새 수치" oninput="vqc()"/>
+  <input id="qcDate" type="date" onchange="vqc()"/>
+  <input id="qcPerson" placeholder="지시자 (예: 홍길동 소장)" oninput="vqc()"/>
+  <input id="qcReason" placeholder="변경 사유 (구체적으로)" oninput="vqc()"/>
+  <div class="mbtns"><button class="bca" onclick="cm('qcModal')">취소</button><button class="bwa" id="qcSave" disabled onclick="applyQC()">변경 저장</button></div>
+</div></div>
+
+<!-- 모달: 수량이력 -->
+<div class="overlay" id="histModal"><div class="modal" style="max-width:600px;width:95%">
+  <div class="mtitle" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+    <span>📋 수량 변경 이력</span>
+    <div style="display:flex;gap:5px">
+      <button class="bca" style="padding:4px 9px;font-size:10px" onclick="copyHist()">📝 카카오 복사</button>
+      <button class="bok" style="padding:4px 9px;font-size:10px" onclick="exportHist()">📊 엑셀 저장</button>
+    </div>
+  </div>
+  <div style="overflow-y:auto;max-height:360px;border:1px solid var(--bd);border-radius:6px;margin-top:8px">
+    <table class="histt"><thead><tr><th>일자</th><th>변경내역</th><th>지시자</th><th>사유</th><th>출처</th></tr></thead>
+    <tbody id="histBody"></tbody></table>
+  </div>
+  <div class="mbtns" style="margin-top:8px"><button class="bca" onclick="cm('histModal')">닫기</button></div>
+</div></div>
+
+<!-- 모달: AI 추출 결과 (이슈/액션) -->
+<div class="overlay" id="aiExtModal"><div class="modal" style="max-width:560px;width:95%">
+  <div class="mtitle" id="aiExtTitle">🤖 AI 추출 결과 — 등록할 항목 선택</div>
+  <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">체크한 항목만 현장에 등록됩니다.</div>
+  <div id="aiExtList" style="border:1px solid var(--bd);border-radius:7px;overflow:hidden;max-height:320px;overflow-y:auto"></div>
+  <div class="mbtns" style="margin-top:10px">
+    <button class="bca" onclick="cm('aiExtModal')">취소</button>
+    <button class="bok" onclick="applyAIExt()">✅ 선택 항목 등록</button>
+  </div>
+</div></div>
+
+<!-- 모달: 이슈추가 -->
+<div class="overlay" id="issModal"><div class="modal"><div class="mtitle">이슈 추가</div>
+  <input id="is-t" placeholder="이슈 내용"/>
+  <select id="is-p"><option value="danger">긴급</option><option value="warn">보통</option><option value="low">낮음</option></select>
+  <input id="is-o" placeholder="담당자"/><input id="is-d" type="date" placeholder="기한"/>
+  <div class="mbtns"><button class="bok" onclick="addIssue()">추가</button><button class="bca" onclick="cm('issModal')">취소</button></div>
+</div></div>
+
+<!-- 모달: 이슈→작업의뢰서 변환 -->
+<div class="overlay" id="iss2woModal"><div class="modal"><div class="mtitle">이슈 → 작업의뢰서 변환</div>
+  <div style="font-size:11px;color:var(--tx2);margin-bottom:8px" id="i2wIssTit"></div>
+  <input id="i2w-t" placeholder="작업 제목"/>
+  <select id="i2w-d"><option>설계팀</option><option>개발팀</option><option>시공팀</option><option>구매팀</option></select>
+  <input id="i2w-dl" placeholder="완료 기한"/>
+  <textarea id="i2w-c" placeholder="작업 내용" rows="4"></textarea>
+  <div class="mbtns"><button class="bok" onclick="applyI2W()">작업의뢰서 생성</button><button class="bca" onclick="cm('iss2woModal')">취소</button></div>
+</div></div>
+
+<!-- 모달: 후속조치추가 -->
+<div class="overlay" id="actModal"><div class="modal"><div class="mtitle">후속조치 추가</div>
+  <input id="ac-t" placeholder="할 일"/><input id="ac-o" placeholder="담당자"/><input id="ac-d" type="date"/>
+  <div class="mbtns"><button class="bok" onclick="addAction()">추가</button><button class="bca" onclick="cm('actModal')">취소</button></div>
+</div></div>
+
+<!-- 모달: 카카오전송문 -->
+<div class="overlay" id="kakaoModal"><div class="modal"><div class="mtitle">📱 카카오 전송문</div>
+  <textarea id="kakaoText" rows="8" style="font-size:12px;line-height:1.7"></textarea>
+  <div class="mbtns"><button class="bok" onclick="copyKakao()">복사</button><button class="bca" onclick="cm('kakaoModal')">닫기</button></div>
+</div></div>
+
+<!-- 모달: 회의록추가 -->
+<div class="overlay" id="minModal"><div class="modal"><div class="mtitle">회의록 추가</div>
+  <input id="mn-t" placeholder="회의 제목"/><input id="mn-d" type="date"/>
+  <select id="mn-ty"><option>공정회의</option><option>킥오프</option><option>설계협의</option><option>시공협의</option><option>기타</option></select>
+  <textarea id="mn-c" placeholder="PLAUD 회의록 전체 붙여넣기 (마크다운 표 포함)" rows="8"></textarea>
+  <div class="mbtns"><button class="bok" onclick="addMin()">저장 + AI 분석</button><button class="bca" onclick="cm('minModal')">취소</button></div>
+</div></div>
+
+<!-- 모달: 메모추가 -->
+<div class="overlay" id="memModal"><div class="modal"><div class="mtitle">내용 추가</div>
+  <select id="me-ty"><option value="mail">📧 메일</option><option value="kakao">💬 카카오톡</option><option value="sms">📱 문자</option><option value="etc">📝 기타</option></select>
+  <input id="me-f" placeholder="발신자"/><input id="me-d" type="date"/>
+  <textarea id="me-c" placeholder="내용 붙여넣기" rows="6"></textarea>
+  <div style="margin-bottom:7px">
+    <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">📎 사진 첨부 (갤럭시 공유 또는 클립보드 붙여넣기)</label>
+    <label style="display:inline-block;padding:6px 12px;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;font-size:11px;color:var(--ac);cursor:pointer">사진 선택<input type="file" accept="image/*" multiple style="display:none" onchange="addMemoImg(this)"/></label>
+    <span style="font-size:10px;color:var(--tx3);margin-left:8px">또는 Ctrl+V로 붙여넣기</span>
+    <div id="memoImgPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+  </div>
+  <div class="mbtns"><button class="bok" onclick="addMemo()">저장 + 수량감지</button><button class="bca" onclick="cm('memModal')">취소</button></div>
+</div></div>
+
+<!-- 모달: 수량연동 -->
+<div class="overlay" id="qlModal"><div class="modal">
+  <div class="mtitle">수량표 연동 수정</div>
+  <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">출처: <span id="qlSrc" style="color:var(--wa)"></span></div>
+  <select id="ql-p"></select>
+  <select id="ql-f"><option value="order">발주 수량</option><option value="deliver">납품 수량</option><option value="install">설치 수량</option></select>
+  <input id="ql-n" placeholder="새 수치" type="number" oninput="vql()"/>
+  <input id="ql-d" type="date" onchange="vql()"/>
+  <input id="ql-pe" placeholder="지시자" oninput="vql()"/>
+  <input id="ql-r" placeholder="변경 사유" oninput="vql()"/>
+  <div class="mbtns"><button class="bca" onclick="cm('qlModal')">취소</button><button class="bwa" id="qlSave" disabled onclick="applyQL()">수량표 반영</button></div>
+</div></div>
+
+<!-- 모달: 계산항목 -->
+<div class="overlay" id="calcModal"><div class="modal"><div class="mtitle">계산 항목 추가</div>
+  <input id="ca-n" placeholder="항목명"/>
+  <select id="ca-t"><option value="contract">계약금액</option><option value="add">증액</option><option value="sub">감액</option><option value="collect">수금</option></select>
+  <input id="ca-a" placeholder="금액 (원)" type="number"/><input id="ca-d" type="date"/><input id="ca-no" placeholder="비고"/>
+  <div class="mbtns"><button class="bok" onclick="addCalc()">추가</button><button class="bca" onclick="cm('calcModal')">취소</button></div>
+</div></div>
+
+<!-- 모달: 작업의뢰서 -->
+<div class="overlay" id="woModal"><div class="modal"><div class="mtitle">작업의뢰서 작성</div>
+  <input id="wo-t" placeholder="작업 제목"/>
+  <select id="wo-d"><option>설계팀</option><option>개발팀</option><option>시공팀</option><option>구매팀</option></select>
+  <input id="wo-dl" placeholder="완료 기한"/>
+  <textarea id="wo-c" placeholder="작업 내용 상세" rows="5"></textarea>
+  <div class="mbtns"><button class="bok" onclick="genWO()">작성</button><button class="bca" onclick="cm('woModal')">취소</button></div>
+</div></div>
+
+<!-- 모달: 문서추가 -->
+<div class="overlay" id="docModal"><div class="modal"><div class="mtitle">문서 추가</div>
+  <select id="dc-t"><option value="estimate">견적서</option><option value="exec">실행예산</option><option value="contract">계약서</option><option value="change">변경내역서</option><option value="tax">세금계산서</option></select>
+  <input id="dc-ti" placeholder="제목"/><input id="dc-d" type="date"/>
+  <input id="dc-a" placeholder="금액 (원)" type="number"/>
+  <textarea id="dc-c" placeholder="내용 붙여넣기" rows="6"></textarea>
+  <div class="mbtns"><button class="bok" onclick="addDoc()">저장</button><button class="bca" onclick="cm('docModal')">취소</button></div>
+</div></div>
+
+<!-- 모달: 파이프라인 -->
+<div class="overlay" id="pipeModal"><div class="modal"><div class="mtitle">영업 현장 추가</div>
+  <input id="pi-n" placeholder="현장명"/><input id="pi-c" placeholder="발주처/설계사"/><input id="pi-a" placeholder="주소"/>
+  <select id="pi-s"><option value="0">첫 접촉</option><option value="1">설계의뢰</option><option value="2">설계중</option><option value="3">견적제출</option><option value="4">계약완료</option></select>
+  <input id="pi-am" placeholder="예상 계약금액 (원)" type="number"/>
+  <textarea id="pi-no" placeholder="메모" rows="3"></textarea>
+  <div class="mbtns"><button class="bok" onclick="addPipe()">추가</button><button class="bca" onclick="cm('pipeModal')">취소</button></div>
+</div></div>
+
+<!-- 모달: 업무일지 -->
+<div class="overlay" id="wjModal"><div class="modal"><div class="mtitle">업무일지 작성</div>
+  <input id="wj-d" type="date"/>
+  <div style="font-size:11px;color:var(--tx2);margin-bottom:5px">현장 클릭으로 빠른 삽입:</div>
+  <div id="wjQuickSites" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px"></div>
+  <textarea id="wj-c" rows="12" placeholder="여기에 내용 작성..."></textarea>
+  <div class="mbtns"><button class="bok" onclick="addWJ()">저장 + AI 분석</button><button class="bca" onclick="cm('wjModal')">취소</button></div>
+</div></div>
+
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzfF783inpczKxf1Y9-iWzHrGtjunk3RdqJVnCEjzkFczEh-cKymE9AZfdspm8Z-6ia/exec';
+const CLAUDE_API='https://api.anthropic.com/v1/messages';
+const STAGES=['설계중','CB외함 납품','분전함 설치','결선 작업','제품 설치','테스트','완료/수금'];
+const PIPE_STAGES=['첫 접촉','설계의뢰','설계중','견적제출','계약완료'];
+const PC={danger:'var(--da)',warn:'var(--wa)',low:'var(--tx3)'};
+const DOC_TYPE={estimate:'📋 견적서',exec:'💹 실행예산',contract:'📝 계약서',change:'🔄 변경내역서',tax:'🧾 세금계산서'};
+const MEM_TYPE={mail:'📧 메일',kakao:'💬 카카오톡',sms:'📱 문자',etc:'📝 기타'};
+const TABS=['수량표','회의록','미결이슈','후속조치','발주처대화','메일','카카오톡','문자','작업의뢰서','사진','견적서','실행예산','계약서','첨부파일','AI대화'];
+
+let sites=[
+  {id:1,name:'연수동 FIP 현장',addr:'인천 연수구',products:'RCU, BSP, 챠임벨',client:'아카데미',stage:3,
+   qty:{'챠임벨':{order:20,deliver:20,install:19,history:[]},'BSP':{order:19,deliver:19,install:0,history:[]}},
+   issues:[{id:1,title:'잉여 속판 1개 소재 불명',priority:'danger',owner:'시공팀+아카데미',due:'2026-05-20',done:false}],
+   actions:[{id:1,title:'잉여 속판 실물 확인',owner:'시공팀',due:'2026-05-16',done:false}],
+   minutes:[],memos:[],photos:[],calc:[{id:1,name:'RCU 시스템 계약',type:'contract',amount:85000000,date:'2026-03-15',note:''}],
+   workorders:[],docs:[],files:[],schedule:[{title:'챠임벨 설치',date:'2026-05-20'}],
+   excelHistory:[],excelHtml:'',excelChanges:{}},
+  {id:2,name:'단양 디캠프',addr:'충북 단양',products:'MMO, 키센서',client:'디캠프',stage:2,
+   qty:{},issues:[],actions:[],minutes:[],memos:[],photos:[],calc:[],workorders:[],docs:[],files:[],schedule:[],excelHistory:[],excelHtml:'',excelChanges:{}}
+];
+let pipeline=[
+  {id:1,name:'속초 신라호텔',client:'속초 신라',addr:'강원 속초',stage:1,amount:120000000,note:'설계의뢰 접수'},
+  {id:2,name:'제주 JW메리어트',client:'JW메리어트',addr:'제주',stage:0,amount:0,note:'첫 미팅 완료'}
+];
+let workJournals=[];
+let curSite=1,curTab='수량표',selMin=null,curView='site',selWJ=null;
+let calY=new Date().getFullYear(),calM=new Date().getMonth();
+let editMode=false,qcTargetEl=null,qcTargetSid=null;
+let qlSrcTab='',qlSrcIdx=-1;
+let aiExtType='',aiExtSid=null,aiExtItems=[];
+let i2wIssIdx=-1,i2wSid=null;
+
+// ── 유틸 ──
+const td=()=>new Date().toISOString().slice(0,10);
+function $(id){return document.getElementById(id);}
+function om(id){$(id).classList.add('show');}
+function cm(id){$(id).classList.remove('show');}
+function toast(m){const t=$('toast');t.textContent=m;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',2600);}
+document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('show');}));
+function dday(due){if(!due)return'';const d=Math.ceil((new Date(due)-new Date(td()))/(1000*86400));if(d<0)return`<span class="dday dd-da">D+${Math.abs(d)}</span>`;if(d===0)return`<span class="dday dd-da">D-day</span>`;if(d<=3)return`<span class="dday dd-wa">D-${d}</span>`;return`<span class="dday dd-ok">D-${d}</span>`;}
+
+// ── 클라우드 ──
+async function saveCloud(){try{await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'save',data:{sites,pipeline,workJournals}})});toast('저장됐습니다 ✓');}catch(e){toast('저장 실패');}}
+async function loadCloud(){toast('불러오는 중...');try{const r=await fetch(SCRIPT_URL+'?action=load');const j=await r.json();if(j.status==='ok'&&j.data){if(j.data.sites)sites=j.data.sites;if(j.data.pipeline)pipeline=j.data.pipeline;if(j.data.workJournals)workJournals=j.data.workJournals;toast('불러오기 완료 ✓');}else toast('저장 데이터 없음');}catch(e){toast('로컬 데이터 사용');}autoEscalate();renderSL();dispatch();}
+
+// ── 자동화: 이슈 기한초과 자동 긴급 격상 ──
+function autoEscalate(){sites.forEach(s=>{(s.issues||[]).forEach(iss=>{if(!iss.done&&iss.due&&new Date(iss.due)<new Date()&&iss.priority!=='danger'){iss.priority='danger';iss._autoEscalated=true;}});});}
+
+// ── 자동화: 오늘 업무일지 여부 확인 ──
+function hasWJToday(){return workJournals.some(w=>w.date===td());}
+
+// ── 자동화: 수량 잔여 경보 ──
+function qtyAlerts(site){const alerts=[];Object.entries(site.qty||{}).forEach(([p,q])=>{const rem=(q.deliver||0)-(q.install||0);if(rem<0)alerts.push({type:'danger',msg:`[${p}] 설치 수량이 납품 수량 초과 (잔여 ${rem})`});if(q.order>0&&q.deliver<q.order)alerts.push({type:'warn',msg:`[${p}] 납품 수량 부족 (발주 ${q.order} / 납품 ${q.deliver})`});});return alerts;}
+
+// ── 자동화: 미수금 계산 ──
+function calcRem(site){if(!site.calc)return 0;let t=0,c=0;site.calc.forEach(x=>{if(x.type==='contract'||x.type==='add')t+=x.amount;else if(x.type==='sub')t-=x.amount;else if(x.type==='collect')c+=x.amount;});return t-c;}
+
+// ── 수정모드 토글 ──
+function toggleEdit(){editMode=!editMode;const b=$('editBtn');if(editMode){b.style.background='var(--wa)';b.style.color='#000';b.textContent='✏️ 수정중 (클릭=완료)';}else{b.style.background='var(--bg3)';b.style.border='1px solid var(--bd)';b.style.color='var(--tx2)';b.textContent='✏️ 수정모드';}toast(editMode?'수정모드 ON':'수정모드 OFF (보기전용)');}
+
+// ── 초기화 ──
+function init(){$('todayDate').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'});loadCloud();}
+function dispatch(){if(curView==='pipe')renderPipe();else if(curView==='dash')renderDash();else if(curView==='cal')renderCal();else if(curView==='wj')renderWJPage();else selSite(curSite);}
+
+// ── 사이드바 ──
+function renderSL(filter=''){
+  const w=$('siteList');w.innerHTML='';
+  const nm=hasWJToday()?'📝 업무일지':'📝 업무일지 ⚠️';
+  [{l:'📊 전체 대시보드',m:'',v:'dash',fn:()=>{curView='dash';renderSL();renderDash();}},
+   {l:nm,m:workJournals.length+'건',v:'wj',fn:()=>{curView='wj';renderSL();renderWJPage();}},
+   {l:'🎯 영업 파이프라인',m:pipeline.length+'개',v:'pipe',fn:()=>{curView='pipe';renderSL();renderPipe();}},
+   {l:'📅 공정 캘린더',m:'',v:'cal',fn:()=>{curView='cal';renderSL();renderCal();}}
+  ].forEach(item=>{
+    const el=document.createElement('div');el.className='si'+(curView===item.v?' active':'');
+    el.innerHTML=`<div class="sin">${item.l}</div>${item.m?`<div class="sim">${item.m}</div>`:''}`;
+    el.onclick=item.fn;w.appendChild(el);
+  });
+  const d=document.createElement('div');d.className='ssec';d.textContent='진행 현장';w.appendChild(d);
+  const urgentSites=sites.filter(s=>s.issues&&s.issues.filter(i=>!i.done&&i.priority==='danger').length>0).map(s=>s.id);
+  sites.filter(s=>!filter||s.name.includes(filter)||s.addr.includes(filter)).forEach(s=>{
+    const ii=s.issues.filter(i=>!i.done).length,uu=s.minutes.filter(m=>!m.read).length;
+    const el=document.createElement('div');el.className='si'+(curSite===s.id&&curView==='site'?' active':'');
+    el.innerHTML=`<div class="sin">${urgentSites.includes(s.id)?'🚨 ':''} ${s.name}</div><div class="sim">${STAGES[s.stage]}</div><div class="sibs">${ii>0?`<span class="mb mb-r">이슈 ${ii}</span>`:''}${uu>0?`<span class="mb mb-w">미확인 ${uu}</span>`:''}</div>`;
+    el.onclick=()=>selSite(s.id);w.appendChild(el);
+  });
+}
+function filterSites(v){renderSL(v);}
+function selSite(id){curSite=id;curView='site';selMin=null;renderSL();renderTabs();renderTab(curTab);}
+function renderTabs(){$('tabBar').innerHTML=TABS.map(t=>`<div class="tab ${t===curTab?'active':''}" onclick="swTab('${t}')">${t}</div>`).join('');}
+function swTab(t){curTab=t;renderTabs();renderTab(t);}
+function renderTab(t){
+  const site=sites.find(s=>s.id===curSite);if(!site)return;
+  const hdr=`<div class="shdr"><div><h2>${site.name}</h2><p>${site.addr} · ${site.client||''} · ${site.products}</p></div><span class="spill">${STAGES[site.stage]}</span></div>`;
+  const alerts=qtyAlerts(site).map(a=>`<div class="alert-banner ${a.type}">${a.type==='danger'?'🚨':'⚠️'} ${a.msg}</div>`).join('');
+  const fn={수량표:()=>renderQty(site),회의록:()=>renderMins(site),미결이슈:()=>renderIssues(site),후속조치:()=>renderActions(site),발주처대화:()=>renderTalks(site),메일:()=>renderMemoTab(site,'mail'),카카오톡:()=>renderMemoTab(site,'kakao'),문자:()=>renderMemoTab(site,'sms'),작업의뢰서:()=>renderWO(site),사진:()=>renderPhotos(site),견적서:()=>renderDocTab(site,'estimate'),실행예산:()=>renderDocTab(site,'exec'),계약서:()=>renderDocTab(site,'contract'),첨부파일:()=>renderFiles(site),AI대화:()=>renderAI(site)};
+  const body=fn[t]?fn[t]():'';
+  $('mainContent').innerHTML=hdr+(alerts||'')+body;
+  if(t==='수량표'&&site.excelHtml)setTimeout(()=>attachExcel(site),80);
+}
+
+// ── 대시보드 (스마트 알림 포함) ──
+function renderDash(){
+  $('tabBar').innerHTML='';
+  autoEscalate();
+  const urgIss=sites.flatMap(s=>s.issues.filter(i=>!i.done&&i.priority==='danger').map(i=>({...i,site:s.name,sid:s.id})));
+  const overAct=sites.flatMap(s=>s.actions.filter(a=>!a.done&&a.due&&new Date(a.due)<new Date()).map(a=>({...a,site:s.name})));
+  const totalRem=sites.reduce((a,s)=>a+calcRem(s),0);
+  const longRem=sites.filter(s=>calcRem(s)>0);
+  const noWJToday=!hasWJToday();
+  const thisWeek=getThisWeekEvents();
+
+  let alerts='';
+  if(noWJToday)alerts+=`<div class="alert-banner danger" style="cursor:pointer" onclick="curView='wj';renderSL();renderWJPage()">🚨 오늘 업무일지 미작성 — 지금 작성하기 →</div>`;
+  urgIss.slice(0,3).forEach(i=>alerts+=`<div class="alert-banner danger" style="cursor:pointer" onclick="selSite(${i.sid});swTab('미결이슈')">🚨 [${i.site}] ${i.title}</div>`);
+  overAct.slice(0,3).forEach(a=>alerts+=`<div class="alert-banner warn">⚠️ 기한초과 [${a.site}] ${a.title}</div>`);
+  longRem.forEach(s=>{if(calcRem(s)>0){const days=Math.floor((new Date()-new Date(s.calc.find(c=>c.type==='contract')?.date||td()))/(1000*86400));if(days>60)alerts+=`<div class="alert-banner warn">⚠️ 미수금 60일 초과 [${s.name}] ${calcRem(s).toLocaleString()}원</div>`;} });
+
+  const weekEvHtml=thisWeek.length?thisWeek.map(e=>`<div class="ri"><div class="dot" style="background:var(--ac)"></div><div><div class="rtit">${e.site}</div><div class="rmeta">${e.date} · ${e.title}</div></div></div>`).join(''):'<div style="padding:14px;text-align:center;color:var(--tx2)">이번 주 예정 없음</div>';
+
+  $('mainContent').innerHTML=`
+    <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+      <div><h2 style="font-size:16px;font-weight:700">전체 현황</h2><p style="font-size:11px;color:var(--tx2);margin-top:2px">현장 ${sites.length}개 · 업무일지 ${workJournals.length}건</p></div>
+      ${noWJToday?`<button onclick="openWJModal()" style="padding:7px 12px;background:var(--da);border:none;border-radius:7px;color:#fff;font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif;animation:pulse 1.5s infinite">📝 오늘 일지 작성</button>`:''}
+    </div>
+    ${alerts?`<div class="card" style="margin-bottom:12px">${alerts}</div>`:''}
+    <div class="kgrid">
+      <div class="kcard"><div class="klbl">진행 현장</div><div class="kval" style="color:var(--ac)">${sites.length}</div></div>
+      <div class="kcard"><div class="klbl">긴급 이슈</div><div class="kval" style="color:var(--da)">${urgIss.length}</div></div>
+      <div class="kcard"><div class="klbl">미수금 합계</div><div class="kval" style="color:var(--pu);font-size:15px">${(totalRem/10000).toFixed(0)}만</div></div>
+      <div class="kcard"><div class="klbl">기한초과 액션</div><div class="kval" style="color:var(--wa)">${overAct.length}</div></div>
+    </div>
+    <div class="kgrid">
+      <div class="kcard"><div class="klbl">영업 파이프라인</div><div class="kval" style="color:var(--gr)">${pipeline.length}</div></div>
+      <div class="kcard"><div class="klbl">미확인 회의록</div><div class="kval" style="color:var(--wa)">${sites.reduce((a,s)=>a+s.minutes.filter(m=>!m.read).length,0)}</div></div>
+      <div class="kcard"><div class="klbl">완료 현장</div><div class="kval" style="color:var(--tx3)">${sites.filter(s=>s.stage===6).length}</div></div>
+      <div class="kcard"><div class="klbl">수량변경이력</div><div class="kval" style="color:var(--or)">${sites.reduce((a,s)=>a+(s.excelHistory||[]).length,0)}</div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px"><div class="chdr"><span class="ctit">🗓 이번 주 설치/공정 예정</span></div>${weekEvHtml}</div>
+    <div class="card"><div class="chdr"><span class="ctit">현장별 현황</span></div>
+      ${sites.map(s=>{const rem=calcRem(s);const urgCnt=s.issues.filter(i=>!i.done&&i.priority==='danger').length;return`<div class="ri" style="cursor:pointer" onclick="selSite(${s.id})"><div class="dot" style="background:${urgCnt>0?'var(--da)':'var(--gr)'}"></div><div style="flex:1"><div class="rtit">${s.name}</div><div class="rmeta">${STAGES[s.stage]} ${rem>0?`· 미수금 ${(rem/10000).toFixed(0)}만원`:''}</div></div>${urgCnt>0?`<span class="mb mb-r">긴급 ${urgCnt}</span>`:`<span class="mb mb-g">정상</span>`}</div>`;}).join('')}
+    </div>`;
+}
+function getThisWeekEvents(){const now=new Date();const start=new Date(now);start.setDate(now.getDate()-now.getDay());const end=new Date(start);end.setDate(start.getDate()+7);return sites.flatMap(s=>(s.schedule||[]).filter(e=>new Date(e.date)>=start&&new Date(e.date)<=end).map(e=>({...e,site:s.name})));}
+
+// ── 수량표 ──
+function renderQty(site){
+  if(!site.excelHistory)site.excelHistory=[];if(!site.excelChanges)site.excelChanges={};
+  const area=site.excelHtml?`<div id="excelArea">${site.excelHtml}</div>`:`<div style="padding:32px;text-align:center;color:var(--tx2);font-size:12px">📊 [엑셀 업로드] 버튼으로 수량표를 불러오세요<br><small style="color:var(--tx3);margin-top:5px;display:block">${editMode?'수정모드 ON — 셀 클릭으로 변경':'보기모드 — 수정하려면 상단 [✏️ 수정모드] 버튼 클릭'}</small></div>`;
+  const qrows=Object.entries(site.qty||{}).map(([p,q])=>{const rem=(q.deliver||0)-(q.install||0);const rc=rem>0?'cw':rem<0?'cr':'cg';const hcnt=(q.history||[]).length;return`<tr><td style="font-weight:500">${p}</td><td class="mono">${q.order||'-'}</td><td class="mono">${q.deliver||'-'}</td><td class="mono ${rc}">${q.install||'-'}</td><td class="mono ${rc}">${q.order?rem:'-'}</td><td style="font-size:10px;color:${hcnt>0?'var(--wa)':'var(--tx3)'}">${hcnt}건</td><td><span style="font-size:10px;color:var(--ac);cursor:pointer" onclick="openQM(${site.id},'${p}')">수정</span></td></tr>`;}).join('');
+  return`<div class="card"><div class="chdr"><span class="ctit">원본 수량표 (엑셀)</span><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="cbtn" style="color:var(--gr);border:1px solid var(--gr);border-radius:5px;padding:2px 7px" onclick="openHist(${site.id})">📋 변경이력</button><label style="font-size:10px;color:var(--ac);cursor:pointer;padding:2px 7px;border:1px solid var(--ac);border-radius:5px">📊 엑셀 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="importXL(${site.id},this)"/></label></div></div><div style="padding:8px 13px;font-size:10px;color:${editMode?'var(--wa)':'var(--tx3)'}">${editMode?'✏️ 수정모드: 셀 클릭 → 변경 사유 입력':'👁 보기모드: 수정하려면 상단 [✏️ 수정모드] 클릭'}</div>${area}</div>${Object.keys(site.qty||{}).length?`<div class="card" style="margin-top:10px"><div class="chdr"><span class="ctit">수동 수량표</span><button class="cbtn" onclick="openQNew(${site.id})">+ 제품 추가</button></div><table class="qtytbl"><thead><tr><th>제품</th><th>발주</th><th>납품</th><th>설치</th><th>잔여</th><th>이력</th><th></th></tr></thead><tbody>${qrows}</tbody></table></div>`:''}`;
+}
+function importXL(sid,input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});const site=sites.find(s=>s.id===sid);const ws=wb.Sheets[wb.SheetNames[0]];site.excelHtml=XLSX.utils.sheet_to_html(ws);if(!site.excelHistory)site.excelHistory=[];if(!site.excelChanges)site.excelChanges={};toast('엑셀 업로드 완료 ✓');renderTab(curTab);setTimeout(()=>attachExcel(site),80);}catch(err){toast('엑셀 오류: '+err.message);}};r.readAsArrayBuffer(file);}
+function attachExcel(site){const area=$('excelArea');if(!area)return;Object.entries(site.excelChanges||{}).forEach(([id,v])=>{const el=area.querySelector(`[data-cid="${id}"]`);if(el){el.innerText=v;el.classList.add('cell-changed');}});let ci=0;area.querySelectorAll('td').forEach(cell=>{if(!cell.getAttribute('data-cid'))cell.setAttribute('data-cid','c'+ci++);if(editMode)cell.classList.add('editable');else cell.classList.remove('editable');cell.onclick=function(){if(!editMode){toast('수정하려면 상단 [✏️ 수정모드] 버튼을 먼저 누르세요');return;}qcTargetEl=this;qcTargetSid=site.id;$('qcOld').textContent=this.innerText.trim()||'(빈칸)';$('qcNew').value=this.innerText.trim();$('qcDate').value=td();$('qcPerson').value='';$('qcReason').value='';$('qcSave').disabled=true;om('qcModal');};});}
+function vqc(){$('qcSave').disabled=!($('qcNew').value.trim()&&$('qcDate').value&&$('qcPerson').value.trim()&&$('qcReason').value.trim());}
+function applyQC(){const site=sites.find(s=>s.id===qcTargetSid);if(!site||!qcTargetEl)return;const cid=qcTargetEl.getAttribute('data-cid');const old=qcTargetEl.innerText.trim();const nv=$('qcNew').value.trim();if(old!==nv){if(!site.excelHistory)site.excelHistory=[];site.excelHistory.push({date:$('qcDate').value,detail:`${old||'(빈칸)'} → ${nv}`,person:$('qcPerson').value,reason:$('qcReason').value,source:'수량표 직접'});if(!site.excelChanges)site.excelChanges={};site.excelChanges[cid]=nv;qcTargetEl.innerText=nv;qcTargetEl.classList.add('cell-changed');site.excelHtml=$('excelArea').innerHTML;toast('변경 저장 완료 ✓');}cm('qcModal');}
+function openQM(sid,p){qcTargetSid=sid;const q=sites.find(s=>s.id===sid).qty[p];$('qcOld').textContent=`발주${q.order}/납품${q.deliver}/설치${q.install}`;$('qcNew').value='';$('qcDate').value=td();$('qcPerson').value='';$('qcReason').value='';$('qcSave').disabled=true;om('qcModal');}
+function openQNew(sid){qcTargetSid=sid;qcTargetEl=null;$('qcOld').textContent='신규 제품';$('qcNew').value='';$('qcDate').value=td();$('qcPerson').value='';$('qcReason').value='';$('qcSave').disabled=true;om('qcModal');}
+function openHist(sid){const site=sites.find(s=>s.id===sid);const hist=site.excelHistory||[];const tb=$('histBody');tb.innerHTML='';if(!hist.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--tx2);padding:16px">변경 이력 없음</td></tr>';}else{[...hist].reverse().forEach(h=>{tb.innerHTML+=`<tr><td class="mono" style="color:var(--ac)">${h.date}</td><td style="font-weight:500">${h.detail}</td><td>${h.person}</td><td style="font-size:10px;color:var(--tx2)">${h.reason}</td><td style="font-size:10px;color:var(--tx3)">${h.source||''}</td></tr>`;});}om('histModal');}
+function copyHist(){const site=sites.find(s=>s.id===curSite);const arr=site?.excelHistory||[];if(!arr.length){toast('이력 없음');return;}let txt=`📌 [${site.name}] 수량 변경 이력\n\n`;arr.forEach((h,i)=>{txt+=`${i+1}. [${h.date}] ${h.detail}\n   지시자: ${h.person}\n   사유: ${h.reason}\n\n`;});navigator.clipboard.writeText(txt).then(()=>toast('카카오 전송용 복사됐습니다'));}
+function exportHist(){const site=sites.find(s=>s.id===curSite);const arr=site?.excelHistory||[];if(!arr.length){toast('이력 없음');return;}const ws=XLSX.utils.json_to_sheet(arr.map(h=>({'일자':h.date,'변경내역':h.detail,'지시자':h.person,'사유':h.reason,'출처':h.source||''})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'이력');XLSX.writeFile(wb,`${site.name}_수량이력_${td()}.xlsx`);}
+function openQL(srcTab,srcIdx){const site=sites.find(s=>s.id===curSite);qlSrcTab=srcTab;qlSrcIdx=srcIdx;$('qlSrc').textContent=srcTab;const sel=$('ql-p');sel.innerHTML=Object.keys(site.qty||{}).map(p=>`<option value="${p}">${p}</option>`).join('');['ql-n','ql-pe','ql-r'].forEach(i=>$(i).value='');$('ql-d').value=td();$('qlSave').disabled=true;om('qlModal');}
+function vql(){$('qlSave').disabled=!($('ql-n').value.trim()&&$('ql-d').value&&$('ql-pe').value.trim()&&$('ql-r').value.trim());}
+function applyQL(){const site=sites.find(s=>s.id===curSite);const p=$('ql-p').value,f=$('ql-f').value;const nv=parseInt($('ql-n').value)||0;if(!site.qty[p])site.qty[p]={order:0,deliver:0,install:0,history:[]};const old=site.qty[p][f]||0;site.qty[p][f]=nv;if(!site.qty[p].history)site.qty[p].history=[];site.qty[p].history.push({date:$('ql-d').value,detail:`${f} ${old}→${nv}`,person:$('ql-pe').value,reason:$('ql-r').value,source:qlSrcTab});if(!site.excelHistory)site.excelHistory=[];site.excelHistory.push({date:$('ql-d').value,detail:`[${p}] ${f} ${old}→${nv}`,person:$('ql-pe').value,reason:$('ql-r').value,source:qlSrcTab});if(qlSrcIdx>=0){const memos=site.memos||[];if(memos[qlSrcIdx]){if(!memos[qlSrcIdx].qtyLinked)memos[qlSrcIdx].qtyLinked=[];memos[qlSrcIdx].qtyLinked.push(`${td()} [${p}] ${f} 반영`);}}cm('qlModal');toast(`[${p}] ${f} 수량표 반영 완료 ✓`);renderTab(curTab);}
+
+// ── AI 추출 (Claude API 호출) ──
+async function callClaude(prompt){
+  const res=await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+  const data=await res.json();
+  return data.content?.[0]?.text||'';
+}
+
+async function extractFromContent(content,type,sid){
+  const site=sites.find(s=>s.id===sid);
+  let prompt='';
+  if(type==='issues'){
+    prompt=`다음 회의록/업무일지에서 미결이슈와 문제점을 추출해주세요.\n반드시 JSON 배열로만 응답하세요. 다른 텍스트 없이.\n형식: [{"title":"이슈제목","priority":"danger|warn|low","owner":"담당자","due":"YYYY-MM-DD 또는 빈문자열"}]\n\n내용:\n${content}`;
+  } else {
+    prompt=`다음 회의록/업무일지에서 후속조치(액션아이템)를 추출해주세요.\n반드시 JSON 배열로만 응답하세요. 다른 텍스트 없이.\n형식: [{"title":"할일","owner":"담당자","due":"YYYY-MM-DD 또는 빈문자열"}]\n\n내용:\n${content}`;
+  }
+  try{
+    const raw=await callClaude(prompt);
+    const clean=raw.replace(/```json|```/g,'').trim();
+    return JSON.parse(clean);
+  }catch(e){return[];}
+}
+
+function showAIExtModal(items,type,sid){
+  aiExtType=type;aiExtSid=sid;aiExtItems=items;
+  $('aiExtTitle').textContent=type==='issues'?'🤖 AI 추출 — 미결이슈 등록':'🤖 AI 추출 — 후속조치 등록';
+  const list=$('aiExtList');
+  if(!items.length){list.innerHTML='<div style="padding:16px;text-align:center;color:var(--tx2)">추출된 항목 없음</div>';om('aiExtModal');return;}
+  list.innerHTML=items.map((item,i)=>`<div class="ai-extract-item"><input type="checkbox" id="aie${i}" checked/><div class="ai-extract-text"><label for="aie${i}" style="cursor:pointer;font-weight:500">${item.title}</label><div class="ai-extract-sub">${type==='issues'?`우선순위: ${item.priority||'warn'} · 담당: ${item.owner||'미정'}`:''} ${item.due?`기한: ${item.due}`:''}</div></div></div>`).join('');
+  om('aiExtModal');
+}
+
+function applyAIExt(){
+  const site=sites.find(s=>s.id===aiExtSid);
+  let added=0;
+  aiExtItems.forEach((item,i)=>{
+    const cb=$(`aie${i}`);if(!cb||!cb.checked)return;
+    if(aiExtType==='issues'){site.issues.push({id:Date.now()+i,title:item.title,priority:item.priority||'warn',owner:item.owner||'미정',due:item.due||'',done:false});}
+    else{site.actions.push({id:Date.now()+i,title:item.title,owner:item.owner||'미정',due:item.due||'',done:false});}
+    added++;
+  });
+  cm('aiExtModal');toast(`${added}개 항목 등록됐습니다 ✓`);autoEscalate();renderSL();renderTab(curTab);
+}
+
+async function runAIExtract(content,sid){
+  toast('AI 분석 중...');
+  const [issues,actions]=await Promise.all([extractFromContent(content,'issues',sid),extractFromContent(content,'actions',sid)]);
+  if(issues.length+actions.length===0){toast('AI가 추출한 항목이 없습니다');return;}
+  if(issues.length>0)setTimeout(()=>showAIExtModal(issues,'issues',sid),100);
+  if(actions.length>0)setTimeout(()=>{if(issues.length>0)setTimeout(()=>showAIExtModal(actions,'actions',sid),300);else showAIExtModal(actions,'actions',sid);},issues.length>0?0:100);
+}
+
+// 수량 변경 감지
+function detectQtyChange(content){const patterns=[/(\d+)개에서\s*(\d+)개/,/수량.*?(\d+).*?(?:→|로)\s*(\d+)/,/(\d+)개.*?변경.*?(\d+)개/];return patterns.some(p=>p.test(content));}
+
+// ── 회의록 ──
+function renderMins(site){
+  if(site.minutes.length&&!selMin)selMin=site.minutes[0].id;
+  const sel=site.minutes.find(m=>m.id===selMin)||site.minutes[0];
+  const list=`<div style="padding:7px;border-bottom:1px solid var(--bd)"><button style="width:100%;padding:5px;background:rgba(61,127,255,0.1);border:1px dashed rgba(61,127,255,0.4);border-radius:6px;color:var(--ac);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif" onclick="om('minModal')">+ 회의록 추가</button></div>${site.minutes.map(m=>`<div class="mll ${m.id===(sel&&sel.id)?'active':''}" onclick="selMin=${m.id};renderTab(curTab)"><div class="mlt">${m.title}</div><div class="mlm">${m.date} · ${m.type} <span style="padding:1px 4px;border-radius:5px;font-size:9px;background:${m.read?'rgba(0,200,150,0.1)':'rgba(245,166,35,0.1)'};color:${m.read?'var(--gr)':'var(--wa)'}">${m.read?'확인':'미확인'}</span></div>${(m.qtyLinked||[]).length?`<div class="qtag">✅ 수량표 ${m.qtyLinked.length}건 반영</div>`:''}</div>`).join('')||'<div style="padding:14px;text-align:center;color:var(--tx2);font-size:11px">회의록 없음</div>'}`;
+  const viewer=sel?`<div class="mv"><div class="mdoc"><div class="mdtit">${sel.title}</div><div class="mdmeta">📅 ${sel.date} · ${sel.type} · <span style="color:${sel.read?'var(--gr)':'var(--wa)'}">${sel.read?'✓ 확인완료':'⚠ 미확인'}</span></div><div class="mdbody">${marked.parse(sel.content||'')}</div>${(sel.qtyLinked||[]).length?`<div style="margin-top:8px">${sel.qtyLinked.map(t=>`<div class="qtag">✅ ${t}</div>`).join('')}</div>`:''}<div class="mdact"><button class="dbtn ${sel.read?'ddel':'dok'}" onclick="toggleRead(${site.id},${sel.id})">${sel.read?'확인취소':'✓ 확인완료'}</button><button class="dbtn dwa" onclick="openQL('회의록',${site.minutes.indexOf(sel)})">🔗 수량반영</button><button class="dbtn dai" onclick="runAIExtract(site.minutes.find(m=>m.id==${sel.id})?.content||'',${site.id})">🤖 이슈/액션 추출</button><button class="dbtn ddel" onclick="delMin(${site.id},${sel.id})">삭제</button></div></div></div>`:`<div style="display:flex;align-items:center;justify-content:center;flex:1;color:var(--tx2)">회의록 선택</div>`;
+  return`<div style="height:calc(100vh - 148px);display:grid;grid-template-columns:185px 1fr;overflow:hidden;border:1px solid var(--bd);border-radius:10px;background:var(--bg2)"><div style="overflow-y:auto;border-right:1px solid var(--bd)">${list}</div>${viewer}</div>`;
+}
+function toggleRead(sid,id){const s=sites.find(x=>x.id===sid);s.minutes.find(m=>m.id===id).read=!s.minutes.find(m=>m.id===id).read;renderSL();renderTab(curTab);}
+function delMin(sid,id){if(!confirm('삭제?'))return;const s=sites.find(x=>x.id===sid);s.minutes=s.minutes.filter(m=>m.id!==id);selMin=s.minutes.length?s.minutes[0].id:null;renderSL();renderTab(curTab);}
+async function addMin(){const site=sites.find(s=>s.id===curSite);const t=$('mn-t').value.trim();if(!t)return;const m={id:Date.now(),title:t,date:$('mn-d').value||td(),type:$('mn-ty').value,content:$('mn-c').value,read:false,qtyLinked:[]};site.minutes.push(m);selMin=m.id;cm('minModal');renderSL();renderTab(curTab);toast('회의록 저장됨 — AI 분석 시작...');await runAIExtract(m.content,curSite);}
+
+// ── 이슈 ──
+function renderIssues(site){
+  autoEscalate();
+  const open=site.issues.filter(i=>!i.done).sort((a,b)=>{const ord={danger:0,warn:1,low:2};return(ord[a.priority]||1)-(ord[b.priority]||1);});
+  const done=site.issues.filter(i=>i.done);
+  const rows=[...open,...done].map(iss=>`<div class="ri"><div class="dot" style="background:${PC[iss.priority]||'var(--tx3)'};${iss.done?'opacity:0.3':''}"></div><div style="flex:1"><div class="rtit" style="${iss.done?'text-decoration:line-through;color:var(--tx3)':''}">${iss._autoEscalated?'🔺 ':''} ${iss.title}</div><div class="rmeta">담당: ${iss.owner||'미정'} ${iss.due?`· 기한: ${iss.due} ${dday(iss.due)}`:''}</div></div><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><span style="font-size:10px;padding:2px 6px;border-radius:7px;background:${iss.done?'rgba(0,200,150,0.1)':'rgba(245,166,35,0.1)'};color:${iss.done?'var(--gr)':'var(--wa)'}">${iss.done?'해결':'진행중'}</span><span style="font-size:10px;color:var(--pu);cursor:pointer" onclick="openI2W(${site.id},${iss.id})">→의뢰서</span><span style="font-size:10px;color:var(--wa);cursor:pointer" onclick="genKakaoFromIss('${iss.title}','${iss.owner||''}','${iss.due||''}')">📱카카오</span><span style="font-size:10px;color:var(--ac);cursor:pointer" onclick="toggleIss(${site.id},${iss.id})">${iss.done?'재개':'완료'}</span></div></div>`).join('')||'<div style="padding:18px;text-align:center;color:var(--tx2)">이슈 없음 ✓</div>';
+  return`<div class="card"><div class="chdr"><span class="ctit">미결 이슈 <span style="color:var(--da)">${open.length}</span></span><button class="cbtn" onclick="om('issModal')">+ 추가</button></div>${rows}</div>`;
+}
+function toggleIss(sid,id){const s=sites.find(x=>x.id===sid);const i=s.issues.find(x=>x.id===id);i.done=!i.done;renderSL();renderTab(curTab);}
+function addIssue(){const site=sites.find(s=>s.id===curSite);const t=$('is-t').value.trim();if(!t)return;site.issues.push({id:Date.now(),title:t,priority:$('is-p').value,owner:$('is-o').value||'미정',due:$('is-d').value||'',done:false});cm('issModal');autoEscalate();renderSL();renderTab(curTab);}
+function openI2W(sid,iid){i2wSid=sid;i2wIssIdx=iid;const s=sites.find(x=>x.id===sid);const iss=s.issues.find(i=>i.id===iid);if(!iss)return;$('i2wIssTit').textContent=`이슈: ${iss.title}`;$('i2w-t').value=`[이슈해결] ${iss.title}`;$('i2w-c').value=`이슈: ${iss.title}\n담당: ${iss.owner||'미정'}\n기한: ${iss.due||'미정'}\n\n처리 내용:`;$('i2w-dl').value=iss.due||'';om('iss2woModal');}
+function applyI2W(){const site=sites.find(s=>s.id===i2wSid);if(!site.workorders)site.workorders=[];site.workorders.push({id:Date.now(),title:$('i2w-t').value,dept:$('i2w-d').value,deadline:$('i2w-dl').value,content:$('i2w-c').value,date:td(),site:site.name});cm('iss2woModal');toast('작업의뢰서 생성됐습니다 ✓');renderTab(curTab);}
+function genKakaoFromIss(title,owner,due){const msg=`안녕하세요.\n\n[이슈 알림]\n내용: ${title}\n담당: ${owner||'담당자'}\n기한: ${due||'미정'}\n\n확인 부탁드립니다.\n감사합니다.`;$('kakaoText').value=msg;om('kakaoModal');}
+
+// ── 후속조치 ──
+function renderActions(site){
+  const open=site.actions.filter(a=>!a.done).sort((a,b)=>{if(!a.due)return 1;if(!b.due)return -1;return new Date(a.due)-new Date(b.due);});
+  const done=site.actions.filter(a=>a.done);
+  const rows=[...open,...done].map(a=>{const od=a.due&&new Date(a.due)<new Date()&&!a.done;return`<div class="ag"><div style="${a.done?'text-decoration:line-through;color:var(--tx3)':od?'color:var(--da)':''}">${a.title}</div><div style="font-size:11px;color:var(--tx2)">${a.owner}</div><div style="font-size:10px">${a.due||'-'} ${dday(a.due)}</div><div class="chk ${a.done?'done':''}" onclick="toggleAct(${site.id},${a.id})">${a.done?'✓':''}</div></div>`;}).join('')||'<div style="padding:18px;text-align:center;color:var(--tx2)">후속조치 없음</div>';
+  const overCnt=open.filter(a=>a.due&&new Date(a.due)<new Date()).length;
+  return`<div class="card"><div class="chdr"><span class="ctit">후속조치 ${overCnt>0?`<span style="color:var(--da)">기한초과 ${overCnt}건</span>`:''}</span><div style="display:flex;gap:5px"><button class="cbtn" onclick="genKakaoFromActions(${site.id})">📱 전체 카카오</button><button class="cbtn" onclick="om('actModal')">+ 추가</button></div></div><div class="ag hdr"><span class="cll">할 일</span><span class="cll">담당</span><span class="cll">기한</span><span class="cll">완료</span></div>${rows}</div>`;
+}
+function toggleAct(sid,id){const s=sites.find(x=>x.id===sid);s.actions.find(a=>a.id===id).done=!s.actions.find(a=>a.id===id).done;renderTab(curTab);}
+function addAction(){const site=sites.find(s=>s.id===curSite);const t=$('ac-t').value.trim();if(!t)return;site.actions.push({id:Date.now(),title:t,owner:$('ac-o').value||'미정',due:$('ac-d').value||'',done:false});cm('actModal');renderTab(curTab);}
+function genKakaoFromActions(sid){const site=sites.find(s=>s.id===sid);const open=site.actions.filter(a=>!a.done);if(!open.length){toast('미완료 액션 없음');return;}const msg=`[${site.name}] 후속조치 확인 요청\n\n${open.map((a,i)=>`${i+1}. ${a.title}\n   담당: ${a.owner||'미정'} / 기한: ${a.due||'미정'}`).join('\n\n')}\n\n확인 및 진행 부탁드립니다.`;$('kakaoText').value=msg;om('kakaoModal');}
+function copyKakao(){navigator.clipboard.writeText($('kakaoText').value).then(()=>toast('카카오 메시지 복사됐습니다'));}
+
+// ── 메모 탭 ──
+function renderMemoTab(site,type){
+  if(!site.memos)site.memos=[];
+  const list=site.memos.filter(m=>m.type===type);
+  const tc={mail:'mt-mail',kakao:'mt-kakao',sms:'mt-sms',etc:'mt-etc'};
+  const rows=list.map((m,ri)=>{const ri2=site.memos.indexOf(m);const hasQty=detectQtyChange(m.content);return`<div class="memrow"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><div><span class="mtag ${tc[m.type]}">${MEM_TYPE[m.type]}</span><span style="font-size:11px;font-weight:500">${m.from}</span>${hasQty?`<span style="font-size:9px;padding:2px 6px;border-radius:6px;background:rgba(245,166,35,0.2);color:var(--wa);margin-left:6px">⚠️ 수량변경 감지</span>`:''}</div><div style="display:flex;gap:6px"><span style="font-size:10px;color:var(--tx3)">${m.date}</span><button style="font-size:10px;color:${hasQty?'var(--wa)':'var(--ac)'};background:none;border:${hasQty?'1px solid var(--wa)':'none'};border-radius:4px;padding:1px 5px;cursor:pointer;font-family:Noto Sans KR,sans-serif" onclick="openQL('${type}',${ri2})">🔗 수량반영</button><span style="font-size:10px;color:var(--da);cursor:pointer" onclick="delMemo(${site.id},${ri2})">삭제</span></div></div><div style="font-size:12px;color:var(--tx);white-space:pre-wrap;line-height:1.7">${m.content}</div>${(m.images||[]).length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${m.images.map((img,ii)=>`<img src="${img}" style="max-width:180px;max-height:180px;border-radius:7px;border:1px solid var(--bd);cursor:pointer" onclick="window.open(this.src)">`).join('')}</div>`:''}${(m.qtyLinked||[]).length?`<div style="margin-top:4px">${m.qtyLinked.map(t=>`<div class="qtag">✅ ${t}</div>`).join('')}</div>`:''}</div>`;}).join('')||`<div style="padding:18px;text-align:center;color:var(--tx2)">${MEM_TYPE[type]} 없음</div>`;
+  return`<div class="card"><div class="chdr"><span class="ctit">${MEM_TYPE[type]}</span><button class="cbtn" onclick="openMemModal('${type}')">+ 추가</button></div>${rows}</div>`;
+}
+function renderTalks(site){if(!site.docs)site.docs=[];const talks=site.docs.filter(d=>d.type==='talk');const rows=talks.map((d,i)=>`<div class="memrow"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;font-weight:500">💬 ${d.title}</span><div style="display:flex;gap:6px"><span style="font-size:10px;color:var(--tx3)">${d.date}</span><span style="font-size:10px;color:var(--da);cursor:pointer" onclick="delDoc(${site.id},${site.docs.indexOf(d)})">삭제</span></div></div><div style="font-size:12px;line-height:1.8;white-space:pre-wrap">${d.content}</div></div>`).join('')||'<div style="padding:18px;text-align:center;color:var(--tx2)">발주처 핵심대화 없음</div>';return`<div class="card"><div class="chdr"><span class="ctit">발주처 핵심 대화</span><button class="cbtn" onclick="openDoc2('talk')">+ 추가</button></div>${rows}</div>`;}
+let memoImgs=[];
+
+function addMemoImg(input){
+  Array.from(input.files).forEach(f=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      memoImgs.push(e.target.result);
+      renderMemoImgPreview();
+    };
+    r.readAsDataURL(f);
+  });
+}
+
+function renderMemoImgPreview(){
+  const p=$('memoImgPreview');if(!p)return;
+  p.innerHTML=memoImgs.map((img,i)=>`<div style="position:relative;display:inline-block"><img src="${img}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--bd)"/><button onclick="memoImgs.splice(${i},1);renderMemoImgPreview()" style="position:absolute;top:-4px;right:-4px;background:var(--da);border:none;border-radius:50%;width:16px;height:16px;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button></div>`).join('');
+}
+
+// 클립보드 붙여넣기 감지
+document.addEventListener('paste',function(e){
+  if(!$('memModal')?.classList.contains('show'))return;
+  const items=e.clipboardData?.items;
+  if(!items)return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){
+      const f=item.getAsFile();
+      const r=new FileReader();
+      r.onload=ev=>{memoImgs.push(ev.target.result);renderMemoImgPreview();};
+      r.readAsDataURL(f);
+      e.preventDefault();
+    }
+  }
+});
+
+function openMemModal(type){$('me-ty').value=type;$('me-f').value='';$('me-d').value=td();$('me-c').value='';memoImgs=[];setTimeout(()=>{const p=$('memoImgPreview');if(p)p.innerHTML='';},50);om('memModal');}
+function addMemo(){const site=sites.find(s=>s.id===curSite);if(!site.memos)site.memos=[];const c=$('me-c').value.trim();if(!c&&!memoImgs.length)return;const m={type:$('me-ty').value,from:$('me-f').value||'미상',date:$('me-d').value||td(),content:c,images:[...memoImgs],qtyLinked:[]};site.memos.push(m);memoImgs=[];cm('memModal');if(detectQtyChange(c))toast('수량 변경 내용이 감지됐습니다 — [🔗 수량반영] 버튼을 눌러주세요');renderTab(curTab);}
+function delMemo(sid,idx){sites.find(s=>s.id===sid).memos.splice(idx,1);renderTab(curTab);}
+
+// ── 사진 ──
+function renderPhotos(site){if(!site.photos)site.photos=[];const items=site.photos.map((p,i)=>`<div class="pit"><img src="${p.data}" alt=""/><button class="pdel" onclick="delP(${site.id},${i})">✕</button></div>`).join('');return`<div class="card"><div class="chdr"><span class="ctit">현장 사진 ${site.photos.length}장</span></div><div class="pgrid">${items}<label class="padd"><span style="font-size:22px">📷</span><span>추가</span><input type="file" accept="image/*" multiple style="display:none" onchange="addP(${site.id},this)"/></label></div></div>`;}
+function addP(sid,input){const site=sites.find(s=>s.id===sid);if(!site.photos)site.photos=[];Array.from(input.files).forEach(f=>{const r=new FileReader();r.onload=e=>{site.photos.push({data:e.target.result,name:f.name,date:td()});renderTab(curTab);};r.readAsDataURL(f);});}
+function delP(sid,idx){if(!confirm('삭제?'))return;sites.find(s=>s.id===sid).photos.splice(idx,1);renderTab(curTab);}
+
+// ── 계산 ──
+function renderCalcTab(site){if(!site.calc)site.calc=[];const tl={contract:'계약금액',add:'증액',sub:'감액',collect:'수금'};const tc={contract:'var(--ac)',add:'var(--gr)',sub:'var(--da)',collect:'var(--pu)'};let tot=0,col=0;site.calc.forEach(c=>{if(c.type==='contract'||c.type==='add')tot+=c.amount;else if(c.type==='sub')tot-=c.amount;else if(c.type==='collect')col+=c.amount;});const rem=tot-col;const is60d=site.calc.find(c=>c.type==='contract')&&Math.floor((new Date()-new Date(site.calc.find(c=>c.type==='contract').date||td()))/(1000*86400))>60&&rem>0;const rows=site.calc.map((c,i)=>`<tr><td style="color:${tc[c.type]}">${tl[c.type]}</td><td>${c.name}</td><td style="text-align:right;font-family:JetBrains Mono">${c.amount.toLocaleString()}</td><td style="font-size:10px;color:var(--tx2)">${c.date}</td><td><span style="font-size:10px;color:var(--da);cursor:pointer" onclick="delCalc(${site.id},${i})">삭제</span></td></tr>`).join('');return`<div class="card"><div class="chdr"><span class="ctit">계약 · 증감 · 수금</span><button class="cbtn" onclick="om('calcModal')">+ 추가</button></div>${is60d?`<div class="alert-banner danger">🚨 미수금 60일 초과 경보 — 즉시 수금 확인 필요</div>`:''}${rem>0?`<div class="alert-banner warn">💰 미수금: ${rem.toLocaleString()}원</div>`:''}<table class="calct"><thead><tr><th>구분</th><th>항목</th><th style="text-align:right">금액(원)</th><th>날짜</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="2">계약 합계</td><td style="text-align:right;font-family:JetBrains Mono;color:var(--ac)">${tot.toLocaleString()}</td><td colspan="2"></td></tr><tr><td colspan="2">수금 완료</td><td style="text-align:right;font-family:JetBrains Mono;color:var(--gr)">${col.toLocaleString()}</td><td colspan="2"></td></tr><tr><td colspan="2" style="color:${rem>0?'var(--da)':'var(--gr)'}">미수금</td><td style="text-align:right;font-family:JetBrains Mono;color:${rem>0?'var(--da)':'var(--gr)'}">${rem.toLocaleString()}</td><td colspan="2"></td></tr></tfoot></table></div>`;}
+function addCalc(){const site=sites.find(s=>s.id===curSite);if(!site.calc)site.calc=[];const n=$('ca-n').value.trim();if(!n)return;site.calc.push({id:Date.now(),name:n,type:$('ca-t').value,amount:parseInt($('ca-a').value)||0,date:$('ca-d').value||td(),note:$('ca-no').value});cm('calcModal');renderTab(curTab);}
+function delCalc(sid,idx){sites.find(s=>s.id===sid).calc.splice(idx,1);renderTab(curTab);}
+
+// ── 작업의뢰서 ──
+function renderWO(site){if(!site.workorders)site.workorders=[];const rows=site.workorders.map((w,i)=>`<div class="ri" style="cursor:pointer" onclick="viewWO(${site.id},${i})"><div class="dot" style="background:var(--pu)"></div><div style="flex:1"><div class="rtit">${w.title}</div><div class="rmeta">${w.dept} · ${w.deadline}</div></div><span style="font-size:10px;color:var(--da);cursor:pointer" onclick="event.stopPropagation();delWO(${site.id},${i})">삭제</span></div>`).join('')||'<div style="padding:18px;text-align:center;color:var(--tx2)">작업의뢰서 없음</div>';return`<div class="card"><div class="chdr"><span class="ctit">작업의뢰서</span><button class="cbtn" onclick="om('woModal')">+ 작성</button></div>${rows}</div>`;}
+function genWO(){const site=sites.find(s=>s.id===curSite);if(!site.workorders)site.workorders=[];const t=$('wo-t').value.trim();if(!t)return;site.workorders.push({id:Date.now(),title:t,dept:$('wo-d').value,deadline:$('wo-dl').value,content:$('wo-c').value,date:td(),site:site.name});cm('woModal');renderTab(curTab);}
+function viewWO(sid,idx){const s=sites.find(x=>x.id===sid);const w=s.workorders[idx];$('mainContent').innerHTML=`<div class="shdr"><div><h2>${s.name}</h2></div><button onclick="renderTab('작업의뢰서')" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;color:var(--tx2);font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">← 목록</button></div><div class="wodoc"><div class="wotit">작 업 의 뢰 서</div><div class="wosub">한국마이크로닉(주)</div><table class="wotbl"><tr><th>수신부서</th><td>${w.dept}</td><th>작성일</th><td class="mono">${w.date}</td></tr><tr><th>현장명</th><td colspan="3">${w.site}</td></tr><tr><th>작업제목</th><td colspan="3">${w.title}</td></tr><tr><th>완료기한</th><td colspan="3" class="mono">${w.deadline}</td></tr></table><div style="font-size:12px;font-weight:500;margin-bottom:7px">작업 내용</div><div style="background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:12px;font-size:12px;line-height:1.8;white-space:pre-wrap">${w.content}</div><div class="wosign"><div class="wosignb"><div class="wosignl">작성자 (배성윤)</div><div style="font-size:10px;color:var(--tx2)">PM 차장</div></div><div class="wosignb"><div class="wosignl">팀장</div></div><div class="wosignb"><div class="wosignl">수신: ${w.dept}</div></div></div><div style="margin-top:12px;text-align:center"><button onclick="window.print()" style="padding:7px 18px;background:var(--ac);border:none;border-radius:7px;color:#fff;font-size:12px;cursor:pointer">🖨 인쇄</button></div></div>`;}
+function delWO(sid,idx){sites.find(s=>s.id===sid).workorders.splice(idx,1);renderTab(curTab);}
+
+// ── 문서 ──
+function renderDocTab(site,type){if(!site.docs)site.docs=[];const list=site.docs.filter(d=>d.type===type);const rows=list.map((d,i)=>`<div class="ri" style="cursor:pointer" onclick="viewDoc(${site.id},${site.docs.indexOf(d)})"><div class="dot" style="background:var(--ac)"></div><div style="flex:1"><div class="rtit">${DOC_TYPE[d.type]} ${d.title}</div><div class="rmeta">${d.date}${d.amount?` · ${parseInt(d.amount).toLocaleString()}원`:''}</div></div><span style="font-size:10px;color:var(--da);cursor:pointer" onclick="event.stopPropagation();delDoc(${site.id},${site.docs.indexOf(d)})">삭제</span></div>`).join('')||`<div style="padding:18px;text-align:center;color:var(--tx2)">${DOC_TYPE[type]} 없음</div>`;return`<div class="card"><div class="chdr"><span class="ctit">${DOC_TYPE[type]}</span><button class="cbtn" onclick="openDoc2('${type}')">+ 추가</button></div>${rows}</div>`;}
+function openDoc2(type){$('dc-t').value=type;$('dc-ti').value='';$('dc-d').value=td();$('dc-a').value='';$('dc-c').value='';om('docModal');}
+function addDoc(){const site=sites.find(s=>s.id===curSite);if(!site.docs)site.docs=[];const t=$('dc-ti').value.trim();if(!t)return;site.docs.push({id:Date.now(),type:$('dc-t').value,title:t,date:$('dc-d').value||td(),amount:$('dc-a').value,content:$('dc-c').value});cm('docModal');renderTab(curTab);}
+function viewDoc(sid,idx){const s=sites.find(x=>x.id===sid);const d=s.docs[idx];$('mainContent').innerHTML=`<div class="shdr"><div><h2>${s.name}</h2></div><button onclick="renderTab('견적서')" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;color:var(--tx2);font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">← 목록</button></div><div class="mdoc"><div class="mdtit">${DOC_TYPE[d.type]} - ${d.title}</div><div class="mdmeta">📅 ${d.date}${d.amount?` · 💰 ${parseInt(d.amount).toLocaleString()}원`:''}</div><div class="mdbody">${marked.parse(d.content||'')}</div><div class="mdact"><button class="dbtn ddel" onclick="delDoc(${s.id},${idx});renderTab('견적서')">삭제</button></div></div>`;}
+function delDoc(sid,idx){sites.find(s=>s.id===sid).docs.splice(idx,1);renderTab(curTab);}
+
+// ── 첨부파일 ──
+function renderFiles(site){if(!site.files)site.files=[];const fi=(n)=>({pdf:'📄',xlsx:'📊',xls:'📊',docx:'📝',doc:'📝',pptx:'📑',jpg:'🖼',jpeg:'🖼',png:'🖼'}[n.split('.').pop().toLowerCase()]||'📎');const cards=site.files.map((f,i)=>`<div class="fcard"><div class="fico">${fi(f.name)}</div><div class="fname">${f.name}</div><div class="fmeta">${f.date} · ${(f.size/1024).toFixed(0)}KB</div><div style="margin-top:6px"><span style="font-size:10px;color:var(--da);cursor:pointer" onclick="delF(${site.id},${i})">삭제</span></div></div>`).join('');return`<div class="card"><div class="chdr"><span class="ctit">첨부파일 ${site.files.length}개</span></div><div class="fadda" ondragover="this.classList.add('drag-over');event.preventDefault()" ondragleave="this.classList.remove('drag-over')" ondrop="dropF(${site.id},event);this.classList.remove('drag-over')"><div style="font-size:26px;margin-bottom:7px">📁</div><div style="font-size:12px;color:var(--tx2);margin-bottom:9px">끌어다 놓거나</div><label style="padding:7px 14px;background:var(--ac);border-radius:7px;color:#fff;font-size:11px;cursor:pointer">파일 선택<input type="file" multiple style="display:none" onchange="addF(${site.id},this)"/></label></div>${cards?`<div class="fgrid">${cards}</div>`:''}</div>`;}
+function addF(sid,input){const s=sites.find(x=>x.id===sid);if(!s.files)s.files=[];Array.from(input.files).forEach(f=>{const r=new FileReader();r.onload=e=>{s.files.push({name:f.name,size:f.size,date:td(),data:e.target.result});renderTab(curTab);};r.readAsDataURL(f);});}
+function dropF(sid,e){e.preventDefault();addF(sid,{files:e.dataTransfer.files});}
+function delF(sid,idx){if(!confirm('삭제?'))return;sites.find(s=>s.id===sid).files.splice(idx,1);renderTab(curTab);}
+
+// ── AI 대화 ──
+function renderAI(site){return`<div class="card"><div class="chdr"><span class="ctit">🤖 AI 현장 대화 (Claude API)</span></div><div class="aichat"><div class="aimsgs" id="aiMsgs"><div><div class="aiq">${site.name} 오늘 현황 요약해줘</div></div><div class="cf"><div class="aia">${site.name} 현황:<br>📍 ${STAGES[site.stage]}<br>⚠️ 이슈 ${site.issues.filter(i=>!i.done).length}건<br>📋 미확인 회의록 ${site.minutes.filter(m=>!m.read).length}건<br>✅ 미완료 후속조치 ${site.actions.filter(a=>!a.done).length}건<br>💰 미수금 ${calcRem(site).toLocaleString()}원<br>📊 수량변경이력 ${(site.excelHistory||[]).length}건</div></div></div><div class="airow"><input class="aiinp" id="aiInp" placeholder="이슈, 수량, 작업의뢰서, 미수금..." onkeydown="if(event.key==='Enter')sendAI(${site.id})"/><button class="aisend" onclick="sendAI(${site.id})">전송</button></div></div></div>`;}
+
+async function sendAI(sid){
+  const inp=$('aiInp');const q=inp.value.trim();if(!q)return;inp.value='';
+  const site=sites.find(s=>s.id===sid);
+  const msgs=$('aiMsgs');
+  msgs.innerHTML+=`<div style="margin-bottom:7px"><div class="aiq">${q}</div></div>`;
+  msgs.innerHTML+=`<div class="cf" id="aiLoading"><div class="aia"><div class="ai-loading"><div class="spin"></div>AI 분석 중...</div></div></div>`;
+  msgs.scrollTop=msgs.scrollHeight;
+
+  const ctx=`현장명: ${site.name}\n공정단계: ${STAGES[site.stage]}\n미결이슈: ${site.issues.filter(i=>!i.done).map(i=>i.title).join(', ')||'없음'}\n미완료액션: ${site.actions.filter(a=>!a.done).map(a=>a.title).join(', ')||'없음'}\n미수금: ${calcRem(site).toLocaleString()}원\n수량: ${Object.entries(site.qty||{}).map(([p,v])=>`${p} 발주${v.order}/납품${v.deliver}/설치${v.install}`).join(', ')||'없음'}`;
+  try{
+    const ans=await callClaude(`당신은 한국마이크로닉 현장관리 AI 비서입니다. 호텔 객실관리 시스템(RCU/BSP/챠임벨/키센서 등) 전문가입니다.\n\n현장 정보:\n${ctx}\n\n질문: ${q}\n\n간결하고 실용적으로 답변해주세요.`);
+    $('aiLoading')?.remove();
+    msgs.innerHTML+=`<div class="cf" style="margin-bottom:7px"><div class="aia">${ans.replace(/\n/g,'<br>')}</div></div>`;
+  }catch(e){
+    $('aiLoading')?.remove();
+    msgs.innerHTML+=`<div class="cf" style="margin-bottom:7px"><div class="aia">API 오류가 발생했습니다.</div></div>`;
+  }
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+// ── 업무일지 ──
+function openWJModal(){
+  const d=new Date();$('wj-d').value=td();
+  const qs=$('wjQuickSites');qs.innerHTML=sites.map(s=>`<button style="padding:3px 8px;border:1px solid var(--bd);border-radius:5px;background:var(--bg3);color:var(--tx);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif" onclick="insertSiteToWJ('${s.name}')">${s.name}</button>`).join('');
+  const tmpl=genWJTemplate();$('wj-c').value=tmpl;
+  om('wjModal');
+}
+function genWJTemplate(){const d=new Date();return`1]내근\n-업무 내용:\n\n2]외근 (시간)\n-담당자 협의\n .내용\n\n사무실-\n예정사항: `;}
+function insertSiteToWJ(name){const ta=$('wj-c');const pos=ta.selectionStart;const v=ta.value;ta.value=v.slice(0,pos)+name+v.slice(pos);ta.selectionStart=ta.selectionEnd=pos+name.length;ta.focus();}
+async function addWJ(){
+  const c=$('wj-c').value.trim();if(!c)return;
+  const date=$('wj-d').value||td();
+  const preview=c.split('\n').find(l=>l.trim()&&l.trim().length>2)||c.slice(0,30);
+  const w={id:Date.now(),date,content:c,preview:preview.trim().slice(0,38)};
+  workJournals.push(w);selWJ=w.id;
+  cm('wjModal');renderSL();renderWJPage();
+  toast('업무일지 저장됨 — AI 분석 시작...');
+  await runAIExtract(c,curSite);
+}
+function renderWJPage(){
+  $('tabBar').innerHTML='';
+  if(workJournals.length&&!selWJ)selWJ=workJournals[workJournals.length-1].id;
+  const sel=workJournals.find(w=>w.id===selWJ);
+  const list=`<div style="padding:7px;border-bottom:1px solid var(--bd)"><button style="width:100%;padding:6px;background:${hasWJToday()?'rgba(61,127,255,0.1)':'rgba(255,77,77,0.1)'};border:1px dashed ${hasWJToday()?'rgba(61,127,255,0.4)':'rgba(255,77,77,0.4)'};border-radius:6px;color:${hasWJToday()?'var(--ac)':'var(--da)'};font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif" onclick="openWJModal()">${hasWJToday()?'+ 업무일지 작성':'🚨 오늘 업무일지 미작성 — 작성하기'}</button></div>${workJournals.slice().reverse().map(w=>`<div class="wjli ${w.id===selWJ?'active':''}" onclick="selWJ=${w.id};renderWJPage()"><div style="font-size:12px;font-weight:500">${w.date}${w.date===td()?' <span style=\'color:var(--gr);font-size:9px\'>오늘</span>':''}</div><div style="font-size:10px;color:var(--tx2);margin-top:1px">${w.preview||''}</div></div>`).join('')||'<div style="padding:14px;text-align:center;color:var(--tx2);font-size:11px">업무일지 없음</div>'}`;
+  const viewer=sel?renderWJDoc(sel):`<div style="display:flex;align-items:center;justify-content:center;flex:1;color:var(--tx2)">업무일지 선택 또는 작성</div>`;
+  $('mainContent').innerHTML=`<div style="height:calc(100vh - 100px);display:grid;grid-template-columns:185px 1fr;overflow:hidden;border:1px solid var(--bd);border-radius:10px;background:var(--bg2)"><div style="overflow-y:auto;border-right:1px solid var(--bd)">${list}</div><div style="overflow-y:auto;padding:18px">${viewer}</div></div>`;
+}
+function renderWJDoc(w){
+  const lines=w.content.split('\n');let html=`<div class="wjdoc"><div class="wjhdr">📅 ${w.date} 업무일지</div>`;
+  let cs='',ci='',cc=[];
+  const fI=()=>{if(ci){html+=`<div style="margin-bottom:9px"><div class="wjit">${ci}</div>${cc.length?`<div class="wjic">${cc.join('\n')}</div>`:''}</div>`;cc=[];}};
+  const fS=()=>{if(cs){html+='</div>';cs='';}};
+  lines.forEach(line=>{const t=line.trim();if(!t)return;if(/^\d+\]/.test(t)){fI();if(cs)fS();html+=`<div class="wjsec"><div class="wjsect">${t}</div>`;cs=t;ci='';}else if(t.startsWith('-')){fI();ci=t.slice(1).trim();}else if(t.startsWith('.')||t.startsWith(';')){cc.push('  '+t);}else if(t.includes('-')&&!t.startsWith('-')&&t.split('-').length===2){fI();html+=`<div class="wjro">🚗 ${t}</div>`;}else if(t.startsWith('예정사항')){fI();html+=`<div class="wjnx">⏭ ${t}</div>`;}else{cc.push(t);}});
+  fI();fS();
+  html+=`<div class="mdact"><button class="dbtn dai" onclick="runAIExtract(workJournals.find(w=>w.id==${w.id})?.content||'',${curSite})">🤖 이슈/액션 재추출</button><button class="dbtn ddel" onclick="delWJ(${w.id})">삭제</button></div></div>`;
+  return html;
+}
+function delWJ(id){if(!confirm('삭제?'))return;workJournals=workJournals.filter(w=>w.id!==id);selWJ=workJournals.length?workJournals[workJournals.length-1].id:null;renderSL();renderWJPage();}
+
+// ── 영업 파이프라인 ──
+function renderPipe(){
+  $('tabBar').innerHTML='';
+  const cols=PIPE_STAGES.map((stage,i)=>{const cards=pipeline.filter(p=>p.stage===i).map(p=>`<div class="pcard"><div class="pcn">${p.name}</div><div class="pcm">${p.client}</div>${p.amount>0?`<div style="font-size:10px;color:var(--ac);margin-top:3px;font-family:JetBrains Mono">${(p.amount/10000).toFixed(0)}만원</div>`:''}<div style="display:flex;gap:5px;margin-top:7px;flex-wrap:wrap">${i>0?`<span style="font-size:10px;color:var(--tx2);cursor:pointer" onclick="mvP(${p.id},-1)">←</span>`:''} ${i<4?`<span style="font-size:10px;color:var(--ac);cursor:pointer" onclick="mvP(${p.id},1)">→</span>`:''} ${i===4?`<span style="font-size:10px;color:var(--gr);cursor:pointer" onclick="convP(${p.id})">PM전환</span>`:''}<span style="font-size:10px;color:var(--da);cursor:pointer;margin-left:auto" onclick="delP2(${p.id})">삭제</span></div></div>`).join('');return`<div class="pcol"><div class="pcolt">${stage} <span style="color:var(--tx3)">${pipeline.filter(p=>p.stage===i).length}</span></div>${cards}<button class="padd2" onclick="openPM(${i})">+ 추가</button></div>`;}).join('');
+  $('mainContent').innerHTML=`<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between"><div><h2 style="font-size:16px;font-weight:700">영업 파이프라인</h2><p style="font-size:11px;color:var(--tx2);margin-top:2px">예상 계약금액 합계: ${(pipeline.reduce((a,p)=>a+p.amount,0)/10000).toFixed(0)}만원</p></div><button onclick="om('pipeModal')" style="padding:7px 12px;background:var(--ac);border:none;border-radius:7px;color:#fff;font-size:12px;cursor:pointer;font-family:Noto Sans KR,sans-serif">+ 현장 추가</button></div><div style="overflow-x:auto"><div class="pcols">${cols}</div></div>`;
+}
+function openPM(s){$('pi-s').value=s;om('pipeModal');}
+function addPipe(){const n=$('pi-n').value.trim();if(!n)return;pipeline.push({id:Date.now(),name:n,client:$('pi-c').value,addr:$('pi-a').value,stage:parseInt($('pi-s').value)||0,amount:parseInt($('pi-am').value)||0,note:$('pi-no').value});cm('pipeModal');renderPipe();}
+function mvP(id,dir){pipeline.find(x=>x.id===id).stage=Math.max(0,Math.min(4,pipeline.find(x=>x.id===id).stage+dir));renderPipe();}
+function delP2(id){if(!confirm('삭제?'))return;pipeline=pipeline.filter(p=>p.id!==id);renderPipe();}
+function convP(id){const p=pipeline.find(x=>x.id===id);if(!confirm(`"${p.name}"을 PM 현장으로 전환할까요?`))return;sites.push({id:Date.now(),name:p.name,addr:p.addr,products:'',client:p.client,stage:0,qty:{},issues:[],actions:[],minutes:[],memos:[],photos:[],calc:[],workorders:[],docs:[],files:[],schedule:[],excelHistory:[],excelHtml:'',excelChanges:{}});pipeline=pipeline.filter(x=>x.id!==id);toast(p.name+' PM 전환 완료 ✓');renderSL();renderPipe();}
+
+// ── 캘린더 ──
+function renderCal(){
+  $('tabBar').innerHTML='';
+  const today_d=new Date();const fD=new Date(calY,calM,1).getDay();const dim=new Date(calY,calM+1,0).getDate();
+  const allEv=sites.flatMap(s=>(s.schedule||[]).map(e=>({...e,site:s.name})));
+  const mn=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  let cells='';let day=1-fD;
+  for(let r=0;r<6;r++){if(day>dim)break;for(let c=0;c<7;c++,day++){if(day<1||day>dim){cells+=`<div class="calc om"></div>`;continue;}const ds=`${calY}-${String(calM+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;const isTd=day===today_d.getDate()&&calM===today_d.getMonth()&&calY===today_d.getFullYear();const evs=allEv.filter(e=>e.date===ds).map(e=>`<div class="calev">${e.site.slice(0,3)} ${e.title}</div>`).join('');const wjEvs=workJournals.filter(w=>w.date===ds).map(()=>`<div class="calev" style="background:rgba(167,139,250,0.2);color:var(--pu)">📝일지</div>`).join('');cells+=`<div class="calc ${isTd?'today':''}"><div class="cald" style="${isTd?'color:var(--ac);font-weight:700':''}">${day}</div>${evs}${wjEvs}</div>`;}}
+  $('mainContent').innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h2 style="font-size:16px;font-weight:700">공정 캘린더</h2><div style="display:flex;align-items:center;gap:10px"><button onclick="calM--;if(calM<0){calM=11;calY--;}renderCal()" style="padding:4px 9px;background:var(--bg2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);cursor:pointer">‹</button><span style="font-size:14px;font-weight:500">${calY}년 ${mn[calM]}</span><button onclick="calM++;if(calM>11){calM=0;calY++;}renderCal()" style="padding:4px 9px;background:var(--bg2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);cursor:pointer">›</button></div></div><div class="card" style="padding:10px"><div class="calgrid">${['일','월','화','수','목','금','토'].map(d=>`<div class="calh">${d}</div>`).join('')}${cells}</div></div>`;
+}
+
+// ── 현장 추가 ──
+function addSite(){const n=$('ns-n').value.trim();if(!n)return;const s={id:Date.now(),name:n,addr:$('ns-a').value,products:$('ns-p').value,client:$('ns-c').value,stage:parseInt($('ns-s').value)||0,qty:{},issues:[],actions:[],minutes:[],memos:[],photos:[],calc:[],workorders:[],docs:[],files:[],schedule:[],excelHistory:[],excelHtml:'',excelChanges:{}};sites.push(s);cm('addSite');renderSL();selSite(s.id);}
+
+init();
+</script>
+</body>
+</html>
