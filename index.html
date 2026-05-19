@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>한국마이크로닉 현장관리 v5.2</title>
+<title>한국마이크로닉 현장관리 v5.3</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -233,7 +233,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 <div class="hdr">
   <div class="logo">
     <div class="lm">KM</div>
-    <div><div class="ln">한국마이크로닉</div><div class="ls">현장관리 v5.2 — 현장대화+회사협의</div></div>
+    <div><div class="ln">한국마이크로닉</div><div class="ls">현장관리 v5.3 — 다중선택+캘린더</div></div>
   </div>
   <div class="hbtns">
     <span class="hdate" id="todayDate"></span>
@@ -954,11 +954,62 @@ async function addMin(){
   }
 }
 
-// ── 미결이슈+후속조치 통합 (2패널) ──
-let issSelId=null,issSelType=null;
+// ── 미결이슈+후속조치 통합 (2패널 + 다중선택) ──
+let issSelId=null,issSelType=null,issChecked=new Set();
+
+function toggleIssCheck(id,type,el){
+  const key=id+':'+type;
+  if(issChecked.has(key))issChecked.delete(key);
+  else issChecked.add(key);
+  updateIssBulkBar();
+}
+function clearIssCheck(){issChecked.clear();document.querySelectorAll('.iss-cb').forEach(cb=>cb.checked=false);updateIssBulkBar();}
+function updateIssBulkBar(){
+  const bar=document.getElementById('issBulkBar');
+  if(!bar)return;
+  if(issChecked.size>0){bar.style.display='block';const cnt=bar.querySelector('.bulk-cnt');if(cnt)cnt.textContent=issChecked.size+'개 선택';}
+  else{bar.style.display='none';}
+}
+
+function genBulkMsg(sid,method){
+  const site=sites.find(s=>s.id===sid);
+  if(!issChecked.size){toast('항목을 선택하세요');return;}
+  const items=[];
+  issChecked.forEach(key=>{
+    const [id,type]=key.split(':');
+    const item=type==='issue'?site.issues.find(i=>i.id==id):site.actions.find(a=>a.id==id);
+    if(item)items.push({...item,_type:type});
+  });
+  items.sort((a,b)=>{const ord={danger:0,warn:1,low:2};return(ord[a.priority]||2)-(ord[b.priority]||2);});
+  const lines=items.map((item,i)=>{
+    const tag=item._type==='issue'?'⚠️ [이슈]':'✅ [액션]';
+    const due=item.due?` / 기한: ${item.due}`:'';
+    return`${i+1}. ${tag} ${item.title}
+   담당: ${item.owner||'미정'}${due}`;
+  }).join('
+
+');
+  const msg=`[${site.name}] 확인 요청
+
+안녕하세요, 배성윤입니다.
+아래 사항들 확인 부탁드립니다.
+
+${lines}
+
+감사합니다.`;
+  if(method==='kakao'||method==='sms'){
+    $('kakaoText').value=msg;
+    $('kakaoTo').textContent=`${items.length}건 선택`;
+    om('kakaoModal');
+  } else {
+    $('kakaoText').value=msg;
+    $('kakaoTo').textContent=`[메일용] ${items.length}건 선택`;
+    om('kakaoModal');
+  }
+}
+
 function renderIssues(site){
   autoEscalate();
-  // 전체 아이템 - minuteId 기준 그룹핑
   const allIss=site.issues.map(i=>({...i,_type:'issue'}));
   const allAct=site.actions.map(a=>({...a,_type:'action'}));
   const all=[...allIss,...allAct];
@@ -976,11 +1027,16 @@ function renderIssues(site){
         const isIss=item._type==='issue';
         const col=isIss?(PC[item.priority]||'var(--tx3)'):'var(--gr)';
         const sel=(issSelId===item.id&&issSelType===item._type);
-        return`<div class="ig-item ${sel?'sel':''}" id="igi_${item._type}_${item.id}" onclick="showIssDetail(${site.id},${item.id},'${item._type}')">
-          <div class="dot" style="background:${col};margin-top:4px;${item.done?'opacity:0.3':''}"></div>
-          <div style="flex:1;min-width:0">
+        const chkKey=item.id+':'+item._type;
+        return`<div class="ig-item ${sel?'sel':''}" id="igi_${item._type}_${item.id}">
+          <input type="checkbox" class="iss-cb" ${issChecked.has(chkKey)?'checked':''}
+            style="width:14px;height:14px;flex-shrink:0;margin-top:3px;cursor:pointer;accent-color:var(--ac)"
+            onclick="event.stopPropagation();toggleIssCheck(${item.id},'${item._type}',this)">
+          <div class="dot" style="background:${col};margin-top:5px;${item.done?'opacity:0.3':''}"></div>
+          <div style="flex:1;min-width:0;cursor:pointer" onclick="showIssDetail(${site.id},${item.id},'${item._type}')">
             <div style="font-size:11px;${item.done?'text-decoration:line-through;color:var(--tx3)':''}">
               ${item._autoEscalated?'🔺 ':''}${item.title}
+              ${item.minuteId?'<span class="src-tag">📋</span>':''}
             </div>
             <div style="font-size:10px;color:var(--tx2)">${item.owner||'미정'} ${item.due?dday(item.due):''}</div>
           </div>
@@ -991,7 +1047,7 @@ function renderIssues(site){
   });
   if(!listHTML)listHTML='<div style="padding:18px;text-align:center;color:var(--tx2)">이슈/액션 없음 ✓</div>';
 
-  const detailHTML=issSelId?getIssDetail(site,issSelId,issSelType):`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--tx2);font-size:12px;gap:8px"><span style="font-size:28px">←</span>목록에서 항목을 선택하세요</div>`;
+  const detailHTML=issSelId?getIssDetail(site,issSelId,issSelType):`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--tx2);font-size:12px;gap:8px"><span style="font-size:28px">←</span>항목 클릭 → 상세<br><br><span style="font-size:11px;color:var(--tx3)">체크박스로 여러 개 선택<br>→ 카카오/메일 한번에 전송</span></div>`;
 
   const openCnt=site.issues.filter(i=>!i.done).length;
   const overAct=site.actions.filter(a=>!a.done&&a.due&&new Date(a.due)<new Date()).length;
@@ -999,19 +1055,31 @@ function renderIssues(site){
   const result=`<div class="card" style="margin-bottom:0"><div class="chdr">
     <span class="ctit">미결이슈+후속조치 <span style="color:var(--da)">${openCnt}</span>${overAct>0?` <span style="color:var(--wa);font-size:10px">기한초과 ${overAct}</span>`:''}</span>
     <div style="display:flex;gap:5px">
-      <button class="cbtn" onclick="genKakaoFromActions(${site.id})">📱 카카오</button>
       <button class="cbtn" onclick="om('actModal')">+ 액션</button>
       <button class="cbtn" onclick="om('issModal')">+ 이슈</button>
     </div>
   </div>
   <div id="issCont" style="display:flex;height:calc(100vh - 215px);overflow:hidden">
-    <div id="issList" style="width:260px;min-width:160px;overflow-y:auto;border-right:1px solid var(--bd);flex-shrink:0">${listHTML}</div>
+    <div id="issList" style="width:260px;min-width:160px;overflow-y:auto;border-right:1px solid var(--bd);flex-shrink:0;position:relative">
+      ${listHTML}
+      <div id="issBulkBar" style="display:${issChecked.size>0?'block':'none'};position:sticky;bottom:0;background:var(--bg2);border-top:2px solid var(--ac);padding:8px 10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span class="bulk-cnt" style="font-size:11px;font-weight:500;color:var(--ac)">${issChecked.size}개 선택</span>
+          <span style="font-size:10px;color:var(--tx2);cursor:pointer" onclick="clearIssCheck()">선택해제</span>
+        </div>
+        <div style="display:flex;gap:5px">
+          <button onclick="genBulkMsg(${site.id},'kakao')" style="flex:1;padding:5px;background:rgba(245,166,35,0.15);border:1px solid var(--wa);border-radius:5px;color:var(--wa);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif">📱 카카오</button>
+          <button onclick="genBulkMsg(${site.id},'mail')" style="flex:1;padding:5px;background:rgba(61,127,255,0.1);border:1px solid var(--ac);border-radius:5px;color:var(--ac);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif">📧 메일</button>
+        </div>
+      </div>
+    </div>
     <div class="dh" id="dhIss"></div>
     <div id="issDetail" style="flex:1;overflow-y:auto;padding:18px;background:var(--bg3)">${detailHTML}</div>
   </div></div>`;
   setTimeout(()=>{const dh=$('dhIss'),list=$('issList');if(dh&&list)initDH(dh,list,'right');},50);
   return result;
 }
+
 function getIssDetail(site,id,type){
   const item=type==='issue'?site.issues.find(i=>i.id===id):site.actions.find(a=>a.id===id);
   if(!item)return'';
@@ -1249,7 +1317,11 @@ function delP2(id){if(!confirm('삭제?'))return;pipeline=pipeline.filter(p=>p.i
 function convP(id){const p=pipeline.find(x=>x.id===id);if(!confirm(`"${p.name}"을 PM 현장으로 전환할까요?`))return;sites.push({id:Date.now(),name:p.name,addr:p.addr,products:'',client:p.client,stage:0,qty:{},issues:[],actions:[],minutes:[],memos:[],photos:[],calc:[],workorders:[],docs:[],files:[],schedule:[],excelHistory:[],excelHtml:'',excelChanges:{},fieldTalks:[],compComms:[]});pipeline=pipeline.filter(x=>x.id!==id);toast(p.name+' PM 전환 완료 ✓');renderSL();renderPipe();}
 
 // ── 캘린더 ──
-function renderCal(){$('tabBar').innerHTML='';const today_d=new Date();const fD=new Date(calY,calM,1).getDay();const dim=new Date(calY,calM+1,0).getDate();const allEv=sites.flatMap(s=>(s.schedule||[]).map(e=>({...e,site:s.name})));const mn=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];let cells='';let day=1-fD;for(let r=0;r<6;r++){if(day>dim)break;for(let c=0;c<7;c++,day++){if(day<1||day>dim){cells+=`<div class="calc om"></div>`;continue;}const ds=`${calY}-${String(calM+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;const isTd=day===today_d.getDate()&&calM===today_d.getMonth()&&calY===today_d.getFullYear();const evs=allEv.filter(e=>e.date===ds).map(e=>`<div class="calev">${e.site.slice(0,3)} ${e.title}</div>`).join('');const wjEvs=workJournals.filter(w=>w.date===ds).map(()=>`<div class="calev" style="background:rgba(167,139,250,0.2);color:var(--pu)">📝일지</div>`).join('');cells+=`<div class="calc ${isTd?'today':''}"><div class="cald" style="${isTd?'color:var(--ac);font-weight:700':''}">${day}</div>${evs}${wjEvs}</div>`;}}$('mainContent').innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h2 style="font-size:16px;font-weight:700">공정 캘린더</h2><div style="display:flex;align-items:center;gap:10px"><button onclick="calM--;if(calM<0){calM=11;calY--;}renderCal()" style="padding:4px 9px;background:var(--bg2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);cursor:pointer">‹</button><span style="font-size:14px;font-weight:500">${calY}년 ${mn[calM]}</span><button onclick="calM++;if(calM>11){calM=0;calY++;}renderCal()" style="padding:4px 9px;background:var(--bg2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);cursor:pointer">›</button></div></div><div class="card" style="padding:10px"><div class="calgrid">${['일','월','화','수','목','금','토'].map(d=>`<div class="calh">${d}</div>`).join('')}${cells}</div></div>`;}
+function renderCal(){$('tabBar').innerHTML='';const today_d=new Date();const fD=new Date(calY,calM,1).getDay();const dim=new Date(calY,calM+1,0).getDate();const allEv=sites.flatMap(s=>(s.schedule||[]).map(e=>({...e,site:s.name})));const mn=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];let cells='';let day=1-fD;for(let r=0;r<6;r++){if(day>dim)break;for(let c=0;c<7;c++,day++){if(day<1||day>dim){cells+=`<div class="calc om"></div>`;continue;}const ds=`${calY}-${String(calM+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;const isTd=day===today_d.getDate()&&calM===today_d.getMonth()&&calY===today_d.getFullYear();const evs=allEv.filter(e=>e.date===ds).map(e=>`<div class="calev">${e.site.slice(0,3)} ${e.title}</div>`).join('');
+        const wjEvs=workJournals.filter(w=>w.date===ds).map(()=>`<div class="calev" style="background:rgba(167,139,250,0.2);color:var(--pu)">📝일지</div>`).join('');
+        const issEvs=sites.flatMap(s=>s.issues.filter(i=>!i.done&&i.due===ds).map(i=>`<div class="calev" style="background:rgba(255,77,77,0.15);color:var(--da);cursor:pointer" onclick="selSite(${s.id});swTab('미결이슈')" title="${i.title}">⚠️${s.name.slice(0,3)} ${i.title.slice(0,7)}</div>`)).join('');
+        const actEvs=sites.flatMap(s=>s.actions.filter(a=>!a.done&&a.due===ds).map(a=>`<div class="calev" style="background:rgba(0,200,150,0.12);color:var(--gr);cursor:pointer" onclick="selSite(${s.id});swTab('미결이슈')" title="${a.title}">✅${s.name.slice(0,3)} ${a.title.slice(0,7)}</div>`)).join('');
+        cells+=`<div class="calc ${isTd?'today':''}"><div class="cald" style="${isTd?'color:var(--ac);font-weight:700':''}">${day}</div>${evs}${wjEvs}${issEvs}${actEvs}</div>`;}}$('mainContent').innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h2 style="font-size:16px;font-weight:700">공정 캘린더</h2><div style="display:flex;align-items:center;gap:10px"><button onclick="calM--;if(calM<0){calM=11;calY--;}renderCal()" style="padding:4px 9px;background:var(--bg2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);cursor:pointer">‹</button><span style="font-size:14px;font-weight:500">${calY}년 ${mn[calM]}</span><button onclick="calM++;if(calM>11){calM=0;calY++;}renderCal()" style="padding:4px 9px;background:var(--bg2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);cursor:pointer">›</button></div></div><div class="card" style="padding:10px"><div class="calgrid">${['일','월','화','수','목','금','토'].map(d=>`<div class="calh">${d}</div>`).join('')}${cells}</div></div>`;}
 
 // ── 회사협의 탭 ──
 const CC_DEPTS=['설계팀','시공팀','영업팀','제작팀','개발팀','AS팀','총무팀'];
