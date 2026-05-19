@@ -204,6 +204,24 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 .ai-extract-item input[type=checkbox]{width:16px;height:16px;margin-top:2px;flex-shrink:0;cursor:pointer;}
 .ai-extract-text{font-size:12px;flex:1;}
 .ai-extract-sub{font-size:10px;color:var(--tx2);margin-top:2px;}
+.dh{width:5px;background:var(--bd);cursor:col-resize;flex-shrink:0;transition:background 0.15s;user-select:none;-webkit-user-select:none;}
+.dh:hover,.dh.dragging{background:var(--ac);}
+.ap-sec{border-bottom:1px solid var(--bd);padding:8px 11px;}
+.ap-sect{font-size:10px;font-weight:500;color:var(--tx2);margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;}
+.ap-item{display:flex;gap:7px;align-items:flex-start;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.ap-item:last-child{border-bottom:none;}
+.ap-cb{width:15px;height:15px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--ac);}
+.ap-txt{font-size:11px;flex:1;line-height:1.5;}
+.ap-sub{font-size:10px;color:var(--tx2);margin-top:2px;}
+.ap-del{font-size:10px;color:var(--da);cursor:pointer;padding:0 3px;flex-shrink:0;}
+.ap-add{width:100%;padding:5px;background:transparent;border:1px dashed var(--bd);border-radius:5px;color:var(--tx3);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif;margin-top:5px;}
+.ig-hdr{font-size:10px;color:var(--tx2);font-weight:500;padding:7px 11px 4px;display:flex;align-items:center;gap:5px;cursor:pointer;}
+.ig-item{display:flex;gap:7px;align-items:flex-start;padding:6px 11px;cursor:pointer;transition:background 0.1s;}
+.ig-item:hover{background:var(--bg3);}
+.ig-item.sel{background:rgba(61,127,255,0.12);border-left:2px solid var(--ac);}
+.dept-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--bd);border-radius:5px;font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif;color:var(--tx2);}
+.dept-btn:has(input:checked){background:rgba(61,127,255,0.15);border-color:var(--ac);color:var(--ac);}
+.dept-btn input{display:none;}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--bd);color:var(--tx);padding:8px 16px;border-radius:7px;font-size:12px;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
 .ai-loading{display:flex;align-items:center;gap:8px;padding:12px;color:var(--tx2);font-size:12px;}
 .spin{width:16px;height:16px;border:2px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:spin 0.8s linear infinite;}
@@ -358,12 +376,53 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
   <div class="mbtns"><button class="bok" onclick="addCalc()">추가</button><button class="bca" onclick="cm('calcModal')">취소</button></div>
 </div></div>
 
-<!-- 모달: 작업의뢰서 -->
-<div class="overlay" id="woModal"><div class="modal"><div class="mtitle">작업의뢰서 작성</div>
-  <input id="wo-t" placeholder="작업 제목"/>
-  <select id="wo-d"><option>설계팀</option><option>개발팀</option><option>시공팀</option><option>구매팀</option></select>
-  <input id="wo-dl" placeholder="완료 기한"/>
-  <textarea id="wo-c" placeholder="작업 내용 상세" rows="5"></textarea>
+<!-- 모달: 작업의뢰서 (서식 MB-004) -->
+<div class="overlay" id="woModal"><div class="modal" style="max-width:900px;width:96%">
+  <div class="mtitle">작 업 의 뢰 서 <span style="font-size:10px;color:var(--tx3);font-weight:400">양식 MB-004</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+    <div><label style="font-size:10px;color:var(--tx2)">■ 기안일자</label><input id="wo-date" type="date"/></div>
+    <div><label style="font-size:10px;color:var(--tx2)">■ 납기일</label><input id="wo-due" type="date"/></div>
+    <div><label style="font-size:10px;color:var(--tx2)">업체명</label><input id="wo-co" placeholder="발주처/업체명"/></div>
+    <div><label style="font-size:10px;color:var(--tx2)">현장명</label><input id="wo-site" placeholder="현장명"/></div>
+    <div><label style="font-size:10px;color:var(--tx2)">객실수</label><input id="wo-rooms" placeholder="객실수" type="number"/></div>
+    <div><label style="font-size:10px;color:var(--tx2)">업체담당자/연락처</label><input id="wo-contact" placeholder="이름 / 연락처"/></div>
+  </div>
+  <label style="font-size:10px;color:var(--tx2);display:block;margin-top:5px;margin-bottom:3px">구분</label>
+  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px">
+    <label class="dept-btn"><input type="radio" name="wo-type" value="선투입자재"> 선투입자재</label>
+    <label class="dept-btn"><input type="radio" name="wo-type" value="목업룸"> 목업룸</label>
+    <label class="dept-btn"><input type="radio" name="wo-type" value="계약전"> 계약 전</label>
+    <label class="dept-btn"><input type="radio" name="wo-type" value="계약"> 계약</label>
+    <label class="dept-btn"><input type="radio" name="wo-type" value="기타"> 기타</label>
+  </div>
+  <label style="font-size:10px;color:var(--tx2);display:block;margin-bottom:3px">수신부서 (복수선택)</label>
+  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px">
+    <label class="dept-btn"><input type="checkbox" name="wo-dept" value="영업"> 영업</label>
+    <label class="dept-btn"><input type="checkbox" name="wo-dept" value="디자인&설계"> 디자인&설계</label>
+    <label class="dept-btn"><input type="checkbox" name="wo-dept" value="개발"> 개발</label>
+    <label class="dept-btn"><input type="checkbox" name="wo-dept" value="구매"> 구매</label>
+    <label class="dept-btn"><input type="checkbox" name="wo-dept" value="제작"> 제작</label>
+    <label class="dept-btn"><input type="checkbox" name="wo-dept" value="시공"> 시공</label>
+    <label class="dept-btn"><input type="checkbox" name="wo-dept" value="고객지원"> 고객지원</label>
+  </div>
+  <label style="font-size:10px;color:var(--tx2);display:block;margin-bottom:3px">납품방법</label>
+  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px">
+    <label class="dept-btn"><input type="radio" name="wo-deliver" value="직납"> 직납</label>
+    <label class="dept-btn"><input type="radio" name="wo-deliver" value="택배"> 택배</label>
+    <label class="dept-btn"><input type="radio" name="wo-deliver" value="화물"> 화물</label>
+  </div>
+  <label style="font-size:10px;color:var(--tx2);display:block;margin-bottom:3px">세금계산서</label>
+  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px">
+    <label class="dept-btn"><input type="radio" name="wo-tax" value="선발행"> 선발행</label>
+    <label class="dept-btn"><input type="radio" name="wo-tax" value="후발행"> 후발행</label>
+    <label class="dept-btn"><input type="radio" name="wo-tax" value="미발행"> 미발행</label>
+  </div>
+  <label style="font-size:10px;color:var(--tx2);display:block;margin-bottom:3px">배송지주소</label>
+  <input id="wo-addr" placeholder="배송지 주소"/>
+  <label style="font-size:10px;color:var(--tx2);display:block;margin-bottom:3px">작업 제목</label>
+  <input id="wo-t" placeholder="작업 제목 (간단하게)"/>
+  <label style="font-size:10px;color:var(--tx2);display:block;margin-bottom:3px">작업 의뢰 내용</label>
+  <textarea id="wo-c" placeholder="구체적인 작업 내용 기재" rows="6"></textarea>
   <div class="mbtns"><button class="bok" onclick="genWO()">작성</button><button class="bca" onclick="cm('woModal')">취소</button></div>
 </div></div>
 
@@ -464,9 +523,29 @@ function calcRem(site){if(!site.calc)return 0;let t=0,c=0;site.calc.forEach(x=>{
 function toggleEdit(){editMode=!editMode;const b=$('editBtn');if(editMode){b.style.background='var(--wa)';b.style.color='#000';b.textContent='✏️ 수정중 (클릭=완료)';}else{b.style.background='var(--bg3)';b.style.border='1px solid var(--bd)';b.style.color='var(--tx2)';b.textContent='✏️ 수정모드';}toast(editMode?'수정모드 ON':'수정모드 OFF (보기전용)');}
 
 // ── 초기화 ──
+// ★ 드래그 핸들 전역 상태
+let dhState=null;
+document.addEventListener('mousemove',e=>{
+  if(!dhState)return;
+  const delta=e.clientX-dhState.startX;
+  if(dhState.dir==='right'){
+    const nw=Math.max(120,Math.min(400,dhState.startW+delta));
+    dhState.el.style.width=nw+'px';
+  } else {
+    const nw=Math.max(180,Math.min(600,dhState.startW-delta));
+    dhState.el.style.width=nw+'px';
+  }
+});
+document.addEventListener('mouseup',()=>{if(dhState){dhState.dh.classList.remove('dragging');dhState=null;}});
+function initDH(dhEl,targetEl,dir){
+  dhEl.addEventListener('mousedown',e=>{
+    dhState={dh:dhEl,el:targetEl,startX:e.clientX,startW:targetEl.offsetWidth,dir};
+    dhEl.classList.add('dragging');
+    e.preventDefault();
+  });
+}
 function init(){
   $('todayDate').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'});
-  // ★ API키 버튼 색상 초기화
   if(apiKey){const btn=$('apiKeyBtn');if(btn)btn.style.color='var(--gr)';}
   loadCloud();
 }
@@ -596,6 +675,29 @@ async function callClaude(prompt){
   return data.content?.[0]?.text||'';
 }
 
+// ★ 회의록 단일 호출 전체 분류 (확정/이슈/액션/전달)
+async function extractMinuteCategories(content){
+  const prompt=`다음 회의록에서 항목을 분류해서 JSON으로만 응답하세요. 다른 텍스트 없이.
+형식:
+{
+  "decisions": [{"content":"확정사항 내용"}],
+  "issues": [{"title":"이슈 제목","owner":"담당자","due":"YYYY-MM-DD 또는 빈문자열","priority":"danger|warn|low"}],
+  "actions": [{"title":"후속조치 내용","owner":"담당자","due":"YYYY-MM-DD 또는 빈문자열"}],
+  "transfers": [{"dept":"전달 대상 부서/담당자","content":"전달 내용"}]
+}
+우선순위: danger=긴급, warn=보통, low=낮음. due 없으면 빈 문자열.
+decisions: 회의에서 확정된 사항만
+transfers: 각 업체/부서에 전달해야 할 내용
+
+회의록:
+${content}`;
+  try{
+    const raw=await callClaude(prompt);
+    const clean=raw.replace(/\`\`\`json|\`\`\`/g,'').trim();
+    return JSON.parse(clean);
+  }catch(e){return {decisions:[],issues:[],actions:[],transfers:[]};}
+}
+
 async function extractFromContent(content,type,sid){
   let prompt='';
   if(type==='issues'){
@@ -670,66 +772,279 @@ async function runAIExtract(content,sid,minId=null){
   }
 }
 
-// ── 회의록 ──
+// ── ★ 회의록 ③ 패널 함수들 ──
+function renderMinPanel(site,min){
+  if(!min)return'<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--tx2);font-size:12px">회의록을 선택하세요</div>';
+  const pd=min.panelData;
+  if(!pd||!pd.loaded)return`<div style="padding:20px;text-align:center"><div style="color:var(--tx2);font-size:12px;margin-bottom:12px">AI 분석 전입니다</div><button onclick="runMinAI(${site.id},${min.id})" style="padding:8px 16px;background:rgba(167,139,250,0.15);border:1px solid var(--pu);border-radius:7px;color:var(--pu);font-size:12px;cursor:pointer;font-family:Noto Sans KR,sans-serif">🤖 AI 분석 시작</button></div>`;
+  const sec=(title,color,items,type)=>{
+    if(!items||!items.length)return'';
+    const rows=items.map((item,i)=>`<div class="ap-item">
+      <input class="ap-cb" type="checkbox" id="ap_${type}_${i}" checked>
+      <div class="ap-txt"><label for="ap_${type}_${i}" style="cursor:pointer">${item.content||item.title||''}</label>
+      ${(item.owner||item.due||item.dept)?`<div class="ap-sub">${item.dept?'→ '+item.dept:''} ${item.owner?'담당: '+item.owner:''} ${item.due?'/ 기한: '+item.due:''}</div>`:''}</div>
+      <span class="ap-del" onclick="delPanelItem('${type}',${i},${min.id},${site.id})">✕</span>
+    </div>`).join('');
+    return`<div class="ap-sec"><div class="ap-sect"><span style="color:${color}">${title} <span style="color:var(--tx3);font-weight:400">${items.length}건</span></span></div>${rows}</div>`;
+  };
+  return`<div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+    <div style="padding:8px 11px;border-bottom:1px solid var(--bd);display:flex;gap:5px;flex-shrink:0">
+      <button onclick="applyMinPanel(${site.id},${min.id})" style="flex:1;padding:6px;background:var(--gr);border:none;border-radius:6px;color:#000;font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif;font-weight:500">✅ 선택항목 등록</button>
+      <button onclick="runMinAI(${site.id},${min.id})" style="padding:6px 9px;background:rgba(167,139,250,0.1);border:1px solid var(--pu);border-radius:6px;color:var(--pu);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif">🔄 재분석</button>
+    </div>
+    <div style="overflow-y:auto;flex:1">
+      ${sec('✅ 확정사항','var(--gr)',pd.decisions,'dec')}
+      ${sec('⚠️ 미결이슈','var(--da)',pd.issues,'iss')}
+      ${sec('📋 후속조치','var(--ac)',pd.actions,'act')}
+      ${sec('📢 부서 전달사항','var(--pu)',pd.transfers,'trf')}
+      <div class="ap-sec">
+        <textarea id="apAddText" placeholder="② 원문에서 복사해서 여기에 붙여넣기" style="width:100%;background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:6px;color:var(--tx);font-size:11px;font-family:Noto Sans KR,sans-serif;resize:vertical;min-height:50px;outline:none;margin-bottom:5px;box-sizing:border-box"></textarea>
+        <div style="display:flex;gap:5px">
+          <select id="apAddType" style="flex:1;background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:5px;color:var(--tx);font-size:11px;font-family:Noto Sans KR,sans-serif">
+            <option value="dec">확정사항</option><option value="iss">미결이슈</option><option value="act">후속조치</option><option value="trf">부서전달</option>
+          </select>
+          <button onclick="addPanelItem(${min.id},${site.id})" style="padding:5px 10px;background:var(--ac);border:none;border-radius:5px;color:#fff;font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">추가</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function runMinAI(sid,minId){
+  const site=sites.find(s=>s.id===sid);const min=site.minutes.find(m=>m.id===minId);if(!min)return;
+  toast('AI 분석 중...');
+  try{const result=await extractMinuteCategories(min.content);min.panelData={...result,loaded:true};renderTab(curTab);toast('AI 분석 완료 ✓');}
+  catch(e){toast('AI 분석 오류: '+e.message);}
+}
+function delPanelItem(type,idx,minId,sid){
+  const site=sites.find(s=>s.id===sid);const min=site.minutes.find(m=>m.id===minId);if(!min||!min.panelData)return;
+  const map={dec:'decisions',iss:'issues',act:'actions',trf:'transfers'};
+  const arr=min.panelData[map[type]];if(arr)arr.splice(idx,1);renderTab(curTab);
+}
+function addPanelItem(minId,sid){
+  const site=sites.find(s=>s.id===sid);const min=site.minutes.find(m=>m.id===minId);if(!min)return;
+  const txt=$('apAddText')?.value.trim();if(!txt)return;
+  const type=$('apAddType')?.value||'act';
+  const map={dec:'decisions',iss:'issues',act:'actions',trf:'transfers'};
+  if(!min.panelData){min.panelData={decisions:[],issues:[],actions:[],transfers:[],loaded:true};}
+  const arr=min.panelData[map[type]];
+  if(type==='iss')arr.push({title:txt,owner:'',due:'',priority:'warn'});
+  else if(type==='act')arr.push({title:txt,owner:'',due:''});
+  else if(type==='trf')arr.push({dept:'',content:txt});
+  else arr.push({content:txt});
+  renderTab(curTab);
+}
+function applyMinPanel(sid,minId){
+  const site=sites.find(s=>s.id===sid);const min=site.minutes.find(m=>m.id===minId);if(!min||!min.panelData)return;
+  const pd=min.panelData;let added=0;
+  (pd.issues||[]).forEach((item,i)=>{const cb=$('ap_iss_'+i);if(!cb||!cb.checked)return;site.issues.push({id:Date.now()+i,title:item.title,priority:item.priority||'warn',owner:item.owner||'미정',due:item.due||'',done:false,minuteId:minId});added++;});
+  (pd.actions||[]).forEach((item,i)=>{const cb=$('ap_act_'+i);if(!cb||!cb.checked)return;site.actions.push({id:Date.now()+1000+i,title:item.title,owner:item.owner||'미정',due:item.due||'',done:false,minuteId:minId});added++;});
+  toast(added+'개 항목 등록됐습니다 ✓');autoEscalate();renderSL();renderTab(curTab);
+}
+
+// ── 회의록 (3패널: ①목록 / ②원문편집 / ③AI패널) ──
 function renderMins(site){
   if(site.minutes.length&&!selMin)selMin=site.minutes[0].id;
   const sel=site.minutes.find(m=>m.id===selMin)||site.minutes[0];
-  const list=`<div style="padding:7px;border-bottom:1px solid var(--bd)"><button style="width:100%;padding:5px;background:rgba(61,127,255,0.1);border:1px dashed rgba(61,127,255,0.4);border-radius:6px;color:var(--ac);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif" onclick="om('minModal')">+ 회의록 추가</button></div>${site.minutes.map(m=>{
-    // 이 회의록에서 생성된 이슈/액션 수
+
+  // ① 목록
+  const listHTML=`<div style="padding:7px;border-bottom:1px solid var(--bd)">
+    <button style="width:100%;padding:5px;background:rgba(61,127,255,0.1);border:1px dashed rgba(61,127,255,0.4);border-radius:6px;color:var(--ac);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif" onclick="om('minModal')">+ 회의록 추가</button>
+  </div>
+  ${site.minutes.map(m=>{
     const issCnt=site.issues.filter(i=>i.minuteId===m.id).length;
     const actCnt=site.actions.filter(a=>a.minuteId===m.id).length;
-    return`<div class="mll ${m.id===(sel&&sel.id)?'active':''}" onclick="selMin=${m.id};renderTab(curTab)"><div class="mlt">${m.title}</div><div class="mlm">${m.date} · ${m.type} <span style="padding:1px 4px;border-radius:5px;font-size:9px;background:${m.read?'rgba(0,200,150,0.1)':'rgba(245,166,35,0.1)'};color:${m.read?'var(--gr)':'var(--wa)'}">${m.read?'확인':'미확인'}</span></div>${(issCnt||actCnt)?`<div style="margin-top:3px;display:flex;gap:3px">${issCnt?`<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(255,77,77,0.1);color:var(--da)">이슈 ${issCnt}</span>`:''} ${actCnt?`<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(0,200,150,0.1);color:var(--gr)">액션 ${actCnt}</span>`:''}</div>`:''} ${(m.qtyLinked||[]).length?`<div class="qtag">✅ 수량표 ${m.qtyLinked.length}건 반영</div>`:''}</div>`;
+    return`<div class="mll ${m.id===(sel&&sel.id)?'active':''}" onclick="selMin=${m.id};renderTab(curTab)">
+      <div class="mlt">${m.title}</div>
+      <div class="mlm">${m.date} · ${m.type} <span style="padding:1px 4px;border-radius:5px;font-size:9px;background:${m.read?'rgba(0,200,150,0.1)':'rgba(245,166,35,0.1)'};color:${m.read?'var(--gr)':'var(--wa)'}">${m.read?'확인':'미확인'}</span></div>
+      ${(issCnt||actCnt)?`<div style="margin-top:3px;display:flex;gap:3px">${issCnt?`<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(255,77,77,0.1);color:var(--da)">이슈 ${issCnt}</span>`:''}${actCnt?`<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(0,200,150,0.1);color:var(--gr)">액션 ${actCnt}</span>`:''}</div>`:''}
+      ${(m.qtyLinked||[]).length?`<div class="qtag">✅ 수량 ${m.qtyLinked.length}건</div>`:''}
+    </div>`;
   }).join('')||'<div style="padding:14px;text-align:center;color:var(--tx2);font-size:11px">회의록 없음</div>'}`;
-  // ★ 패치 8: AI버튼에서 site 대신 sites 사용 + minId 전달
-  const viewer=sel?`<div class="mv"><div class="mdoc"><div class="mdtit">${sel.title}</div><div class="mdmeta">📅 ${sel.date} · ${sel.type} · <span style="color:${sel.read?'var(--gr)':'var(--wa)'}">${sel.read?'✓ 확인완료':'⚠ 미확인'}</span></div><div class="mdbody">${marked.parse(sel.content||'')}</div>${(sel.qtyLinked||[]).length?`<div style="margin-top:8px">${sel.qtyLinked.map(t=>`<div class="qtag">✅ ${t}</div>`).join('')}</div>`:''}<div class="mdact"><button class="dbtn ${sel.read?'ddel':'dok'}" onclick="toggleRead(${site.id},${sel.id})">${sel.read?'확인취소':'✓ 확인완료'}</button><button class="dbtn dwa" onclick="openQL('회의록',${site.minutes.indexOf(sel)})">🔗 수량반영</button><button class="dbtn dai" onclick="runAIExtract(sites.find(s=>s.id===${site.id})?.minutes.find(m=>m.id===${sel.id})?.content||'',${site.id},${sel.id})">🤖 이슈/액션 추출</button><button class="dbtn ddel" onclick="delMin(${site.id},${sel.id})">삭제</button></div></div></div>`:`<div style="display:flex;align-items:center;justify-content:center;flex:1;color:var(--tx2)">회의록 선택</div>`;
-  return`<div style="height:calc(100vh - 148px);display:grid;grid-template-columns:185px 1fr;overflow:hidden;border:1px solid var(--bd);border-radius:10px;background:var(--bg2)"><div style="overflow-y:auto;border-right:1px solid var(--bd)">${list}</div>${viewer}</div>`;
+
+  // ② 원문 (편집 가능 토글)
+  const isEditing = sel && sel._editing;
+  const viewerHTML=sel?`<div style="display:flex;flex-direction:column;height:100%">
+    <div style="padding:7px 11px;border-bottom:1px solid var(--bd);display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0">
+      <span style="font-size:12px;font-weight:500;flex:1">${sel.title}</span>
+      <button class="dbtn ${sel.read?'ddel':'dok'}" onclick="toggleRead(${site.id},${sel.id})">${sel.read?'확인취소':'✓ 확인'}</button>
+      <button class="dbtn" style="border-color:var(--wa);color:var(--wa)" onclick="toggleMinEdit(${site.id},${sel.id})">${isEditing?'💾 저장':'✏️ 편집'}</button>
+      <button class="dbtn dwa" onclick="openQL('회의록',${site.minutes.indexOf(sel)})">🔗 수량</button>
+      <button class="dbtn ddel" onclick="delMin(${site.id},${sel.id})">삭제</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px">
+      <div style="font-size:10px;color:var(--tx2);margin-bottom:10px">📅 ${sel.date} · ${sel.type}</div>
+      ${isEditing
+        ?`<textarea id="minEditArea" style="width:100%;height:calc(100% - 40px);min-height:400px;background:var(--bg3);border:1px solid var(--ac);border-radius:7px;padding:10px;color:var(--tx);font-size:12px;font-family:Noto Sans KR,sans-serif;line-height:1.8;resize:none;outline:none;box-sizing:border-box">${sel.content||''}</textarea>`
+        :`<div class="mdbody">${marked.parse(sel.content||'')}</div>`
+      }
+      ${(sel.qtyLinked||[]).length?`<div style="margin-top:8px">${sel.qtyLinked.map(t=>`<div class="qtag">✅ ${t}</div>`).join('')}</div>`:''}
+    </div>
+  </div>`:`<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--tx2)">회의록을 선택하세요</div>`;
+
+  // ③ AI 패널
+  const panelHTML = renderMinPanel(site, sel);
+
+  const h=`<div id="minCont" style="height:calc(100vh - 148px);display:flex;overflow:hidden;border:1px solid var(--bd);border-radius:10px;background:var(--bg2)">
+    <div id="minList" style="width:175px;min-width:120px;overflow-y:auto;border-right:1px solid var(--bd);flex-shrink:0">${listHTML}</div>
+    <div class="dh" id="dhMin1"></div>
+    <div id="minViewer" style="flex:1;overflow:hidden;min-width:200px;border-right:1px solid var(--bd)">${viewerHTML}</div>
+    <div class="dh" id="dhMin2"></div>
+    <div id="minPanel" style="width:340px;min-width:180px;flex-shrink:0;overflow:hidden;background:var(--bg3)">${panelHTML}</div>
+  </div>`;
+  setTimeout(()=>{
+    const dh1=$('dhMin1'),list=$('minList');
+    const dh2=$('dhMin2'),panel=$('minPanel');
+    if(dh1&&list)initDH(dh1,list,'right');
+    if(dh2&&panel)initDH(dh2,panel,'left');
+  },50);
+  return h;
 }
+function toggleMinEdit(sid,id){
+  const site=sites.find(s=>s.id===sid);const min=site.minutes.find(m=>m.id===id);if(!min)return;
+  if(min._editing){
+    const ta=$('minEditArea');if(ta)min.content=ta.value;
+    min._editing=false;toast('저장됐습니다 ✓');
+  } else {min._editing=true;}
+  renderTab(curTab);
+}
+
 function toggleRead(sid,id){const s=sites.find(x=>x.id===sid);s.minutes.find(m=>m.id===id).read=!s.minutes.find(m=>m.id===id).read;renderSL();renderTab(curTab);}
 function delMin(sid,id){if(!confirm('삭제?'))return;const s=sites.find(x=>x.id===sid);s.minutes=s.minutes.filter(m=>m.id!==id);selMin=s.minutes.length?s.minutes[0].id:null;renderSL();renderTab(curTab);}
-// ★ 패치 9: addMin - m.id를 runAIExtract에 전달
 async function addMin(){
   const site=sites.find(s=>s.id===curSite);
   const t=$('mn-t').value.trim();if(!t)return;
-  const m={id:Date.now(),title:t,date:$('mn-d').value||td(),type:$('mn-ty').value,content:$('mn-c').value,read:false,qtyLinked:[]};
+  const m={id:Date.now(),title:t,date:$('mn-d').value||td(),type:$('mn-ty').value,content:$('mn-c').value,read:false,qtyLinked:[],panelData:null};
   site.minutes.push(m);selMin=m.id;
   cm('minModal');renderSL();renderTab(curTab);
-  toast('회의록 저장됨 — AI 분석 시작...');
-  await runAIExtract(m.content,curSite,m.id);  // ★ m.id 전달
+  toast('회의록 저장됨 — AI 분석 중...');
+  try{
+    const result=await extractMinuteCategories(m.content);
+    m.panelData={...result,loaded:true};
+    renderTab(curTab);
+    toast('AI 분석 완료 — ③ 패널에서 확인하세요 ✓');
+  }catch(e){
+    toast('AI 분석 오류: '+e.message);
+  }
 }
 
-// ── ★ 패치 10: renderIssues - 회의록 출처 태그 표시 ──
+// ── 미결이슈+후속조치 통합 (2패널) ──
+let issSelId=null,issSelType=null;
 function renderIssues(site){
   autoEscalate();
-  const open=site.issues.filter(i=>!i.done).sort((a,b)=>{const ord={danger:0,warn:1,low:2};return(ord[a.priority]||1)-(ord[b.priority]||1);});
-  const done=site.issues.filter(i=>i.done);
-  const rows=[...open,...done].map(iss=>`<div class="ri"><div class="dot" style="background:${PC[iss.priority]||'var(--tx3)'};${iss.done?'opacity:0.3':''}"></div><div style="flex:1"><div class="rtit" style="${iss.done?'text-decoration:line-through;color:var(--tx3)':''}">
-      ${iss._autoEscalated?'🔺 ':''} ${iss.title}
-      ${iss.minuteId?`<span class="src-tag" onclick="event.stopPropagation();selMin=${iss.minuteId};swTab('회의록')" title="회의록에서 자동 추출됨">📋 회의록</span>`:''}
-    </div><div class="rmeta">담당: ${iss.owner||'미정'} ${iss.due?`· 기한: ${iss.due} ${dday(iss.due)}`:''}</div></div><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><span style="font-size:10px;padding:2px 6px;border-radius:7px;background:${iss.done?'rgba(0,200,150,0.1)':'rgba(245,166,35,0.1)'};color:${iss.done?'var(--gr)':'var(--wa)'}">${iss.done?'해결':'진행중'}</span><span style="font-size:10px;color:var(--pu);cursor:pointer" onclick="openI2W(${site.id},${iss.id})">→의뢰서</span><span style="font-size:10px;color:var(--wa);cursor:pointer" onclick="genKakaoFromIss('${iss.title}','${iss.owner||''}','${iss.due||''}')">📱카카오</span><span style="font-size:10px;color:var(--ac);cursor:pointer" onclick="toggleIss(${site.id},${iss.id})">${iss.done?'재개':'완료'}</span></div></div>`).join('')||'<div style="padding:18px;text-align:center;color:var(--tx2)">이슈 없음 ✓</div>';
-  return`<div class="card"><div class="chdr"><span class="ctit">미결 이슈 <span style="color:var(--da)">${open.length}</span></span><button class="cbtn" onclick="om('issModal')">+ 추가</button></div>${rows}</div>`;
+  // 전체 아이템 - minuteId 기준 그룹핑
+  const allIss=site.issues.map(i=>({...i,_type:'issue'}));
+  const allAct=site.actions.map(a=>({...a,_type:'action'}));
+  const all=[...allIss,...allAct];
+  const groups={};
+  all.forEach(item=>{const k=item.minuteId||'__direct__';if(!groups[k])groups[k]=[];groups[k].push(item);});
+
+  let listHTML='';
+  Object.entries(groups).forEach(([minId,items])=>{
+    const min=minId!=='__direct__'?site.minutes.find(m=>m.id==minId):null;
+    const title=min?`📋 ${min.date} ${min.title}`:'📌 직접 추가';
+    const open=items.filter(i=>!i.done);const done=items.filter(i=>i.done);
+    listHTML+=`<div style="border-bottom:1px solid var(--bd)">
+      <div class="ig-hdr">${title} <span style="color:var(--da);font-size:9px">${open.length}건</span></div>
+      ${[...open,...done].map(item=>{
+        const isIss=item._type==='issue';
+        const col=isIss?(PC[item.priority]||'var(--tx3)'):'var(--gr)';
+        const sel=(issSelId===item.id&&issSelType===item._type);
+        return`<div class="ig-item ${sel?'sel':''}" id="igi_${item._type}_${item.id}" onclick="showIssDetail(${site.id},${item.id},'${item._type}')">
+          <div class="dot" style="background:${col};margin-top:4px;${item.done?'opacity:0.3':''}"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;${item.done?'text-decoration:line-through;color:var(--tx3)':''}">
+              ${item._autoEscalated?'🔺 ':''}${item.title}
+            </div>
+            <div style="font-size:10px;color:var(--tx2)">${item.owner||'미정'} ${item.due?dday(item.due):''}</div>
+          </div>
+          <span style="font-size:9px;padding:1px 4px;border-radius:3px;flex-shrink:0;background:${isIss?'rgba(255,77,77,0.1)':'rgba(0,200,150,0.1)'};color:${isIss?'var(--da)':'var(--gr)'}">${isIss?'이슈':'액션'}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  });
+  if(!listHTML)listHTML='<div style="padding:18px;text-align:center;color:var(--tx2)">이슈/액션 없음 ✓</div>';
+
+  const detailHTML=issSelId?getIssDetail(site,issSelId,issSelType):`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--tx2);font-size:12px;gap:8px"><span style="font-size:28px">←</span>목록에서 항목을 선택하세요</div>`;
+
+  const openCnt=site.issues.filter(i=>!i.done).length;
+  const overAct=site.actions.filter(a=>!a.done&&a.due&&new Date(a.due)<new Date()).length;
+
+  const result=`<div class="card" style="margin-bottom:0"><div class="chdr">
+    <span class="ctit">미결이슈+후속조치 <span style="color:var(--da)">${openCnt}</span>${overAct>0?` <span style="color:var(--wa);font-size:10px">기한초과 ${overAct}</span>`:''}</span>
+    <div style="display:flex;gap:5px">
+      <button class="cbtn" onclick="genKakaoFromActions(${site.id})">📱 카카오</button>
+      <button class="cbtn" onclick="om('actModal')">+ 액션</button>
+      <button class="cbtn" onclick="om('issModal')">+ 이슈</button>
+    </div>
+  </div>
+  <div id="issCont" style="display:flex;height:calc(100vh - 215px);overflow:hidden">
+    <div id="issList" style="width:260px;min-width:160px;overflow-y:auto;border-right:1px solid var(--bd);flex-shrink:0">${listHTML}</div>
+    <div class="dh" id="dhIss"></div>
+    <div id="issDetail" style="flex:1;overflow-y:auto;padding:18px;background:var(--bg3)">${detailHTML}</div>
+  </div></div>`;
+  setTimeout(()=>{const dh=$('dhIss'),list=$('issList');if(dh&&list)initDH(dh,list,'right');},50);
+  return result;
 }
+function getIssDetail(site,id,type){
+  const item=type==='issue'?site.issues.find(i=>i.id===id):site.actions.find(a=>a.id===id);
+  if(!item)return'';
+  const min=item.minuteId?site.minutes.find(m=>m.id===item.minuteId):null;
+  const isIss=type==='issue';
+  return`<div style="max-width:440px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:14px;line-height:1.5">${item._autoEscalated?'🔺 ':''}${item.title}</div>
+    <table style="font-size:12px;width:100%;margin-bottom:16px;border-collapse:collapse">
+      <tr><td style="color:var(--tx2);width:70px;padding:5px 0;vertical-align:top">구분</td><td>${isIss?`<span style="color:${PC[item.priority]}">⚠️ 미결이슈 (${item.priority==='danger'?'긴급':item.priority==='warn'?'보통':'낮음'})`:'✅ 후속조치'}</span></td></tr>
+      <tr><td style="color:var(--tx2);padding:5px 0">담당</td><td>${item.owner||'미정'}</td></tr>
+      <tr><td style="color:var(--tx2);padding:5px 0">기한</td><td>${item.due||'-'} ${item.due?dday(item.due):''}</td></tr>
+      <tr><td style="color:var(--tx2);padding:5px 0">상태</td><td><span style="color:${item.done?'var(--gr)':'var(--wa)'}">${item.done?'✓ 완료':'진행중'}</span></td></tr>
+      ${min?`<tr><td style="color:var(--tx2);padding:5px 0">출처</td><td><span class="src-tag" onclick="selMin=${item.minuteId};swTab('회의록')" style="cursor:pointer">📋 ${min.title}</span></td></tr>`:''}
+    </table>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      ${isIss?`<button class="dbtn dai" onclick="openI2W(${site.id},${item.id})">→ 작업의뢰서</button>`:''}
+      <button class="dbtn dwa" onclick="showKakaoDetail('${item.title.replace(/'/g,"\\'")}','${item.owner||''}','${item.due||''}')">📱 카카오</button>
+      <button class="dbtn dok" onclick="toggleDetail(${site.id},${item.id},'${type}')">${item.done?'재개':'✅ 완료'}</button>
+      <button class="dbtn ddel" onclick="delDetail(${site.id},${item.id},'${type}')">삭제</button>
+    </div>
+  </div>`;
+}
+function showIssDetail(sid,id,type){
+  issSelId=id;issSelType=type;
+  document.querySelectorAll('.ig-item').forEach(el=>el.classList.remove('sel'));
+  const el=document.getElementById('igi_'+type+'_'+id);if(el)el.classList.add('sel');
+  const site=sites.find(s=>s.id===sid);
+  const panel=$('issDetail');if(panel)panel.innerHTML=getIssDetail(site,id,type);
+}
+function toggleDetail(sid,id,type){
+  const site=sites.find(s=>s.id===sid);
+  if(type==='issue')toggleIss(sid,id);else toggleAct(sid,id);
+  const panel=$('issDetail');if(panel)panel.innerHTML=getIssDetail(site,id,type);
+  // update list item style
+  const item=type==='issue'?site.issues.find(i=>i.id===id):site.actions.find(a=>a.id===id);
+  const el=document.getElementById('igi_'+type+'_'+id);
+  if(el&&item){const txt=el.querySelector('div[style]');if(txt)txt.style.textDecoration=item.done?'line-through':'';}
+  renderSL();
+}
+function delDetail(sid,id,type){
+  if(!confirm('삭제할까요?'))return;
+  const site=sites.find(s=>s.id===sid);
+  if(type==='issue')site.issues=site.issues.filter(i=>i.id!==id);
+  else site.actions=site.actions.filter(a=>a.id!==id);
+  issSelId=null;issSelType=null;
+  renderTab(curTab);
+}
+function showKakaoDetail(title,owner,due){
+  const msg='안녕하세요.\n\n[이슈 알림]\n내용: '+title+'\n담당: '+(owner||'담당자')+'\n기한: '+(due||'미정')+'\n\n확인 부탁드립니다.\n감사합니다.';
+  $('kakaoText').value=msg;om('kakaoModal');
+}
+
 function toggleIss(sid,id){const s=sites.find(x=>x.id===sid);const i=s.issues.find(x=>x.id===id);i.done=!i.done;renderSL();renderTab(curTab);}
 function addIssue(){const site=sites.find(s=>s.id===curSite);const t=$('is-t').value.trim();if(!t)return;site.issues.push({id:Date.now(),title:t,priority:$('is-p').value,owner:$('is-o').value||'미정',due:$('is-d').value||'',done:false});cm('issModal');autoEscalate();renderSL();renderTab(curTab);}
 function openI2W(sid,iid){i2wSid=sid;i2wIssIdx=iid;const s=sites.find(x=>x.id===sid);const iss=s.issues.find(i=>i.id===iid);if(!iss)return;$('i2wIssTit').textContent=`이슈: ${iss.title}`;$('i2w-t').value=`[이슈해결] ${iss.title}`;$('i2w-c').value=`이슈: ${iss.title}\n담당: ${iss.owner||'미정'}\n기한: ${iss.due||'미정'}\n\n처리 내용:`;$('i2w-dl').value=iss.due||'';om('iss2woModal');}
 function applyI2W(){const site=sites.find(s=>s.id===i2wSid);if(!site.workorders)site.workorders=[];site.workorders.push({id:Date.now(),title:$('i2w-t').value,dept:$('i2w-d').value,deadline:$('i2w-dl').value,content:$('i2w-c').value,date:td(),site:site.name});cm('iss2woModal');toast('작업의뢰서 생성됐습니다 ✓');renderTab(curTab);}
 function genKakaoFromIss(title,owner,due){const msg=`안녕하세요.\n\n[이슈 알림]\n내용: ${title}\n담당: ${owner||'담당자'}\n기한: ${due||'미정'}\n\n확인 부탁드립니다.\n감사합니다.`;$('kakaoText').value=msg;om('kakaoModal');}
 
-// ── ★ 패치 11: renderActions - 회의록 출처 태그 표시 ──
-function renderActions(site){
-  const open=site.actions.filter(a=>!a.done).sort((a,b)=>{if(!a.due)return 1;if(!b.due)return -1;return new Date(a.due)-new Date(b.due);});
-  const done=site.actions.filter(a=>a.done);
-  const rows=[...open,...done].map(a=>{const od=a.due&&new Date(a.due)<new Date()&&!a.done;return`<div class="ag">
-    <div style="${a.done?'text-decoration:line-through;color:var(--tx3)':od?'color:var(--da)':''}">
-      ${a.title}
-      ${a.minuteId?`<span class="src-tag" onclick="event.stopPropagation();selMin=${a.minuteId};swTab('회의록')" title="회의록에서 자동 추출됨">📋</span>`:''}
-    </div>
-    <div style="font-size:11px;color:var(--tx2)">${a.owner}</div>
-    <div style="font-size:10px">${a.due||'-'} ${dday(a.due)}</div>
-    <div class="chk ${a.done?'done':''}" onclick="toggleAct(${site.id},${a.id})">${a.done?'✓':''}</div>
-  </div>`;}).join('')||'<div style="padding:18px;text-align:center;color:var(--tx2)">후속조치 없음</div>';
-  const overCnt=open.filter(a=>a.due&&new Date(a.due)<new Date()).length;
-  return`<div class="card"><div class="chdr"><span class="ctit">후속조치 ${overCnt>0?`<span style="color:var(--da)">기한초과 ${overCnt}건</span>`:''}</span><div style="display:flex;gap:5px"><button class="cbtn" onclick="genKakaoFromActions(${site.id})">📱 전체 카카오</button><button class="cbtn" onclick="om('actModal')">+ 추가</button></div></div><div class="ag hdr"><span class="cll">할 일</span><span class="cll">담당</span><span class="cll">기한</span><span class="cll">완료</span></div>${rows}</div>`;
-}
+function renderActions(site){return renderIssues(site);}
 function toggleAct(sid,id){const s=sites.find(x=>x.id===sid);s.actions.find(a=>a.id===id).done=!s.actions.find(a=>a.id===id).done;renderTab(curTab);}
 function addAction(){const site=sites.find(s=>s.id===curSite);const t=$('ac-t').value.trim();if(!t)return;site.actions.push({id:Date.now(),title:t,owner:$('ac-o').value||'미정',due:$('ac-d').value||'',done:false});cm('actModal');renderTab(curTab);}
 function genKakaoFromActions(sid){const site=sites.find(s=>s.id===sid);const open=site.actions.filter(a=>!a.done);if(!open.length){toast('미완료 액션 없음');return;}const msg=`[${site.name}] 후속조치 확인 요청\n\n${open.map((a,i)=>`${i+1}. ${a.title}\n   담당: ${a.owner||'미정'} / 기한: ${a.due||'미정'}`).join('\n\n')}\n\n확인 및 진행 부탁드립니다.`;$('kakaoText').value=msg;om('kakaoModal');}
@@ -764,8 +1079,29 @@ function delCalc(sid,idx){sites.find(s=>s.id===sid).calc.splice(idx,1);renderTab
 
 // ── 작업의뢰서 ──
 function renderWO(site){if(!site.workorders)site.workorders=[];const rows=site.workorders.map((w,i)=>`<div class="ri" style="cursor:pointer" onclick="viewWO(${site.id},${i})"><div class="dot" style="background:var(--pu)"></div><div style="flex:1"><div class="rtit">${w.title}</div><div class="rmeta">${w.dept} · ${w.deadline}</div></div><span style="font-size:10px;color:var(--da);cursor:pointer" onclick="event.stopPropagation();delWO(${site.id},${i})">삭제</span></div>`).join('')||'<div style="padding:18px;text-align:center;color:var(--tx2)">작업의뢰서 없음</div>';return`<div class="card"><div class="chdr"><span class="ctit">작업의뢰서</span><button class="cbtn" onclick="om('woModal')">+ 작성</button></div>${rows}</div>`;}
-function genWO(){const site=sites.find(s=>s.id===curSite);if(!site.workorders)site.workorders=[];const t=$('wo-t').value.trim();if(!t)return;site.workorders.push({id:Date.now(),title:t,dept:$('wo-d').value,deadline:$('wo-dl').value,content:$('wo-c').value,date:td(),site:site.name});cm('woModal');renderTab(curTab);}
-function viewWO(sid,idx){const s=sites.find(x=>x.id===sid);const w=s.workorders[idx];$('mainContent').innerHTML=`<div class="shdr"><div><h2>${s.name}</h2></div><button onclick="renderTab('작업의뢰서')" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;color:var(--tx2);font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">← 목록</button></div><div class="wodoc"><div class="wotit">작 업 의 뢰 서</div><div class="wosub">한국마이크로닉(주)</div><table class="wotbl"><tr><th>수신부서</th><td>${w.dept}</td><th>작성일</th><td class="mono">${w.date}</td></tr><tr><th>현장명</th><td colspan="3">${w.site}</td></tr><tr><th>작업제목</th><td colspan="3">${w.title}</td></tr><tr><th>완료기한</th><td colspan="3" class="mono">${w.deadline}</td></tr></table><div style="font-size:12px;font-weight:500;margin-bottom:7px">작업 내용</div><div style="background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:12px;font-size:12px;line-height:1.8;white-space:pre-wrap">${w.content}</div><div class="wosign"><div class="wosignb"><div class="wosignl">작성자 (배성윤)</div><div style="font-size:10px;color:var(--tx2)">PM 차장</div></div><div class="wosignb"><div class="wosignl">팀장</div></div><div class="wosignb"><div class="wosignl">수신: ${w.dept}</div></div></div><div style="margin-top:12px;text-align:center"><button onclick="window.print()" style="padding:7px 18px;background:var(--ac);border:none;border-radius:7px;color:#fff;font-size:12px;cursor:pointer">🖨 인쇄</button></div></div>`;}
+function genWO(){
+  const site=sites.find(s=>s.id===curSite);if(!site.workorders)site.workorders=[];
+  const t=$('wo-t').value.trim();if(!t){toast('작업 제목을 입력하세요');return;}
+  const depts=[...document.querySelectorAll('input[name="wo-dept"]:checked')].map(e=>e.value).join(',');
+  const woType=document.querySelector('input[name="wo-type"]:checked')?.value||'';
+  const deliver=document.querySelector('input[name="wo-deliver"]:checked')?.value||'';
+  const tax=document.querySelector('input[name="wo-tax"]:checked')?.value||'후발행';
+  site.workorders.push({
+    id:Date.now(),title:t,
+    dept:depts||'미지정',
+    woType,deliver,tax,
+    deadline:$('wo-due').value||$('wo-dl')?.value||'',
+    date:$('wo-date').value||td(),
+    company:$('wo-co').value||'',
+    rooms:$('wo-rooms').value||'',
+    contact:$('wo-contact').value||'',
+    addr:$('wo-addr').value||'',
+    content:$('wo-c').value,
+    site:site.name
+  });
+  cm('woModal');renderTab(curTab);toast('작업의뢰서 생성됐습니다 ✓');
+}
+function viewWO(sid,idx){const s=sites.find(x=>x.id===sid);const w=s.workorders[idx];$('mainContent').innerHTML=`<div class="shdr"><div><h2>${s.name}</h2></div><button onclick="renderTab('작업의뢰서')" style="padding:5px 10px;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;color:var(--tx2);font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">← 목록</button></div><div class="wodoc" style="max-width:760px"><div class="wotit">작 업 의 뢰 서</div><div class="wosub">한국마이크로닉(주) — 양식 MB-004</div><table class="wotbl"><tr><th>기안일자</th><td class="mono">${w.date}</td><th>납기일</th><td class="mono">${w.deadline||'-'}</td></tr><tr><th>업체명</th><td>${w.company||'-'}</td><th>객실수</th><td>${w.rooms||'-'}</td></tr><tr><th>현장명</th><td colspan="3">${w.site}</td></tr><tr><th>수신부서</th><td colspan="3" style="color:var(--ac);font-weight:500">${w.dept}</td></tr><tr><th>구분</th><td>${w.woType||'-'}</td><th>납품방법</th><td>${w.deliver||'-'}</td></tr><tr><th>세금계산서</th><td>${w.tax||'-'}</td><th>담당자</th><td>${w.contact||'-'}</td></tr>${w.addr?`<tr><th>배송지</th><td colspan="3">${w.addr}</td></tr>`:''}<tr><th>작업제목</th><td colspan="3" style="font-weight:500">${w.title}</td></tr></table><div style="font-size:12px;font-weight:500;margin:10px 0 6px">작업 의뢰 내용</div><div style="background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:12px;font-size:12px;line-height:1.8;white-space:pre-wrap">${w.content}</div><div class="wosign"><div class="wosignb"><div class="wosignl">작성자 (배성윤)</div><div style="font-size:10px;color:var(--tx2)">PM 차장</div></div><div class="wosignb"><div class="wosignl">팀장</div></div><div class="wosignb"><div class="wosignl">수신: ${w.dept}</div></div></div><div style="margin-top:12px;text-align:center;display:flex;gap:8px;justify-content:center"><button onclick="window.print()" style="padding:7px 18px;background:var(--ac);border:none;border-radius:7px;color:#fff;font-size:12px;cursor:pointer">🖨 인쇄</button><button onclick="delWO(${sid},${idx});renderTab('작업의뢰서')" style="padding:7px 18px;background:rgba(255,77,77,0.1);border:1px solid var(--da);border-radius:7px;color:var(--da);font-size:12px;cursor:pointer">삭제</button></div></div>`;}
 function delWO(sid,idx){sites.find(s=>s.id===sid).workorders.splice(idx,1);renderTab(curTab);}
 
 // ── 문서 ──
