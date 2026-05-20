@@ -233,7 +233,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 <div class="hdr">
   <div class="logo">
     <div class="lm">KM</div>
-    <div><div class="ln">한국마이크로닉</div><div class="ls">현장관리 v5.5 — 데이터안전저장</div></div>
+    <div><div class="ln">한국마이크로닉</div><div class="ls">현장관리 v5.5 — 안전저장</div></div>
   </div>
   <div class="hbtns">
     <span class="hdate" id="todayDate"></span>
@@ -561,7 +561,13 @@ async function loadCloud(){
     if(!hasLocal)toast('서버 연결 실패 — 새로 시작합니다');
     else toast('서버 오프라인 — 로컬 데이터 사용 중');
   }
-  autoEscalate();renderSL();dispatch();
+  autoEscalate();
+  // 데이터 있으면 마지막 현장, 없으면 대시보드
+  if(sites.length>0&&curSite&&sites.find(s=>s.id===curSite)){
+    renderSL();dispatch();
+  }else{
+    curView='dash';renderSL();renderDash();
+  }
 }
 
 // ── 자동화 ──
@@ -600,7 +606,18 @@ function init(){
   // 30초마다 자동 로컬 저장
   setInterval(saveLocal, 30000);
 }
-function dispatch(){if(curView==='pipe')renderPipe();else if(curView==='dash')renderDash();else if(curView==='cal')renderCal();else if(curView==='wj')renderWJPage();else selSite(curSite);}
+function dispatch(){
+  if(curView==='pipe')renderPipe();
+  else if(curView==='cal')renderCal();
+  else if(curView==='wj')renderWJPage();
+  else if(curView==='dash'||sites.length===0){curView='dash';renderSL();renderDash();}
+  else{
+    // curSite가 유효한지 확인
+    const valid=sites.find(s=>s.id===curSite);
+    if(!valid&&sites.length>0)curSite=sites[0].id;
+    selSite(curSite);
+  }
+}
 
 // ── 사이드바 ──
 function renderSL(filter=''){
