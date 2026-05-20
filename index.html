@@ -1184,20 +1184,10 @@ function genBulkMsg(sid,method){
   items.sort((a,b)=>{const ord={danger:0,warn:1,low:2};return(ord[a.priority]||2)-(ord[b.priority]||2);});
   const lines=items.map((item,i)=>{
     const tag=item._type==='issue'?'⚠️ [이슈]':'✅ [액션]';
-    const due=item.due?` / 기한: ${item.due}`:'';
-    return`${i+1}. ${tag} ${item.title}
-   담당: ${item.owner||'미정'}${due}`;
-  }).join('
-
-');
-  const msg=`[${site.name}] 확인 요청
-
-안녕하세요, 배성윤입니다.
-아래 사항들 확인 부탁드립니다.
-
-${lines}
-
-감사합니다.`;
+    const due=item.due?' / 기한: '+item.due:'';
+    return(i+1)+'. '+tag+' '+item.title+'\n   담당: '+(item.owner||'미정')+due;
+  }).join('\n\n');
+  const msg='['+site.name+'] 확인 요청\n\n안녕하세요, 배성윤입니다.\n아래 사항들 확인 부탁드립니다.\n\n'+lines+'\n\n감사합니다.';
   if(method==='kakao'||method==='sms'){
     $('kakaoText').value=msg;
     $('kakaoTo').textContent=`${items.length}건 선택`;
