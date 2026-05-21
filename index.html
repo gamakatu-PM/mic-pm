@@ -886,10 +886,10 @@ function mkBadge(text,color){
 }
 function getPanelItems(pd){
   var items=[];
-  (pd.decisions||[]).forEach(function(d,i){items.push({idx:i,cat:'dec',catLabel:'확정',content:d.content||'',owner_tag:d.owner_tag||'',urgency:d.urgency||'',type:d.type||''});});
+  (pd.decisions||[]).forEach(function(d,i){items.push({idx:i,cat:'dec',catLabel:'확정',content:d.content||'',owner_tag:d.owner_tag||'한국마이크로닉',urgency:d.urgency||'여유있음',type:d.type||'확인문의'});});
   (pd.issues||[]).forEach(function(d,i){items.push({idx:i,cat:'iss',catLabel:'이슈',content:d.title||'',owner_tag:d.owner_tag||'',urgency:d.urgency||'즉시',type:d.type||'확인문의',owner:d.owner||'',due:d.due||'',priority:d.priority||'warn'});});
   (pd.actions||[]).forEach(function(d,i){items.push({idx:i,cat:'act',catLabel:'액션',content:d.title||'',owner_tag:d.owner_tag||'',urgency:d.urgency||'이번주',type:d.type||'팀내전달',owner:d.owner||'',due:d.due||''});});
-  (pd.transfers||[]).forEach(function(d,i){items.push({idx:i,cat:'trf',catLabel:'전달',content:d.content||'',owner_tag:d.owner_tag||'',urgency:d.urgency||'여유있음',type:d.type||'팀내전달',dept:d.dept||''});});
+  (pd.transfers||[]).forEach(function(d,i){items.push({idx:i,cat:'trf',catLabel:'전달',content:d.content||'',owner_tag:d.owner_tag||d.dept||'공동',urgency:d.urgency||'여유있음',type:d.type||'팀내전달',dept:d.dept||''});});
   return items;
 }
 
@@ -965,7 +965,7 @@ function renderMinStage2(pd,sid,minId){
     });
     bodyHTML+='</div>';
   });
-  return tabHTML+'<div style="overflow-y:auto;flex:1">'+bodyHTML+'</div>';
+  return tabHTML+bodyHTML;
 }
 function renderMinStage3(pd,sid,minId){
   var issues=pd.issues||[];
@@ -1061,18 +1061,23 @@ function renderMinPanel(site,min){
   var total=((pd.decisions||[]).length+(pd.issues||[]).length+(pd.actions||[]).length+(pd.transfers||[]).length);
   var stageBar='<div style="display:flex;border-bottom:2px solid var(--bd);flex-shrink:0">';
   [['1','전체요약',total+'건'],['2','분류보기','A/B/C'],['3','등록확인','체크']].forEach(function(s){
-    var active=minPanelStage===parseInt(s[0]);
+    var active=parseInt(minPanelStage)===parseInt(s[0]);
     stageBar+='<button onclick="setMinPanelStage('+s[0]+')" style="flex:1;padding:6px 4px;font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif;border:none;border-bottom:2px solid '+(active?'var(--ac)':'transparent')+';background:transparent;color:'+(active?'var(--ac)':'var(--tx2)')+'">'+s[0]+'단계<br><span style="font-size:9px;color:'+(active?'var(--ac)':'var(--tx3)')+'">'+s[2]+'</span></button>';
   });
   stageBar+='<button onclick="runMinAI('+site.id+','+min.id+')" style="padding:5px;font-size:9px;cursor:pointer;font-family:Noto Sans KR,sans-serif;border:none;border-left:1px solid var(--bd);background:transparent;color:var(--pu)">🔄<br>재분석</button>';
   stageBar+='</div>';
 
   var stageContent='';
-  if(minPanelStage===1)stageContent=renderMinStage1(pd,site.id,min.id);
-  else if(minPanelStage===2)stageContent=renderMinStage2(pd,site.id,min.id);
+  var stg=parseInt(minPanelStage)||1;
+  if(stg===1)stageContent=renderMinStage1(pd,site.id,min.id);
+  else if(stg===2)stageContent=renderMinStage2(pd,site.id,min.id);
   else stageContent=renderMinStage3(pd,site.id,min.id);
 
-  return metaHTML+stageBar+'<div style="overflow-y:auto;flex:1;display:flex;flex-direction:column">'+stageContent+'</div>';
+  // stage3은 내부에 버튼이 있어서 flex column 필요
+  var wrapStyle = (minPanelStage===3)
+    ? 'display:flex;flex-direction:column;flex:1;overflow:hidden'
+    : 'overflow-y:auto;flex:1';
+  return metaHTML+stageBar+'<div style="'+wrapStyle+'">'+stageContent+'</div>';
 }
 
 async function runMinAI(sid,minId){
