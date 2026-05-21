@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>한국마이크로닉 현장관리 v5.1</title>
+<title>한국마이크로닉 현장관리 v5.6</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -1013,64 +1013,101 @@ async function addMin(){
   }
 }
 
-// ── 미결이슈+후속조치 통합 (2패널) ──
+// ── 미결이슈+후속조치 통합 (다중선택) ──
 let issSelId=null,issSelType=null;
+function toggleIssCheck(iid,itype){
+  var k=String(iid)+':'+itype;
+  if(issChecked.has(k))issChecked.delete(k);else issChecked.add(k);
+  var bar=document.getElementById('issBulkBar');
+  if(bar){bar.style.display=issChecked.size>0?'block':'none';var cnt=bar.querySelector('.bulk-cnt');if(cnt)cnt.textContent=issChecked.size+'개 선택';}
+}
+function clearIssCheck(){
+  issChecked.clear();
+  document.querySelectorAll('.iss-cb').forEach(function(cb){cb.checked=false;});
+  var bar=document.getElementById('issBulkBar');if(bar)bar.style.display='none';
+}
+function genBulkMsg(sid){
+  var site=sites.find(function(s){return s.id===sid;});
+  if(!issChecked.size){toast('항목을 선택하세요');return;}
+  var items=[];
+  issChecked.forEach(function(k){
+    var p=k.split(':');var id=parseInt(p[0]);var type=p[1];
+    var item=type==='issue'?site.issues.find(function(i){return i.id===id;}):site.actions.find(function(a){return a.id===id;});
+    if(item){var o=Object.assign({},item);o._type=type;items.push(o);}
+  });
+  var lines='';
+  for(var i=0;i<items.length;i++){
+    var it=items[i];var tag=it._type==='issue'?'[이슈]':'[액션]';var due=it.due?' / 기한: '+it.due:'';
+    lines+=(i+1)+'. '+tag+' '+it.title+' / 담당: '+(it.owner||'미정')+due+(i<items.length-1?'\n\n':'');
+  }
+  var msg='['+site.name+'] 확인 요청\n\n안녕하세요, 배성윤입니다.\n아래 사항들 확인 부탁드립니다.\n\n'+lines+'\n\n감사합니다.';
+  $('kakaoText').value=msg;$('kakaoTo').textContent=items.length+'건 선택';om('kakaoModal');
+}
+function buildIssRow(item,site){
+  var isIss=item._type==='issue';
+  var col=isIss?(PC[item.priority]||'var(--tx3)'):'var(--gr)';
+  var sel=(issSelId===item.id&&issSelType===item._type);
+  var chkKey=String(item.id)+':'+item._type;
+  var el=document.createElement('div');
+  el.className='ig-item'+(sel?' sel':'');
+  el.id='igi_'+item._type+'_'+item.id;
+  var cb=document.createElement('input');
+  cb.type='checkbox';cb.className='iss-cb';
+  if(issChecked.has(chkKey))cb.checked=true;
+  cb.style.cssText='width:14px;height:14px;flex-shrink:0;margin-top:3px;cursor:pointer;accent-color:var(--ac)';
+  cb.setAttribute('data-iid',item.id);cb.setAttribute('data-itype',item._type);
+  cb.addEventListener('click',function(e){e.stopPropagation();toggleIssCheck(this.getAttribute('data-iid'),this.getAttribute('data-itype'));});
+  var dot=document.createElement('div');dot.className='dot';
+  dot.style.cssText='background:'+col+';margin-top:5px;'+(item.done?'opacity:0.3':'');
+  var info=document.createElement('div');info.style.cssText='flex:1;min-width:0;cursor:pointer';
+  info.addEventListener('click',function(){showIssDetail(site.id,item.id,item._type);});
+  var t=document.createElement('div');t.style.cssText='font-size:11px;'+(item.done?'text-decoration:line-through;color:var(--tx3)':'');
+  t.textContent=(item._autoEscalated?'🔺 ':'')+item.title;
+  var m=document.createElement('div');m.style.cssText='font-size:10px;color:var(--tx2)';
+  m.textContent=(item.owner||'미정')+(item.due?' '+dday(item.due):'');
+  info.appendChild(t);info.appendChild(m);
+  var badge=document.createElement('span');
+  badge.style.cssText='font-size:9px;padding:1px 4px;border-radius:3px;flex-shrink:0;background:'+(isIss?'rgba(255,77,77,0.1)':'rgba(0,200,150,0.1)')+';color:'+(isIss?'var(--da)':'var(--gr)');
+  badge.textContent=isIss?'이슈':'액션';
+  el.appendChild(cb);el.appendChild(dot);el.appendChild(info);el.appendChild(badge);
+  return el.outerHTML;
+}
 function renderIssues(site){
   autoEscalate();
-  // 전체 아이템 - minuteId 기준 그룹핑
-  const allIss=site.issues.map(i=>({...i,_type:'issue'}));
-  const allAct=site.actions.map(a=>({...a,_type:'action'}));
-  const all=[...allIss,...allAct];
-  const groups={};
-  all.forEach(item=>{const k=item.minuteId||'__direct__';if(!groups[k])groups[k]=[];groups[k].push(item);});
-
-  let listHTML='';
-  Object.entries(groups).forEach(([minId,items])=>{
-    const min=minId!=='__direct__'?site.minutes.find(m=>m.id==minId):null;
-    const title=min?`📋 ${min.date} ${min.title}`:'📌 직접 추가';
-    const open=items.filter(i=>!i.done);const done=items.filter(i=>i.done);
-    listHTML+=`<div style="border-bottom:1px solid var(--bd)">
-      <div class="ig-hdr">${title} <span style="color:var(--da);font-size:9px">${open.length}건</span></div>
-      ${[...open,...done].map(item=>{
-        const isIss=item._type==='issue';
-        const col=isIss?(PC[item.priority]||'var(--tx3)'):'var(--gr)';
-        const sel=(issSelId===item.id&&issSelType===item._type);
-        return`<div class="ig-item ${sel?'sel':''}" id="igi_${item._type}_${item.id}" onclick="showIssDetail(${site.id},${item.id},'${item._type}')">
-          <div class="dot" style="background:${col};margin-top:4px;${item.done?'opacity:0.3':''}"></div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:11px;${item.done?'text-decoration:line-through;color:var(--tx3)':''}">
-              ${item._autoEscalated?'🔺 ':''}${item.title}
-            </div>
-            <div style="font-size:10px;color:var(--tx2)">${item.owner||'미정'} ${item.due?dday(item.due):''}</div>
-          </div>
-          <span style="font-size:9px;padding:1px 4px;border-radius:3px;flex-shrink:0;background:${isIss?'rgba(255,77,77,0.1)':'rgba(0,200,150,0.1)'};color:${isIss?'var(--da)':'var(--gr)'}">${isIss?'이슈':'액션'}</span>
-        </div>`;
-      }).join('')}
-    </div>`;
+  var allItems=site.issues.map(function(i){return Object.assign({},i,{_type:'issue'});})
+    .concat(site.actions.map(function(a){return Object.assign({},a,{_type:'action'});}));
+  var groups={};
+  allItems.forEach(function(item){var k=item.minuteId||'__direct__';if(!groups[k])groups[k]=[];groups[k].push(item);});
+  var listHTML='';
+  Object.keys(groups).forEach(function(minId){
+    var items=groups[minId];
+    var min=minId!=='__direct__'?site.minutes.find(function(m){return m.id==minId;}):null;
+    var title=min?('📋 '+min.date+' '+min.title):'📌 직접 추가';
+    var open=items.filter(function(i){return !i.done;});
+    listHTML+='<div style="border-bottom:1px solid var(--bd)"><div class="ig-hdr">'+title+' <span style="color:var(--da);font-size:9px">'+open.length+'건</span></div>';
+    items.forEach(function(item){listHTML+=buildIssRow(item,site);});
+    listHTML+='</div>';
   });
   if(!listHTML)listHTML='<div style="padding:18px;text-align:center;color:var(--tx2)">이슈/액션 없음 ✓</div>';
-
-  const detailHTML=issSelId?getIssDetail(site,issSelId,issSelType):`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--tx2);font-size:12px;gap:8px"><span style="font-size:28px">←</span>목록에서 항목을 선택하세요</div>`;
-
-  const openCnt=site.issues.filter(i=>!i.done).length;
-  const overAct=site.actions.filter(a=>!a.done&&a.due&&new Date(a.due)<new Date()).length;
-
-  const result=`<div class="card" style="margin-bottom:0"><div class="chdr">
-    <span class="ctit">미결이슈+후속조치 <span style="color:var(--da)">${openCnt}</span>${overAct>0?` <span style="color:var(--wa);font-size:10px">기한초과 ${overAct}</span>`:''}</span>
-    <div style="display:flex;gap:5px">
-      <button class="cbtn" onclick="genKakaoFromActions(${site.id})">📱 카카오</button>
-      <button class="cbtn" onclick="om('actModal')">+ 액션</button>
-      <button class="cbtn" onclick="om('issModal')">+ 이슈</button>
-    </div>
-  </div>
-  <div id="issCont" style="display:flex;height:calc(100vh - 215px);overflow:hidden">
-    <div id="issList" style="width:260px;min-width:160px;overflow-y:auto;border-right:1px solid var(--bd);flex-shrink:0">${listHTML}</div>
-    <div class="dh" id="dhIss"></div>
-    <div id="issDetail" style="flex:1;overflow-y:auto;padding:18px;background:var(--bg3)">${detailHTML}</div>
-  </div></div>`;
-  setTimeout(()=>{const dh=$('dhIss'),list=$('issList');if(dh&&list)initDH(dh,list,'right');},50);
+  var selItem=issSelId?(issSelType==='issue'?site.issues.find(function(i){return i.id===issSelId;}):site.actions.find(function(a){return a.id===issSelId;})):null;
+  var detailHTML=selItem?getIssDetail(site,issSelId,issSelType):'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--tx2);font-size:12px;gap:8px"><span style="font-size:28px">←</span>항목 클릭=상세 / 체크=다중선택</div>';
+  var openCnt=site.issues.filter(function(i){return !i.done;}).length;
+  var overAct=site.actions.filter(function(a){return !a.done&&a.due&&new Date(a.due)<new Date();}).length;
+  var result='<div class="card" style="margin-bottom:0"><div class="chdr">'
+    +'<span class="ctit">미결이슈+후속조치 <span style="color:var(--da)">'+openCnt+'</span>'+(overAct>0?' <span style="color:var(--wa);font-size:10px">기한초과 '+overAct+'</span>':'')+'</span>'
+    +'<div style="display:flex;gap:5px"><button class="cbtn" onclick="om(\'actModal\')">+ 액션</button><button class="cbtn" onclick="om(\'issModal\')">+ 이슈</button></div>'
+    +'</div><div id="issCont" style="display:flex;height:calc(100vh - 215px);overflow:hidden">'
+    +'<div id="issList" style="width:260px;min-width:160px;overflow-y:auto;border-right:1px solid var(--bd);flex-shrink:0;position:relative">'+listHTML
+    +'<div id="issBulkBar" style="display:'+(issChecked.size>0?'block':'none')+';position:sticky;bottom:0;background:var(--bg2);border-top:2px solid var(--ac);padding:8px 10px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span class="bulk-cnt" style="font-size:11px;font-weight:500;color:var(--ac)">'+issChecked.size+'개 선택</span><span style="font-size:10px;color:var(--tx2);cursor:pointer" onclick="clearIssCheck()">선택해제</span></div>'
+    +'<button onclick="genBulkMsg('+site.id+')" style="width:100%;padding:5px;background:rgba(245,166,35,0.15);border:1px solid var(--wa);border-radius:5px;color:var(--wa);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif">📱 카카오/메일 전송</button>'
+    +'</div></div>'
+    +'<div class="dh" id="dhIss"></div>'
+    +'<div id="issDetail" style="flex:1;overflow-y:auto;padding:18px;background:var(--bg3)">'+detailHTML+'</div></div></div>';
+  setTimeout(function(){var dh=$('dhIss'),list=$('issList');if(dh&&list)initDH(dh,list,'right');},50);
   return result;
 }
+
 function getIssDetail(site,id,type){
   const item=type==='issue'?site.issues.find(i=>i.id===id):site.actions.find(a=>a.id===id);
   if(!item)return'';
@@ -1512,51 +1549,4 @@ function addSite(){const n=$('ns-n').value.trim();if(!n)return;const s={id:Date.
 init();
 </script>
 </body>
-</html>// ── 미결이슈+후속조치 통합 ──
-let issSelId=null,issSelType=null;
-function renderIssues(site){
-  autoEscalate();
-  var allItems=site.issues.map(function(i){return Object.assign({},i,{_type:'issue'});}).concat(site.actions.map(function(a){return Object.assign({},a,{_type:'action'});}));
-  var groups={};
-  allItems.forEach(function(item){var k=item.minuteId||'__direct__';if(!groups[k])groups[k]=[];groups[k].push(item);});
-  var listHTML='';
-  Object.keys(groups).forEach(function(minId){
-    var items=groups[minId];
-    var min=minId!=='__direct__'?site.minutes.find(function(m){return m.id==minId;}):null;
-    var title=min?('📋 '+min.date+' '+min.title):'📌 직접 추가';
-    var open=items.filter(function(i){return !i.done;});
-    listHTML+='<div style="border-bottom:1px solid var(--bd)"><div class="ig-hdr">'+title+' <span style="color:var(--da);font-size:9px">'+open.length+'건</span></div>';
-    items.forEach(function(item){
-      var isIss=item._type==='issue';
-      var col=isIss?(PC[item.priority]||'var(--tx3)'):'var(--gr)';
-      var sel=(issSelId===item.id&&issSelType===item._type);
-      var chkKey=item.id+':'+item._type;
-      listHTML+='<div class="ig-item'+(sel?' sel':'')+'" id="igi_'+item._type+'_'+item.id+'">';
-      listHTML+='<input type="checkbox" class="iss-cb"'+(issChecked.has(chkKey)?' checked':'')+' style="width:14px;height:14px;flex-shrink:0;margin-top:3px;cursor:pointer;accent-color:var(--ac)" onclick="event.stopPropagation();toggleIssCheck('+item.id+',''+item._type+'')">';
-      listHTML+='<div class="dot" style="background:'+col+';margin-top:5px;'+(item.done?'opacity:0.3':'')+'"></div>';
-      listHTML+='<div style="flex:1;min-width:0;cursor:pointer" onclick="showIssDetail('+site.id+','+item.id+',''+item._type+'')">';
-      listHTML+='<div style="font-size:11px;'+(item.done?'text-decoration:line-through;color:var(--tx3)':'')+'">'+item.title+'</div>';
-      listHTML+='<div style="font-size:10px;color:var(--tx2)">'+(item.owner||'미정')+' '+(item.due?dday(item.due):'')+'</div></div>';
-      listHTML+='<span style="font-size:9px;padding:1px 4px;border-radius:3px;flex-shrink:0;background:'+(isIss?'rgba(255,77,77,0.1)':'rgba(0,200,150,0.1)')+';color:'+(isIss?'var(--da)':'var(--gr)')+'">'+(isIss?'이슈':'액션')+'</span>';
-      listHTML+='</div>';
-    });
-    listHTML+='</div>';
-  });
-  if(!listHTML)listHTML='<div style="padding:18px;text-align:center;color:var(--tx2)">이슈/액션 없음 ✓</div>';
-  var selItem=issSelId?(issSelType==='issue'?site.issues.find(function(i){return i.id===issSelId;}):site.actions.find(function(a){return a.id===issSelId;})):null;
-  var detailHTML=selItem?getIssDetail(site,issSelId,issSelType):'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--tx2);font-size:12px;gap:8px"><span style="font-size:28px">←</span>항목 클릭 = 상세 / 체크 = 다중선택</div>';
-  var openCnt=site.issues.filter(function(i){return !i.done;}).length;
-  var overAct=site.actions.filter(function(a){return !a.done&&a.due&&new Date(a.due)<new Date();}).length;
-  var result='<div class="card" style="margin-bottom:0"><div class="chdr"><span class="ctit">미결이슈+후속조치 <span style="color:var(--da)">'+openCnt+'</span>'+(overAct>0?' <span style="color:var(--wa);font-size:10px">기한초과 '+overAct+'</span>':'')+'</span><div style="display:flex;gap:5px"><button class="cbtn" onclick="om('actModal')">+ 액션</button><button class="cbtn" onclick="om('issModal')">+ 이슈</button></div></div>';
-  result+='<div id="issCont" style="display:flex;height:calc(100vh - 215px);overflow:hidden">';
-  result+='<div id="issList" style="width:260px;min-width:160px;overflow-y:auto;border-right:1px solid var(--bd);flex-shrink:0;position:relative">'+listHTML;
-  result+='<div id="issBulkBar" style="display:'+(issChecked.size>0?'block':'none')+';position:sticky;bottom:0;background:var(--bg2);border-top:2px solid var(--ac);padding:8px 10px">';
-  result+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span class="bulk-cnt" style="font-size:11px;font-weight:500;color:var(--ac)">'+issChecked.size+'개 선택</span><span style="font-size:10px;color:var(--tx2);cursor:pointer" onclick="clearIssCheck()">선택해제</span></div>';
-  result+='<button onclick="genBulkMsg('+site.id+')" style="width:100%;padding:5px;background:rgba(245,166,35,0.15);border:1px solid var(--wa);border-radius:5px;color:var(--wa);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif">📱 카카오/메일 전송</button>';
-  result+='</div></div>';
-  result+='<div class="dh" id="dhIss"></div>';
-  result+='<div id="issDetail" style="flex:1;overflow-y:auto;padding:18px;background:var(--bg3)">'+detailHTML+'</div></div></div>';
-  setTimeout(function(){var dh=$('dhIss'),list=$('issList');if(dh&&list)initDH(dh,list,'right');},50);
-  return result;
-}
-
+</html>
