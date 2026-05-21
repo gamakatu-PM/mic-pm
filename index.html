@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>한국마이크로닉 현장관리 v5.6</title>
+<title>한국마이크로닉 현장관리 v5.7</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -507,6 +507,8 @@ let i2wIssIdx=-1,i2wSid=null;
 // ★ 패치 2: API 키 관리
 let apiKey=localStorage.getItem('km_claude_key')||'';
 let geminiKey=localStorage.getItem('km_gemini_key')||'';
+let issChecked=new Set();
+let minPanelStage=1,minPanelTab='A';
 
 // ── 유틸 ──
 const td=()=>new Date().toISOString().slice(0,10);
@@ -752,35 +754,27 @@ async function callClaude(prompt){
 }
 
 // ★ 회의록 분류 — Gemini Flash (맥락 자동 포함)
-async function extractMinuteCategories(content, siteCtx){
+async function extractMinuteCategories(content,siteCtx){
   var ctx='';
-  if(siteCtx){
-    ctx='[현장 정보]\n현장명: '+siteCtx.name+'\n발주처: '+(siteCtx.client||'미상')+'\n제품: '+(siteCtx.products||'')+'\n공정단계: '+STAGES[siteCtx.stage]+'\n주소: '+(siteCtx.addr||'')+'\n\n';
-  }
-  var prompt=ctx+'아래 회의록을 분석해서 JSON으로만 응답하세요. 마크다운 코드블록 없이 순수 JSON만.\n\n'+
-'형식:\n{\n'+
-'  "decisions": [{"content":"확정된 사항 (구체적으로)"}],\n'+
-'  "issues": [{"title":"미결 이슈","owner":"담당자 또는 업체명","due":"YYYY-MM-DD 또는 빈문자열","priority":"danger|warn|low"}],\n'+
-'  "actions": [{"title":"해야 할 일","owner":"담당자 또는 업체명","due":"YYYY-MM-DD 또는 빈문자열"}],\n'+
-'  "transfers": [{"dept":"전달받을 팀/업체","content":"전달 내용"}]\n'+
-'}\n\n'+
-'규칙:\n'+
-'- decisions: 이번 회의에서 완전히 확정된 것만. 검토중이거나 추후 결정은 issues로.\n'+
-'- issues: 아직 결정 안 됨, 확인 필요, 미결 사항. 기한 있으면 반드시 기재.\n'+
-'- actions: 특정 담당자가 해야 할 구체적 행동. 담당자 명시 필수.\n'+
-'- transfers: 한국마이크로닉 내부 팀(설계팀/시공팀/제작팀/구매팀/개발팀) 또는 외부 업체에 전달해야 할 내용.\n'+
-'- 우선순위: danger=즉시/긴급, warn=이번주내, low=여유있음\n'+
-'- 애매한 내용은 issues에 넣을 것\n\n'+
-'회의록:\n'+content;
-
-  try{
-    const raw=await callGemini(prompt,'gemini-2.0-flash');
-    const clean=raw.replace(/```json|```/g,'').trim();
-    return JSON.parse(clean);
-  }catch(e){
-    console.error('Gemini 추출 오류:',e);
-    return {decisions:[],issues:[],actions:[],transfers:[]};
-  }
+  if(siteCtx){ctx='[현장] '+siteCtx.name+' / 발주처: '+(siteCtx.client||'미상')+' / 제품: '+(siteCtx.products||'')+' / 단계: '+STAGES[siteCtx.stage]+'\n\n';}
+  var ownerOpts='한국마이크로닉|발주처|강전업체|인테리어/설계|공동';
+  var urgOpts='즉시|이번주|다음회의전|여유있음';
+  var typeOpts='도면반영|자재결정|확인문의|일정기한|팀내전달';
+  var fmt='{"decisions":[{"content":"확정사항 한줄압축","owner_tag":"'+ownerOpts+'","urgency":"'+urgOpts+'","type":"'+typeOpts+'"}],'
+    +'"issues":[{"title":"미결이슈 한줄","owner":"담당자명","due":"YYYY-MM-DD또는빈값","priority":"danger|warn|low","owner_tag":"...","urgency":"...","type":"..."}],'
+    +'"actions":[{"title":"후속조치 할일","owner":"담당자","due":"YYYY-MM-DD또는빈값","owner_tag":"...","urgency":"...","type":"..."}],'
+    +'"transfers":[{"dept":"전달팀/업체","content":"전달내용","owner_tag":"...","urgency":"...","type":"..."}]}';
+  var rules='규칙:\n'
+    +'decisions=이번회의 완전확정, 항목별 한줄로 압축(45개면 45개 다 추출)\n'
+    +'issues=미결/확인필요/기한있는것, 설계착수 막는것 우선\n'
+    +'actions=담당자+구체적행동(담당자 필수), 마감기한 있으면 기재\n'
+    +'transfers=한국마이크로닉 내부팀 또는 외부업체 전달사항\n'
+    +'owner_tag: 한국마이크로닉(내부업무) / 발주처(발주처확인) / 강전업체(전기공사) / 인테리어/설계(도면디자인) / 공동(복수업체)\n'
+    +'urgency: 즉시(설계착수전필수/오늘내일) / 이번주 / 다음회의전 / 여유있음\n'
+    +'type: 도면반영(도면수정) / 자재결정(제품수량) / 확인문의(확인후회신) / 일정기한(날짜있음) / 팀내전달(내부공유)';
+  var prompt=ctx+'아래 회의록을 분석해서 JSON만 응답(마크다운없이).\n'+fmt+'\n'+rules+'\n\n회의록:\n'+content;
+  try{var raw=await callGemini(prompt,'gemini-2.0-flash');return JSON.parse(raw.replace(/```json|```/g,'').trim());}
+  catch(e){console.error('Gemini 오류:',e);return {decisions:[],issues:[],actions:[],transfers:[]};}
 }
 
 async function extractFromContent(content,type,sid){
@@ -858,41 +852,227 @@ async function runAIExtract(content,sid,minId=null){
 }
 
 // ── ★ 회의록 ③ 패널 함수들 ──
+// ── 패널 상태 제어 ──
+function setMinPanelStage(n){minPanelStage=n;renderTab(curTab);}
+function setMinPanelTab(t){minPanelTab=t;renderTab(curTab);}
+function savePanelItemEdit(cat,idx,minId,sid,newText){
+  var site=sites.find(function(s){return s.id===sid;});
+  var min=site&&site.minutes.find(function(m){return m.id===minId;});
+  if(!min||!min.panelData)return;
+  var map={dec:'decisions',iss:'issues',act:'actions',trf:'transfers'};
+  var arr=min.panelData[map[cat]];
+  if(!arr||arr[idx]===undefined)return;
+  if(arr[idx].content!==undefined)arr[idx].content=newText;
+  else arr[idx].title=newText;
+  saveLocal();
+}
+function delPanelItemFull(cat,idx,minId,sid){
+  var site=sites.find(function(s){return s.id===sid;});
+  var min=site&&site.minutes.find(function(m){return m.id===minId;});
+  if(!min||!min.panelData)return;
+  var map={dec:'decisions',iss:'issues',act:'actions',trf:'transfers'};
+  var arr=min.panelData[map[cat]];
+  if(arr)arr.splice(idx,1);
+  renderTab(curTab);
+}
+// 배지 색상
+var OWNER_COL={'한국마이크로닉':'#3d7fff','발주처':'#f5a623','강전업체':'#ff8c42','인테리어/설계':'#a78bfa','공동':'#00c896'};
+var URG_COL={'즉시':'#ff4d4d','이번주':'#f5a623','다음회의전':'#3d7fff','여유있음':'#4a5568'};
+var TYPE_COL={'도면반영':'#a78bfa','자재결정':'#ff8c42','확인문의':'#3d7fff','일정기한':'#ff4d4d','팀내전달':'#00c896'};
+var CAT_COL={'확정':'#00c896','이슈':'#ff4d4d','액션':'#3d7fff','전달':'#a78bfa'};
+function mkBadge(text,color){
+  if(!text)return'';
+  return'<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:'+color+'33;color:'+color+';margin-right:3px;white-space:nowrap;border:1px solid '+color+'55">'+text+'</span>';
+}
+function getPanelItems(pd){
+  var items=[];
+  (pd.decisions||[]).forEach(function(d,i){items.push({idx:i,cat:'dec',catLabel:'확정',content:d.content||'',owner_tag:d.owner_tag||'',urgency:d.urgency||'',type:d.type||''});});
+  (pd.issues||[]).forEach(function(d,i){items.push({idx:i,cat:'iss',catLabel:'이슈',content:d.title||'',owner_tag:d.owner_tag||'',urgency:d.urgency||'즉시',type:d.type||'확인문의',owner:d.owner||'',due:d.due||'',priority:d.priority||'warn'});});
+  (pd.actions||[]).forEach(function(d,i){items.push({idx:i,cat:'act',catLabel:'액션',content:d.title||'',owner_tag:d.owner_tag||'',urgency:d.urgency||'이번주',type:d.type||'팀내전달',owner:d.owner||'',due:d.due||''});});
+  (pd.transfers||[]).forEach(function(d,i){items.push({idx:i,cat:'trf',catLabel:'전달',content:d.content||'',owner_tag:d.owner_tag||'',urgency:d.urgency||'여유있음',type:d.type||'팀내전달',dept:d.dept||''});});
+  return items;
+}
+
+function renderMinStage1(pd,sid,minId){
+  var items=getPanelItems(pd);
+  if(!items.length)return'<div style="padding:16px;text-align:center;color:var(--tx2)">항목 없음</div>';
+  var html='<div style="padding:6px 10px;font-size:10px;color:var(--tx3);border-bottom:1px solid var(--bd)">전체 '+items.length+'건 — 항목 클릭해서 수정 가능</div>';
+  items.forEach(function(item){
+    var catColor=CAT_COL[item.catLabel]||'var(--tx2)';
+    var badges=mkBadge(item.catLabel,catColor)+mkBadge(item.owner_tag,OWNER_COL[item.owner_tag]||'var(--tx3)')+mkBadge(item.urgency,URG_COL[item.urgency]||'var(--tx3)')+mkBadge(item.type,TYPE_COL[item.type]||'var(--tx3)');
+    var sub=item.owner?'담당: '+item.owner:'';if(item.due)sub+=(sub?' / ':' ')+'기한: '+item.due;if(item.dept)sub+=(sub?' · ':' ')+item.dept;
+    html+='<div style="padding:7px 10px;border-bottom:1px solid var(--bd);display:flex;gap:6px;align-items:flex-start">';
+    html+='<div style="flex:1;min-width:0">';
+    html+='<div style="margin-bottom:3px">'+badges+'</div>';
+    html+='<div contenteditable="true" style="font-size:11px;line-height:1.5;outline:none;cursor:text;padding:2px 0" onblur="savePanelItemEdit(\''+item.cat+'\','+item.idx+','+minId+','+sid+',this.innerText)">'+item.content+'</div>';
+    if(sub)html+='<div style="font-size:10px;color:var(--tx2);margin-top:2px">'+sub+'</div>';
+    html+='</div>';
+    html+='<span style="font-size:10px;color:var(--da);cursor:pointer;flex-shrink:0;padding-top:2px" onclick="delPanelItemFull(\''+item.cat+'\','+item.idx+','+minId+','+sid+')">✕</span>';
+    html+='</div>';
+  });
+  return html;
+}
+function renderMinStage2(pd,sid,minId){
+  var items=getPanelItems(pd);
+  var tabs=[['A','담당별'],['B','긴급도'],['C','업무유형']];
+  var tabHTML='<div style="display:flex;border-bottom:2px solid var(--bd);flex-shrink:0">';
+  tabs.forEach(function(t){
+    var active=minPanelTab===t[0];
+    tabHTML+='<button onclick="setMinPanelTab(\''+t[0]+'\')" style="flex:1;padding:7px;font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif;border:none;border-bottom:2px solid '+(active?'var(--ac)':'transparent')+';background:transparent;color:'+(active?'var(--ac)':'var(--tx2)')+';font-weight:'+(active?'500':'400')+'">'+t[1]+'</button>';
+  });
+  tabHTML+='</div>';
+  
+  var groups={};
+  var groupOrder=[];
+  items.forEach(function(item){
+    var key='';
+    if(minPanelTab==='A')key=item.owner_tag||'미분류';
+    else if(minPanelTab==='B')key=item.urgency||'미분류';
+    else key=item.type||'미분류';
+    if(!groups[key]){groups[key]=[];groupOrder.push(key);}
+    groups[key].push(item);
+  });
+  
+  // 긴급도 정렬
+  if(minPanelTab==='B'){
+    var urgOrder=['즉시','이번주','다음회의전','여유있음','미분류'];
+    groupOrder.sort(function(a,b){return urgOrder.indexOf(a)-urgOrder.indexOf(b);});
+  }
+  
+  var bodyHTML='';
+  groupOrder.forEach(function(key){
+    var grpItems=groups[key];
+    var grpColor='';
+    if(minPanelTab==='A')grpColor=OWNER_COL[key]||'var(--tx2)';
+    else if(minPanelTab==='B')grpColor=URG_COL[key]||'var(--tx2)';
+    else grpColor=TYPE_COL[key]||'var(--tx2)';
+    bodyHTML+='<div style="border-bottom:1px solid var(--bd)">';
+    bodyHTML+='<div style="padding:5px 10px;font-size:10px;font-weight:500;background:'+grpColor+'18;color:'+grpColor+'">'+key+' <span style="font-weight:400;color:var(--tx3)">'+grpItems.length+'건</span></div>';
+    grpItems.forEach(function(item){
+      var catColor=CAT_COL[item.catLabel]||'var(--tx2)';
+      var extraBadge='';
+      if(minPanelTab==='A')extraBadge=mkBadge(item.urgency,URG_COL[item.urgency]||'var(--tx3)')+mkBadge(item.type,TYPE_COL[item.type]||'var(--tx3)');
+      else if(minPanelTab==='B')extraBadge=mkBadge(item.owner_tag,OWNER_COL[item.owner_tag]||'var(--tx3)')+mkBadge(item.type,TYPE_COL[item.type]||'var(--tx3)');
+      else extraBadge=mkBadge(item.owner_tag,OWNER_COL[item.owner_tag]||'var(--tx3)')+mkBadge(item.urgency,URG_COL[item.urgency]||'var(--tx3)');
+      bodyHTML+='<div style="padding:6px 10px;border-bottom:1px solid var(--bd)44;display:flex;gap:6px;align-items:flex-start">';
+      bodyHTML+='<div style="flex:1;min-width:0">';
+      bodyHTML+='<div style="margin-bottom:2px">'+mkBadge(item.catLabel,catColor)+extraBadge+'</div>';
+      bodyHTML+='<div contenteditable="true" style="font-size:11px;line-height:1.5;outline:none;cursor:text" onblur="savePanelItemEdit(\''+item.cat+'\','+item.idx+','+minId+','+sid+',this.innerText)">'+item.content+'</div>';
+      if(item.owner||item.due||item.dept){var sub=(item.owner?'담당: '+item.owner:'')+(item.due?' / 기한: '+item.due:'')+(item.dept?' '+item.dept:'');bodyHTML+='<div style="font-size:10px;color:var(--tx2);margin-top:1px">'+sub+'</div>';}
+      bodyHTML+='</div>';
+      bodyHTML+='<span style="font-size:10px;color:var(--da);cursor:pointer;flex-shrink:0" onclick="delPanelItemFull(\''+item.cat+'\','+item.idx+','+minId+','+sid+')">✕</span>';
+      bodyHTML+='</div>';
+    });
+    bodyHTML+='</div>';
+  });
+  return tabHTML+'<div style="overflow-y:auto;flex:1">'+bodyHTML+'</div>';
+}
+function renderMinStage3(pd,sid,minId){
+  var issues=pd.issues||[];
+  var actions=pd.actions||[];
+  var transfers=pd.transfers||[];
+  var html='<div style="padding:8px 10px;font-size:11px;color:var(--tx2);border-bottom:1px solid var(--bd);flex-shrink:0">체크한 항목을 각 탭에 등록합니다</div>';
+  html+='<div style="overflow-y:auto;flex:1">';
+  
+  if(issues.length){
+    html+='<div style="padding:6px 10px;font-size:10px;font-weight:500;color:var(--da);background:rgba(255,77,77,0.08);border-bottom:1px solid var(--bd)">⚠️ 미결이슈 탭에 등록 '+issues.length+'건</div>';
+    issues.forEach(function(item,i){
+      html+='<div style="display:flex;gap:7px;padding:7px 10px;border-bottom:1px solid var(--bd);align-items:flex-start">';
+      html+='<input type="checkbox" id="p3iss'+i+'" checked style="margin-top:2px;width:14px;height:14px;accent-color:var(--ac);flex-shrink:0">';
+      html+='<label for="p3iss'+i+'" style="font-size:11px;cursor:pointer;flex:1">'+item.title+'<div style="font-size:10px;color:var(--tx2);margin-top:1px">'+(item.owner?'담당: '+item.owner:'')+(item.due?' / 기한: '+item.due:'')+'</div></label>';
+      html+='</div>';
+    });
+  }
+  if(actions.length){
+    html+='<div style="padding:6px 10px;font-size:10px;font-weight:500;color:var(--ac);background:rgba(61,127,255,0.08);border-bottom:1px solid var(--bd)">✅ 후속조치 탭에 등록 '+actions.length+'건</div>';
+    actions.forEach(function(item,i){
+      html+='<div style="display:flex;gap:7px;padding:7px 10px;border-bottom:1px solid var(--bd);align-items:flex-start">';
+      html+='<input type="checkbox" id="p3act'+i+'" checked style="margin-top:2px;width:14px;height:14px;accent-color:var(--ac);flex-shrink:0">';
+      html+='<label for="p3act'+i+'" style="font-size:11px;cursor:pointer;flex:1">'+item.title+'<div style="font-size:10px;color:var(--tx2);margin-top:1px">'+(item.owner?'담당: '+item.owner:'')+(item.due?' / 기한: '+item.due:'')+'</div></label>';
+      html+='</div>';
+    });
+  }
+  if(transfers.length){
+    html+='<div style="padding:6px 10px;font-size:10px;font-weight:500;color:var(--pu);background:rgba(167,139,250,0.08);border-bottom:1px solid var(--bd)">📢 작업의뢰서 탭에 등록 '+transfers.length+'건</div>';
+    transfers.forEach(function(item,i){
+      html+='<div style="display:flex;gap:7px;padding:7px 10px;border-bottom:1px solid var(--bd);align-items:flex-start">';
+      html+='<input type="checkbox" id="p3trf'+i+'" checked style="margin-top:2px;width:14px;height:14px;accent-color:var(--ac);flex-shrink:0">';
+      html+='<label for="p3trf'+i+'" style="font-size:11px;cursor:pointer;flex:1">'+(item.dept?'['+item.dept+'] ':'')+item.content+'</label>';
+      html+='</div>';
+    });
+  }
+  html+='</div>';
+  html+='<div style="padding:8px 10px;border-top:2px solid var(--bd);flex-shrink:0">';
+  html+='<button onclick="applyMinStage3('+sid+','+minId+')" style="width:100%;padding:8px;background:var(--gr);border:none;border-radius:7px;color:#000;font-size:12px;cursor:pointer;font-family:Noto Sans KR,sans-serif;font-weight:500">✅ 선택 항목 등록</button>';
+  html+='</div>';
+  return html;
+}
+
+function applyMinStage3(sid,minId){
+  var site=sites.find(function(s){return s.id===sid;});
+  var min=site&&site.minutes.find(function(m){return m.id===minId;});
+  if(!min||!min.panelData)return;
+  var pd=min.panelData;var added=0;
+  (pd.issues||[]).forEach(function(item,i){
+    var cb=document.getElementById('p3iss'+i);if(!cb||!cb.checked)return;
+    site.issues.push({id:Date.now()+i,title:item.title,priority:item.priority||'warn',owner:item.owner||'미정',due:item.due||'',done:false,minuteId:minId});added++;
+  });
+  (pd.actions||[]).forEach(function(item,i){
+    var cb=document.getElementById('p3act'+i);if(!cb||!cb.checked)return;
+    site.actions.push({id:Date.now()+1000+i,title:item.title,owner:item.owner||'미정',due:item.due||'',done:false,minuteId:minId});added++;
+  });
+  (pd.transfers||[]).forEach(function(item,i){
+    var cb=document.getElementById('p3trf'+i);if(!cb||!cb.checked)return;
+    if(!site.workorders)site.workorders=[];
+    site.workorders.push({id:Date.now()+2000+i,title:(item.dept?'['+item.dept+'] ':'')+item.content,dept:item.dept||'미지정',deadline:'',content:item.content,date:td(),site:site.name});added++;
+  });
+  saveLocal();autoEscalate();renderSL();
+  toast(added+'개 항목 등록됐습니다 ✓');
+  minPanelStage=1;renderTab(curTab);
+}
 function renderMinPanel(site,min){
   if(!min)return'<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--tx2);font-size:12px">회의록을 선택하세요</div>';
-  const pd=min.panelData;
-  if(!pd||!pd.loaded)return`<div style="padding:20px;text-align:center"><div style="color:var(--tx2);font-size:12px;margin-bottom:12px">AI 분석 전입니다</div><button onclick="runMinAI(${site.id},${min.id})" style="padding:8px 16px;background:rgba(167,139,250,0.15);border:1px solid var(--pu);border-radius:7px;color:var(--pu);font-size:12px;cursor:pointer;font-family:Noto Sans KR,sans-serif">🤖 AI 분석 시작</button></div>`;
-  const sec=(title,color,items,type)=>{
-    if(!items||!items.length)return'';
-    const rows=items.map((item,i)=>`<div class="ap-item">
-      <input class="ap-cb" type="checkbox" id="ap_${type}_${i}" checked>
-      <div class="ap-txt"><label for="ap_${type}_${i}" style="cursor:pointer">${item.content||item.title||''}</label>
-      ${(item.owner||item.due||item.dept)?`<div class="ap-sub">${item.dept?'→ '+item.dept:''} ${item.owner?'담당: '+item.owner:''} ${item.due?'/ 기한: '+item.due:''}</div>`:''}</div>
-      <span class="ap-del" onclick="delPanelItem('${type}',${i},${min.id},${site.id})">✕</span>
-    </div>`).join('');
-    return`<div class="ap-sec"><div class="ap-sect"><span style="color:${color}">${title} <span style="color:var(--tx3);font-weight:400">${items.length}건</span></span></div>${rows}</div>`;
-  };
-  return`<div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
-    <div style="padding:8px 11px;border-bottom:1px solid var(--bd);display:flex;gap:5px;flex-shrink:0">
-      <button onclick="applyMinPanel(${site.id},${min.id})" style="flex:1;padding:6px;background:var(--gr);border:none;border-radius:6px;color:#000;font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif;font-weight:500">✅ 선택항목 등록</button>
-      <button onclick="runMinAI(${site.id},${min.id})" style="padding:6px 9px;background:rgba(167,139,250,0.1);border:1px solid var(--pu);border-radius:6px;color:var(--pu);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif">🔄 재분석</button>
-    </div>
-    <div style="overflow-y:auto;flex:1">
-      ${sec('✅ 확정사항','var(--gr)',pd.decisions,'dec')}
-      ${sec('⚠️ 미결이슈','var(--da)',pd.issues,'iss')}
-      ${sec('📋 후속조치','var(--ac)',pd.actions,'act')}
-      ${sec('📢 부서 전달사항','var(--pu)',pd.transfers,'trf')}
-      <div class="ap-sec">
-        <textarea id="apAddText" placeholder="② 원문에서 복사해서 여기에 붙여넣기" style="width:100%;background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:6px;color:var(--tx);font-size:11px;font-family:Noto Sans KR,sans-serif;resize:vertical;min-height:50px;outline:none;margin-bottom:5px;box-sizing:border-box"></textarea>
-        <div style="display:flex;gap:5px">
-          <select id="apAddType" style="flex:1;background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:5px;color:var(--tx);font-size:11px;font-family:Noto Sans KR,sans-serif">
-            <option value="dec">확정사항</option><option value="iss">미결이슈</option><option value="act">후속조치</option><option value="trf">부서전달</option>
-          </select>
-          <button onclick="addPanelItem(${min.id},${site.id})" style="padding:5px 10px;background:var(--ac);border:none;border-radius:5px;color:#fff;font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">추가</button>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  var content=min.content||'';
+  // 메타 헤더
+  var metaHTML='<div style="padding:9px 11px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0">';
+  metaHTML+='<div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:3px">'+min.title+'</div>';
+  metaHTML+='<div style="font-size:10px;color:var(--tx2)">📅 '+min.date+' · '+min.type+'</div>';
+  var attIdx=content.indexOf('참석자');
+  if(attIdx>=0){var attLine=content.slice(attIdx).split('\n').slice(1,2).join('').trim().slice(0,60);if(attLine)metaHTML+='<div style="font-size:10px;color:var(--tx2);margin-top:1px">👥 '+attLine+'</div>';}
+  metaHTML+='</div>';
+  
+  var pd=min.panelData;
+  // AI 분석 전
+  if(!pd||!pd.loaded){
+    return metaHTML+'<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:12px">'
+      +'<div style="font-size:28px">🤖</div>'
+      +'<div style="font-size:12px;color:var(--tx2);text-align:center">AI가 회의록을 분석하면<br>확정사항·이슈·액션·전달사항을<br>1~3단계로 정리해드립니다</div>'
+      +'<button onclick="runMinAI('+site.id+','+min.id+')" style="padding:9px 22px;background:var(--pu);border:none;border-radius:7px;color:#fff;font-size:12px;cursor:pointer;font-family:Noto Sans KR,sans-serif;font-weight:500">🤖 AI 분석 시작</button>'
+      +'<div style="width:100%;border-top:1px solid var(--bd);padding-top:10px">'
+      +'<div style="font-size:10px;color:var(--tx3);margin-bottom:5px">직접 추가:</div>'
+      +'<textarea id="apAddText" placeholder="② 원문에서 복사해서 여기 붙여넣기" style="width:100%;background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:6px;color:var(--tx);font-size:11px;font-family:Noto Sans KR,sans-serif;resize:vertical;min-height:55px;outline:none;box-sizing:border-box"></textarea>'
+      +'<div style="display:flex;gap:5px;margin-top:5px">'
+      +'<select id="apAddType" style="flex:1;background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:5px;color:var(--tx);font-size:11px;font-family:Noto Sans KR,sans-serif"><option value="dec">확정사항</option><option value="iss">미결이슈</option><option value="act">후속조치</option><option value="trf">부서전달</option></select>'
+      +'<button onclick="addPanelItem('+min.id+','+site.id+')" style="padding:5px 10px;background:var(--ac);border:none;border-radius:5px;color:#fff;font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">추가</button>'
+      +'</div></div></div>';
+  }
+
+  // 단계 버튼
+  var total=((pd.decisions||[]).length+(pd.issues||[]).length+(pd.actions||[]).length+(pd.transfers||[]).length);
+  var stageBar='<div style="display:flex;border-bottom:2px solid var(--bd);flex-shrink:0">';
+  [['1','전체요약',total+'건'],['2','분류보기','A/B/C'],['3','등록확인','체크']].forEach(function(s){
+    var active=minPanelStage===parseInt(s[0]);
+    stageBar+='<button onclick="setMinPanelStage('+s[0]+')" style="flex:1;padding:6px 4px;font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif;border:none;border-bottom:2px solid '+(active?'var(--ac)':'transparent')+';background:transparent;color:'+(active?'var(--ac)':'var(--tx2)')+'">'+s[0]+'단계<br><span style="font-size:9px;color:'+(active?'var(--ac)':'var(--tx3)')+'">'+s[2]+'</span></button>';
+  });
+  stageBar+='<button onclick="runMinAI('+site.id+','+min.id+')" style="padding:5px;font-size:9px;cursor:pointer;font-family:Noto Sans KR,sans-serif;border:none;border-left:1px solid var(--bd);background:transparent;color:var(--pu)">🔄<br>재분석</button>';
+  stageBar+='</div>';
+
+  var stageContent='';
+  if(minPanelStage===1)stageContent=renderMinStage1(pd,site.id,min.id);
+  else if(minPanelStage===2)stageContent=renderMinStage2(pd,site.id,min.id);
+  else stageContent=renderMinStage3(pd,site.id,min.id);
+
+  return metaHTML+stageBar+'<div style="overflow-y:auto;flex:1;display:flex;flex-direction:column">'+stageContent+'</div>';
 }
 
 async function runMinAI(sid,minId){
@@ -1004,8 +1184,9 @@ async function addMin(){
   cm('minModal');renderSL();renderTab(curTab);
   toast('회의록 저장됨 — AI 분석 중...');
   try{
-    const result=await extractMinuteCategories(m.content);
+    const result=await extractMinuteCategories(m.content,site);
     m.panelData={...result,loaded:true};
+    saveLocal();
     renderTab(curTab);
     toast('AI 분석 완료 — ③ 패널에서 확인하세요 ✓');
   }catch(e){
