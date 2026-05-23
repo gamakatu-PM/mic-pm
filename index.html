@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>한국마이크로닉 현장관리 v5.7</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -243,8 +245,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
     <button class="hbtn" id="editBtn" style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx2)" onclick="toggleEdit()">✏️ 수정모드</button>
     <button class="hbtn" id="apiKeyBtn" style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx2)" onclick="setApiKey()" title="Claude API 키 설정">🔑 Claude</button>
     <button class="hbtn" id="geminiKeyBtn" style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx2)" onclick="setGeminiKey()">🔑 Gemini</button>
-    <button class="hbtn" style="background:rgba(0,200,150,0.12);border:1px solid rgba(0,200,150,0.4);color:var(--gr)" onclick="backupData()" title="JSON 백업">💾</button>
+    <button class="hbtn" style="background:rgba(0,200,150,0.12);border:1px solid rgba(0,200,150,0.4);color:var(--gr)" onclick="backupExcel()" title="엑셀 백업">📊</button>
     <button class="hbtn" style="background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.4);color:var(--wa)" onclick="restoreData()" title="백업 복원">📂</button>
+    <button class="hbtn" id="gdriveBtn" style="background:rgba(61,127,255,0.12);border:1px solid rgba(61,127,255,0.4);color:var(--ac)" onclick="saveToDrive()" title="구글 드라이브에 저장">☁️ Drive</button>
   </div>
 </div>
 <div class="layout">
@@ -508,6 +511,9 @@ let i2wIssIdx=-1,i2wSid=null;
 
 // ★ 패치 2: API 키 관리
 let apiKey=localStorage.getItem('km_claude_key')||'';
+let gdriveClientId=localStorage.getItem('km_gdrive_client_id')||'';
+let gdriveToken=null;
+const GDRIVE_FOLDER_ID='1isuTHfLAdOJmUhqU0FWOKmqGw5rIbMJC';
 let geminiKey=localStorage.getItem('km_gemini_key')||'';
 let issChecked=new Set();
 let minPanelStage=1,minPanelTab='A';
@@ -543,6 +549,180 @@ function backupData(){
   a.click();
   URL.revokeObjectURL(url);
   toast('백업 파일 다운로드됐습니다 ✓ (현장 '+sites.length+'개 / 회의록 '+sites.reduce(function(a,s){return a+(s.minutes||[]).length;},0)+'건)');
+}
+function backupExcel(){
+  try{
+    var wb=XLSX.utils.book_new();
+
+    // ── 시트1: 현장목록
+    var s1=[['현장명','주소','발주처','제품','공정단계','미결이슈수','미확인회의록','미수금(원)']];
+    sites.forEach(function(s){
+      var rem=calcRem(s);
+      s1.push([s.name,s.addr||'',s.client||'',s.products||'',STAGES[s.stage]||'',
+        (s.issues||[]).filter(function(i){return !i.done;}).length,
+        (s.minutes||[]).filter(function(m){return !m.read;}).length,
+        rem]);
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s1),'현장목록');
+
+    // ── 시트2: 회의록
+    var s2=[['현장명','회의제목','날짜','유형','확인여부','이슈수','액션수','내용']];
+    sites.forEach(function(s){
+      (s.minutes||[]).forEach(function(m){
+        var ic=(s.issues||[]).filter(function(i){return i.minuteId===m.id;}).length;
+        var ac=(s.actions||[]).filter(function(a){return a.minuteId===m.id;}).length;
+        s2.push([s.name,m.title,m.date,m.type,m.read?'확인':'미확인',ic,ac,m.content||'']);
+      });
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s2),'회의록');
+
+    // ── 시트3: 미결이슈
+    var s3=[['현장명','이슈내용','우선순위','담당자','기한','상태','출처회의록']];
+    sites.forEach(function(s){
+      (s.issues||[]).forEach(function(iss){
+        var min=iss.minuteId?(s.minutes||[]).find(function(m){return m.id===iss.minuteId;}):null;
+        var pri=iss.priority==='danger'?'긴급':iss.priority==='warn'?'보통':'낮음';
+        s3.push([s.name,iss.title,pri,iss.owner||'',iss.due||'',iss.done?'완료':'진행중',min?min.title:'직접추가']);
+      });
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s3),'미결이슈');
+
+    // ── 시트4: 후속조치
+    var s4=[['현장명','할일','담당자','기한','완료여부','출처회의록']];
+    sites.forEach(function(s){
+      (s.actions||[]).forEach(function(a){
+        var min=a.minuteId?(s.minutes||[]).find(function(m){return m.id===a.minuteId;}):null;
+        s4.push([s.name,a.title,a.owner||'',a.due||'',a.done?'완료':'진행중',min?min.title:'직접추가']);
+      });
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s4),'후속조치');
+
+    // ── 시트5: 수량변경이력
+    var s5=[['현장명','일자','변경내역','지시자','사유','출처']];
+    sites.forEach(function(s){
+      (s.excelHistory||[]).forEach(function(h){
+        s5.push([s.name,h.date,h.detail,h.person,h.reason,h.source||'']);
+      });
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s5),'수량변경이력');
+
+    // ── 시트6: 작업의뢰서
+    var s6=[['현장명','제목','수신부서','기안일','납기일','내용']];
+    sites.forEach(function(s){
+      (s.workorders||[]).forEach(function(w){
+        s6.push([s.name,w.title,w.dept||'',w.date||'',w.deadline||'',w.content||'']);
+      });
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s6),'작업의뢰서');
+
+    // ── 시트7: 계약/수금
+    var s7=[['현장명','구분','항목','금액','날짜','비고']];
+    var typeLabel={contract:'계약금액',add:'증액',sub:'감액',collect:'수금'};
+    sites.forEach(function(s){
+      (s.calc||[]).forEach(function(c){
+        s7.push([s.name,typeLabel[c.type]||c.type,c.name,c.amount,c.date,c.note||'']);
+      });
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s7),'계약수금');
+
+    var fname='KM현장관리_백업_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    XLSX.writeFile(wb,fname);
+
+    var totalMin=sites.reduce(function(a,s){return a+(s.minutes||[]).length;},0);
+    var totalIss=sites.reduce(function(a,s){return a+(s.issues||[]).length;},0);
+    toast('엑셀 백업 완료 ✓ 현장 '+sites.length+'개 / 회의록 '+totalMin+'건 / 이슈 '+totalIss+'건');
+  }catch(e){toast('엑셀 백업 오류: '+e.message);}
+}
+// ── Google Drive 저장 ──
+function setGdriveClientId(){
+  var k=window.prompt('Google OAuth 클라이언트 ID 입력\n(xxxxx.apps.googleusercontent.com 형식)\n\nhttps://console.cloud.google.com 에서 발급\n현재: '+(gdriveClientId?gdriveClientId.slice(0,20)+'...':'미설정'));
+  if(k===null)return;
+  gdriveClientId=k||'';
+  if(k)localStorage.setItem('km_gdrive_client_id',k);else localStorage.removeItem('km_gdrive_client_id');
+  toast(gdriveClientId?'구글 Drive 클라이언트 ID 저장됨':'클라이언트 ID 삭제됨');
+}
+
+function initGDriveToken(callback){
+  if(!gdriveClientId){
+    if(!confirm('구글 드라이브 클라이언트 ID가 없습니다.\n지금 입력하시겠습니까?'))return;
+    setGdriveClientId();
+    if(!gdriveClientId)return;
+  }
+  try{
+    var client=google.accounts.oauth2.initTokenClient({
+      client_id:gdriveClientId,
+      scope:'https://www.googleapis.com/auth/drive.file',
+      callback:function(resp){
+        if(resp.error){toast('구글 로그인 오류: '+resp.error);return;}
+        gdriveToken=resp.access_token;
+        callback();
+      }
+    });
+    client.requestAccessToken();
+  }catch(e){
+    toast('Google API 로드 오류. 잠시 후 다시 시도하세요.');
+    console.error(e);
+  }
+}
+
+async function uploadToDrive(filename,content,mimeType){
+  var metadata={name:filename,parents:[GDRIVE_FOLDER_ID]};
+  var form=new FormData();
+  form.append('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));
+  form.append('file',new Blob([content],{type:mimeType}));
+  var res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+    method:'POST',
+    headers:{Authorization:'Bearer '+gdriveToken},
+    body:form
+  });
+  if(!res.ok){
+    var err=await res.json();
+    throw new Error(err.error&&err.error.message||res.status);
+  }
+  return await res.json();
+}
+
+async function saveToDriveAfterAuth(){
+  toast('구글 드라이브에 저장 중...');
+  var dateStr=new Date().toISOString().slice(0,10);
+  var errors=[];
+
+  // JSON 백업
+  try{
+    var jsonData=JSON.stringify({sites,pipeline,workJournals,_ts:Date.now(),_version:'v5.7'},null,2);
+    var jsonName='KM현장관리_백업_'+dateStr+'.json';
+    await uploadToDrive(jsonName,jsonData,'application/json');
+  }catch(e){errors.push('JSON: '+e.message);}
+
+  // CSV 백업 (회의록 - 엑셀 대신 CSV로 드라이브에)
+  try{
+    var csvRows=[['현장명','회의제목','날짜','유형','내용']];
+    sites.forEach(function(s){
+      (s.minutes||[]).forEach(function(m){
+        csvRows.push([s.name,m.title,m.date,m.type,(m.content||'').replace(/\n/g,' ').slice(0,500)]);
+      });
+    });
+    var csvContent=csvRows.map(function(r){return r.map(function(c){return '"'+(String(c||'')).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+    var csvName='KM현장관리_회의록_'+dateStr+'.csv';
+    await uploadToDrive(csvName,'\uFEFF'+csvContent,'text/csv');
+  }catch(e){errors.push('CSV: '+e.message);}
+
+  if(errors.length){
+    toast('저장 오류: '+errors.join(' / '));
+  }else{
+    var btn=document.getElementById('gdriveBtn');
+    if(btn){btn.style.color='var(--gr)';btn.style.borderColor='rgba(0,200,150,0.4)';}
+    var totalMin=sites.reduce(function(a,s){return a+(s.minutes||[]).length;},0);
+    toast('☁️ 구글 드라이브 저장 완료 ✓ 현장 '+sites.length+'개 / 회의록 '+totalMin+'건');
+  }
+}
+
+function saveToDrive(){
+  if(gdriveToken){
+    saveToDriveAfterAuth();
+  }else{
+    initGDriveToken(saveToDriveAfterAuth);
+  }
 }
 function restoreData(){
   var input=document.createElement('input');
@@ -756,9 +936,10 @@ function renderDash(){
           <div style="font-size:11px;color:var(--tx2);margin-top:3px">현장 <strong style="color:var(--tx)">${sites.length}</strong>개 · 회의록 <strong style="color:var(--tx)">${sites.reduce((a,s)=>a+(s.minutes||[]).length,0)}</strong>건 · 이슈 <strong style="color:var(--tx)">${sites.reduce((a,s)=>a+(s.issues||[]).length,0)}</strong>건</div>
         </div>
         <div style="display:flex;gap:7px">
-          <button onclick="backupData()" style="padding:5px 12px;background:rgba(0,200,150,0.15);border:1px solid var(--gr);border-radius:6px;color:var(--gr);font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">⬇️ JSON 백업</button>
+          <button onclick="backupExcel()" style="padding:5px 12px;background:rgba(0,200,150,0.15);border:1px solid var(--gr);border-radius:6px;color:var(--gr);font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">📊 엑셀 백업</button><button onclick="backupData()" style="padding:5px 12px;background:rgba(61,127,255,0.1);border:1px solid var(--ac);border-radius:6px;color:var(--ac);font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">📋 JSON 백업</button>
           <button onclick="restoreData()" style="padding:5px 12px;background:rgba(245,166,35,0.1);border:1px solid var(--wa);border-radius:6px;color:var(--wa);font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">⬆️ 복원</button>
           <button onclick="saveCloud()" style="padding:5px 12px;background:rgba(61,127,255,0.15);border:1px solid var(--ac);border-radius:6px;color:var(--ac);font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">☁️ 서버저장</button>
+          <button onclick="saveToDrive()" style="padding:5px 12px;background:rgba(0,200,150,0.15);border:1px solid var(--gr);border-radius:6px;color:var(--gr);font-size:11px;cursor:pointer;font-family:Noto Sans KR,sans-serif">📁 Drive저장</button>
         </div>
       </div>
     </div>
