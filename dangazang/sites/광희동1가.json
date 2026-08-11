@@ -1,0 +1,364 @@
+{
+  "site": "광희동1가",
+  "source": "dangazang_v40.xlsx",
+  "cb": {
+    "title": "현장: 광희동1가 관광숙박시설 신축공사 (DND 건축사사무소, 2026.07 / 도면 ET-101~)",
+    "note": "배선도 2장 전수 처리. CB 내부 구성은 A~D 타입이 완전히 동일하고 E 타입만 조명회로 배분이 다릅니다.",
+    "types": [
+      "A TYPE",
+      "B TYPE",
+      "C TYPE",
+      "D TYPE",
+      "E TYPE"
+    ],
+    "modules": [
+      {
+        "name": "MCB 52AF/32AT (5kA) 주택용",
+        "drawing": "MCB 52AF/32AT (주택용 차단기)",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[확인] 도면에 차단용량(kA) 미표기"
+      },
+      {
+        "name": "RCBO 32AF/20AT (2.5kA) 주택용",
+        "drawing": "RCBO 32AF/20AT×6 (주택용). 2개는 정격감도전류 15mA",
+        "qty": {
+          "A TYPE": 6,
+          "B TYPE": 6,
+          "C TYPE": 6,
+          "D TYPE": 6,
+          "E TYPE": 6
+        },
+        "note": "[확인] 도면에 차단용량(kA) 미표기"
+      },
+      {
+        "name": "POWER TRANS",
+        "drawing": "POWER TRANS (0.5A 퓨즈 1차)",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": null
+      },
+      {
+        "name": "전열 릴레이보드 (형번 미표기)",
+        "drawing": "A1·A2 2회로 — 일반전열·화장실전열",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[형번확인]"
+      },
+      {
+        "name": "전등릴레이 TL-30SP5P",
+        "drawing": "TL-30SP5P — R1~R5 5회로 + 5A 퓨즈",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[신규·단가확인]"
+      },
+      {
+        "name": "밸브·에어컨 인터페이스 SA0201B",
+        "drawing": "SA0201B — FV CAN1/CAN2·AIRC1/AIRC2·12V/485 + 1A 퓨즈",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[신규·단가확인]"
+      },
+      {
+        "name": "MAIN 보드 CB-30BCB_4F",
+        "drawing": "CB-30BCB_4F V01 — DIMMER1·RELAY5/8·LATCH R1/R2·485_1/2·SCOM1~4·KS·IND·DM·EXIO1/2·SP",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[신규·단가확인]"
+      },
+      {
+        "name": "퓨즈 0.5A",
+        "drawing": "퓨즈 0.5A (TRANS 1차)",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": null
+      },
+      {
+        "name": "퓨즈 5A",
+        "drawing": "퓨즈 5A (TL-30SP5P)",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": null
+      },
+      {
+        "name": "퓨즈 1A",
+        "drawing": "퓨즈 1A (SA0201B)",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[신규]",
+        "unit_price_value": 50
+      },
+      {
+        "name": "CHIME SPEAKER",
+        "drawing": "SPEAKER (MAIN 보드 SP 커넥터)",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[확인] 스피커 납품 주체"
+      }
+    ],
+    "enclosures": [
+      {
+        "name": "CB 외함 400*600*90",
+        "drawing": "400*600*90 / 커버 440*640 / 속판 300*500 (상세도 ET 계열)",
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[단가확인] 총괄 51행 가격 공란",
+        "unit_price_value": 120000
+      }
+    ],
+    "footnotes": [
+      "※ CB 대수는 「광희동1가 기구물」 시트 5행에서만 관리합니다. 이 시트 5행은 그 값을 자동으로 끌어옵니다.",
+      "※ CB 내부 구성은 A~D 타입이 완전히 동일합니다(배선도 CONTROL BOX1). E 타입만 별도(CONTROL BOX2) — 실제 모듈 구성은 같고 조명 회로 배분만 다릅니다.",
+      "※ 요율: ×1.5 = 계약 실행가 / ×1.8 = 견적가 / 160% = 설계 예산가(계약 실행가 × 1.6).",
+      "※ 이 현장 MAIN 보드는 CB-30BCB_4F 계열입니다. 다른 현장(CB101M)과 다른 품목이니 단가를 끌어다 쓰지 마세요.",
+      "※ 기구물·중앙장비는 「광희동1가 기구물」 시트에 있습니다."
+    ]
+  },
+  "fixtures_sheet": {
+    "title": "현장: 광희동1가 관광숙박시설 — 객실 기구물 + 중앙장비",
+    "note": "정본: 계통도(ET-101) 수량표. 객실 289실.",
+    "types": [
+      "A TYPE",
+      "B TYPE",
+      "C TYPE",
+      "D TYPE",
+      "E TYPE"
+    ],
+    "rooms_by_type": {
+      "A TYPE": 153,
+      "B TYPE": 34,
+      "C TYPE": 17,
+      "D TYPE": 51,
+      "E TYPE": 34
+    },
+    "rooms_note": "평면도「지상4~20층 객실관리설비 평면도」실측 확정 (2026-08-11). 기준층 17실 × 17개 층(4~20층) = 289실. 층당 A 9(상단4+하단5)·B 2·C 1·D 3·E 2. 검산 7항목 전부 일치 — CB1 255 / CB2 34 / L3 255 / L1 68 / FIP 17 / 전 품목 289.",
+    "fixtures": [
+      {
+        "name": "입구 INDICATOR CI-2000M",
+        "drawing": "C — 입구 INDICATOR",
+        "central": null,
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[계열확인·단가확인] 계열 2000M 확정. 금액은 성윤님이 직접 정리"
+      },
+      {
+        "name": "KEY SENSOR & D/M PLATE KD-2000M",
+        "drawing": "K|D — KEY SENSOR & D/M PLATE",
+        "central": null,
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[계열확인·단가확인]"
+      },
+      {
+        "name": "LIGHT SWITCH 1버튼 LS-2000M",
+        "drawing": "L1 — LIGHT SWITCH 1버튼",
+        "central": null,
+        "qty": {
+          "A TYPE": null,
+          "B TYPE": null,
+          "C TYPE": null,
+          "D TYPE": null,
+          "E TYPE": 2
+        },
+        "note": "E타입 전용 2개. 계통도 68개 = 34실 × 2 (검산 OK)"
+      },
+      {
+        "name": "LIGHT SWITCH 3버튼 LS-2000M",
+        "drawing": "L3 — LIGHT SWITCH 3버튼",
+        "central": null,
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": null
+        },
+        "note": "A~D타입 전용 1개. 계통도 255개 = 255실 × 1 (검산 OK)"
+      },
+      {
+        "name": "BED SIDE PANEL BSP-2000M",
+        "drawing": "BSP — BED SIDE PANEL",
+        "central": null,
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[계열확인·단가확인]"
+      },
+      {
+        "name": "RF DOOR LOCK (2000M 계열)",
+        "drawing": "RD — RF DOOR LOCK. 상세도·타공도 있음",
+        "central": null,
+        "qty": {
+          "A TYPE": 1,
+          "B TYPE": 1,
+          "C TYPE": 1,
+          "D TYPE": 1,
+          "E TYPE": 1
+        },
+        "note": "[계열확인·단가확인]"
+      },
+      {
+        "name": "OPERATION PC (광희동1가)",
+        "drawing": "OP — OPERATION PC",
+        "central": 1,
+        "qty": {
+          "A TYPE": null,
+          "B TYPE": null,
+          "C TYPE": null,
+          "D TYPE": null,
+          "E TYPE": null
+        },
+        "note": "[단가확인] 중앙장비"
+      },
+      {
+        "name": "DATA CONVERSION UNIT (광희동1가)",
+        "drawing": "DCU — DATA CONVERSION UNIT",
+        "central": 1,
+        "qty": {
+          "A TYPE": null,
+          "B TYPE": null,
+          "C TYPE": null,
+          "D TYPE": null,
+          "E TYPE": null
+        },
+        "note": "[단가확인] 중앙장비"
+      },
+      {
+        "name": "RF CARD READER (광희동1가)",
+        "drawing": "C/R — 프런트 RF CARD READER",
+        "central": 1,
+        "qty": {
+          "A TYPE": null,
+          "B TYPE": null,
+          "C TYPE": null,
+          "D TYPE": null,
+          "E TYPE": null
+        },
+        "note": "[단가확인] 중앙장비"
+      },
+      {
+        "name": "HAND DATA UNIT (광희동1가)",
+        "drawing": "HDU — HAND DATA UNIT",
+        "central": 1,
+        "qty": {
+          "A TYPE": null,
+          "B TYPE": null,
+          "C TYPE": null,
+          "D TYPE": null,
+          "E TYPE": null
+        },
+        "note": "[단가확인] 중앙장비"
+      },
+      {
+        "name": "FLOOR INDICATOR PANEL (광희동1가)",
+        "drawing": "FIP — 층당 1대, 계통도 17대",
+        "central": 17,
+        "qty": {
+          "A TYPE": null,
+          "B TYPE": null,
+          "C TYPE": null,
+          "D TYPE": null,
+          "E TYPE": null
+        },
+        "note": "[단가확인] 1식 안에 17대"
+      }
+    ],
+    "checks": [
+      {
+        "item": "LIGHT SWITCH 1버튼 LS-2000M",
+        "expected": 68
+      },
+      {
+        "item": "LIGHT SWITCH 3버튼 LS-2000M",
+        "expected": 255
+      },
+      {
+        "item": "입구 INDICATOR CI-2000M",
+        "expected": 289
+      },
+      {
+        "item": "KEY SENSOR & D/M PLATE KD-2000M",
+        "expected": 289
+      },
+      {
+        "item": "BED SIDE PANEL BSP-2000M",
+        "expected": 289
+      },
+      {
+        "item": "RF DOOR LOCK (2000M 계열)",
+        "expected": 289
+      }
+    ],
+    "footnotes": []
+  },
+  "source_version": 40
+}
