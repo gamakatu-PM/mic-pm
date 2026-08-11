@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d0f14">
+<title>작업거점 파인더 — 노트북 작업 장소 찾기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{--bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;--bd:#252a38;--ac:#3d7fff;--gr:#00c896;--wa:#f5a623;--da:#ff4d4d;--tx:#e8ecf4;--tx2:#8892a8;--tx3:#4a5568;--pu:#a78bfa;--or:#ff8c42;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;display:flex;flex-direction:column;overflow:hidden;}
+button{font-family:'Noto Sans KR',sans-serif;cursor:pointer;}
+input,select,textarea{font-family:'Noto Sans KR',sans-serif;color:var(--tx);background:var(--bg3);border:1px solid var(--bd);border-radius:7px;outline:none;font-size:13px;}
+input::placeholder,textarea::placeholder{color:var(--tx3);}
+/* header */
+.hdr{background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 12px;height:48px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:8px;}
+.lm{width:24px;height:24px;background:var(--ac);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;}
+.ln{font-size:13px;font-weight:700;}
+.ls{font-size:9px;color:var(--tx2);}
+.hbtn{padding:5px 10px;border-radius:5px;font-size:11px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);}
+/* tabbar */
+.tabbar{background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;padding:0 8px;flex-shrink:0;}
+.tab{flex:1;text-align:center;padding:10px 4px;font-size:12px;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+.tab.active{color:var(--ac);border-bottom-color:var(--ac);font-weight:500;}
+.view{flex:1;overflow-y:auto;display:none;flex-direction:column;}
+.view.active{display:flex;}
+.view::-webkit-scrollbar{width:3px;}
+.view::-webkit-scrollbar-thumb{background:var(--bd);}
+/* search area */
+.srow{display:flex;gap:6px;padding:9px 10px 6px;flex-shrink:0;}
+.srow input{flex:1;padding:8px 11px;}
+.sbtn{padding:8px 12px;border-radius:7px;border:none;background:var(--ac);color:#fff;font-size:12px;white-space:nowrap;}
+.sbtn.ghost{background:var(--bg3);border:1px solid var(--bd);color:var(--tx2);}
+.chips{display:flex;gap:5px;padding:2px 10px 7px;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;}
+.chips::-webkit-scrollbar{display:none;}
+.chip{padding:6px 11px;border-radius:15px;font-size:11.5px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);white-space:nowrap;flex-shrink:0;}
+.chip.on{background:rgba(61,127,255,0.15);border-color:var(--ac);color:var(--ac);font-weight:500;}
+.chip.pk.on{background:rgba(255,140,66,0.15);border-color:var(--or);color:var(--or);}
+.frow{display:flex;gap:5px;padding:0 10px 7px;align-items:center;overflow-x:auto;flex-shrink:0;}
+.frow::-webkit-scrollbar{display:none;}
+.fchip{padding:4px 9px;border-radius:12px;font-size:10.5px;border:1px solid var(--bd);background:transparent;color:var(--tx3);white-space:nowrap;flex-shrink:0;}
+.fchip.on{border-color:var(--gr);color:var(--gr);background:rgba(0,200,150,0.08);}
+.fchip:disabled{opacity:0.4;}
+.frow select{font-size:10.5px;padding:4px 7px;border-radius:12px;background:var(--bg3);}
+#map{height:37vh;min-height:200px;flex-shrink:0;background:var(--bg3);position:relative;}
+.map-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--tx2);font-size:12px;text-align:center;padding:20px;z-index:5;}
+.rescnt{padding:7px 12px 3px;font-size:11px;color:var(--tx2);flex-shrink:0;}
+.cards{padding:4px 10px 20px;}
+/* place card */
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:10px 11px;margin-bottom:7px;}
+.card.hl{border-color:var(--ac);}
+.card.vf{border-left:3px solid var(--gr);}
+.crow1{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.cname{font-size:13.5px;font-weight:600;line-height:1.3;}
+.cname .vfb{font-size:10px;color:var(--gr);font-weight:500;margin-left:4px;}
+.cdist{font-size:11px;color:var(--ac);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.cmeta{font-size:11px;color:var(--tx2);margin-top:3px;line-height:1.5;}
+.cpark{font-size:11px;margin-top:4px;color:var(--or);}
+.cpark.free{color:var(--gr);}
+.cstars{color:var(--wa);font-size:11px;}
+.cbtns{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;}
+.cb{padding:5px 9px;border-radius:6px;font-size:10.5px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);text-decoration:none;display:inline-block;}
+.cb.pri{background:rgba(0,200,150,0.12);border-color:rgba(0,200,150,0.4);color:var(--gr);}
+.cb.blue{background:rgba(61,127,255,0.12);border-color:rgba(61,127,255,0.4);color:var(--ac);}
+/* my spots */
+.padbox{padding:10px;}
+.note{background:var(--bg2);border:1px dashed var(--bd);border-radius:9px;padding:11px;font-size:11.5px;color:var(--tx2);line-height:1.6;margin-bottom:9px;}
+/* settings */
+.sec{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:12px;margin-bottom:10px;}
+.sec h3{font-size:12.5px;margin-bottom:8px;}
+.sec p{font-size:11.5px;color:var(--tx2);line-height:1.65;margin-bottom:7px;}
+.sec ol{margin:0 0 8px 17px;font-size:11.5px;color:var(--tx2);line-height:1.8;}
+.sec code{font-family:'JetBrains Mono',monospace;font-size:10.5px;background:var(--bg3);padding:1px 5px;border-radius:4px;color:var(--pu);word-break:break-all;}
+.sec input[type=text],.sec input[type=password]{width:100%;padding:8px 11px;margin-bottom:7px;}
+.okmsg{font-size:11px;color:var(--gr);margin-top:5px;}
+.warnmsg{font-size:11px;color:var(--wa);margin-top:5px;line-height:1.5;}
+/* overlay / modal */
+.ovl{position:fixed;inset:0;background:rgba(5,7,10,0.82);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+.ovl.show{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--bd);border-radius:14px 14px 0 0;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:16px 15px 24px;}
+.modal h2{font-size:15px;margin-bottom:4px;}
+.modal .sub{font-size:11px;color:var(--tx2);margin-bottom:12px;}
+.fld{margin-bottom:10px;}
+.fld label{display:block;font-size:11px;color:var(--tx2);margin-bottom:4px;}
+.fld input[type=text],.fld textarea{width:100%;padding:8px 11px;}
+.fld textarea{resize:vertical;min-height:52px;}
+.segs{display:flex;gap:5px;flex-wrap:wrap;}
+.seg{padding:6px 11px;border-radius:7px;font-size:11.5px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);}
+.seg.on{background:rgba(61,127,255,0.15);border-color:var(--ac);color:var(--ac);}
+.stars{display:flex;gap:4px;}
+.star{font-size:22px;color:var(--tx3);background:none;border:none;}
+.star.on{color:var(--wa);}
+.mbtns{display:flex;gap:7px;margin-top:14px;}
+.mbtns button{flex:1;padding:11px;border-radius:8px;font-size:13px;border:none;}
+.mb-save{background:var(--ac);color:#fff;font-weight:500;}
+.mb-cancel{background:var(--bg3);color:var(--tx2);border:1px solid var(--bd);}
+.mb-del{background:rgba(255,77,77,0.12);color:var(--da);border:1px solid rgba(255,77,77,0.35);flex:0 0 auto;padding:11px 14px;}
+/* onboarding */
+.ob{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;margin:14px 12px;padding:16px 15px;max-width:560px;align-self:center;}
+.ob h2{font-size:16px;margin-bottom:6px;}
+.ob .step{display:flex;gap:10px;margin-bottom:11px;}
+.ob .sn{width:20px;height:20px;border-radius:50%;background:rgba(61,127,255,0.15);color:var(--ac);font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;margin-top:1px;}
+.ob .st{font-size:12px;color:var(--tx2);line-height:1.65;}
+.ob .st b{color:var(--tx);font-weight:500;}
+.ob input{width:100%;padding:10px 12px;margin:8px 0;}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--bd);color:var(--tx);font-size:12px;padding:9px 16px;border-radius:20px;z-index:200;display:none;max-width:88vw;text-align:center;}
+/* kakao map custom markers */
+.mk{width:26px;height:26px;border-radius:50% 50% 50% 3px;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.45);cursor:pointer;}
+.mk span{transform:rotate(45deg);font-size:12px;}
+.mk-place{background:var(--ac);}
+.mk-vf{background:var(--gr);}
+.mk-pk{background:var(--or);width:22px;height:22px;}
+.mk-pk span{font-size:10px;font-weight:700;color:#fff;}
+.mk-me{width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid var(--ac);box-shadow:0 0 0 6px rgba(61,127,255,0.25);}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="logo"><div class="lm">📍</div><div><div class="ln">작업거점 파인더</div><div class="ls">노트북 작업 장소 · 무료주차 · 내 검증 거점</div></div></div>
+  <button class="hbtn" onclick="switchTab('set')">⚙️ 설정</button>
+</div>
+<div class="tabbar">
+  <div class="tab active" id="tab-find" onclick="switchTab('find')">🔍 찾기</div>
+  <div class="tab" id="tab-my" onclick="switchTab('my')">✅ 내 거점 <span id="mycnt"></span></div>
+  <div class="tab" id="tab-set" onclick="switchTab('set')">⚙️ 설정</div>
+</div>
+
+<!-- ============ 찾기 ============ -->
+<div class="view active" id="view-find">
+  <div id="onboard" style="display:none;">
+    <div class="ob">
+      <h2>🔑 카카오 지도 키 설정 (최초 1회, 무료)</h2>
+      <p style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:12px;">
+        지도와 실시간 장소검색(폐업 반영)을 쓰려면 카카오 개발자 키가 필요합니다.
+        발급은 무료이고 5분이면 됩니다. 계정당 첫 번째 카카오맵 앱은 무료 쿼터가 제공되어 개인용으로는 비용이 들지 않습니다.
+      </p>
+      <div class="step"><div class="sn">1</div><div class="st"><b>developers.kakao.com</b> 접속 → 카카오 계정으로 로그인</div></div>
+      <div class="step"><div class="sn">2</div><div class="st">[내 애플리케이션] → <b>[애플리케이션 추가하기]</b> → 앱 이름 아무거나(예: 작업거점) 입력해 생성</div></div>
+      <div class="step"><div class="sn">3</div><div class="st">만든 앱에서 <b>[앱 키]</b> 항목의 <b>JavaScript 키</b>를 복사. 같은 화면(또는 [플랫폼] 메뉴)에서 <b>Web 사이트 도메인</b>에 <code style="font-family:monospace;font-size:11px;">https://gamakatu-pm.github.io</code> 를 등록</div></div>
+      <div class="step"><div class="sn">4</div><div class="st">[제품 설정] → <b>카카오맵</b> 사용 설정을 <b>활성화</b> (메뉴 위치는 개편으로 다를 수 있으나 "카카오맵" 활성화 스위치를 켜면 됩니다)</div></div>
+      <div class="step"><div class="sn">5</div><div class="st">복사한 JavaScript 키를 아래에 붙여넣기 → 저장</div></div>
+      <input type="text" id="obkey" placeholder="JavaScript 키 붙여넣기 (32자 영문·숫자)" autocomplete="off">
+      <div style="display:flex;gap:7px;">
+        <button class="sbtn" style="flex:1;padding:11px;" onclick="saveKey('obkey')">저장하고 시작</button>
+        <button class="sbtn ghost" style="padding:11px 14px;" onclick="skipKey()">키 없이 내 거점만 쓰기</button>
+      </div>
+      <div class="warnmsg" id="obmsg"></div>
+    </div>
+  </div>
+  <div id="finder" style="display:none;flex-direction:column;flex:1;min-height:0;">
+    <div class="srow">
+      <input type="text" id="q" placeholder="동네·역 이름으로 이동 (예: 판교역, 수원 인계동)" onkeydown="if(event.key==='Enter')goArea()">
+      <button class="sbtn ghost" onclick="goArea()">이동</button>
+      <button class="sbtn" onclick="goMyLoc()">📍 현위치</button>
+    </div>
+    <div class="chips" id="catchips">
+      <button class="chip" data-cat="cafe" onclick="runCat('cafe',this)">☕ 카페</button>
+      <button class="chip" data-cat="study" onclick="runCat('study',this)">📚 스터디카페</button>
+      <button class="chip" data-cat="lib" onclick="runCat('lib',this)">🏛️ 도서관</button>
+      <button class="chip" data-cat="muin" onclick="runCat('muin',this)">🤖 무인카페</button>
+      <button class="chip" data-cat="h24" onclick="runCat('h24',this)">🌙 24시</button>
+      <button class="chip pk" id="pkchip" onclick="togglePk()">🅿️ 주차장</button>
+    </div>
+    <div class="frow">
+      <select id="radius" onchange="rerunLast()">
+        <option value="500">반경 500m</option>
+        <option value="1000" selected>반경 1km</option>
+        <option value="2000">반경 2km</option>
+      </select>
+      <button class="fchip" id="f-vf" onclick="toggleF('vf')">✅ 검증된 곳만</button>
+      <button class="fchip" id="f-fp" onclick="toggleF('fp')" title="무료주차 데이터 필요">🅿️ 무료주차 도보5분</button>
+      <select id="sortby" onchange="renderCards()">
+        <option value="dist">거리순</option>
+        <option value="star">별점순</option>
+      </select>
+    </div>
+    <div id="map"><div class="map-msg" id="mapmsg">지도를 불러오는 중…</div></div>
+    <div class="rescnt" id="rescnt">카테고리를 누르면 지도 중심 기준으로 검색합니다. 한번 등록한 거점은 ✅로 표시됩니다.</div>
+    <div class="cards" id="cards"></div>
+  </div>
+</div>
+
+<!-- ============ 내 거점 ============ -->
+<div class="view" id="view-my">
+  <div class="padbox">
+    <div class="srow" style="padding:0 0 8px;">
+      <input type="text" id="myq" placeholder="거점 검색 (이름·지역·메모)" oninput="renderMy()">
+      <button class="sbtn" onclick="openSpotModal(null)">＋ 직접 추가</button>
+    </div>
+    <div class="note" id="mynote" style="display:none;">
+      아직 등록된 거점이 없습니다. 🔍 찾기에서 장소를 검색해 「거점 등록」을 누르거나, 이미 아는 곳은 「＋ 직접 추가」로 넣어 두세요.
+      한번 검증해 두면 다음부터는 검색 없이 여기서 바로 고르면 됩니다.
+    </div>
+    <div id="mylist"></div>
+  </div>
+</div>
+
+<!-- ============ 설정 ============ -->
+<div class="view" id="view-set">
+  <div class="padbox">
+    <div class="sec">
+      <h3>🔑 카카오 JavaScript 키</h3>
+      <p id="keystate"></p>
+      <input type="text" id="setkey" placeholder="JavaScript 키" autocomplete="off">
+      <button class="sbtn" onclick="saveKey('setkey')">키 저장 후 새로고침</button>
+      <p style="margin-top:8px;">지도가 안 뜨면: ① 키가 <b>JavaScript 키</b>인지(REST 키 아님) ② 카카오 개발자 앱의 Web 도메인에 <code>https://gamakatu-pm.github.io</code> 등록 ③ [카카오맵] 활성화 — 세 가지를 확인하세요.</p>
+    </div>
+    <div class="sec">
+      <h3>🅿️ 무료·공영 주차장 데이터 (선택, 강력 추천)</h3>
+      <p id="pkstate"></p>
+      <p>공공데이터포털의 <b>전국주차장정보표준데이터</b> CSV를 한 번 넣어두면, 검색 결과 카드마다 <b>가장 가까운 무료·공영 주차장과 거리</b>가 자동 표시되고 「무료주차 도보5분」 필터를 쓸 수 있습니다.</p>
+      <ol>
+        <li><code>data.go.kr</code> 접속 → "전국주차장정보표준데이터" 검색 (데이터셋 번호 15012896)</li>
+        <li><b>CSV 다운로드</b> (로그인 없이 가능)</li>
+        <li>아래 버튼으로 그 CSV 파일 선택 → 서울·경기의 무료/공영 주차장만 자동 추출해 저장합니다</li>
+      </ol>
+      <input type="file" id="pkfile" accept=".csv" style="display:none;" onchange="importParking(this.files[0])">
+      <button class="sbtn" onclick="document.getElementById('pkfile').click()">CSV 파일 가져오기</button>
+      <button class="sbtn ghost" onclick="clearParking()" style="margin-left:5px;">데이터 삭제</button>
+      <p class="warnmsg" style="margin-top:8px;">데이터가 없어도 🅿️ 주차장 버튼으로 카카오 실시간 주차장 검색은 가능합니다 (무료 여부는 카카오맵 상세에서 확인).</p>
+    </div>
+    <div class="sec">
+      <h3>💾 내 거점 백업</h3>
+      <p>거점 데이터는 이 브라우저(localStorage)에 저장됩니다. 기기를 바꾸거나 브라우저 데이터를 지우기 전에 내보내 두세요.</p>
+      <button class="sbtn" onclick="exportXlsx()">엑셀(xlsx) 내보내기</button>
+      <button class="sbtn ghost" onclick="document.getElementById('bakfile').click()" style="margin-left:5px;">가져오기(xlsx/json)</button>
+      <input type="file" id="bakfile" accept=".xlsx,.json" style="display:none;" onchange="importBackup(this.files[0])">
+    </div>
+    <div class="sec">
+      <h3>ℹ️ 사용 팁</h3>
+      <p>· 폐업/영업시간/리뷰는 카드의 「카카오맵」 버튼에서 최신 정보로 확인됩니다 — 블로그 검색과 달리 죽은 정보가 없습니다.<br>
+      · 현장 동선별로 <b>고정 거점 2~3곳</b>(공영주차장 붙은 도서관 + 스터디카페 1곳)을 등록해 두는 것이 가장 효율적입니다.<br>
+      · 홈 화면에 추가(브라우저 메뉴 → 홈 화면에 추가)하면 앱처럼 쓸 수 있습니다.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 거점 등록/수정 모달 ============ -->
+<div class="ovl" id="spotOvl" onclick="if(event.target===this)closeSpotModal()">
+  <div class="modal">
+    <h2 id="smTitle">거점 등록</h2>
+    <div class="sub" id="smSub"></div>
+    <div class="fld"><label>이름</label><input type="text" id="sm-name" placeholder="장소 이름"></div>
+    <div class="fld"><label>주소 / 지역</label><input type="text" id="sm-addr" placeholder="예: 성남시 분당구 판교동"></div>
+    <div class="fld"><label>무료주차</label><div class="segs" id="sm-park">
+      <button class="seg" data-v="free">○ 무료</button><button class="seg" data-v="cond">△ 조건부</button><button class="seg" data-v="paid">× 유료/없음</button>
+    </div></div>
+    <div class="fld"><label>콘센트</label><div class="segs" id="sm-plug">
+      <button class="seg" data-v="many">많음</button><button class="seg" data-v="some">보통</button><button class="seg" data-v="none">없음</button>
+    </div></div>
+    <div class="fld"><label>좌석 여유</label><div class="segs" id="sm-seat">
+      <button class="seg" data-v="good">여유</button><button class="seg" data-v="ok">보통</button><button class="seg" data-v="bad">붐빔</button>
+    </div></div>
+    <div class="fld"><label>와이파이</label><div class="segs" id="sm-wifi">
+      <button class="seg" data-v="good">빠름</button><button class="seg" data-v="ok">보통</button><button class="seg" data-v="bad">느림/없음</button>
+    </div></div>
+    <div class="fld"><label>장시간 작업 (4~5시간)</label><div class="segs" id="sm-long">
+      <button class="seg" data-v="ok">눈치 안 보임</button><button class="seg" data-v="mid">2~3시간까지</button><button class="seg" data-v="no">비추천</button>
+    </div></div>
+    <div class="fld"><label>별점</label><div class="stars" id="sm-stars">
+      <button class="star" data-v="1">★</button><button class="star" data-v="2">★</button><button class="star" data-v="3">★</button><button class="star" data-v="4">★</button><button class="star" data-v="5">★</button>
+    </div></div>
+    <div class="fld"><label>메모 (주차 조건, 자리 위치, 콘센트 위치 등)</label><textarea id="sm-memo" placeholder="예: 2층 창가 콘센트석 6개, 건물 뒤 공영주차장 30분 무료"></textarea></div>
+    <div class="mbtns">
+      <button class="mb-del" id="sm-del" onclick="deleteSpot()" style="display:none;">삭제</button>
+      <button class="mb-cancel" onclick="closeSpotModal()">취소</button>
+      <button class="mb-save" onclick="saveSpot()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ========== 상태 ========== */
+const LS = {key:'wf_kakao_key', spots:'wf_spots', parking:'wf_parking', center:'wf_center', skip:'wf_skipkey'};
+let kakaoReady = false, map = null, ps = null, geocoder = null;
+let markers = [], pkMarkers = [], meMarker = null;
+let results = [];            // 마지막 검색 결과
+let lastCat = null;          // 마지막 카테고리
+let pkOn = false;            // 실시간 주차장 레이어
+let filters = {vf:false, fp:false};
+let spots = load(LS.spots, {});      // id -> spot
+let parking = load(LS.parking, []);  // [{n,la,lo,t,f,fee,tm,c,a}]
+let editingId = null, pendingPlace = null;
+
+function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ toast('저장 공간이 부족합니다'); } }
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._tm); t._tm=setTimeout(()=>t.style.display='none', 2600); }
+function dist(la1,lo1,la2,lo2){ const R=6371000,r=Math.PI/180,dLa=(la2-la1)*r,dLo=(lo2-lo1)*r,a=Math.sin(dLa/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dLo/2)**2; return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
+function fmtDist(m){ return m<1000 ? Math.round(m)+'m' : (m/1000).toFixed(1)+'km'; }
+
+/* ========== 탭 ========== */
+function switchTab(t){
+  ['find','my','set'].forEach(x=>{
+    $('tab-'+x).classList.toggle('active', x===t);
+    $('view-'+x).classList.toggle('active', x===t);
+  });
+  if(t==='my') renderMy();
+  if(t==='set') renderSet();
+  if(t==='find' && map) setTimeout(()=>{ map.relayout(); }, 60);
+}
+
+/* ========== 카카오 SDK ========== */
+function bootstrap(){
+  const key = localStorage.getItem(LS.key);
+  if(key){ $('onboard').style.display='none'; $('finder').style.display='flex'; loadKakao(key); }
+  else if(localStorage.getItem(LS.skip)){ $('onboard').style.display='none'; $('finder').style.display='flex'; sdkFail('키가 등록되지 않아 지도를 쓸 수 없습니다. ⚙️ 설정에서 등록하세요.'); }
+  else { $('onboard').style.display='block'; $('finder').style.display='none'; }
+  updateMyCnt();
+}
+function saveKey(inputId){
+  const k = $(inputId).value.trim();
+  if(!/^[0-9a-f]{32}$/i.test(k)){
+    const el = $('obmsg'); if(el && inputId==='obkey'){ el.textContent='JavaScript 키는 32자리 영문·숫자입니다. [앱 키] 화면에서 JavaScript 키를 복사했는지 확인하세요.'; }
+    if(!confirm('키 형식이 일반적인 JavaScript 키(32자)와 다릅니다. 그래도 저장할까요?')) return;
+  }
+  localStorage.setItem(LS.key, k);
+  location.reload();
+}
+function skipKey(){ localStorage.setItem(LS.skip,'1'); bootstrap(); switchTab('my'); }
+function loadKakao(key){
+  const s = document.createElement('script');
+  s.src = 'https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=' + encodeURIComponent(key) + '&libraries=services';
+  s.onload = ()=>{ try{ kakao.maps.load(initMap); }catch(e){ sdkFail('지도 초기화 실패: '+e.message); } };
+  s.onerror = ()=>sdkFail('카카오 SDK 로드 실패 — 키가 올바른지, 카카오 개발자 앱의 Web 도메인에 이 주소가 등록됐는지 확인하세요.');
+  document.head.appendChild(s);
+  setTimeout(()=>{ if(!kakaoReady && !window._sdkFailed) sdkFail('지도 로드가 늦어집니다 — 키/도메인 등록/카카오맵 활성화를 확인하세요.'); }, 8000);
+}
+function sdkFail(msg){
+  window._sdkFailed = true;
+  const el = $('mapmsg');
+  if(el){ el.innerHTML = '⚠️ '+esc(msg)+'<br><button class="sbtn" style="margin-top:6px;" onclick="switchTab(\'set\')">설정 열기</button>'; }
+}
+function initMap(){
+  kakaoReady = true;
+  const c = load(LS.center, {la:37.5665, lo:126.9780}); // 서울시청 기본
+  map = new kakao.maps.Map($('map'), {center: new kakao.maps.LatLng(c.la, c.lo), level: 4});
+  ps = new kakao.maps.services.Places();
+  geocoder = new kakao.maps.services.Geocoder();
+  $('mapmsg').style.display='none';
+  kakao.maps.event.addListener(map, 'idle', ()=>{
+    const ct = map.getCenter();
+    save(LS.center, {la: ct.getLat(), lo: ct.getLng()});
+    if(pkOn) drawPkLayer();
+  });
+  goMyLoc(true);
+}
+
+/* ========== 위치/이동 ========== */
+function goMyLoc(silent){
+  if(!navigator.geolocation){ if(!silent) toast('이 브라우저는 위치를 지원하지 않습니다'); return; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    if(!map) return;
+    const ll = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+    map.setCenter(ll); map.setLevel(4);
+    if(meMarker) meMarker.setMap(null);
+    meMarker = new kakao.maps.CustomOverlay({position: ll, content: '<div class="mk-me"></div>', zIndex: 3});
+    meMarker.setMap(map);
+    if(!silent) toast('현재 위치로 이동했습니다');
+  }, ()=>{ if(!silent) toast('위치 권한을 확인하세요'); }, {enableHighAccuracy:true, timeout:7000});
+}
+function goArea(){
+  const q = $('q').value.trim();
+  if(!q || !kakaoReady) return;
+  ps.keywordSearch(q, (data, status)=>{
+    if(status === kakao.maps.services.Status.OK && data.length){
+      map.setCenter(new kakao.maps.LatLng(data[0].y, data[0].x)); map.setLevel(4);
+      toast(data[0].place_name + ' 주변으로 이동');
+      if(lastCat) runCat(lastCat, null);
+    } else toast('검색 결과가 없습니다');
+  });
+}
+
+/* ========== 카테고리 검색 ========== */
+const CATS = {
+  cafe:  {label:'카페',      mode:'cat', code:'CE7'},
+  study: {label:'스터디카페', mode:'kw',  q:'스터디카페'},
+  lib:   {label:'도서관',    mode:'kw',  q:'도서관'},
+  muin:  {label:'무인카페',  mode:'kw',  q:'무인카페'},
+  h24:   {label:'24시 카페', mode:'kw',  q:'24시간 카페'}
+};
+function runCat(cat, btn){
+  if(!kakaoReady){ toast('지도가 아직 준비되지 않았습니다'); return; }
+  lastCat = cat;
+  document.querySelectorAll('#catchips .chip[data-cat]').forEach(c=>c.classList.toggle('on', c.dataset.cat===cat));
+  const c = CATS[cat], ct = map.getCenter(), radius = +$('radius').value;
+  const opt = {location: ct, radius: radius, sort: kakao.maps.services.SortBy.DISTANCE, size: 15};
+  results = []; let pagesLeft = 3;
+  const cb = (data, status, pagination)=>{
+    if(status === kakao.maps.services.Status.OK){
+      results = results.concat(data);
+      pagesLeft--;
+      if(pagination && pagination.hasNextPage && pagesLeft > 0){ pagination.nextPage(); return; }
+    }
+    finishSearch(c.label);
+  };
+  if(c.mode==='cat') ps.categorySearch(c.code, cb, opt);
+  else ps.keywordSearch(c.q, cb, {...opt, useMapCenter:true});
+}
+function rerunLast(){ if(lastCat) runCat(lastCat, null); }
+function finishSearch(label){
+  // 중복 제거 + 거점 매칭 + 주차 거리 계산
+  const seen = new Set();
+  results = results.filter(r=>{ if(seen.has(r.id)) return false; seen.add(r.id); return true; });
+  results.forEach(r=>{
+    r._spot = spots[r.id] || matchSpotByName(r.place_name);
+    r._pk = nearestFreeParking(+r.y, +r.x);
+  });
+  renderCards();
+  drawMarkers();
+  $('rescnt').textContent = label + ' ' + results.length + '곳 (지도 중심 기준' + ($('radius').value/1000) + 'km)' + (parking.length? '' : ' · 무료주차 표시는 설정에서 주차장 CSV를 넣으면 켜집니다');
+}
+function matchSpotByName(name){
+  const ids = Object.keys(spots);
+  for(const id of ids){ if(spots[id].name === name) return spots[id]; }
+  return null;
+}
+
+/* ========== 무료주차 ========== */
+function nearestFreeParking(la, lo){
+  if(!parking.length) return null;
+  let best = null, bd = 1e12;
+  for(const p of parking){
+    const d = dist(la, lo, p.la, p.lo);
+    if(d < bd){ bd = d; best = p; }
+  }
+  return best ? {p: best, d: bd} : null;
+}
+
+/* ========== 카드 렌더 ========== */
+function starsHtml(n){ return n ? '<span class="cstars">' + '★'.repeat(n) + '</span>' : ''; }
+const PARK_LBL = {free:'🅿️ 무료주차 ○', cond:'🅿️ 조건부 무료', paid:'🅿️ 유료/주차 없음'};
+const SEG_LBL = {many:'콘센트 많음', some:'콘센트 보통', none:'콘센트 없음', good:'', ok:'', bad:''};
+function spotBadges(s){
+  const b = [];
+  if(s.park) b.push(PARK_LBL[s.park]);
+  if(s.plug==='many') b.push('🔌 콘센트 많음'); else if(s.plug==='none') b.push('🔌 콘센트 없음');
+  if(s.long==='ok') b.push('⏰ 장시간 OK'); else if(s.long==='no') b.push('⏰ 장시간 비추');
+  if(s.wifi==='bad') b.push('📶 와이파이 약함');
+  return b.join(' · ');
+}
+function renderCards(){
+  let list = results.slice();
+  if(filters.vf) list = list.filter(r=>r._spot);
+  if(filters.fp) list = list.filter(r=>r._pk && r._pk.d <= 400 || (r._spot && r._spot.park==='free'));
+  const sortby = $('sortby').value;
+  if(sortby==='star') list.sort((a,b)=>((b._spot?b._spot.star||0:0)-(a._spot?a._spot.star||0:0)) || (+a.distance||0)-(+b.distance||0));
+  // 검증 거점 상단 고정
+  list.sort((a,b)=>((b._spot?1:0)-(a._spot?1:0)));
+  const el = $('cards');
+  if(!list.length){ el.innerHTML = results.length ? '<div class="note">필터 조건에 맞는 곳이 없습니다.</div>' : ''; return; }
+  el.innerHTML = list.map(r=>{
+    const s = r._spot;
+    const pk = r._pk;
+    const pkFree = pk && (pk.p.f==='무료');
+    return '<div class="card'+(s?' vf':'')+'" id="card-'+esc(r.id)+'">'
+      + '<div class="crow1"><div class="cname">'+esc(r.place_name)+(s?'<span class="vfb">✅ 내 거점</span>':'')+'</div>'
+      + '<div class="cdist">'+(r.distance?fmtDist(+r.distance):'')+'</div></div>'
+      + '<div class="cmeta">'+esc(r.road_address_name||r.address_name||'')+(r.phone?' · '+esc(r.phone):'')+'</div>'
+      + (s ? '<div class="cmeta">'+starsHtml(s.star)+' '+esc(spotBadges(s))+(s.memo?'<br>📝 '+esc(s.memo):'')+'</div>' : '')
+      + (pk ? '<div class="cpark'+(pkFree?' free':'')+'">🅿️ '+esc(pk.p.n)+' ('+esc(pk.p.f||pk.p.t)+') '+fmtDist(pk.d)+(pk.p.tm?' · '+esc(pk.p.tm):'')+'</div>' : '')
+      + '<div class="cbtns">'
+      + '<a class="cb blue" href="'+esc(r.place_url)+'" target="_blank" rel="noopener">카카오맵 상세·리뷰</a>'
+      + '<a class="cb" href="https://map.kakao.com/link/to/'+encodeURIComponent(r.place_name)+','+r.y+','+r.x+'" target="_blank" rel="noopener">길찾기</a>'
+      + '<button class="cb pri" onclick="openFromResult(\''+esc(r.id)+'\')">'+(s?'✏️ 거점 수정':'＋ 거점 등록')+'</button>'
+      + '<button class="cb" onclick="panTo('+r.y+','+r.x+')">지도</button>'
+      + '</div></div>';
+  }).join('');
+}
+function panTo(la, lo){ if(map){ map.panTo(new kakao.maps.LatLng(la, lo)); } }
+
+/* ========== 마커 ========== */
+function drawMarkers(){
+  markers.forEach(m=>m.setMap(null)); markers = [];
+  results.forEach(r=>{
+    const vf = !!r._spot;
+    const ov = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(+r.y, +r.x),
+      content: '<div class="mk '+(vf?'mk-vf':'mk-place')+'" onclick="focusCard(\''+esc(r.id)+'\')"><span>'+(vf?'✅':'☕')+'</span></div>',
+      yAnchor: 1, zIndex: vf?2:1
+    });
+    ov.setMap(map); markers.push(ov);
+  });
+}
+function focusCard(id){
+  const el = $('card-'+id);
+  if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('hl'); setTimeout(()=>el.classList.remove('hl'), 1600); }
+}
+function togglePk(){
+  pkOn = !pkOn;
+  $('pkchip').classList.toggle('on', pkOn);
+  if(pkOn) drawPkLayer(); else { pkMarkers.forEach(m=>m.setMap(null)); pkMarkers=[]; }
+}
+function drawPkLayer(){
+  pkMarkers.forEach(m=>m.setMap(null)); pkMarkers = [];
+  if(!map) return;
+  const ct = map.getCenter();
+  if(parking.length){
+    // 내장 데이터: 중심 2km 내 무료·공영만
+    parking.forEach(p=>{
+      const d = dist(ct.getLat(), ct.getLng(), p.la, p.lo);
+      if(d > 2000) return;
+      const ov = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(p.la, p.lo),
+        content: '<div class="mk mk-pk" onclick="toast(\''+esc(p.n).replace(/'/g,'')+' · '+esc(p.f||p.t)+(p.tm?' · '+esc(p.tm).replace(/'/g,''):'')+'\')"><span>P</span></div>',
+        yAnchor: 1
+      });
+      ov.setMap(map); pkMarkers.push(ov);
+    });
+    if(!pkMarkers.length) toast('이 근처에 등록된 무료·공영 주차장이 없습니다');
+  } else if(kakaoReady){
+    // 실시간 카카오 검색 폴백
+    ps.categorySearch('PK6', (data, status)=>{
+      if(status !== kakao.maps.services.Status.OK) return;
+      data.forEach(p=>{
+        const ov = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(+p.y, +p.x),
+          content: '<div class="mk mk-pk" onclick="window.open(\''+esc(p.place_url)+'\')"><span>P</span></div>',
+          yAnchor: 1
+        });
+        ov.setMap(map); pkMarkers.push(ov);
+      });
+    }, {location: ct, radius: 1500, size: 15});
+  }
+}
+
+/* ========== 필터 ========== */
+function toggleF(f){
+  if(f==='fp' && !parking.length && !Object.values(spots).some(s=>s.park==='free')){
+    toast('설정에서 주차장 CSV를 먼저 넣어주세요 (또는 무료주차 거점을 등록)'); return;
+  }
+  filters[f] = !filters[f];
+  $('f-'+f).classList.toggle('on', filters[f]);
+  renderCards();
+}
+
+/* ========== 거점 모달 ========== */
+function segInit(){
+  document.querySelectorAll('.segs').forEach(g=>{
+    g.querySelectorAll('.seg').forEach(b=>{
+      b.onclick = ()=>{ g.querySelectorAll('.seg').forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
+    });
+  });
+  document.querySelectorAll('#sm-stars .star').forEach(b=>{
+    b.onclick = ()=>{
+      const v = +b.dataset.v;
+      document.querySelectorAll('#sm-stars .star').forEach(x=>x.classList.toggle('on', +x.dataset.v <= v));
+    };
+  });
+}
+function segVal(id){ const b = document.querySelector('#'+id+' .seg.on'); return b ? b.dataset.v : ''; }
+function segSet(id, v){ document.querySelectorAll('#'+id+' .seg').forEach(b=>b.classList.toggle('on', b.dataset.v===v)); }
+function starVal(){ return document.querySelectorAll('#sm-stars .star.on').length; }
+function starSet(n){ document.querySelectorAll('#sm-stars .star').forEach(b=>b.classList.toggle('on', +b.dataset.v <= n)); }
+
+function openFromResult(id){
+  const r = results.find(x=>x.id===id);
+  if(!r) return;
+  pendingPlace = r;
+  openSpotModal(spots[r.id] ? r.id : null, r);
+}
+function openSpotModal(id, place){
+  editingId = id;
+  const s = id ? spots[id] : null;
+  $('smTitle').textContent = s ? '거점 수정' : '거점 등록';
+  $('smSub').textContent = s ? ('최근 방문: ' + (s.visited || '-') + ' · 방문 ' + (s.visits||1) + '회') : '한번 기록해 두면 다음부터 검색이 필요 없습니다';
+  $('sm-name').value = s ? s.name : (place ? place.place_name : '');
+  $('sm-addr').value = s ? (s.addr||'') : (place ? (place.road_address_name || place.address_name || '') : '');
+  segSet('sm-park', s ? s.park : ''); segSet('sm-plug', s ? s.plug : '');
+  segSet('sm-seat', s ? s.seat : ''); segSet('sm-wifi', s ? s.wifi : '');
+  segSet('sm-long', s ? s.long : '');
+  starSet(s ? (s.star||0) : 0);
+  $('sm-memo').value = s ? (s.memo||'') : '';
+  $('sm-del').style.display = s ? 'block' : 'none';
+  if(!place && !s) pendingPlace = null;
+  $('spotOvl').classList.add('show');
+}
+function closeSpotModal(){ $('spotOvl').classList.remove('show'); editingId = null; pendingPlace = null; }
+function saveSpot(){
+  const name = $('sm-name').value.trim();
+  if(!name){ toast('이름을 입력하세요'); return; }
+  const today = new Date().toISOString().slice(0,10);
+  const id = editingId || (pendingPlace ? pendingPlace.id : 'm_' + Date.now());
+  const prev = spots[id] || {};
+  spots[id] = {
+    id, name,
+    addr: $('sm-addr').value.trim(),
+    la: prev.la != null ? prev.la : (pendingPlace ? +pendingPlace.y : null),
+    lo: prev.lo != null ? prev.lo : (pendingPlace ? +pendingPlace.x : null),
+    url: prev.url || (pendingPlace ? pendingPlace.place_url : ''),
+    phone: prev.phone || (pendingPlace ? pendingPlace.phone : ''),
+    park: segVal('sm-park'), plug: segVal('sm-plug'), seat: segVal('sm-seat'),
+    wifi: segVal('sm-wifi'), long: segVal('sm-long'),
+    star: starVal(),
+    memo: $('sm-memo').value.trim(),
+    visited: prev.visited || today,
+    visits: prev.visits || 1,
+    created: prev.created || today
+  };
+  save(LS.spots, spots);
+  closeSpotModal();
+  updateMyCnt();
+  results.forEach(r=>{ r._spot = spots[r.id] || matchSpotByName(r.place_name); });
+  renderCards(); if(kakaoReady) drawMarkers();
+  renderMy();
+  toast('저장했습니다 ✅');
+}
+function deleteSpot(){
+  if(!editingId) return;
+  if(!confirm('이 거점을 삭제할까요?')) return;
+  delete spots[editingId];
+  save(LS.spots, spots);
+  closeSpotModal(); updateMyCnt();
+  results.forEach(r=>{ r._spot = spots[r.id] || matchSpotByName(r.place_name); });
+  renderCards(); if(kakaoReady) drawMarkers();
+  renderMy();
+}
+function visitToday(id){
+  const s = spots[id]; if(!s) return;
+  s.visited = new Date().toISOString().slice(0,10);
+  s.visits = (s.visits||1) + 1;
+  save(LS.spots, spots); renderMy();
+  toast(s.name + ' 방문 기록 +1');
+}
+
+/* ========== 내 거점 목록 ========== */
+function updateMyCnt(){ const n = Object.keys(spots).length; $('mycnt').textContent = n ? '('+n+')' : ''; }
+function renderMy(){
+  const q = ($('myq').value||'').trim().toLowerCase();
+  let list = Object.values(spots);
+  if(q) list = list.filter(s=>(s.name+' '+(s.addr||'')+' '+(s.memo||'')).toLowerCase().includes(q));
+  list.sort((a,b)=>(b.star||0)-(a.star||0) || (b.visited||'').localeCompare(a.visited||''));
+  $('mynote').style.display = Object.keys(spots).length ? 'none' : 'block';
+  $('mylist').innerHTML = list.map(s=>{
+    return '<div class="card vf">'
+      + '<div class="crow1"><div class="cname">'+esc(s.name)+'</div><div class="cdist">'+starsHtml(s.star)+'</div></div>'
+      + '<div class="cmeta">'+esc(s.addr||'')+'</div>'
+      + '<div class="cmeta">'+esc(spotBadges(s))+'</div>'
+      + (s.memo?'<div class="cmeta">📝 '+esc(s.memo)+'</div>':'')
+      + '<div class="cmeta" style="color:var(--tx3);">최근 '+esc(s.visited||'-')+' · '+(s.visits||1)+'회 방문</div>'
+      + '<div class="cbtns">'
+      + '<button class="cb pri" onclick="visitToday(\''+esc(s.id)+'\')">오늘 방문 +1</button>'
+      + '<button class="cb" onclick="openSpotModal(\''+esc(s.id)+'\')">✏️ 수정</button>'
+      + (s.la!=null?'<button class="cb blue" onclick="switchTab(\'find\');panTo('+s.la+','+s.lo+')">지도</button>':'')
+      + (s.url?'<a class="cb" href="'+esc(s.url)+'" target="_blank" rel="noopener">카카오맵</a>':'')
+      + (s.la!=null?'<a class="cb" href="https://map.kakao.com/link/to/'+encodeURIComponent(s.name)+','+s.la+','+s.lo+'" target="_blank" rel="noopener">길찾기</a>':'')
+      + '</div></div>';
+  }).join('');
+}
+
+/* ========== 설정 ========== */
+function renderSet(){
+  const key = localStorage.getItem(LS.key);
+  $('keystate').innerHTML = key ? '현재 키: <code>'+esc(key.slice(0,6))+'…'+esc(key.slice(-4))+'</code> <span class="okmsg">등록됨</span>' : '<span class="warnmsg">키가 없습니다 — 지도·검색을 쓰려면 등록하세요.</span>';
+  $('pkstate').innerHTML = parking.length
+    ? '<span class="okmsg">✅ 무료·공영 주차장 <b>'+parking.length.toLocaleString()+'곳</b> 저장됨 — 검색 카드에 가까운 무료주차장이 자동 표시됩니다.</span>'
+    : '<span class="warnmsg">아직 데이터가 없습니다.</span>';
+}
+
+/* ========== 주차장 CSV 가져오기 ========== */
+function readFileSmart(file, cb){
+  // data.go.kr CSV는 EUC-KR인 경우가 많다 → utf-8로 읽어 깨짐이 많으면 euc-kr 재시도
+  const fr = new FileReader();
+  fr.onload = ()=>{
+    const buf = fr.result;
+    let txt = new TextDecoder('utf-8', {fatal:false}).decode(buf);
+    const bad = (txt.match(/�/g)||[]).length;
+    if(bad > 5){
+      try{ txt = new TextDecoder('euc-kr').decode(buf); }catch(e){}
+    }
+    cb(txt);
+  };
+  fr.readAsArrayBuffer(file);
+}
+function parseCsv(txt){
+  const rows = []; let row = [], cell = '', inQ = false;
+  for(let i=0;i<txt.length;i++){
+    const ch = txt[i];
+    if(inQ){
+      if(ch==='"'){ if(txt[i+1]==='"'){ cell+='"'; i++; } else inQ=false; }
+      else cell += ch;
+    } else {
+      if(ch==='"') inQ = true;
+      else if(ch===','){ row.push(cell); cell=''; }
+      else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&txt[i+1]==='\n') i++; row.push(cell); cell=''; if(row.length>1||row[0]!=='') rows.push(row); row=[]; }
+      else cell += ch;
+    }
+  }
+  if(cell!==''||row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+function importParking(file){
+  if(!file) return;
+  toast('CSV 분석 중…');
+  readFileSmart(file, txt=>{
+    try{
+      const rows = parseCsv(txt);
+      if(rows.length < 2){ toast('CSV 내용을 읽을 수 없습니다'); return; }
+      const hd = rows[0].map(h=>h.replace(/\s/g,''));
+      const ix = name=>hd.findIndex(h=>h.includes(name));
+      const iName = ix('주차장명'), iType = ix('주차장구분'), iFee = ix('요금정보'),
+            iLa = ix('위도'), iLo = ix('경도'),
+            iAddrR = ix('소재지도로명주소'), iAddrJ = ix('소재지지번주소'),
+            iDay = ix('운영요일'), iT1 = ix('평일운영시작시각'), iT2 = ix('평일운영종료시각'),
+            iCnt = ix('주차구획수');
+      if(iName<0 || iLa<0 || iLo<0){ toast('전국주차장정보표준데이터 형식이 아닙니다 (주차장명/위도/경도 컬럼 필요)'); return; }
+      const out = [];
+      for(let r=1;r<rows.length;r++){
+        const c = rows[r];
+        const la = parseFloat(c[iLa]), lo = parseFloat(c[iLo]);
+        if(!isFinite(la)||!isFinite(lo)||la<33||la>39||lo<124||lo>132) continue;
+        const addr = (c[iAddrR]||'') || (c[iAddrJ]||'');
+        // 서울·경기만
+        if(!/^(서울|경기)/.test(addr.trim())) continue;
+        const fee = (iFee>=0 ? (c[iFee]||'') : '').trim();
+        const type = (iType>=0 ? (c[iType]||'') : '').trim();
+        // 무료 또는 공영만 보관
+        if(fee !== '무료' && type !== '공영') continue;
+        out.push({
+          n: (c[iName]||'').trim(), la: +la.toFixed(6), lo: +lo.toFixed(6),
+          t: type, f: fee,
+          tm: (iT1>=0 && c[iT1] ? (c[iT1]+'~'+(c[iT2]||'')) : ''),
+          c: iCnt>=0 ? (c[iCnt]||'') : '',
+          a: addr
+        });
+      }
+      if(!out.length){ toast('서울·경기의 무료/공영 주차장을 찾지 못했습니다 — 파일이 전국주차장정보표준데이터인지 확인하세요'); return; }
+      parking = out;
+      save(LS.parking, parking);
+      renderSet();
+      toast('무료·공영 주차장 ' + out.length.toLocaleString() + '곳 저장 완료 ✅');
+      results.forEach(r=>{ r._pk = nearestFreeParking(+r.y, +r.x); });
+      renderCards();
+    }catch(e){ toast('가져오기 실패: ' + e.message); }
+  });
+}
+function clearParking(){
+  if(!parking.length){ toast('저장된 데이터가 없습니다'); return; }
+  if(!confirm('주차장 데이터 '+parking.length+'곳을 삭제할까요?')) return;
+  parking = []; localStorage.removeItem(LS.parking); renderSet(); toast('삭제했습니다');
+}
+
+/* ========== 백업 ========== */
+const SPOT_COLS = [['name','이름'],['addr','주소'],['park','무료주차'],['plug','콘센트'],['seat','좌석'],['wifi','와이파이'],['long','장시간'],['star','별점'],['memo','메모'],['visited','최근방문'],['visits','방문횟수'],['la','위도'],['lo','경도'],['url','카카오맵URL'],['id','ID']];
+function exportXlsx(){
+  const list = Object.values(spots);
+  if(!list.length){ toast('내보낼 거점이 없습니다'); return; }
+  if(typeof XLSX === 'undefined'){
+    // CDN 실패 시 JSON 폴백
+    const blob = new Blob([JSON.stringify({spots}, null, 1)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '작업거점_백업.json'; a.click();
+    toast('엑셀 라이브러리를 불러오지 못해 JSON으로 내보냈습니다'); return;
+  }
+  const rows = list.map(s=>{ const o = {}; SPOT_COLS.forEach(([k,h])=>o[h] = s[k] != null ? s[k] : ''); return o; });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '내거점');
+  XLSX.writeFile(wb, '작업거점_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+function importBackup(file){
+  if(!file) return;
+  const isJson = /\.json$/i.test(file.name);
+  const fr = new FileReader();
+  fr.onload = ()=>{
+    try{
+      let added = 0;
+      if(isJson){
+        const data = JSON.parse(fr.result);
+        const src = data.spots || data;
+        Object.values(src).forEach(s=>{ if(s && s.name){ spots[s.id || 'm_'+Date.now()+'_'+added] = s; added++; } });
+      } else {
+        if(typeof XLSX === 'undefined'){ toast('엑셀 라이브러리를 불러오지 못했습니다 — JSON 백업을 사용하세요'); return; }
+        const wb = XLSX.read(fr.result, {type:'array'});
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        rows.forEach(r=>{
+          if(!r['이름']) return;
+          const id = r['ID'] || 'm_'+Date.now()+'_'+added;
+          const s = {id};
+          SPOT_COLS.forEach(([k,h])=>{ if(r[h] !== undefined && r[h] !== '') s[k] = r[h]; });
+          s.name = r['이름'];
+          spots[id] = Object.assign({}, spots[id], s);
+          added++;
+        });
+      }
+      save(LS.spots, spots);
+      updateMyCnt(); renderMy();
+      toast(added + '건 가져왔습니다 ✅');
+    }catch(e){ toast('가져오기 실패: ' + e.message); }
+  };
+  if(isJson) fr.readAsText(file); else fr.readAsArrayBuffer(file);
+}
+
+/* ========== 시작 ========== */
+segInit();
+bootstrap();
+</script>
+</body>
+</html>
