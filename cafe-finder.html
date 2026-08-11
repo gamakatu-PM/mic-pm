@@ -192,6 +192,11 @@ input::placeholder,textarea::placeholder{color:var(--tx3);}
       <input type="text" id="myq" placeholder="거점 검색 (이름·지역·메모)" oninput="renderMy()">
       <button class="sbtn" onclick="openSpotModal(null)">＋ 직접 추가</button>
     </div>
+    <div class="frow" style="padding:0 0 8px;">
+      <button class="fchip on" id="mv-all" onclick="setMyView('all')">전체 목록</button>
+      <button class="fchip" id="mv-area" onclick="setMyView('area')">🗺️ 동네별 (무료주차 3~4시간 우선)</button>
+      <button class="fchip" onclick="exportXlsx()">📤 동네별 엑셀</button>
+    </div>
     <div class="note" id="mynote" style="display:none;">
       아직 등록된 거점이 없습니다. 🔍 찾기에서 장소를 검색해 「거점 등록」을 누르거나, 이미 아는 곳은 「＋ 직접 추가」로 넣어 두세요.
       한번 검증해 두면 다음부터는 검색 없이 여기서 바로 고르면 됩니다.
@@ -215,9 +220,8 @@ input::placeholder,textarea::placeholder{color:var(--tx3);}
       <p id="pkstate"></p>
       <p>공공데이터포털의 <b>전국주차장정보표준데이터</b> CSV를 한 번 넣어두면, 검색 결과 카드마다 <b>가장 가까운 무료·공영 주차장과 거리</b>가 자동 표시되고 「무료주차 도보5분」 필터를 쓸 수 있습니다.</p>
       <ol>
-        <li><code>data.go.kr</code> 접속 → "전국주차장정보표준데이터" 검색 (데이터셋 번호 15012896)</li>
-        <li><b>CSV 다운로드</b> (로그인 없이 가능)</li>
-        <li>아래 버튼으로 그 CSV 파일 선택 → 서울·경기의 무료/공영 주차장만 자동 추출해 저장합니다</li>
+        <li><a href="https://www.data.go.kr/data/15012896/standard.do" target="_blank" rel="noopener" style="color:var(--ac);">👉 여기를 눌러 다운로드 페이지 열기</a> → <b>CSV 다운로드</b> 버튼 (로그인 없이 가능)</li>
+        <li>아래 버튼으로 받은 CSV 파일 선택 → 서울·경기의 무료/공영 주차장만 자동 추출해 저장합니다</li>
       </ol>
       <input type="file" id="pkfile" accept=".csv" style="display:none;" onchange="importParking(this.files[0])">
       <button class="sbtn" onclick="document.getElementById('pkfile').click()">CSV 파일 가져오기</button>
@@ -249,6 +253,9 @@ input::placeholder,textarea::placeholder{color:var(--tx3);}
     <div class="fld"><label>주소 / 지역</label><input type="text" id="sm-addr" placeholder="예: 성남시 분당구 판교동"></div>
     <div class="fld"><label>무료주차</label><div class="segs" id="sm-park">
       <button class="seg" data-v="free">○ 무료</button><button class="seg" data-v="cond">△ 조건부</button><button class="seg" data-v="paid">× 유료/없음</button>
+    </div></div>
+    <div class="fld"><label>무료주차 가능 시간 (검증한 시간)</label><div class="segs" id="sm-parkhr">
+      <button class="seg" data-v="m30">30분</button><button class="seg" data-v="h12">1~2시간</button><button class="seg" data-v="h34">3~4시간</button><button class="seg" data-v="unlim">무제한</button>
     </div></div>
     <div class="fld"><label>콘센트</label><div class="segs" id="sm-plug">
       <button class="seg" data-v="many">많음</button><button class="seg" data-v="some">보통</button><button class="seg" data-v="none">없음</button>
@@ -439,10 +446,27 @@ function nearestFreeParking(la, lo){
 /* ========== 카드 렌더 ========== */
 function starsHtml(n){ return n ? '<span class="cstars">' + '★'.repeat(n) + '</span>' : ''; }
 const PARK_LBL = {free:'🅿️ 무료주차 ○', cond:'🅿️ 조건부 무료', paid:'🅿️ 유료/주차 없음'};
+const PARKHR_LBL = {m30:'30분', h12:'1~2시간', h34:'3~4시간', unlim:'무제한'};
+const PARKHR_RANK = {unlim:4, h34:3, h12:2, m30:1};
+function parkRank(s){ return (s.park==='free'||s.park==='cond') ? (PARKHR_RANK[s.parkhr]||0.5) : 0; }
+function regionOf(addr){
+  const t = (addr||'').trim().split(/\s+/).filter(Boolean);
+  if(!t.length) return {g:'지역 미입력', d:''};
+  const guI = t.findIndex(w=>/구$/.test(w));
+  const cityI = t.findIndex(w=>/(시|군)$/.test(w));
+  let g;
+  if(guI >= 0){
+    const city = (cityI >= 0 && cityI < guI) ? t[cityI].replace(/특별시$|광역시$/,'') : '';
+    g = (city ? city + ' ' : '') + t[guI];
+  } else if(cityI >= 0) g = t[cityI];
+  else g = t[0];
+  const d = t.find(w=>/^[가-힣0-9·]+(동|읍|면|가)$/.test(w)) || '';
+  return {g, d};
+}
 const SEG_LBL = {many:'콘센트 많음', some:'콘센트 보통', none:'콘센트 없음', good:'', ok:'', bad:''};
 function spotBadges(s){
   const b = [];
-  if(s.park) b.push(PARK_LBL[s.park]);
+  if(s.park) b.push(PARK_LBL[s.park] + (s.parkhr && s.park!=='paid' ? ' ' + PARKHR_LBL[s.parkhr] : ''));
   if(s.plug==='many') b.push('🔌 콘센트 많음'); else if(s.plug==='none') b.push('🔌 콘센트 없음');
   if(s.long==='ok') b.push('⏰ 장시간 OK'); else if(s.long==='no') b.push('⏰ 장시간 비추');
   if(s.wifi==='bad') b.push('📶 와이파이 약함');
@@ -575,7 +599,7 @@ function openSpotModal(id, place){
   $('smSub').textContent = s ? ('최근 방문: ' + (s.visited || '-') + ' · 방문 ' + (s.visits||1) + '회') : '한번 기록해 두면 다음부터 검색이 필요 없습니다';
   $('sm-name').value = s ? s.name : (place ? place.place_name : '');
   $('sm-addr').value = s ? (s.addr||'') : (place ? (place.road_address_name || place.address_name || '') : '');
-  segSet('sm-park', s ? s.park : ''); segSet('sm-plug', s ? s.plug : '');
+  segSet('sm-park', s ? s.park : ''); segSet('sm-parkhr', s ? (s.parkhr||'') : ''); segSet('sm-plug', s ? s.plug : '');
   segSet('sm-seat', s ? s.seat : ''); segSet('sm-wifi', s ? s.wifi : '');
   segSet('sm-long', s ? s.long : '');
   starSet(s ? (s.star||0) : 0);
@@ -598,7 +622,7 @@ function saveSpot(){
     lo: prev.lo != null ? prev.lo : (pendingPlace ? +pendingPlace.x : null),
     url: prev.url || (pendingPlace ? pendingPlace.place_url : ''),
     phone: prev.phone || (pendingPlace ? pendingPlace.phone : ''),
-    park: segVal('sm-park'), plug: segVal('sm-plug'), seat: segVal('sm-seat'),
+    park: segVal('sm-park'), parkhr: segVal('sm-parkhr'), plug: segVal('sm-plug'), seat: segVal('sm-seat'),
     wifi: segVal('sm-wifi'), long: segVal('sm-long'),
     star: starVal(),
     memo: $('sm-memo').value.trim(),
@@ -634,15 +658,43 @@ function visitToday(id){
 
 /* ========== 내 거점 목록 ========== */
 function updateMyCnt(){ const n = Object.keys(spots).length; $('mycnt').textContent = n ? '('+n+')' : ''; }
+let myView = 'all';
+function setMyView(v){
+  myView = v;
+  $('mv-all').classList.toggle('on', v==='all');
+  $('mv-area').classList.toggle('on', v==='area');
+  renderMy();
+}
 function renderMy(){
   const q = ($('myq').value||'').trim().toLowerCase();
   let list = Object.values(spots);
   if(q) list = list.filter(s=>(s.name+' '+(s.addr||'')+' '+(s.memo||'')).toLowerCase().includes(q));
-  list.sort((a,b)=>(b.star||0)-(a.star||0) || (b.visited||'').localeCompare(a.visited||''));
   $('mynote').style.display = Object.keys(spots).length ? 'none' : 'block';
-  $('mylist').innerHTML = list.map(s=>{
-    return '<div class="card vf">'
-      + '<div class="crow1"><div class="cname">'+esc(s.name)+'</div><div class="cdist">'+starsHtml(s.star)+'</div></div>'
+  if(myView === 'area'){ renderMyArea(list); return; }
+  list.sort((a,b)=>(b.star||0)-(a.star||0) || (b.visited||'').localeCompare(a.visited||''));
+  $('mylist').innerHTML = list.map(spotCard).join('');
+}
+function renderMyArea(list){
+  // 구별 그룹 → 그룹 내 무료주차 시간(3~4시간·무제한 우선) → 별점 순
+  const groups = {};
+  list.forEach(s=>{
+    const r = regionOf(s.addr);
+    const key = r.g;
+    (groups[key] = groups[key] || []).push(Object.assign({_d: r.d}, s));
+  });
+  const keys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
+  $('mylist').innerHTML = keys.map(g=>{
+    const arr = groups[g].sort((a,b)=>parkRank(b)-parkRank(a) || (b.star||0)-(a.star||0));
+    const freeCnt = arr.filter(s=>parkRank(s)>=3).length;
+    return '<div style="margin:14px 2px 6px;font-size:12.5px;font-weight:700;color:var(--ac);">📍 '+esc(g)
+      + ' <span style="color:var(--tx3);font-weight:400;font-size:10.5px;">'+arr.length+'곳'
+      + (freeCnt? ' · 🅿️3시간+ 무료 '+freeCnt+'곳':'')+'</span></div>'
+      + arr.map(s=>spotCard(s, s._d)).join('');
+  }).join('') || '<div class="note">표시할 거점이 없습니다.</div>';
+}
+function spotCard(s, dong){
+  return '<div class="card vf">'
+      + '<div class="crow1"><div class="cname">'+esc(s.name)+(dong?' <span class="vfb" style="color:var(--pu);">'+esc(dong)+'</span>':'')+'</div><div class="cdist">'+starsHtml(s.star)+'</div></div>'
       + '<div class="cmeta">'+esc(s.addr||'')+'</div>'
       + '<div class="cmeta">'+esc(spotBadges(s))+'</div>'
       + (s.memo?'<div class="cmeta">📝 '+esc(s.memo)+'</div>':'')
@@ -654,7 +706,6 @@ function renderMy(){
       + (s.url?'<a class="cb" href="'+esc(s.url)+'" target="_blank" rel="noopener">카카오맵</a>':'')
       + (s.la!=null?'<a class="cb" href="https://map.kakao.com/link/to/'+encodeURIComponent(s.name)+','+s.la+','+s.lo+'" target="_blank" rel="noopener">길찾기</a>':'')
       + '</div></div>';
-  }).join('');
 }
 
 /* ========== 설정 ========== */
@@ -750,7 +801,8 @@ function clearParking(){
 }
 
 /* ========== 백업 ========== */
-const SPOT_COLS = [['name','이름'],['addr','주소'],['park','무료주차'],['plug','콘센트'],['seat','좌석'],['wifi','와이파이'],['long','장시간'],['star','별점'],['memo','메모'],['visited','최근방문'],['visits','방문횟수'],['la','위도'],['lo','경도'],['url','카카오맵URL'],['id','ID']];
+const SPOT_COLS = [['name','이름'],['addr','주소'],['park','무료주차'],['parkhr','무료주차시간'],['plug','콘센트'],['seat','좌석'],['wifi','와이파이'],['long','장시간'],['star','별점'],['memo','메모'],['visited','최근방문'],['visits','방문횟수'],['la','위도'],['lo','경도'],['url','카카오맵URL'],['id','ID']];
+const KO_LBL = {free:'무료',cond:'조건부',paid:'유료/없음',many:'많음',some:'보통',none:'없음',good:'여유/빠름',ok:'보통',bad:'붐빔/느림',mid:'2~3시간',no:'비추천'};
 function exportXlsx(){
   const list = Object.values(spots);
   if(!list.length){ toast('내보낼 거점이 없습니다'); return; }
@@ -760,11 +812,25 @@ function exportXlsx(){
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '작업거점_백업.json'; a.click();
     toast('엑셀 라이브러리를 불러오지 못해 JSON으로 내보냈습니다'); return;
   }
-  const rows = list.map(s=>{ const o = {}; SPOT_COLS.forEach(([k,h])=>o[h] = s[k] != null ? s[k] : ''); return o; });
+  // 동네별 시트: 구 → 무료주차 시간(긴 순) → 별점 순으로 정렬
+  const sorted = list.map(s=>{ const r = regionOf(s.addr); return Object.assign({_g:r.g,_d:r.d}, s); })
+    .sort((a,b)=>a._g.localeCompare(b._g,'ko') || parkRank(b)-parkRank(a) || (b.star||0)-(a.star||0));
+  const rows = sorted.map(s=>{
+    const o = {'구':s._g, '동':s._d};
+    SPOT_COLS.forEach(([k,h])=>{
+      let v = s[k] != null ? s[k] : '';
+      if(k==='park') v = KO_LBL[v]||v;
+      if(k==='parkhr') v = PARKHR_LBL[v]||'';
+      if(k==='plug'||k==='seat'||k==='wifi') v = KO_LBL[v]||v;
+      if(k==='long') v = v==='ok'?'눈치 안 보임':(KO_LBL[v]||v);
+      o[h] = v;
+    });
+    return o;
+  });
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '내거점');
-  XLSX.writeFile(wb, '작업거점_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  XLSX.utils.book_append_sheet(wb, ws, '동네별 거점');
+  XLSX.writeFile(wb, '작업거점_동네별_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 function importBackup(file){
   if(!file) return;
@@ -781,11 +847,22 @@ function importBackup(file){
         if(typeof XLSX === 'undefined'){ toast('엑셀 라이브러리를 불러오지 못했습니다 — JSON 백업을 사용하세요'); return; }
         const wb = XLSX.read(fr.result, {type:'array'});
         const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        const REV = {
+          park: {'무료':'free','조건부':'cond','유료/없음':'paid'},
+          parkhr: {'30분':'m30','1~2시간':'h12','3~4시간':'h34','무제한':'unlim'},
+          plug: {'많음':'many','보통':'some','없음':'none'},
+          seat: {'여유/빠름':'good','여유':'good','보통':'ok','붐빔/느림':'bad','붐빔':'bad'},
+          wifi: {'여유/빠름':'good','빠름':'good','보통':'ok','붐빔/느림':'bad','느림':'bad'},
+          long: {'눈치 안 보임':'ok','2~3시간':'mid','비추천':'no'}
+        };
         rows.forEach(r=>{
           if(!r['이름']) return;
           const id = r['ID'] || 'm_'+Date.now()+'_'+added;
           const s = {id};
-          SPOT_COLS.forEach(([k,h])=>{ if(r[h] !== undefined && r[h] !== '') s[k] = r[h]; });
+          SPOT_COLS.forEach(([k,h])=>{
+            if(r[h] === undefined || r[h] === '') return;
+            s[k] = REV[k] ? (REV[k][r[h]] || r[h]) : r[h];
+          });
           s.name = r['이름'];
           spots[id] = Object.assign({}, spots[id], s);
           added++;
