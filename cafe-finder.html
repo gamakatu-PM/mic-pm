@@ -47,7 +47,9 @@ input::placeholder,textarea::placeholder{color:var(--tx3);}
 .fchip.on{border-color:var(--gr);color:var(--gr);background:rgba(0,200,150,0.08);}
 .fchip:disabled{opacity:0.4;}
 .frow select{font-size:10.5px;padding:4px 7px;border-radius:12px;background:var(--bg3);}
-#map{height:37vh;min-height:200px;flex-shrink:0;background:var(--bg3);position:relative;}
+#map{height:50vh;min-height:240px;flex-shrink:0;background:var(--bg3);position:relative;transition:height 0.25s;}
+#map.big{height:76vh;}
+.mapx{position:absolute;right:9px;top:9px;z-index:10;padding:6px 11px;border-radius:7px;font-size:11.5px;border:1px solid var(--bd);background:rgba(19,22,30,0.92);color:var(--tx);}
 .map-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--tx2);font-size:12px;text-align:center;padding:20px;z-index:5;}
 .rescnt{padding:7px 12px 3px;font-size:11px;color:var(--tx2);flex-shrink:0;}
 .cards{padding:4px 10px 20px;}
@@ -179,7 +181,7 @@ input::placeholder,textarea::placeholder{color:var(--tx3);}
         <option value="star">별점순</option>
       </select>
     </div>
-    <div id="map"><div class="map-msg" id="mapmsg">지도를 불러오는 중…</div></div>
+    <div id="map"><div class="map-msg" id="mapmsg">지도를 불러오는 중…</div><button class="mapx" id="mapx" onclick="toggleMapSize()">⤢ 크게</button></div>
     <div class="rescnt" id="rescnt">카테고리를 누르면 지도 중심 기준으로 검색합니다. 한번 등록한 거점은 ✅로 표시됩니다.</div>
     <div class="cards" id="cards"></div>
   </div>
@@ -378,13 +380,27 @@ function goMyLoc(silent){
 function goArea(){
   const q = $('q').value.trim();
   if(!q || !kakaoReady) return;
-  ps.keywordSearch(q, (data, status)=>{
-    if(status === kakao.maps.services.Status.OK && data.length){
-      map.setCenter(new kakao.maps.LatLng(data[0].y, data[0].x)); map.setLevel(4);
-      toast(data[0].place_name + ' 주변으로 이동');
-      if(lastCat) runCat(lastCat, null);
-    } else toast('검색 결과가 없습니다');
+  const move = (lat, lng, label)=>{
+    map.setCenter(new kakao.maps.LatLng(lat, lng)); map.setLevel(4);
+    toast(label + ' 주변으로 이동');
+    if(lastCat) runCat(lastCat, null);
+  };
+  // 동·지역 이름은 주소 검색이 정확하다 (예: "문정동" → 송파구 문정동). 실패 시 장소 검색 폴백.
+  geocoder.addressSearch(q, (res, status)=>{
+    if(status === kakao.maps.services.Status.OK && res.length){
+      move(+res[0].y, +res[0].x, res[0].address_name || q);
+    } else {
+      ps.keywordSearch(q, (data, st2)=>{
+        if(st2 === kakao.maps.services.Status.OK && data.length) move(+data[0].y, +data[0].x, data[0].place_name);
+        else toast('검색 결과가 없습니다 — 동 이름이나 역 이름으로 다시 시도해 보세요');
+      });
+    }
   });
+}
+function toggleMapSize(){
+  const m = $('map'), big = m.classList.toggle('big');
+  $('mapx').textContent = big ? '⤡ 작게' : '⤢ 크게';
+  setTimeout(()=>{ if(map) map.relayout(); }, 280);
 }
 
 /* ========== 카테고리 검색 ========== */
