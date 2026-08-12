@@ -295,6 +295,7 @@ let markers = [], meMarker = null;
 let results = [];            // 마지막 검색 결과
 let lastCat = null;          // 마지막 카테고리
 let curArea = null;          // 검색한 동네 이름 (동/구) — 있으면 반경 없이 지역 검색
+let appliedQ = '';           // 마지막으로 지역 적용된 검색창 입력값
 let filters = {vf:false, fp:false};
 let spots = load(LS.spots, {});      // id -> spot
 let parking = load(LS.parking, []);  // [{n,la,lo,t,f,fee,tm,c,a}]
@@ -371,7 +372,7 @@ function goMyLoc(silent){
     if(!map) return;
     const ll = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
     map.setCenter(ll); map.setLevel(4);
-    curArea = null;
+    curArea = null; appliedQ = ''; $('q').value = '';
     if(meMarker) meMarker.setMap(null);
     meMarker = new kakao.maps.CustomOverlay({position: ll, content: '<div class="mk-me"></div>', zIndex: 3});
     meMarker.setMap(map);
@@ -381,6 +382,7 @@ function goMyLoc(silent){
 function goArea(){
   const q = $('q').value.trim();
   if(!q || !kakaoReady) return;
+  appliedQ = q;
   const move = (lat, lng, label, area)=>{
     map.setCenter(new kakao.maps.LatLng(lat, lng)); map.setLevel(4);
     curArea = area || null;
@@ -419,6 +421,10 @@ function runCat(cat, btn){
   if(!kakaoReady){ toast('지도가 아직 준비되지 않았습니다'); return; }
   lastCat = cat;
   document.querySelectorAll('#catchips .chip[data-cat]').forEach(c=>c.classList.toggle('on', c.dataset.cat===cat));
+  // 검색창에 새 동네가 입력돼 있으면 먼저 그 동네를 적용한 뒤 검색 (goArea가 다시 runCat을 호출)
+  const typed = $('q').value.trim();
+  if(typed && typed !== appliedQ){ goArea(); return; }
+  if(!typed && curArea){ curArea = null; appliedQ = ''; }
   const N = +$('cnt').value;
   if(cat === 'pk' && parking.length){ searchParkingFromData(N); return; }
   const c = CATS[cat], ct = map.getCenter();
