@@ -575,6 +575,7 @@ function renderCards(){
       + '<div class="cbtns">'
       + '<a class="cb blue" href="'+esc(r.place_url)+'" target="_blank" rel="noopener">카카오맵 상세·리뷰</a>'
       + '<a class="cb" href="https://map.kakao.com/link/to/'+encodeURIComponent(r.place_name)+','+r.y+','+r.x+'" target="_blank" rel="noopener">길찾기</a>'
+      + nBlogBtns(r.place_name, r.road_address_name || r.address_name)
       + '<button class="cb pri" onclick="openFromResult(\''+esc(r.id)+'\')">'+(s?'✏️ 거점 수정':'＋ 거점 등록')+'</button>'
       + '<button class="cb" onclick="panTo('+r.y+','+r.x+')">지도</button>'
       + '</div></div>';
@@ -600,10 +601,22 @@ function pkCard(r){
     + '<div class="cbtns">'
     + (r.place_url ? '<a class="cb blue" href="'+esc(r.place_url)+'" target="_blank" rel="noopener">카카오맵 상세</a>' : '')
     + '<a class="cb" href="https://map.kakao.com/link/to/'+encodeURIComponent(r.place_name)+','+r.y+','+r.x+'" target="_blank" rel="noopener">길찾기</a>'
+    + '<a class="cb" style="color:#2db400;border-color:rgba(45,180,0,0.4);" href="'+esc(nBlog(r.place_name, r.address_name, '요금'))+'" target="_blank" rel="noopener">N 요금 후기</a>'
     + '<button class="cb" onclick="panTo('+r.y+','+r.x+')">지도</button>'
     + '</div></div>';
 }
 function panTo(la, lo){ if(map){ map.panTo(new kakao.maps.LatLng(la, lo)); } }
+// 네이버 블로그 후기 검색 링크 — 장소명에 동네를 붙여 동명이인 가게 혼동을 줄인다
+function nBlog(name, addr, extra){
+  const r = regionOf(addr || '');
+  const area = r.d || (r.g !== '지역 미입력' ? r.g.split(' ').pop() : '');
+  const q = (area ? area + ' ' : '') + name + ' ' + extra;
+  return 'https://search.naver.com/search.naver?ssc=tab.blog.all&query=' + encodeURIComponent(q);
+}
+function nBlogBtns(name, addr){
+  return '<a class="cb" style="color:#2db400;border-color:rgba(45,180,0,0.4);" href="'+esc(nBlog(name, addr, '주차'))+'" target="_blank" rel="noopener">N 주차 후기</a>'
+    + '<a class="cb" style="color:#2db400;border-color:rgba(45,180,0,0.4);" href="'+esc(nBlog(name, addr, '노트북 카공'))+'" target="_blank" rel="noopener">N 노트북 후기</a>';
+}
 
 /* ========== 마커 ========== */
 function drawMarkers(){
@@ -774,6 +787,7 @@ function spotCard(s, dong){
       + (s.la!=null?'<button class="cb blue" onclick="switchTab(\'find\');panTo('+s.la+','+s.lo+')">지도</button>':'')
       + (s.url?'<a class="cb" href="'+esc(s.url)+'" target="_blank" rel="noopener">카카오맵</a>':'')
       + (s.la!=null?'<a class="cb" href="https://map.kakao.com/link/to/'+encodeURIComponent(s.name)+','+s.la+','+s.lo+'" target="_blank" rel="noopener">길찾기</a>':'')
+      + nBlogBtns(s.name, s.addr)
       + '</div></div>';
 }
 
