@@ -177,7 +177,8 @@ input::placeholder,textarea::placeholder{color:var(--tx3);}
       </select>
       <button class="fchip" id="f-vf" onclick="toggleF('vf')">✅ 검증된 곳만</button>
       <button class="fchip" id="f-fp" onclick="toggleF('fp')" title="무료주차 데이터 필요">🅿️ 무료주차 도보5분</button>
-      <select id="sortby" onchange="renderCards()">
+      <select id="sortby" onchange="renderCards();drawMarkers()">
+        <option value="park" selected>무료주차순</option>
         <option value="dist">거리순</option>
         <option value="star">별점순</option>
       </select>
@@ -292,7 +293,8 @@ input::placeholder,textarea::placeholder{color:var(--tx3);}
 const LS = {key:'wf_kakao_key', spots:'wf_spots', parking:'wf_parking', center:'wf_center', skip:'wf_skipkey'};
 let kakaoReady = false, map = null, ps = null, geocoder = null;
 let markers = [], meMarker = null;
-let results = [];            // 마지막 검색 결과
+let results = [];            // 마지막 검색 결과 (후보 전체)
+let shown = [];              // 화면에 표시 중인 결과 (정렬·수량 적용 후)
 let lastCat = null;          // 마지막 카테고리
 let curArea = null;          // 검색한 동네 이름 (동/구) — 있으면 반경 없이 지역 검색
 let appliedQ = '';           // 마지막으로 지역 적용된 검색창 입력값
@@ -453,15 +455,14 @@ function searchParkingFromData(N){
       address_name: p.a || '', road_address_name: p.a || '', phone: '',
       distance: String(Math.round(dist(la, lo, p.la, p.lo))), _pkData: p, _type: 'pk' }))
     .sort((a,b)=>+a.distance - +b.distance)
-    .slice(0, N);
+    .slice(0, Math.max(N * 3, 15));
   finishSearch('공영주차장', N, true);
 }
 function finishSearch(label, N, isPk){
-  // 중복 제거 + 수량 제한 + 거점 매칭 + 주차 거리 계산
+  // 중복 제거 + 거점 매칭 + 주차 거리 계산 (수량 제한은 정렬 후 renderCards에서)
   const seen = new Set();
   results = results.filter(r=>{ if(seen.has(r.id)) return false; seen.add(r.id); return true; });
   results.sort((a,b)=>(+a.distance||1e9)-(+b.distance||1e9));
-  results = results.slice(0, N || results.length);
   results.forEach(r=>{
     if(isPk){ r._type = 'pk'; return; }
     r._spot = spots[r.id] || matchSpotByName(r.place_name);
@@ -470,10 +471,11 @@ function finishSearch(label, N, isPk){
   renderCards();
   drawMarkers();
   const where = curArea ? curArea + ' 안' : '지도 중심 주변';
+  const sortLbl = {park:'무료주차 좋은 순', dist:'가까운 순', star:'별점 순'}[$('sortby').value] || '';
   let note = '';
   if(isPk) note = parking.length ? ' · 요금·운영시간은 공공데이터 기준' : ' · 요금은 카카오맵 상세에서 확인 (설정에서 주차장 CSV를 넣으면 바로 표시)';
-  else if(!parking.length) note = ' · 무료주차 표시는 설정에서 주차장 CSV를 넣으면 켜집니다';
-  $('rescnt').textContent = where + ' ' + label + ' 가까운 순 ' + results.length + '곳' + note;
+  else if(!parking.length) note = ' · 무료주차 정렬·표시는 설정에서 주차장 CSV를 넣으면 정확해집니다';
+  $('rescnt').textContent = where + ' ' + label + ' ' + sortLbl + ' ' + Math.min(N || 5, results.length) + '곳' + note;
 }
 function matchSpotByName(name){
   const ids = Object.keys(spots);
@@ -521,14 +523,37 @@ function spotBadges(s){
   if(s.wifi==='bad') b.push('📶 와이파이 약함');
   return b.join(' · ');
 }
+// 무료주차 점수 — 클수록 무료주차 여건이 좋다
+function parkScore(r){
+  if(r._type === 'pk'){
+    const p = r._pkData;
+    const free = p && p.f === '무료';
+    return (free ? 10000 : 0) - (+r.distance||0);          // 무료 주차장 먼저, 그 안에서 가까운 순
+  }
+  const s = r._spot;
+  if(s && (s.park==='free' || s.park==='cond'))
+    return 20000 + parkRank(s)*1000 - (+r.distance||0)/10; // 내가 검증한 무료주차 (시간 긴 순)
+  if(r._pk && r._pk.p.f === '무료') return 10000 - r._pk.d; // 무료주차장이 가까운 곳
+  if(r._pk) return 5000 - r._pk.d;                          // 공영(유료) 주차장이 가까운 곳
+  if(s && s.park==='paid') return -10000 - (+r.distance||0);// 주차 안 되는 걸 확인한 곳은 뒤로
+  return 0 - (+r.distance||0);                              // 정보 없음 → 거리순
+}
 function renderCards(){
   let list = results.slice();
   if(filters.vf) list = list.filter(r=>r._spot);
   if(filters.fp) list = list.filter(r=>r._pk && r._pk.d <= 400 || (r._spot && r._spot.park==='free'));
   const sortby = $('sortby').value;
-  if(sortby==='star') list.sort((a,b)=>((b._spot?b._spot.star||0:0)-(a._spot?a._spot.star||0:0)) || (+a.distance||0)-(+b.distance||0));
-  // 검증 거점 상단 고정
-  list.sort((a,b)=>((b._spot?1:0)-(a._spot?1:0)));
+  if(sortby==='star'){
+    list.sort((a,b)=>((b._spot?b._spot.star||0:0)-(a._spot?a._spot.star||0:0)) || (+a.distance||0)-(+b.distance||0));
+    list.sort((a,b)=>((b._spot?1:0)-(a._spot?1:0)));
+  } else if(sortby==='park'){
+    // 무료주차 좋은 순: ①내 거점의 무료주차 기록(시간 긴 순) ②가까운 무료주차장 거리 ③장소 거리
+    list.sort((a,b)=>parkScore(b)-parkScore(a));
+  } else {
+    list.sort((a,b)=>((b._spot?1:0)-(a._spot?1:0)));
+  }
+  list = list.slice(0, +$('cnt').value || list.length);
+  shown = list;
   const el = $('cards');
   if(!list.length){ el.innerHTML = results.length ? '<div class="note">필터 조건에 맞는 곳이 없습니다.</div>' : ''; return; }
   el.innerHTML = list.map(r=>{
@@ -577,8 +602,9 @@ function panTo(la, lo){ if(map){ map.panTo(new kakao.maps.LatLng(la, lo)); } }
 
 /* ========== 마커 ========== */
 function drawMarkers(){
+  if(!map) return;
   markers.forEach(m=>m.setMap(null)); markers = [];
-  results.forEach(r=>{
+  shown.forEach(r=>{
     const isPk = r._type === 'pk', vf = !!r._spot;
     const cls = isPk ? 'mk-pk' : (vf ? 'mk-vf' : 'mk-place');
     const icon = isPk ? 'P' : (vf ? '✅' : '☕');
@@ -602,6 +628,7 @@ function toggleF(f){
   filters[f] = !filters[f];
   $('f-'+f).classList.toggle('on', filters[f]);
   renderCards();
+  drawMarkers();
 }
 
 /* ========== 거점 모달 ========== */
