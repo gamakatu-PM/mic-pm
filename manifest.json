@@ -1,0 +1,16 @@
+{
+  "name": "작업거점 파인더",
+  "short_name": "작업거점",
+  "description": "노트북 작업 장소 · 무료주차 · 내 검증 거점",
+  "start_url": "cafe-finder.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0f14",
+  "theme_color": "#0d0f14",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
