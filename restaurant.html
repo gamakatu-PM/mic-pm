@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#8c2f22">
+<meta name="description" content="해온식당 — 서울 마포 한식 백반. 매일 아침 끓이는 김치찌개와 제육볶음.">
+<meta property="og:title" content="해온식당 · 마포 한식 백반">
+<meta property="og:description" content="매일 아침 끓이는 김치찌개와 제육볶음. 주차 가능.">
+<meta property="og:type" content="restaurant.restaurant">
+<title>해온식당 · 마포 한식 백반</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#fdf9f3; --paper2:#f6efe4; --card:#ffffff;
+  --ink:#241b15; --ink2:#5f4f43; --ink3:#93826f;
+  --line:#e8dccb; --line2:#d8c8b0;
+  --brand:#8c2f22; --brand2:#b4402e; --gold:#b98a3c;
+  --open:#2e7d5b; --closed:#9b6a6a;
+  --shadow:0 1px 2px rgba(60,40,20,.06),0 8px 24px rgba(60,40,20,.07);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--paper);color:var(--ink);
+  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;padding-bottom:76px}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+.serif{font-family:'Noto Serif KR','Noto Sans KR',serif}
+.wrap{max-width:720px;margin:0 auto;padding:0 20px}
+
+/* 견본 배너 */
+.demo{background:#3a2a1c;color:#f0e2cf;font-size:12.5px;padding:9px 20px;display:flex;gap:10px;
+  align-items:flex-start;justify-content:center;line-height:1.5}
+.demo b{color:#ffd9a0;font-weight:700}
+.demo button{margin-left:auto;background:none;border:1px solid #6b5540;color:#c9b49a;
+  border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;flex-shrink:0;font-family:inherit}
+
+/* 상단바 */
+header{position:sticky;top:0;z-index:50;background:rgba(253,249,243,.94);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{max-width:720px;margin:0 auto;padding:11px 20px;display:flex;align-items:center;gap:12px}
+.logo{font-size:19px;font-weight:700;letter-spacing:-.5px}
+.logo em{font-style:normal;color:var(--brand)}
+.bar .status{margin-left:auto}
+
+.status{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;
+  padding:4px 11px;border-radius:99px;border:1px solid var(--line2);background:var(--card);white-space:nowrap}
+.status .dot{width:7px;height:7px;border-radius:50%;background:var(--ink3);flex-shrink:0}
+.status.on{color:var(--open);border-color:#bfe0ce;background:#f1faf5}
+.status.on .dot{background:var(--open);box-shadow:0 0 0 3px rgba(46,125,91,.15)}
+.status.off{color:var(--closed);border-color:#e6d2d2;background:#fdf4f4}
+.status.off .dot{background:var(--closed)}
+
+/* 히어로 */
+.hero{background:linear-gradient(178deg,#8c2f22 0%,#6d2419 100%);color:#fdf0e2;
+  padding:44px 20px 40px;text-align:center;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:0;opacity:.16;pointer-events:none;
+  background:radial-gradient(circle at 18% 22%,#ffd9a0 0,transparent 42%),
+             radial-gradient(circle at 82% 78%,#ff9f7a 0,transparent 45%)}
+.hero .in{position:relative;z-index:1;max-width:680px;margin:0 auto}
+.hero .kicker{font-size:12.5px;letter-spacing:3px;color:#f0c9a8;margin-bottom:14px;font-weight:500}
+.hero h1{font-size:clamp(34px,9vw,50px);font-weight:700;letter-spacing:-1.5px;line-height:1.15;margin-bottom:14px}
+.hero p{font-size:15.5px;color:#f5ddc9;max-width:26em;margin:0 auto 26px;line-height:1.7}
+.hero .cta{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:12px 20px;border-radius:11px;
+  font-size:14.5px;font-weight:500;border:1px solid transparent;cursor:pointer;font-family:inherit;
+  transition:transform .12s ease,box-shadow .12s ease}
+.btn:active{transform:scale(.97)}
+.btn-p{background:#fdf0e2;color:#7b2718;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.btn-g{background:rgba(255,255,255,.12);color:#fdf0e2;border-color:rgba(253,240,226,.4)}
+.btn-o{background:var(--card);color:var(--ink);border-color:var(--line2);box-shadow:var(--shadow)}
+.btn-k{background:#fee500;color:#3b1e1e}
+.btn svg{width:17px;height:17px;flex-shrink:0}
+
+/* 섹션 */
+section{padding:44px 0 6px}
+.h2{display:flex;align-items:baseline;gap:11px;margin-bottom:20px}
+.h2 h2{font-size:22px;font-weight:700;letter-spacing:-.6px}
+.h2 span{font-size:12px;color:var(--ink3);letter-spacing:1.5px;text-transform:uppercase}
+.h2::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* 대표메뉴 */
+.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:600px){.signature{grid-template-columns:1fr;gap:10px}}
+.sig{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  box-shadow:var(--shadow)}
+@media(max-width:600px){.sig{display:flex;align-items:stretch}}
+.ph{aspect-ratio:4/3;background:linear-gradient(140deg,#efe3d2,#e3d2ba);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative}
+.ph{color:#a08a68}
+@media(max-width:600px){.ph{width:116px;aspect-ratio:auto;flex-shrink:0}}
+.ph .ico{font-size:26px;opacity:.5}
+.ph small{font-size:9.5px;letter-spacing:.5px;opacity:.85;text-align:center;padding:0 6px}
+.sig .txt{padding:13px 15px 15px;flex:1;display:flex;flex-direction:column;justify-content:center}
+.sig .tag{display:inline-block;font-size:10.5px;font-weight:500;color:var(--brand2);
+  background:#fbeeea;border-radius:5px;padding:2px 7px;margin-bottom:7px;align-self:flex-start}
+.sig h3{font-size:16.5px;font-weight:700;margin-bottom:3px;letter-spacing:-.3px}
+.sig .desc{font-size:12.5px;color:var(--ink2);line-height:1.55;margin-bottom:8px}
+.sig .price{font-size:15px;font-weight:700;color:var(--brand)}
+
+/* 메뉴판 */
+.tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:14px;margin-bottom:4px;
+  scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:7px 15px;border-radius:99px;font-size:13.5px;font-weight:500;
+  border:1px solid var(--line2);background:var(--card);color:var(--ink2);cursor:pointer;font-family:inherit}
+.tab[aria-selected="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+.menu{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:6px 18px;box-shadow:var(--shadow)}
+.row{display:flex;align-items:baseline;gap:12px;padding:13px 0;border-bottom:1px dashed var(--line)}
+.row:last-child{border-bottom:none}
+.row .nm{font-weight:500;font-size:15px}
+.row .nm small{display:block;font-weight:400;font-size:12px;color:var(--ink3);margin-top:2px;line-height:1.45}
+.row .dots{flex:1;border-bottom:1px dotted var(--line2);transform:translateY(-3px);min-width:14px}
+.row .pr{font-weight:700;font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.row.sold .nm,.row.sold .pr{color:var(--ink3);text-decoration:line-through}
+.row .badge{display:inline-block;font-size:10px;font-weight:500;color:#fff;background:var(--ink3);
+  border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:2px;text-decoration:none}
+.note{font-size:12px;color:var(--ink3);margin-top:11px;text-align:right}
+
+/* 예약·주문 */
+.order{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:480px){.order{grid-template-columns:1fr}}
+.oc{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);
+  border-radius:13px;padding:15px 16px;box-shadow:var(--shadow);transition:transform .12s ease}
+.oc:active{transform:scale(.985)}
+.oc .ic{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;
+  font-size:19px;flex-shrink:0}
+.oc b{display:block;font-size:14.5px;font-weight:700}
+.oc small{font-size:12px;color:var(--ink3)}
+.oc .arrow{margin-left:auto;color:var(--line2);font-size:18px}
+
+/* 위치 */
+.map{border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);background:var(--card)}
+.mapimg{height:172px;background:
+   repeating-linear-gradient(0deg,transparent 0 27px,rgba(140,120,95,.13) 27px 28px),
+   repeating-linear-gradient(90deg,transparent 0 27px,rgba(140,120,95,.13) 27px 28px),
+   linear-gradient(150deg,#eee7da,#e2dac9);
+  display:grid;place-items:center;position:relative}
+.pin{width:38px;height:38px;border-radius:50% 50% 50% 4px;background:var(--brand);transform:rotate(-45deg);
+  box-shadow:0 6px 16px rgba(140,47,34,.35);display:grid;place-items:center}
+.pin::after{content:"";width:13px;height:13px;border-radius:50%;background:#fdf0e2}
+.mapimg small{position:absolute;bottom:9px;right:11px;font-size:10px;color:#8c7a63;letter-spacing:.4px}
+.addr{padding:15px 17px}
+.addr .a1{font-weight:500;font-size:15px}
+.addr .a2{font-size:12.5px;color:var(--ink3);margin-top:2px}
+.mapbtns{display:flex;gap:8px;padding:0 17px 16px;flex-wrap:wrap}
+.mapbtns .btn{padding:9px 15px;font-size:13.5px}
+.park{display:flex;gap:11px;margin-top:11px;background:#f3f8f5;border:1px solid #d3e6dc;
+  border-radius:12px;padding:13px 15px;font-size:13.5px;line-height:1.6;color:#2f5c48}
+.park b{color:#1f4a37}
+
+/* 영업시간 */
+.hours{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:5px 18px;box-shadow:var(--shadow)}
+.hr{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.hr:last-child{border-bottom:none}
+.hr .d{width:2.6em;color:var(--ink2);font-weight:500}
+.hr .t{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.hr.today{font-weight:700;color:var(--ink)}
+.hr.today .d,.hr.today .t{color:var(--brand);font-weight:700}
+.hr.today::before{content:"오늘";font-size:10px;background:var(--brand);color:#fff;
+  border-radius:4px;padding:1px 6px;font-weight:500;order:-1}
+.hr.rest .t{color:var(--closed)}
+
+/* 리뷰 */
+.links{display:flex;gap:9px;flex-wrap:wrap}
+
+footer{margin-top:46px;background:var(--paper2);border-top:1px solid var(--line);
+  padding:28px 20px 34px;font-size:12.5px;color:var(--ink3);line-height:1.9}
+footer .wrap{padding:0 20px}
+footer b{color:var(--ink2);font-weight:500}
+footer .biz{margin-top:12px;font-size:11.5px;color:#a89684}
+
+/* 하단 고정 바 */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(253,249,243,.96);
+  backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  padding:9px 12px calc(9px + env(safe-area-inset-bottom));display:flex;gap:8px;
+  max-width:720px;margin:0 auto}
+.dock a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;
+  border-radius:11px;font-size:11.5px;font-weight:500;color:var(--ink2)}
+.dock a.main{background:var(--brand);color:#fff;flex:1.5;flex-direction:row;justify-content:center;
+  font-size:14.5px;gap:7px;box-shadow:0 4px 14px rgba(140,47,34,.28)}
+.dock svg{width:19px;height:19px}
+.dock a.main svg{width:17px;height:17px}
+</style>
+</head>
+<body>
+
+<div class="demo" id="demoBar">
+  <span>⚠ <b>견본입니다.</b> 상호·주소·전화·가격은 전부 지어낸 값이며 실제 가게가 아닙니다. 사진 자리는 회색 박스로 비워 두었습니다.</span>
+  <button onclick="document.getElementById('demoBar').remove()">닫기</button>
+</div>
+
+<header>
+  <div class="bar">
+    <div class="logo serif">해<em>온</em>식당</div>
+    <div class="status" id="statusTop"><span class="dot"></span><span>확인 중</span></div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="in">
+    <div class="kicker">마포 공덕 · 한식 백반</div>
+    <h1 class="serif">매일 아침<br>새로 끓입니다</h1>
+    <p>돼지고기 듬뿍 넣은 김치찌개와 직접 볶는 제육. 20년째 같은 자리에서 점심을 차립니다.</p>
+    <div class="cta">
+      <a class="btn btn-p" href="tel:0212345678">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+        전화 주문·예약
+      </a>
+      <a class="btn btn-g" href="#menu">메뉴 보기</a>
+      <a class="btn btn-g" href="#location">길찾기</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<section id="signature">
+  <div class="h2"><h2 class="serif">대표 메뉴</h2><span>Signature</span></div>
+  <div class="signature">
+    <div class="sig">
+      <div class="ph"><div class="ico">🍲</div><small>사진 자리<br>돼지김치찌개</small></div>
+      <div class="txt">
+        <span class="tag">가장 많이 찾는</span>
+        <h3>돼지김치찌개</h3>
+        <div class="desc">3년 묵은지에 목살을 넣고 아침마다 새로 끓입니다.</div>
+        <div class="price">9,000원</div>
+      </div>
+    </div>
+    <div class="sig">
+      <div class="ph"><div class="ico">🥘</div><small>사진 자리<br>제육볶음</small></div>
+      <div class="txt">
+        <span class="tag">2인 이상 추천</span>
+        <h3>제육볶음</h3>
+        <div class="desc">주문 즉시 센 불에 볶아 냅니다. 상추·쌈장 기본.</div>
+        <div class="price">11,000원</div>
+      </div>
+    </div>
+    <div class="sig">
+      <div class="ph"><div class="ico">🥞</div><small>사진 자리<br>해물파전</small></div>
+      <div class="txt">
+        <span class="tag">저녁 안주</span>
+        <h3>해물파전</h3>
+        <div class="desc">오징어·새우 넉넉히. 막걸리와 함께 드세요.</div>
+        <div class="price">16,000원</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="menu">
+  <div class="h2"><h2 class="serif">메뉴판</h2><span>Menu</span></div>
+  <div class="tabs" id="tabs" role="tablist"></div>
+  <div class="menu" id="menuList"></div>
+  <div class="note" id="menuNote">가격은 부가세 포함 · 재료 사정에 따라 변경될 수 있습니다</div>
+</section>
+
+<section id="order">
+  <div class="h2"><h2 class="serif">예약 · 주문</h2><span>Order</span></div>
+  <div class="order">
+    <a class="oc" href="tel:0212345678">
+      <div class="ic" style="background:#fbeeea;color:#b4402e">📞</div>
+      <div><b>전화 예약</b><small>02-1234-5678 · 10인 이상은 하루 전</small></div>
+      <div class="arrow">›</div>
+    </a>
+    <a class="oc" href="https://booking.naver.com/" target="_blank" rel="noopener">
+      <div class="ic" style="background:#eaf6ec;color:#03c75a">📅</div>
+      <div><b>네이버 예약</b><small>날짜·인원 선택하고 바로 예약</small></div>
+      <div class="arrow">›</div>
+    </a>
+    <a class="oc" href="https://www.baemin.com/" target="_blank" rel="noopener">
+      <div class="ic" style="background:#e8f7f8;color:#2ac1bc">🛵</div>
+      <div><b>배달 주문</b><small>배달의민족 · 11:00~20:00</small></div>
+      <div class="arrow">›</div>
+    </a>
+    <a class="oc" href="http://pf.kakao.com/" target="_blank" rel="noopener">
+      <div class="ic" style="background:#fff8d6;color:#8a6d00">💬</div>
+      <div><b>카카오톡 문의</b><small>단체석·포장 문의는 여기로</small></div>
+      <div class="arrow">›</div>
+    </a>
+  </div>
+</section>
+
+<section id="location">
+  <div class="h2"><h2 class="serif">오시는 길</h2><span>Location</span></div>
+  <div class="map">
+    <div class="mapimg"><div class="pin"></div><small>지도 자리 — 카카오맵 삽입</small></div>
+    <div class="addr">
+      <div class="a1">서울 마포구 백범로 000, 1층</div>
+      <div class="a2">지하철 5·6호선 공덕역 3번 출구에서 도보 4분</div>
+    </div>
+    <div class="mapbtns">
+      <a class="btn btn-o" href="https://map.kakao.com/link/search/서울 마포구 백범로 000" target="_blank" rel="noopener">카카오맵</a>
+      <a class="btn btn-o" href="https://map.naver.com/p/search/서울 마포구 백범로 000" target="_blank" rel="noopener">네이버지도</a>
+      <button class="btn btn-o" id="copyAddr">주소 복사</button>
+    </div>
+  </div>
+  <div class="park">
+    <span style="font-size:19px">🅿️</span>
+    <div><b>주차 4대 가능</b> — 가게 앞 전용 주차선 2면, 옆 골목 공영주차장 2시간 무료(식사 후 주차권 드립니다).<br>만차 시 공덕역 공영주차장을 이용해 주세요.</div>
+  </div>
+</section>
+
+<section id="hours">
+  <div class="h2"><h2 class="serif">영업시간</h2><span>Hours</span></div>
+  <div class="hours" id="hoursBox"></div>
+  <div class="note">브레이크타임 15:00~17:00 · 라스트오더 마감 30분 전</div>
+</section>
+
+<section id="review">
+  <div class="h2"><h2 class="serif">후기 · 소식</h2><span>Review</span></div>
+  <div class="links">
+    <a class="btn btn-o" href="https://m.place.naver.com/" target="_blank" rel="noopener">⭐ 네이버 플레이스 후기</a>
+    <a class="btn btn-o" href="https://www.instagram.com/" target="_blank" rel="noopener">📷 인스타그램</a>
+    <a class="btn btn-o" href="https://blog.naver.com/" target="_blank" rel="noopener">✍️ 블로그 후기</a>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <b>해온식당</b><br>
+    서울 마포구 백범로 000, 1층 · 02-1234-5678<br>
+    <div class="biz">
+      사업자등록번호 000-00-00000 · 대표 홍길동<br>
+      ※ 이 페이지는 견본이며 위 정보는 실제 사업자 정보가 아닙니다.
+    </div>
+  </div>
+</footer>
+
+<nav class="dock">
+  <a href="#menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 2v7a3 3 0 0 0 6 0V2M6 9v13M18 2c-1.7 1-3 3.5-3 6.5 0 2.2 1.2 3.5 3 3.5v10"/></svg>
+    메뉴
+  </a>
+  <a href="#location">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    길찾기
+  </a>
+  <a class="main" href="tel:0212345678">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+    전화 걸기
+  </a>
+</nav>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ① 가게 정보 — 실제 가게로 바꿀 때 이 블록만 고치면 됩니다
+   ══════════════════════════════════════════════════════════════ */
+const SHOP = {
+  tel: '02-1234-5678',
+  addr: '서울 마포구 백범로 000, 1층',
+  // 영업시간: [여는시각, 닫는시각] 24시간제. null = 휴무
+  hours: {
+    0: null,            // 일
+    1: [11.0, 21.0],    // 월
+    2: [11.0, 21.0],
+    3: [11.0, 21.0],
+    4: [11.0, 21.0],
+    5: [11.0, 22.0],    // 금
+    6: [11.0, 22.0]     // 토
+  },
+  breakTime: [15.0, 17.0]   // 브레이크타임, 없으면 null
+};
+
+/* ② 메뉴 — 구글시트를 연결하면 사장님이 직접 고칠 수 있습니다.
+      구글시트 → 파일 → 공유 → 웹에 게시 → CSV 로 얻은 주소를 아래에 붙여넣으세요.
+      시트 열 순서: 분류 | 메뉴명 | 가격 | 설명 | 품절(Y)
+      비워두면 아래 기본 메뉴가 그대로 보입니다.                     */
+const MENU_CSV_URL = '';
+
+const FALLBACK_MENU = [
+  {cat:'식사', name:'돼지김치찌개', price:9000,  desc:'3년 묵은지 + 목살, 공기밥 포함'},
+  {cat:'식사', name:'된장찌개',     price:9000,  desc:'두부·애호박, 공기밥 포함'},
+  {cat:'식사', name:'제육볶음',     price:11000, desc:'상추·쌈장 기본 제공'},
+  {cat:'식사', name:'고등어구이',   price:13000, desc:'주문 후 구워 냅니다'},
+  {cat:'식사', name:'비빔밥',       price:9500,  desc:'계절 나물 7가지'},
+  {cat:'식사', name:'공기밥 추가',  price:1000,  desc:''},
+  {cat:'안주', name:'해물파전',     price:16000, desc:'오징어·새우 듬뿍'},
+  {cat:'안주', name:'계란말이',     price:8000,  desc:''},
+  {cat:'안주', name:'두부김치',     price:12000, desc:''},
+  {cat:'안주', name:'모둠전',       price:18000, desc:'', sold:true},
+  {cat:'주류·음료', name:'소주',    price:5000,  desc:''},
+  {cat:'주류·음료', name:'맥주',    price:5000,  desc:''},
+  {cat:'주류·음료', name:'막걸리',  price:6000,  desc:'지평 생막걸리'},
+  {cat:'주류·음료', name:'음료수',  price:2000,  desc:'콜라·사이다·식혜'}
+];
+
+/* ══════════════════════════════════════════════════════════════
+   여기서부터는 손대지 않아도 됩니다
+   ══════════════════════════════════════════════════════════════ */
+const DAY = ['일','월','화','수','목','금','토'];
+const fmtH = v => `${String(Math.floor(v)).padStart(2,'0')}:${String(Math.round((v%1)*60)).padStart(2,'0')}`;
+const won = n => n.toLocaleString('ko-KR') + '원';
+
+/* 서울 기준 현재 시각 (보는 사람 기기 설정과 무관하게) */
+function seoulNow(){
+  const s = new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'});
+  return new Date(s);
+}
+
+function renderStatus(){
+  const now = seoulNow();
+  const h = now.getHours() + now.getMinutes()/60;
+  const today = SHOP.hours[now.getDay()];
+  const el = document.getElementById('statusTop');
+  let cls = 'off', txt = '오늘 휴무';
+
+  if (today){
+    const [o,c] = today;
+    const br = SHOP.breakTime;
+    if (h < o)              txt = fmtH(o) + ' 오픈';
+    else if (h >= c)        txt = '영업 종료';
+    else if (br && h >= br[0] && h < br[1]) txt = '브레이크타임 · ' + fmtH(br[1]) + ' 재오픈';
+    else { cls = 'on'; txt = '영업 중 · ' + fmtH(c) + ' 마감'; }
+  }
+  el.className = 'status ' + cls;
+  el.innerHTML = '<span class="dot"></span><span>' + txt + '</span>';
+}
+
+function renderHours(){
+  const today = seoulNow().getDay();
+  const box = document.getElementById('hoursBox');
+  box.innerHTML = [1,2,3,4,5,6,0].map(d => {
+    const t = SHOP.hours[d];
+    const cls = 'hr' + (d === today ? ' today' : '') + (t ? '' : ' rest');
+    const label = t ? `${fmtH(t[0])} – ${fmtH(t[1])}` : '정기 휴무';
+    return `<div class="${cls}"><span class="d">${DAY[d]}</span><span class="t">${label}</span></div>`;
+  }).join('');
+}
+
+/* CSV 한 줄 파싱 (따옴표 안 쉼표 보호) */
+function splitCsvLine(line){
+  const out = []; let cur = '', q = false;
+  for (let i = 0; i < line.length; i++){
+    const ch = line[i];
+    if (ch === '"'){ if (q && line[i+1] === '"'){ cur += '"'; i++; } else q = !q; }
+    else if (ch === ',' && !q){ out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out.map(s => s.trim());
+}
+
+function parseMenuCsv(text){
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return null;
+  const rows = lines.slice(1).map(splitCsvLine)
+    .filter(c => c[1] && c[2])
+    .map(c => ({
+      cat:  c[0] || '메뉴',
+      name: c[1],
+      price: Number(String(c[2]).replace(/[^0-9]/g,'')) || 0,
+      desc: c[3] || '',
+      sold: /^[YyㅇOo]/.test(c[4] || '')
+    }));
+  return rows.length ? rows : null;
+}
+
+let MENU = FALLBACK_MENU, activeCat = null;
+
+function renderMenu(){
+  const cats = [...new Set(MENU.map(m => m.cat))];
+  if (!activeCat || !cats.includes(activeCat)) activeCat = cats[0];
+
+  document.getElementById('tabs').innerHTML = cats.map(c =>
+    `<button class="tab" role="tab" aria-selected="${c === activeCat}" data-cat="${c}">${c}</button>`
+  ).join('');
+
+  document.getElementById('menuList').innerHTML = MENU.filter(m => m.cat === activeCat).map(m => `
+    <div class="row${m.sold ? ' sold' : ''}">
+      <div class="nm">${m.name}${m.sold ? '<span class="badge">품절</span>' : ''}
+        ${m.desc ? `<small>${m.desc}</small>` : ''}</div>
+      <div class="dots"></div>
+      <div class="pr">${won(m.price)}</div>
+    </div>`).join('');
+
+  document.querySelectorAll('.tab').forEach(b =>
+    b.onclick = () => { activeCat = b.dataset.cat; renderMenu(); });
+}
+
+async function loadMenu(){
+  if (!MENU_CSV_URL) return;
+  try {
+    const res = await fetch(MENU_CSV_URL, {cache:'no-store'});
+    if (!res.ok) throw new Error(res.status);
+    const rows = parseMenuCsv(await res.text());
+    if (rows){
+      MENU = rows;
+      activeCat = null;
+      renderMenu();
+      document.getElementById('menuNote').textContent =
+        '가격은 부가세 포함 · 마지막 업데이트 ' +
+        seoulNow().toLocaleDateString('ko-KR',{month:'long',day:'numeric'});
+    }
+  } catch(e){
+    /* 시트를 못 읽으면 기본 메뉴를 그대로 보여준다 — 화면이 비지 않게 */
+    console.warn('메뉴 시트를 불러오지 못해 기본 메뉴를 표시합니다:', e);
+  }
+}
+
+document.getElementById('copyAddr').onclick = async function(){
+  try {
+    await navigator.clipboard.writeText(SHOP.addr);
+    const t = this.textContent;
+    this.textContent = '복사했습니다';
+    setTimeout(() => this.textContent = t, 1600);
+  } catch(e){
+    prompt('주소를 복사하세요', SHOP.addr);
+  }
+};
+
+renderStatus();
+renderHours();
+renderMenu();
+loadMenu();
+setInterval(renderStatus, 60000);
+</script>
+</body>
+</html>
