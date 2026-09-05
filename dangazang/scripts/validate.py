@@ -91,38 +91,38 @@ def check_master_matching(wb):
 
 
 def check_rates(wb):
-    print("[3] 요율 검사 (×1.5 / ×1.8 / 160%=계약가×1.6)")
+    """요율 세대 검사 (정본: 계약 ×1.5 / 견적 ×1.8 / 설계예산 ×2.1 — 2026-08-13 확정).
+
+    구 160%(계약×1.6=실행×2.4)·구구 ×1.3/×1.4는 폐기 요율. 잔존 시트는 WARN으로 모아
+    보고한다 (기존 현장 시트 일괄 정정은 성윤 차장 승인 후 별도 작업).
+    신규 생성 시트는 요율 입력칸(노란 배수 칸) 참조 또는 ×2.1이어야 한다.
+    """
+    print("[3] 요율 세대 검사 (정본 ×1.5/×1.8/×2.1 — 구 160%·×1.3/×1.4 폐기)")
+    legacy = []
     for ws in site_sheets(wb):
-        rows = {}
-        for r in range(1, ws.max_row + 1):
-            a = ws.cell(row=r, column=1).value
-            if isinstance(a, str):
-                if a.startswith("▷ 견적단가 (×1.5)") or a.startswith("▷ 견적 총액 (×1.5)"):
-                    rows["c15"] = r
-                elif a.startswith("▷ 견적단가 (×1.8)") or a.startswith("▷ 견적 총액 (×1.8)"):
-                    rows["c18"] = r
-                elif a.startswith("▷ 견적단가 (160%)") or a.startswith("▷ 견적 총액 (160%)"):
-                    rows["c16"] = r
-        if not rows:
-            warn(f"{ws.title}: 요율 행 없음 (요약 블록 미구축 시트)")
-            continue
-        missing = {"c15", "c18", "c16"} - set(rows)
-        if missing:
-            err(f"{ws.title}: 요율 행 누락 {sorted(missing)}")
-            continue
-        for r in (rows["c16"],):
-            ok = False
-            for c in ws[r]:
+        gens = set()
+        for row in ws.iter_rows(max_row=min(ws.max_row, 120)):
+            a = row[0].value
+            label = a if isinstance(a, str) else ""
+            for c in row:
                 v = fval(c)
-                if isinstance(v, str) and v.startswith("="):
-                    # 160% 행은 ×1.5 행(계약가)을 참조해야 한다
-                    if re.search(rf"[A-Z]+{rows['c15']}\*1\.6", v.replace(" ", "")):
-                        ok = True
-                    elif "*1.6" in v or "*2.4" in v:
-                        err(f"{ws.title}!{c.coordinate} 160% 행이 계약가(×1.5) 행이 아닌 "
-                            f"다른 값을 참조: {v[:60]}")
-            if not ok and not errors:
-                warn(f"{ws.title}: 160% 행 수식 패턴 확인 불가 — 육안 확인 필요")
+                if not (isinstance(v, str) and v.startswith("=")):
+                    continue
+                vv = v.replace(" ", "")
+                if "*1.3" in vv or "*1.4" in vv:
+                    gens.add("폐기(×1.3/×1.4)")
+                if "*1.6" in vv and ("▷" in label or "★" in label or "160%" in label):
+                    gens.add("구160%(실행×2.4)")
+                if "*2.1" in vv or re.search(r"\$[A-Z]+\$[5-9]\b", vv) and "TEXT(" in vv:
+                    gens.add("신(×2.1)")
+            if "160%" in label and not label.startswith("="):
+                gens.add("구160%(실행×2.4)")
+        bad = {g for g in gens if g.startswith(("구", "폐기"))}
+        if bad:
+            legacy.append(ws.title)
+            warn(f"{ws.title}: 폐기 요율 잔존 {sorted(bad)} — 정본은 실행 ×2.1 "
+                 f"(대외 제출 전 정정 필요)")
+    print(f"  legacy_rate_sheets: {len(legacy)}")
 
 
 def recalc(path):
@@ -160,13 +160,23 @@ def check_computed(path):
                     m = re.search(r"\((\d+)\s*실\)", c.value)
                     if m:
                         declared = int(m.group(1))
+        # 총합 열을 헤더에서 찾는다 — 행 오른쪽의 요율칸 숫자를 합계로 오인하지 않기 위해
+        sum_col = None
+        for c in ws[4]:
+            h = c.value
+            if isinstance(h, str) and ("총합" in h or h.startswith("객실 (")):
+                sum_col = c.column
+                break
         for r in range(4, 7):
             a = ws.cell(row=r, column=1).value
             if isinstance(a, str) and a.startswith("◆"):
                 total = None
-                for c in ws[r]:
-                    if c.column > 2 and isinstance(c.value, (int, float)):
-                        total = c.value  # 마지막 숫자 = SUM 셀
+                if sum_col and isinstance(ws.cell(row=r, column=sum_col).value, (int, float)):
+                    total = ws.cell(row=r, column=sum_col).value
+                else:
+                    for c in ws[r]:
+                        if c.column > 2 and isinstance(c.value, (int, float)):
+                            total = c.value  # 구형 시트 폴백: 마지막 숫자 = SUM 셀
                 if declared and total and int(total) != declared:
                     err(f"{ws.title} ◆행 합계 {int(total)} ≠ 명시 객실 수 {declared}")
                 elif declared and total:
