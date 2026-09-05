@@ -1,0 +1,13 @@
+{
+  "_설명": "트레이딩뷰 알럿 → 메시지(Message) 칸에 아래 JSON 을 넣는다. 웹훅 URL 칸에는 Apps Script 웹앱 URL. token 은 스크립트 속성 WEBHOOK_TOKEN 과 같아야 한다. {{...}} 는 트레이딩뷰 자리표시자.",
+  "token": "여기에_WEBHOOK_TOKEN",
+  "action": "{{strategy.order.alert_message}}",
+  "symbol": "BTC-USDT-SWAP",
+  "qty": "{{strategy.order.contracts}}",
+  "sl": "",
+  "tp": "",
+  "id": "{{ticker}}-{{timenow}}-{{strategy.order.alert_message}}",
+  "_action_허용값": ["ENTER_LONG", "ENTER_SHORT", "EXIT_LONG", "EXIT_SHORT"],
+  "_qty": "BTC 수량. 계약수로 직접 주려면 qty 대신 contracts 를 쓴다 (예: \"contracts\": \"10\")",
+  "_id": "같은 id 가 두 번 오면 두 번째는 거절(DUP). 반드시 넣는다"
+}

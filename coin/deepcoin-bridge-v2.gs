@@ -1,0 +1,511 @@
+/***********************************************************************
+ * 딥코인(DeepCoin) 자동매매 중계 서버  v2.0  (Google Apps Script)
+ * ───────────────────────────────────────────────────────────────────
+ * 역할: 트레이딩뷰 알럿(웹훅) → 딥코인 무기한선물 시장가 주문
+ *
+ * 흐름:
+ *   TradingView 알럿 ──POST──▶ 이 스크립트(웹앱 URL)
+ *        ① 토큰 확인 → ② 잠금(동시 실행 차단) → ③ 중복 알럿 차단
+ *        ④ 비상정지(KILL) → ⑤ 종목·수량·일일횟수 상한 → ⑥ 거래소 포지션 확인
+ *        ⑦ 주문 (LIVE=YES 일 때만 실제 전송) → ⑧ 주문 후 포지션 재확인
+ *        ⑨ 시트 기록 + 오류 시 메일 알림
+ *
+ * v1 → v2 에서 바뀐 것 (B등급: 기존 동작 수정, 이전 값은 주석에 보존)
+ *   1. 주문 거절 감지: v1은 응답 code만 봤다. 딥코인은 거절도 code:"0"에
+ *      data.sCode:"31" 식으로 온다 → v2는 sCode·retCode까지 본다.
+ *   2. 포지션 진실은 거래소: v1은 스크립트 속성에 적어둔 수량으로 청산했다.
+ *      v2는 청산 직전 /deepcoin/account/positions 를 조회해 실제 수량으로 청산.
+ *   3. 잔고 조회 경로: v1 '/deepcoin/account/balance' → v2 '/deepcoin/account/balances?instType=SWAP'
+ *      (ccxt deepcoin 구현과 동일. 공식 문서 사이트는 작성 환경에서 접근 불가라 ccxt 기준)
+ *   4. slOrdPx:'-1' 제거: 딥코인 규격에 없는 항목(OKX 규격). slTriggerPx 만 보낸다.
+ *   5. 새로 추가(A등급): 잠금, 중복 차단, KILL, 상한 3종, 주문 후 검증,
+ *      자가진단 시트, 메일 알림, 일일 점검 트리거, appid 헤더.
+ *
+ * ★ 설치 (5분)
+ *   프로젝트 설정 → 스크립트 속성:
+ *     DC_API_KEY / DC_SECRET / DC_PASSPHRASE  = 딥코인 API 3종 (출금 권한 없는 키로)
+ *     WEBHOOK_TOKEN = 긴 임의 문자열 (트레이딩뷰 알럿 JSON의 token 과 동일)
+ *     LIVE          = "NO"  ← 처음엔 반드시 NO. 체크리스트 통과 후 "YES"
+ *     LOG_SHEET_ID  = 「딥코인-자동매매-로그」 시트 ID
+ *   실행 메뉴에서 SELFCHECK() 를 한 번 돌려 0.자가진단 탭이 전부 OK 인지 본다.
+ *   설치_일일점검() 을 한 번 실행하면 매일 07:00 자가진단이 자동으로 돈다.
+ *
+ * ★ 비상정지: 시트 「2.설정」 탭의 KILL 을 YES 로 바꾸면 그 순간부터 모든 주문 거절.
+ *   (폰에서 시트만 열면 된다. 스크립트 편집기 안 열어도 됨)
+ ***********************************************************************/
+
+var VERSION = 'v2.0 (2026-09-05)';
+var BASE = 'https://api.deepcoin.com';
+var INST_FALLBACK_CTVAL = 0.001;           // BTC-USDT-SWAP 1계약 = 0.001 BTC (조회 실패 시 예비값)
+var TZ = 'Asia/Seoul';
+
+var SHEET_DIAG = '0.자가진단';
+var SHEET_LOG  = '1.거래로그';
+var SHEET_CFG  = '2.설정';
+
+// 「2.설정」 탭 기본값 — 시트에 없으면 이 값. 시트가 있으면 시트 값이 우선.
+var CFG_DEFAULTS = {
+  KILL:               'NO',              // YES 면 모든 주문 거절 (비상정지)
+  ALLOWED_SYMBOLS:    'BTC-USDT-SWAP',   // 쉼표로 여러 개
+  MAX_CONTRACTS:      '50',              // 1회 주문 최대 계약수. 넘으면 거절(줄이지 않음)
+  MAX_TRADES_PER_DAY: '20',              // 하루 실주문 상한 (LIVE 만 셈)
+  ALLOW_PYRAMID:      'NO',              // 같은 방향 포지션이 있을 때 추가 진입 허용?
+  NOTIFY_EMAIL:       ''                 // 오류·실주문 알림 메일. 비우면 안 보냄
+};
+var CFG_HELP = {
+  KILL:               'YES 로 바꾸면 즉시 모든 주문 거절. 비상정지 스위치',
+  ALLOWED_SYMBOLS:    '주문 허용 종목. 쉼표 구분. 목록에 없는 종목은 거절',
+  MAX_CONTRACTS:      '1회 주문 최대 계약수. 초과하면 거절하고 메일',
+  MAX_TRADES_PER_DAY: '하루 실주문 최대 횟수. 초과하면 거절하고 메일',
+  ALLOW_PYRAMID:      'NO 면 같은 방향 포지션이 이미 있을 때 진입 거절',
+  NOTIFY_EMAIL:       '오류·실주문 알림 받을 메일 주소'
+};
+
+var LOG_HEADER = ['시간(KST)', '상태', '모드', 'action', 'symbol', '요청sz',
+                  '포지션(전)', '포지션(후)', 'ordId', 'alertId', '상세', '오류'];
+
+// ═════════════════ ① 트레이딩뷰가 호출하는 입구 ═════════════════
+function doPost(e) {
+  var log = { time: new Date().toISOString(), version: VERSION };
+  var lock = null;
+  try {
+    var p;
+    try { p = JSON.parse(e.postData.contents); }
+    catch (pe) { return reply_(log, 'REJECT', 'JSON 파싱 실패'); }
+    log.recv = p;
+    var props = PropertiesService.getScriptProperties();
+
+    // 보안: 토큰 불일치면 무시 (아무나 주문 못 쏘게)
+    if (!p.token || p.token !== props.getProperty('WEBHOOK_TOKEN')) {
+      return reply_(log, 'REJECT', '토큰 불일치');
+    }
+    delete log.recv.token;                           // 로그에 토큰을 남기지 않는다
+
+    // 잠금: 같은 순간 두 알럿이 오면 한 건씩 처리
+    lock = LockService.getScriptLock();
+    if (!lock.tryLock(20000)) { lock = null; return reply_(log, 'REJECT', 'BUSY — 다른 알럿 처리 중 (20초 대기 초과)'); }
+
+    var action = String(p.action || '').toUpperCase();   // ENTER_LONG 등
+    var instId = String(p.symbol || 'BTC-USDT-SWAP');
+    log.action = action; log.symbol = instId;
+
+    // 중복 알럿 차단 (같은 id 또는 같은 action+symbol+time 은 한 번만)
+    var alertId = String(p.id || (action + '|' + instId + '|' + (p.time || p.bar_time || '')));
+    log.alertId = alertId;
+    if (isDuplicate_(alertId)) return reply_(log, 'REJECT', 'DUP — 같은 알럿 재수신: ' + alertId);
+    markSeen_(alertId);                              // 처리 도중 오류가 나도 재시도 못 하게 먼저 표시
+
+    // 비상정지
+    if (cfg_('KILL') === 'YES') return reply_(log, 'REJECT', 'KILL=YES — 비상정지 중 (2.설정 탭)');
+
+    // 종목 허용 목록
+    var allowed = cfg_('ALLOWED_SYMBOLS').split(',').map(function (s) { return s.trim(); });
+    if (allowed.indexOf(instId) < 0) return reply_(log, 'REJECT', '허용 안 된 종목: ' + instId + ' (허용: ' + allowed.join(',') + ')');
+
+    var live = (props.getProperty('LIVE') || 'NO').toUpperCase() === 'YES';
+    log.mode = live ? 'LIVE' : 'DRY';
+    var keysReady = hasKeys_();
+    if (live && !keysReady) return reply_(log, 'ERROR', 'LIVE=YES 인데 API 키 3종이 비어 있음');
+
+    var result;
+    if (action === 'ENTER_LONG')       result = enter_(instId, 'long',  p, live, keysReady, log);
+    else if (action === 'ENTER_SHORT') result = enter_(instId, 'short', p, live, keysReady, log);
+    else if (action === 'EXIT_LONG')   result = exit_(instId, 'long',  live, keysReady, log);
+    else if (action === 'EXIT_SHORT')  result = exit_(instId, 'short', live, keysReady, log);
+    else return reply_(log, 'REJECT', '알 수 없는 action: ' + action);
+
+    if (result && result.reject) return reply_(log, 'REJECT', result.reject);
+    if (result && result.skip)   return reply_(log, 'SKIP', result.skip);
+    return reply_(log, live ? 'LIVE' : 'DRY-RUN', result);
+  } catch (err) {
+    log.error = String(err && err.stack ? err.stack : err);
+    return reply_(log, 'ERROR', String(err));
+  } finally {
+    if (lock) { try { lock.releaseLock(); } catch (le) {} }
+  }
+}
+
+// GET 으로 열면 살아 있는지만 알려준다 (브라우저 확인용. 주문 없음)
+function doGet() {
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, version: VERSION, live: (PropertiesService.getScriptProperties().getProperty('LIVE') || 'NO') }))
+                       .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ═════════════════ ② 진입 (시장가 + 손절 동시 설정) ═════════════════
+function enter_(instId, posSide, p, live, keysReady, log) {
+  // 수량: contracts(계약수) 가 오면 그대로, qty(BTC) 가 오면 계약수로 변환
+  var sz;
+  if (p.contracts !== undefined && p.contracts !== '') {
+    sz = parseInt(p.contracts, 10);
+  } else {
+    var ctVal = getCtVal_(instId, keysReady);
+    var qtyBtc = parseFloat(p.qty);
+    if (!(qtyBtc > 0)) return { reject: '수량 없음: qty=' + p.qty + ' (qty=BTC수량 또는 contracts=계약수 중 하나 필수)' };
+    sz = Math.floor(qtyBtc / ctVal);               // 계약수 (내림)
+    log.ctVal = ctVal;
+  }
+  if (!(sz >= 1)) return { reject: '계약수 1 미만: ' + sz };
+  var maxSz = parseInt(cfg_('MAX_CONTRACTS'), 10);
+  if (sz > maxSz) { notify_('[딥코인] 상한 초과로 거절', 'action=' + log.action + ' sz=' + sz + ' > MAX_CONTRACTS=' + maxSz); return { reject: '계약수 ' + sz + ' > MAX_CONTRACTS ' + maxSz + ' — 거절(줄이지 않음)' }; }
+  log.sz = sz;
+
+  // 일일 실주문 상한 (LIVE 만 센다)
+  if (live) {
+    var n = todayCount_();
+    var maxN = parseInt(cfg_('MAX_TRADES_PER_DAY'), 10);
+    if (n >= maxN) { notify_('[딥코인] 일일 상한 도달', '오늘 ' + n + '건 >= MAX_TRADES_PER_DAY ' + maxN); return { reject: '오늘 실주문 ' + n + '건 — MAX_TRADES_PER_DAY ' + maxN + ' 도달' }; }
+  }
+
+  // 진입 전 포지션 확인: 키가 있으면 거래소, 없으면 로컬 기록
+  var posBefore = keysReady ? getPos_(instId, posSide) : loadState_(instId, posSide);
+  log.posBefore = posBefore;
+  if (posBefore > 0 && cfg_('ALLOW_PYRAMID') !== 'YES') {
+    return { reject: 'ALREADY_IN — ' + posSide + ' 포지션 ' + posBefore + '계약 보유 중. 추가 진입은 ALLOW_PYRAMID=YES 일 때만' };
+  }
+
+  var body = {
+    instId: instId,
+    tdMode: 'cross',
+    mrgPosition: 'merge',
+    side: posSide === 'long' ? 'buy' : 'sell',
+    posSide: posSide,
+    ordType: 'market',
+    sz: String(sz),
+    clOrdId: ('KD' + Date.now()).slice(0, 20)
+  };
+  // 손절 동시 설정 (Pine 이 sl 가격을 보내줌)
+  if (p.sl && parseFloat(p.sl) > 0) body.slTriggerPx = String(p.sl);
+  // v1 에 있던 slOrdPx:'-1' 은 딥코인 규격에 없어 제거 (B등급 변경, 2026-09-05)
+  if (p.tp && parseFloat(p.tp) > 0) body.tpTriggerPx = String(p.tp);
+
+  if (!live) {
+    saveState_(instId, posSide, posBefore + sz);   // 모의에서도 상태는 기록
+    return { dryRun: true, wouldSend: body, posBefore: posBefore, exchangeChecked: keysReady };
+  }
+
+  var res = dcPost_('/deepcoin/trade/order', body);
+  log.ordId = res.data && res.data.ordId;
+  bumpTodayCount_();
+  var posAfter = getPos_(instId, posSide);
+  log.posAfter = posAfter;
+  saveState_(instId, posSide, posAfter);
+  var verify = (posAfter >= posBefore + sz) ? 'OK' : ('⚠ 기대 ' + (posBefore + sz) + ' vs 실제 ' + posAfter);
+  notify_('[딥코인] 실주문 ' + log.action + ' ' + sz + '계약 (' + verify + ')', JSON.stringify({ body: body, res: res, posBefore: posBefore, posAfter: posAfter }, null, 1));
+  return { sent: body, ordId: log.ordId, posBefore: posBefore, posAfter: posAfter, verify: verify };
+}
+
+// ═════════════════ ③ 청산 (반대 방향 reduceOnly 시장가, 거래소 수량 기준) ═════════════════
+function exit_(instId, posSide, live, keysReady, log) {
+  var sz = keysReady ? getPos_(instId, posSide) : loadState_(instId, posSide);
+  log.posBefore = sz;
+  if (!(sz > 0)) return { skip: (keysReady ? '거래소' : '로컬 기록') + '에 ' + posSide + ' 포지션 없음 — 이미 손절됐거나 미진입' };
+  log.sz = sz;
+
+  var body = {
+    instId: instId,
+    tdMode: 'cross',
+    mrgPosition: 'merge',
+    side: posSide === 'long' ? 'sell' : 'buy',   // 롱 청산=매도, 숏 청산=매수
+    posSide: posSide,
+    ordType: 'market',
+    sz: String(sz),
+    reduceOnly: true,
+    clOrdId: ('KX' + Date.now()).slice(0, 20)
+  };
+
+  if (!live) { clearState_(instId, posSide); return { dryRun: true, wouldSend: body, exchangeChecked: keysReady }; }
+
+  var res = dcPost_('/deepcoin/trade/order', body);
+  log.ordId = res.data && res.data.ordId;
+  bumpTodayCount_();
+  var posAfter = getPos_(instId, posSide);
+  log.posAfter = posAfter;
+  saveState_(instId, posSide, posAfter);
+  var verify = (posAfter === 0) ? 'OK' : ('⚠ PARTIAL — 청산 후에도 ' + posAfter + '계약 남음');
+  notify_('[딥코인] 실청산 ' + log.action + ' ' + sz + '계약 (' + verify + ')', JSON.stringify({ body: body, res: res, posAfter: posAfter }, null, 1));
+  return { sent: body, ordId: log.ordId, posBefore: sz, posAfter: posAfter, verify: verify };
+}
+
+// ═════════════════ ④ 딥코인 서명·전송 (ccxt deepcoin 구현과 동일 규격) ═════════════════
+// 서명 = Base64( HMAC-SHA256( timestamp + METHOD + requestPath(+?query) + body , secret ) )
+function hasKeys_() {
+  var pr = PropertiesService.getScriptProperties();
+  return !!(pr.getProperty('DC_API_KEY') && pr.getProperty('DC_SECRET') && pr.getProperty('DC_PASSPHRASE'));
+}
+
+function dcHeaders_(method, requestPath, body) {
+  var pr = PropertiesService.getScriptProperties();
+  var key = pr.getProperty('DC_API_KEY'), sec = pr.getProperty('DC_SECRET'), pph = pr.getProperty('DC_PASSPHRASE');
+  if (!key || !sec || !pph) throw 'API 키 미설정 — 스크립트 속성에 DC_API_KEY/DC_SECRET/DC_PASSPHRASE 저장 필요';
+  var ts = new Date().toISOString();               // 예: 2026-08-08T09:08:57.715Z
+  var prehash = ts + method + requestPath + (body || '');
+  var sign = Utilities.base64Encode(Utilities.computeHmacSha256Signature(prehash, sec));
+  return { 'DC-ACCESS-KEY': key, 'DC-ACCESS-SIGN': sign, 'DC-ACCESS-TIMESTAMP': ts,
+           'DC-ACCESS-PASSPHRASE': pph, 'appid': '200103' };
+}
+
+function checkResp_(res, what) {
+  var code = res.getResponseCode ? res.getResponseCode() : 200;
+  var text = res.getContentText();
+  var out;
+  try { out = JSON.parse(text); } catch (e) { throw what + ' 응답이 JSON 아님 (HTTP ' + code + '): ' + String(text).slice(0, 200); }
+  if (code !== 200)          throw what + ' HTTP ' + code + ': ' + text;
+  if (String(out.code) !== '0') throw what + ' 거부 code=' + out.code + ' msg=' + out.msg;
+  var d = out.data || {};
+  // ★ 딥코인은 주문 거절도 code:"0" 으로 오고 data.sCode 에 사유가 있다 (예: 31 NotEnoughPositionToClose, 36 InsufficientMoney)
+  if (!Array.isArray(d)) {
+    if (d.sCode !== undefined && String(d.sCode) !== '0')   throw what + ' 거부 sCode=' + d.sCode + ' ' + (d.sMsg || '');
+    if (d.retCode !== undefined && String(d.retCode) !== '0') throw what + ' 거부 retCode=' + d.retCode + ' ' + (d.retMsg || '');
+  }
+  return out;
+}
+
+function dcPost_(path, bodyObj) {
+  var body = JSON.stringify(bodyObj);
+  var res = UrlFetchApp.fetch(BASE + path, {
+    method: 'post', contentType: 'application/json', payload: body,
+    headers: dcHeaders_('POST', path, body), muteHttpExceptions: true
+  });
+  return checkResp_(res, 'POST ' + path);          // 주문은 재시도하지 않는다 (이중 주문 위험)
+}
+
+function dcGet_(path, query, retries) {
+  var rp = path + (query ? '?' + query : '');
+  var tries = (retries === undefined) ? 2 : retries;
+  var lastErr;
+  for (var i = 0; i <= tries; i++) {
+    try {
+      var res = UrlFetchApp.fetch(BASE + rp, { method: 'get', headers: dcHeaders_('GET', rp, ''), muteHttpExceptions: true });
+      return checkResp_(res, 'GET ' + path);
+    } catch (e) { lastErr = e; if (i < tries) Utilities.sleep(500); }
+  }
+  throw lastErr;
+}
+
+// 거래소 실제 포지션(계약수). 없으면 0
+function getPos_(instId, posSide) {
+  var out = dcGet_('/deepcoin/account/positions', 'instType=SWAP&instId=' + encodeURIComponent(instId));
+  var list = out.data || [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].instId === instId && list[i].posSide === posSide) return parseFloat(list[i].pos) || 0;
+  }
+  return 0;
+}
+
+// 계약 단위 (ctVal). 공개 API 라 키 없이도 조회. 6시간 캐시
+function getCtVal_(instId, keysReady) {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('ctVal_' + instId);
+  if (hit) return parseFloat(hit);
+  try {
+    var res = UrlFetchApp.fetch(BASE + '/deepcoin/market/instruments?instType=SWAP', { muteHttpExceptions: true });
+    var d = JSON.parse(res.getContentText());
+    var list = (d && d.data) || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].instId === instId) {
+        var v = parseFloat(list[i].ctVal);
+        if (v > 0) { cache.put('ctVal_' + instId, String(v), 21600); return v; }
+      }
+    }
+  } catch (e) {}
+  return INST_FALLBACK_CTVAL;
+}
+
+// ═════════════════ ⑤ 상태·중복·설정·카운터 ═════════════════
+function stateKey_(instId, side) { return 'POS_' + instId + '_' + side; }
+function saveState_(instId, side, sz)  { PropertiesService.getScriptProperties().setProperty(stateKey_(instId, side), String(sz)); }
+function loadState_(instId, side)      { return parseInt(PropertiesService.getScriptProperties().getProperty(stateKey_(instId, side)) || '0', 10); }
+function clearState_(instId, side)     { PropertiesService.getScriptProperties().deleteProperty(stateKey_(instId, side)); }
+
+function isDuplicate_(alertId) {
+  if (CacheService.getScriptCache().get('ALERT_' + alertId)) return true;
+  var recent = JSON.parse(PropertiesService.getScriptProperties().getProperty('RECENT_ALERTS') || '[]');
+  return recent.indexOf(alertId) >= 0;
+}
+function markSeen_(alertId) {
+  CacheService.getScriptCache().put('ALERT_' + alertId, '1', 21600);          // 6시간
+  var pr = PropertiesService.getScriptProperties();
+  var recent = JSON.parse(pr.getProperty('RECENT_ALERTS') || '[]');
+  recent.push(alertId); if (recent.length > 50) recent = recent.slice(-50);   // 최근 50건은 캐시가 날아가도 기억
+  pr.setProperty('RECENT_ALERTS', JSON.stringify(recent));
+}
+
+function todayKey_() { return 'DAY_' + Utilities.formatDate(new Date(), TZ, 'yyyyMMdd'); }
+function todayCount_() { return parseInt(PropertiesService.getScriptProperties().getProperty(todayKey_()) || '0', 10); }
+function bumpTodayCount_() { PropertiesService.getScriptProperties().setProperty(todayKey_(), String(todayCount_() + 1)); }
+
+// 설정: 시트 「2.설정」 → 스크립트 속성 → 기본값. 60초 캐시.
+function cfg_(key) {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('CFG_' + key);
+  if (hit !== null && hit !== undefined) return hit;
+  var val = null;
+  try {
+    var sh = cfgSheet_();
+    if (sh) {
+      var rows = sh.getDataRange().getValues();
+      for (var i = 1; i < rows.length; i++) {
+        if (String(rows[i][0]).trim() === key) { var v = String(rows[i][1]).trim(); val = (v === '') ? null : v; break; }
+      }
+    }
+  } catch (e) {}
+  if (val === null) val = PropertiesService.getScriptProperties().getProperty(key);
+  if (val === null || val === undefined) val = CFG_DEFAULTS[key];
+  if (key === 'KILL' || key === 'ALLOW_PYRAMID') val = String(val).toUpperCase();
+  cache.put('CFG_' + key, String(val), 60);
+  return String(val);
+}
+
+// ═════════════════ ⑥ 시트 (로그 · 설정 · 자가진단) ═════════════════
+function logBook_() {
+  var id = PropertiesService.getScriptProperties().getProperty('LOG_SHEET_ID');
+  if (!id) return null;
+  return SpreadsheetApp.openById(id);
+}
+function sheetOrCreate_(book, name, header) {
+  var sh = book.getSheetByName(name);
+  if (!sh) { sh = book.insertSheet(name); if (header) sh.appendRow(header); }
+  else if (header && sh.getLastRow() === 0) sh.appendRow(header);
+  return sh;
+}
+function cfgSheet_() {
+  var book = logBook_(); if (!book) return null;
+  var sh = book.getSheetByName(SHEET_CFG);
+  if (!sh) {                                                // 없으면 기본값으로 만든다 (A등급 추가)
+    sh = book.insertSheet(SHEET_CFG);
+    sh.appendRow(['키', '값', '설명']);
+    for (var k in CFG_DEFAULTS) sh.appendRow([k, CFG_DEFAULTS[k], CFG_HELP[k]]);
+  }
+  return sh;
+}
+
+function appendLog_(log) {
+  try {
+    var book = logBook_(); if (!book) return;
+    var sh = sheetOrCreate_(book, SHEET_LOG, LOG_HEADER);
+    // v1 시트(첫 탭 머리글 5열)가 그대로면 머리글을 v2 로 바꾸지 않고 새 탭에 쓴다 (기존 기록 보존)
+    sh.appendRow([
+      Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss'),
+      log.status, log.mode || '', log.action || '', log.symbol || '',
+      log.sz === undefined ? '' : log.sz,
+      log.posBefore === undefined ? '' : log.posBefore,
+      log.posAfter === undefined ? '' : log.posAfter,
+      log.ordId || '', log.alertId || '',
+      JSON.stringify(log.detail || '').slice(0, 45000), log.error || ''
+    ]);
+  } catch (e) {}
+}
+
+function reply_(log, status, detail) {
+  log.status = status; log.detail = detail;
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('LAST_LOG', JSON.stringify(log).slice(0, 8000));   // 최근 1건은 속성에도 보관
+  props.setProperty('LAST_WEBHOOK_AT', log.time);
+  if (status === 'ERROR') { bumpErrCount_(); notify_('[딥코인] 오류 ' + (log.action || ''), JSON.stringify(log, null, 1)); }
+  appendLog_(log);
+  return ContentService.createTextOutput(JSON.stringify({ status: status, detail: detail, version: VERSION }))
+                       .setMimeType(ContentService.MimeType.JSON);
+}
+function bumpErrCount_() { var pr = PropertiesService.getScriptProperties(); var k = 'ERR_' + Utilities.formatDate(new Date(), TZ, 'yyyyMMdd'); pr.setProperty(k, String(parseInt(pr.getProperty(k) || '0', 10) + 1)); }
+
+function notify_(subject, text) {
+  try {
+    var to = cfg_('NOTIFY_EMAIL');
+    if (!to || to.indexOf('@') < 0) return;
+    MailApp.sendEmail(to, subject, String(text).slice(0, 20000));
+  } catch (e) {}
+}
+
+// ═════════════════ ⑦ 자가진단 (실행 메뉴에서 SELFCHECK 실행 / 매일 자동) ═════════════════
+// 「0.자가진단」 탭을 새로 쓴다. 빨간 항목(FAIL)이 하나라도 있으면 LIVE 로 가지 않는다.
+function SELFCHECK() {
+  var pr = PropertiesService.getScriptProperties();
+  var rows = [];
+  function add(item, ok, note) { rows.push([item, ok ? 'OK' : 'FAIL', note || '']); }
+
+  add('버전', true, VERSION);
+  add('WEBHOOK_TOKEN 설정', !!pr.getProperty('WEBHOOK_TOKEN'), pr.getProperty('WEBHOOK_TOKEN') ? (String(pr.getProperty('WEBHOOK_TOKEN')).length + '자') : '비어 있음');
+  var keys = hasKeys_();
+  add('API 키 3종 설정', keys, keys ? '있음' : 'DC_API_KEY / DC_SECRET / DC_PASSPHRASE 중 빈 것 있음');
+  var live = (pr.getProperty('LIVE') || 'NO').toUpperCase();
+  add('LIVE 모드', true, live === 'YES' ? '★ 실주문 모드' : '모의(DRY-RUN)');
+  add('LOG_SHEET_ID 설정', !!pr.getProperty('LOG_SHEET_ID'), pr.getProperty('LOG_SHEET_ID') || '비어 있음 — 시트 기록 안 됨');
+
+  var book = null;
+  try { book = logBook_(); add('로그 시트 열기', !!book, book ? book.getName() : '열 수 없음'); } catch (e) { add('로그 시트 열기', false, String(e)); }
+
+  add('KILL', cfg_('KILL') !== 'YES', 'KILL=' + cfg_('KILL'));
+  add('허용 종목', true, cfg_('ALLOWED_SYMBOLS'));
+  add('상한', true, 'MAX_CONTRACTS=' + cfg_('MAX_CONTRACTS') + ' / MAX_TRADES_PER_DAY=' + cfg_('MAX_TRADES_PER_DAY') + ' / ALLOW_PYRAMID=' + cfg_('ALLOW_PYRAMID'));
+  add('알림 메일', !!cfg_('NOTIFY_EMAIL'), cfg_('NOTIFY_EMAIL') || '비어 있음 — 오류가 나도 메일이 안 옴');
+
+  var ct = getCtVal_('BTC-USDT-SWAP', keys);
+  add('공개 API (instruments)', true, 'BTC-USDT-SWAP ctVal=' + ct + (ct === INST_FALLBACK_CTVAL ? ' (예비값일 수 있음 — 조회 실패 시 같은 값)' : ''));
+
+  if (keys) {
+    try { var b = dcGet_('/deepcoin/account/balances', 'instType=SWAP', 0); var bal = (b.data || []).map(function (x) { return x.ccy + ' ' + x.availBal + '/' + x.bal; }).join(', '); add('잔고 조회 (키 유효)', true, bal || '잔고 0'); }
+    catch (e) { add('잔고 조회 (키 유효)', false, String(e)); }
+    try { var pos = dcGet_('/deepcoin/account/positions', 'instType=SWAP', 0); var ps = (pos.data || []).map(function (x) { return x.instId + ' ' + x.posSide + ' ' + x.pos; }).join(', '); add('거래소 포지션', true, ps || '없음'); }
+    catch (e) { add('거래소 포지션', false, String(e)); }
+  } else {
+    add('잔고 조회 (키 유효)', false, '키가 없어 건너뜀');
+  }
+
+  add('마지막 웹훅', true, pr.getProperty('LAST_WEBHOOK_AT') || '아직 없음');
+  add('오늘 실주문 수', true, todayCount_() + '건');
+  var errK = 'ERR_' + Utilities.formatDate(new Date(), TZ, 'yyyyMMdd');
+  var errN = parseInt(pr.getProperty(errK) || '0', 10);
+  add('오늘 오류 수', errN === 0, errN + '건');
+
+  var fails = rows.filter(function (r) { return r[1] === 'FAIL'; }).length;
+  if (book) {
+    try {
+      var sh = sheetOrCreate_(book, SHEET_DIAG);
+      sh.clear();
+      sh.appendRow(['0. 자가진단 — 이 시트가 스스로 검사합니다. FAIL 이 있으면 LIVE 로 가지 마십시오.', '', Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm')]);
+      sh.appendRow(['항목', '결과', '내용']);
+      for (var i = 0; i < rows.length; i++) sh.appendRow(rows[i]);
+      sh.appendRow(['합계', fails === 0 ? 'OK' : 'FAIL', 'FAIL ' + fails + '건']);
+    } catch (e) {}
+  }
+  var summary = 'SELFCHECK ' + VERSION + ' — FAIL ' + fails + '건\n' + rows.map(function (r) { return r[1] + ' | ' + r[0] + ' | ' + r[2]; }).join('\n');
+  Logger.log(summary);
+  return { fails: fails, rows: rows, summary: summary };
+}
+
+function dailyCheck_() {
+  var r = SELFCHECK();
+  if (r.fails > 0) notify_('[딥코인] 일일 자가진단 FAIL ' + r.fails + '건', r.summary);
+}
+
+// 실행 메뉴에서 한 번 실행: 매일 07시 자가진단 트리거 설치 (중복 설치 방지)
+function 설치_일일점검() {
+  var ts = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < ts.length; i++) if (ts[i].getHandlerFunction() === 'dailyCheck_') return '이미 설치됨';
+  ScriptApp.newTrigger('dailyCheck_').timeBased().everyDays(1).atHour(7).create();
+  return '설치 완료: 매일 07시 dailyCheck_';
+}
+
+// ═════════════════ ⑧ 수동 테스트 도구 (실행 메뉴에서) ═════════════════
+function TEST_잔고조회() {           // 키 3개가 맞는지 첫 확인용. code:"0" 이면 연결 성공
+  Logger.log(JSON.stringify(dcGet_('/deepcoin/account/balances', 'instType=SWAP', 0)));
+}
+function TEST_모의진입() {            // LIVE=NO 상태에서 전체 흐름 점검
+  Logger.log(doPost(fake_({ action: 'ENTER_LONG', symbol: 'BTC-USDT-SWAP', qty: '0.01', price: '60000', sl: '58000', id: 'test-' + Date.now() })).getContent());
+}
+function TEST_모의청산() {
+  Logger.log(doPost(fake_({ action: 'EXIT_LONG', symbol: 'BTC-USDT-SWAP', id: 'test-' + Date.now() })).getContent());
+}
+function TEST_중복차단() {            // 같은 id 두 번 → 두 번째는 REJECT DUP 이어야 정상
+  var id = 'dup-' + Date.now();
+  Logger.log(doPost(fake_({ action: 'ENTER_LONG', qty: '0.001', id: id })).getContent());
+  Logger.log(doPost(fake_({ action: 'ENTER_LONG', qty: '0.001', id: id })).getContent());
+}
+function TEST_토큰불일치() {          // REJECT 토큰 불일치 가 나와야 정상
+  Logger.log(doPost({ postData: { contents: JSON.stringify({ token: 'wrong', action: 'ENTER_LONG', qty: '0.001' }) } }).getContent());
+}
+function TEST_최근로그() { Logger.log(PropertiesService.getScriptProperties().getProperty('LAST_LOG')); }
+function fake_(o) {
+  o.token = PropertiesService.getScriptProperties().getProperty('WEBHOOK_TOKEN');
+  return { postData: { contents: JSON.stringify(o) } };
+}
