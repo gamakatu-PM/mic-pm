@@ -38,6 +38,9 @@
  *   - 알럿에 price(진입가)가 오면 손절·익절 방향 검사 (롱 sl<price, 숏 sl>price 아니면 거절)
  *   - 알럿 JSON 은 Pine 의 alert_message 에서 조립하는 방식을 표준으로 (coin/pine-alert-wiring.pine)
  *
+ * v2.3 → v2.4 (2026-09-05, 커넥터 정리)
+ *   - 텔레그램 알림(선택): 2.설정 TELEGRAM_CHAT_ID + 스크립트 속성 TELEGRAM_BOT_TOKEN 이 있으면 메일과 함께 폰 푸시
+ *
  * ★ 설치 (5분)
  *   프로젝트 설정 → 스크립트 속성:
  *     DC_API_KEY / DC_SECRET / DC_PASSPHRASE  = 딥코인 API 3종 (출금 권한 없는 키로)
@@ -51,7 +54,7 @@
  *   (폰에서 시트만 열면 된다. 스크립트 편집기 안 열어도 됨)
  ***********************************************************************/
 
-var VERSION = 'v2.3 (2026-09-05)';
+var VERSION = 'v2.4 (2026-09-05)';
 var BASE = 'https://api.deepcoin.com';
 var INST_FALLBACK_CTVAL = 0.001;           // BTC-USDT-SWAP 1계약 = 0.001 BTC (조회 실패 시 예비값)
 var TZ = 'Asia/Seoul';
@@ -68,7 +71,8 @@ var CFG_DEFAULTS = {
   MAX_CONTRACTS:      '50',              // 1회 주문 최대 계약수. 넘으면 거절(줄이지 않음)
   MAX_TRADES_PER_DAY: '20',              // 하루 실주문 상한 (LIVE 만 셈)
   ALLOW_PYRAMID:      'NO',              // 같은 방향 포지션이 있을 때 추가 진입 허용?
-  NOTIFY_EMAIL:       ''                 // 오류·실주문 알림 메일. 비우면 안 보냄
+  NOTIFY_EMAIL:       '',                // 오류·실주문 알림 메일. 비우면 안 보냄
+  TELEGRAM_CHAT_ID:   ''                 // 텔레그램 알림 받을 chat_id. 봇 토큰은 스크립트 속성 TELEGRAM_BOT_TOKEN. 둘 다 있어야 보냄
 };
 var CFG_HELP = {
   KILL:               'YES 로 바꾸면 즉시 모든 주문 거절. 비상정지 스위치',
@@ -76,7 +80,8 @@ var CFG_HELP = {
   MAX_CONTRACTS:      '1회 주문 최대 계약수. 초과하면 거절하고 메일',
   MAX_TRADES_PER_DAY: '하루 실주문 최대 횟수. 초과하면 거절하고 메일',
   ALLOW_PYRAMID:      'NO 면 같은 방향 포지션이 이미 있을 때 진입 거절',
-  NOTIFY_EMAIL:       '오류·실주문 알림 받을 메일 주소'
+  NOTIFY_EMAIL:       '오류·실주문 알림 받을 메일 주소',
+  TELEGRAM_CHAT_ID:   '텔레그램 알림(폰 푸시). @userinfobot 에게 받은 숫자 id. 봇 토큰은 스크립트 속성 TELEGRAM_BOT_TOKEN'
 };
 
 var LOG_HEADER = ['시간(KST)', '상태', '모드', 'action', 'symbol', '요청sz',
@@ -448,8 +453,16 @@ function bumpErrCount_() { var pr = PropertiesService.getScriptProperties(); var
 function notify_(subject, text) {
   try {
     var to = cfg_('NOTIFY_EMAIL');
-    if (!to || to.indexOf('@') < 0) return;
-    MailApp.sendEmail(to, subject, String(text).slice(0, 20000));
+    if (to && to.indexOf('@') >= 0) MailApp.sendEmail(to, subject, String(text).slice(0, 20000));
+  } catch (e) {}
+  try {   // 텔레그램 (선택): 폰 푸시. 메일과 별개로 실패해도 서로 영향 없음
+    var chat = cfg_('TELEGRAM_CHAT_ID'), bot = PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN');
+    if (chat && bot) {
+      UrlFetchApp.fetch('https://api.telegram.org/bot' + bot + '/sendMessage', {
+        method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+        payload: JSON.stringify({ chat_id: chat, text: (subject + '\n' + String(text)).slice(0, 3800) })
+      });
+    }
   } catch (e) {}
 }
 
@@ -475,6 +488,8 @@ function SELFCHECK() {
   add('허용 종목', true, cfg_('ALLOWED_SYMBOLS'));
   add('상한', true, 'MAX_CONTRACTS=' + cfg_('MAX_CONTRACTS') + ' / MAX_TRADES_PER_DAY=' + cfg_('MAX_TRADES_PER_DAY') + ' / ALLOW_PYRAMID=' + cfg_('ALLOW_PYRAMID'));
   add('알림 메일', !!cfg_('NOTIFY_EMAIL'), cfg_('NOTIFY_EMAIL') || '비어 있음 — 오류가 나도 메일이 안 옴');
+  var tgOn = !!(cfg_('TELEGRAM_CHAT_ID') && pr.getProperty('TELEGRAM_BOT_TOKEN'));
+  add('알림 텔레그램(선택)', true, tgOn ? 'chat_id ' + cfg_('TELEGRAM_CHAT_ID') : '미설정 (선택 사항)');
 
   var syms = cfg_('ALLOWED_SYMBOLS').toUpperCase().split(',').map(function (x) { return x.trim(); }).filter(function (x) { return x; });
   for (var si = 0; si < syms.length; si++) {

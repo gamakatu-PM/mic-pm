@@ -11,7 +11,8 @@
 | `tradingview-alert.json` | 알럿 메시지 방식 A(권장: Pine 조립) / B(수동) | 트레이딩뷰 알럿 → 메시지 칸 |
 | `CHECKLIST.md` | 설치 → 모의 → 실전 전환 → 매일 볼 것 | 읽는 용 |
 | `design-mockup.html` | 로그 시트 3탭이 어떻게 보이는지 그림 | 읽는 용 (숫자는 지어낸 값) |
-| `test/run-tests.js` | 모의 실행기 — 정상·고장 경로 89건 (감사 지적 재현 13건, ETH·잔고추이 9건, 손절 방향·Pine JSON 7건) | `node coin/test/run-tests.js` |
+| `test/run-tests.js` | 모의 실행기 — 정상·고장 경로 94건 (감사 지적 재현 13건, ETH·잔고추이 9건, 손절 방향·Pine JSON 7건, 텔레그램 5건) | `node coin/test/run-tests.js` |
+| `skill/km-coin-bridge/SKILL.md` + `km-coin-bridge.skill` | **반려 스킬** — 다음 창이 이 구조를 새로 상상하지 않게 하는 정본. `.skill` 을 claude.ai 스킬에 올린다 | claude.ai → 스킬 → 업로드 |
 
 드라이브 원본: [deepcoin-bridge.gs (v1)](https://docs.google.com/document/d/1E3vJ7GFzJH_4n0vSZPjgnk30ni1W-_tKH7tZ3sCqANs) · [딥코인-자동매매-로그 시트](https://docs.google.com/spreadsheets/d/1NVDDAue2Arm5xvi8shkwZs2Yg5pu2HtldNgo6RduxKI) (2026-08-08 이후 기록 0건 = 실제로 돌아간 적 없음)
 
@@ -90,6 +91,20 @@ A를 권하는 이유: 8/19 통화에서 "자동은 되는데 방법은 모른�
 
 **차장님 전략 코드를 받으면 하는 일:** 원틀의 ★ 두 줄(longSig/shortSig)에 그 전략의 신호를 넣고, 전략이 자체 손절을 갖고 있으면 `slPct` 대신 그 값을 `f_msg` 에 넘기도록 잇는다. 전략이 `strategy.entry` 를 직접 호출하면 그 호출에 `alert_message = f_msg(...)` 만 붙이면 된다.
 
+## 5-3. 커넥터·스킬 — 무엇을 쓰고 무엇을 안 쓰나 (2026-09-05 조사)
+
+| 구분 | 이름 | 상태 | 이 일에서의 역할 |
+|---|---|---|---|
+| 연결됨·씀 | Google Drive | 연결 | 로그 시트 읽기(코인 로그 봐줘), v1 원본 보관 |
+| 연결됨·씀 | Gmail | 연결 | 브리지 알림 메일의 수신함. Claude 가 "오류 메일 왔어?" 를 직접 확인 가능 |
+| 연결됨·씀 | Plaud | 연결 | 김남기 통화 4건 → 수수료·자동 기능 질문표 |
+| 연결됨·안 씀 | Notion · Zapier · Make · Canva · Gamma · Calendar | 연결 | 이 일에는 필요 없음. 노션에 코인 기록 금지(회사 규칙) |
+| 미연결·권장 안 함 | Slack · Supabase · Microsoft 365 | 설치됨, 채팅 꺼짐 | 필요 없음 |
+| 미설치·검토 가능 | Crypto.com(로그인 불필요) · CoinDesk · Twelve Data | 디렉터리에 있음 | ETH 시세를 Claude 가 직접 보고 손절가·로그를 대조할 때 쓸 수 있음. **주문과는 무관**. 차장님이 claude.ai 에서 추가해야 하며 Claude 가 대신 연결할 수 없음 |
+| 없음 | 딥코인 · 트레이딩뷰 커넥터 | 디렉터리에 없음 | 그래서 Apps Script 브리지가 필요한 것 |
+| 코드로 대체 | 텔레그램 알림 | v2.4 에 내장(선택) | 커넥터 없이 Apps Script 가 봇 API 를 직접 호출. 봇 토큰(스크립트 속성)+chat_id(2.설정) 둘 다 있을 때만 |
+| 스킬 | km-coin-bridge (신설) | `coin/skill/` | 외부 스킬 검색 결과 0건 → 직접 만든 정본. 다음 창의 기억 |
+
 ## 6. 못 하는 것 · 모르는 것 (정직하게)
 
 1. **딥코인 공식 문서 사이트를 이 작업 환경에서 열 수 없었다.** 규격은 ccxt 공개 구현(github ccxt/ccxt `deepcoin.ts`)과 검색 결과 요약으로 대조했다. 신뢰도는 높지만 95%는 아니다 → **SELFCHECK의 「잔고 조회」가 OK 로 나오면 키·서명·경로가 맞는 것**이다. 그게 실증이다.
@@ -104,7 +119,7 @@ A를 권하는 이유: 8/19 통화에서 "자동은 되는데 방법은 모른�
 
 | 항목 | 결과 |
 |---|---|
-| 정상 + 고장 경로 검사 | 89건 중 89 PASS (v2.3) |
+| 정상 + 고장 경로 검사 | 94건 중 94 PASS (v2.4) |
 | 고장 주입 1: sCode 검사를 v1처럼 제거 | 3건 FAIL 로 잡힘 (8, 8a, 8b) |
 | 고장 주입 2: 청산을 v1처럼 로컬 기록 기준으로 | 3건 FAIL 로 잡힘 (7k, 7l, 11) |
 | 서명 | 모의 실행기가 같은 비밀키로 HMAC 을 독립 재계산해 헤더와 대조 (7b, 7g) |

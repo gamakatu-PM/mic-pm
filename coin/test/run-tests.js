@@ -54,7 +54,7 @@ function boot(scn, propsInit) {
   p.setProperty('LOG_SHEET_ID', 'sheet-1');
   // 기존 검사는 BTC 수학(0.001) 기준으로 작성됨 → 2.설정 탭을 기본값 그대로 만들되 ALLOWED_SYMBOLS 만 BTC+ETH 로. 코드 기본값(ETH) 검사는 21번에서 따로
   p.setProperty('ALLOWED_SYMBOLS', 'BTC-USDT-SWAP, ETH-USDT-SWAP');
-  ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['KILL', 'NO', ''], ['ALLOWED_SYMBOLS', 'BTC-USDT-SWAP, ETH-USDT-SWAP', ''], ['MAX_CONTRACTS', '50', ''], ['MAX_TRADES_PER_DAY', '20', ''], ['ALLOW_PYRAMID', 'NO', ''], ['NOTIFY_EMAIL', '', '']]);
+  ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['KILL', 'NO', ''], ['ALLOWED_SYMBOLS', 'BTC-USDT-SWAP, ETH-USDT-SWAP', ''], ['MAX_CONTRACTS', '50', ''], ['MAX_TRADES_PER_DAY', '20', ''], ['ALLOW_PYRAMID', 'NO', ''], ['NOTIFY_EMAIL', '', ''], ['TELEGRAM_CHAT_ID', '', '']]);
   for (const k in (propsInit || {})) p.setProperty(k, propsInit[k]);
   return ctx;
 }
@@ -90,7 +90,7 @@ function check(name, cond, info) { results.push({ name, ok: !!cond, info: info =
   check('3e 시트 로그 12열, 상태 DRY-RUN, 모드 DRY', row && row.length === 12 && row[1] === 'DRY-RUN' && row[2] === 'DRY', JSON.stringify(row));
   check('3f 로그에 토큰이 남지 않음', !JSON.stringify(ctx.__mock.sheets.get('1.거래로그')).includes(TOKEN) && !String(ctx.__mock.props.get('LAST_LOG')).includes(TOKEN));
   ctx.__mock.sheets.delete('2.설정'); ctx.__mock.cache.clear(); post(ctx, { action: 'EXIT_SHORT', symbol: 'ETH-USDT-SWAP', id: 'a1g' });
-  check('3g 2.설정 탭 없으면 기본값 6행으로 자동 생성', (ctx.__mock.sheets.get('2.설정') || []).length === 7 && ctx.__mock.sheets.get('2.설정')[2][1] === 'ETH-USDT-SWAP', JSON.stringify(ctx.__mock.sheets.get('2.설정')));
+  check('3g 2.설정 탭 없으면 기본값 7행으로 자동 생성', (ctx.__mock.sheets.get('2.설정') || []).length === 8 && ctx.__mock.sheets.get('2.설정')[2][1] === 'ETH-USDT-SWAP', JSON.stringify(ctx.__mock.sheets.get('2.설정')));
   ctx.__mock.sheets.get('2.설정')[2][1] = 'BTC-USDT-SWAP, ETH-USDT-SWAP'; ctx.__mock.cache.clear();
   // 3h 같은 방향 재진입 → ALREADY_IN
   const r2 = post(ctx, { action: 'ENTER_LONG', qty: '0.01', id: 'a2' });
@@ -336,6 +336,25 @@ function check(name, cond, info) { results.push({ name, ok: !!cond, info: info =
   const pine2 = pine.replace('"id":"ETHUSDT.P-1757030400000-ENTER_LONG"', '"id":"ETHUSDT.P-1757030400000-EXIT_SHORT"').replace('"action":"ENTER_LONG"', '"action":"EXIT_SHORT"');
   const r2 = JSON.parse(ctx.doPost({ postData: { contents: pine2 } }).getContent());
   check('24a 같은 봉의 EXIT_SHORT 는 id 가 달라 DUP 아님 → SKIP(포지션 없음)', r2.status === 'SKIP', r2.status + ' ' + r2.detail); }
+
+// 25. (v2.4) 텔레그램 알림: 토큰+chat_id 둘 다 있을 때만, 메일과 독립, 주문 로직에 영향 없음
+{ const ex = exchange(); const ctx = boot(ex, Object.assign({ LIVE: 'YES', TELEGRAM_BOT_TOKEN: '123:abc' }, KEYS));
+  ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['NOTIFY_EMAIL', 'me@example.com', ''], ['TELEGRAM_CHAT_ID', '99887766', '']]);
+  const r = post(ctx, { action: 'ENTER_LONG', qty: '0.01', id: 't1' });
+  const tg = ctx.__mock.calls.filter(c => c.url.includes('api.telegram.org'));
+  check('25 실주문 → 메일 1 + 텔레그램 1, 본문에 chat_id·제목', r.status === 'LIVE' && ctx.__mock.mails.length === 1 && tg.length === 1 && JSON.parse(tg[0].payload).chat_id === '99887766' && /실주문/.test(JSON.parse(tg[0].payload).text), tg.length + ' ' + (tg[0] && tg[0].payload));
+  check('25a 텔레그램 URL 에 봇 토큰이 들어가고 로그 시트엔 안 남음', tg[0].url.includes('/bot123:abc/') && !JSON.stringify(ctx.__mock.sheets.get('1.거래로그')).includes('123:abc')); }
+{ const ctx = boot(exchange(), Object.assign({ LIVE: 'YES' }, KEYS));                           // 토큰 없음
+  ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['TELEGRAM_CHAT_ID', '99887766', '']]);
+  post(ctx, { action: 'ENTER_LONG', qty: '0.01', id: 't2' });
+  check('25b 봇 토큰 없으면 텔레그램 호출 0', ctx.__mock.calls.filter(c => c.url.includes('api.telegram.org')).length === 0); }
+{ const ex = exchange(); const base = ex.route; ex.route = (rec) => { if (rec.url.includes('api.telegram.org')) throw new Error('텔레그램 다운(모의)'); return base(rec); };
+  const ctx = boot(ex, Object.assign({ LIVE: 'YES', TELEGRAM_BOT_TOKEN: '123:abc' }, KEYS));
+  ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['TELEGRAM_CHAT_ID', '99887766', '']]);
+  const r = post(ctx, { action: 'ENTER_LONG', qty: '0.01', id: 't3' });
+  check('25c 텔레그램 실패해도 주문·기록은 LIVE 로 정상', r.status === 'LIVE' && ex.st.pos.long === 10 && lastLog(ctx)[1] === 'LIVE', r.status);
+  const s = ctx.SELFCHECK(); const row = s.rows.find(x => x[0].startsWith('알림 텔레그램'));
+  check('25d 자가진단에 텔레그램 행', row && /99887766/.test(row[2]), JSON.stringify(row)); }
 
 // ── 결과 ──
 const fails = results.filter(r => !r.ok);
