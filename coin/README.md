@@ -7,10 +7,11 @@
 | 파일 | 역할 | 어디에 설치 |
 |---|---|---|
 | `deepcoin-bridge-v2.gs` | 중계 서버 본체 (v1 대체) | Apps Script 편집기에 붙여넣기 → 웹앱 배포 |
-| `tradingview-alert.json` | 트레이딩뷰 알럿 메시지 원틀 | 트레이딩뷰 알럿 → 메시지 칸 |
+| `pine-alert-wiring.pine` | **Pine 배선 원틀** — 전략 신호에 브리지용 JSON(ETH 수량·손절·익절·진입가·id)을 붙임 | 트레이딩뷰 Pine 편집기. ★ 두 줄만 차장님 전략으로 교체 |
+| `tradingview-alert.json` | 알럿 메시지 방식 A(권장: Pine 조립) / B(수동) | 트레이딩뷰 알럿 → 메시지 칸 |
 | `CHECKLIST.md` | 설치 → 모의 → 실전 전환 → 매일 볼 것 | 읽는 용 |
 | `design-mockup.html` | 로그 시트 3탭이 어떻게 보이는지 그림 | 읽는 용 (숫자는 지어낸 값) |
-| `test/run-tests.js` | 모의 실행기 — 정상·고장 경로 82건 (감사 지적 재현 13건, ETH 기본·잔고추이 9건 포함) | `node coin/test/run-tests.js` |
+| `test/run-tests.js` | 모의 실행기 — 정상·고장 경로 89건 (감사 지적 재현 13건, ETH·잔고추이 9건, 손절 방향·Pine JSON 7건) | `node coin/test/run-tests.js` |
 
 드라이브 원본: [deepcoin-bridge.gs (v1)](https://docs.google.com/document/d/1E3vJ7GFzJH_4n0vSZPjgnk30ni1W-_tKH7tZ3sCqANs) · [딥코인-자동매매-로그 시트](https://docs.google.com/spreadsheets/d/1NVDDAue2Arm5xvi8shkwZs2Yg5pu2HtldNgo6RduxKI) (2026-08-08 이후 기록 0건 = 실제로 돌아간 적 없음)
 
@@ -73,6 +74,22 @@ A를 권하는 이유: 8/19 통화에서 "자동은 되는데 방법은 모른�
 | 수익을 키우는 것 | 그건 트레이딩뷰 전략(진입·청산 규칙)과 레버리지·수수료율의 문제다. 이 코드는 전략을 "그대로, 한 번만, 상한 안에서" 실행할 뿐이다 |
 | 8/19 통화의 수수료 0.4 / 0.6 / 0.81 이 무엇인지 판단 | 단위(%인지, 왕복인지, 레퍼럴인지)를 김남기 쪽에 확인해야 한다 — 통화 정리에 질문 15개가 이미 뽑혀 있다 |
 
+## 5-2. 트레이딩뷰 쪽 배선 — 손절이 알럿에 실리게 (v2.3)
+
+「손절 값이 알럿에 실리는가」는 알럿 메시지 칸에 자리표시자를 늘어놓는 방식(B)으로는 **안 된다** — 트레이딩뷰 자리표시자에 손절가는 없다. 그래서 표준은 **Pine 안에서 JSON 을 조립해 `alert_message` 로 넘기는 방식(A)** 이다.
+
+| | A (권장) Pine 조립 | B 수동 JSON |
+|---|---|---|
+| 손절·익절 | Pine 이 %로 계산해 가격으로 실음 | 빈칸 → 거래소 손절 없음 |
+| 수량 | Pine 입력칸 `qtyEth` (ETH) 그대로 | `{{strategy.order.contracts}}` — ETH 인지 확인 필요 |
+| 진입가 | 실림 → 브리지가 손절 방향 검사 | `{{close}}` 로 가능 |
+| 잃는 것 | Pine 을 열어 두 줄(★)을 바꿔야 함 | 손절 없음, 수량 단위 불확실 |
+
+`pine-alert-wiring.pine` 이 하는 일: 롱 신호 → (숏 있으면 EXIT_SHORT 먼저) → ENTER_LONG(sl=진입가×(1−손절%), tp) / 트레이딩뷰 쪽 `strategy.exit` 도 같이 걸어 이중 안전장치. 거래소 손절이 먼저 나가면 뒤따르는 EXIT 알럿은 브리지가 「포지션 없음 → SKIP」 으로 무해하게 끝낸다.
+브리지 v2.3 은 `price` 가 오면 롱 sl<price, 숏 sl>price 가 아닐 때 거절한다 — Pine 계산이 거꾸로여도 주문이 나가지 않는다.
+
+**차장님 전략 코드를 받으면 하는 일:** 원틀의 ★ 두 줄(longSig/shortSig)에 그 전략의 신호를 넣고, 전략이 자체 손절을 갖고 있으면 `slPct` 대신 그 값을 `f_msg` 에 넘기도록 잇는다. 전략이 `strategy.entry` 를 직접 호출하면 그 호출에 `alert_message = f_msg(...)` 만 붙이면 된다.
+
 ## 6. 못 하는 것 · 모르는 것 (정직하게)
 
 1. **딥코인 공식 문서 사이트를 이 작업 환경에서 열 수 없었다.** 규격은 ccxt 공개 구현(github ccxt/ccxt `deepcoin.ts`)과 검색 결과 요약으로 대조했다. 신뢰도는 높지만 95%는 아니다 → **SELFCHECK의 「잔고 조회」가 OK 로 나오면 키·서명·경로가 맞는 것**이다. 그게 실증이다.
@@ -87,7 +104,7 @@ A를 권하는 이유: 8/19 통화에서 "자동은 되는데 방법은 모른�
 
 | 항목 | 결과 |
 |---|---|
-| 정상 + 고장 경로 검사 | 82건 중 82 PASS (v2.2) |
+| 정상 + 고장 경로 검사 | 89건 중 89 PASS (v2.3) |
 | 고장 주입 1: sCode 검사를 v1처럼 제거 | 3건 FAIL 로 잡힘 (8, 8a, 8b) |
 | 고장 주입 2: 청산을 v1처럼 로컬 기록 기준으로 | 3건 FAIL 로 잡힘 (7k, 7l, 11) |
 | 서명 | 모의 실행기가 같은 비밀키로 HMAC 을 독립 재계산해 헤더와 대조 (7b, 7g) |
@@ -97,7 +114,7 @@ A를 권하는 이유: 8/19 통화에서 "자동은 되는데 방법은 모른�
 
 1. 차장님: Apps Script 에 v2 붙여넣기 → 속성 6개 → SELFCHECK → 「0.자가진단」 전부 OK 확인 (LIVE=NO 그대로)
 2. (ETH 이므로) 자가진단 「계약 단위 ETH-USDT-SWAP」 행에서 1계약이 몇 ETH 인지 먼저 본다 → 알럿 `qty` 를 ETH 수량으로 넣는다
-3. 트레이딩뷰 알럿 1개를 `tradingview-alert.json` 으로 만들고 **DRY-RUN 으로 며칠** 굴려 「1.거래로그」에 알럿이 제대로 쌓이는지 본다 (며칠인지는 차장님이 정한다)
+3. `pine-alert-wiring.pine` 을 차트에 올리고(★ 두 줄을 내 전략으로) 알럿 메시지는 `{{strategy.order.alert_message}}` 한 줄로 만들고 **DRY-RUN 으로 며칠** 굴려 「1.거래로그」에 알럿이 제대로 쌓이는지 본다 (며칠인지는 차장님이 정한다)
 4. 딥코인 앱에서 손절이 실제로 걸리는지 소액 1계약으로 LIVE 1회 확인 (MAX_CONTRACTS=1 로 잠가 두고)
 5. 그 다음에야 MAX_CONTRACTS 를 올린다
 6. 한 달 무사하면 B안(ccxt 서버) 필요 여부를 다시 본다

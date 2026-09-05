@@ -16,7 +16,9 @@
 
 ## 2단계 모의 (DRY-RUN) — 기간: ______일 (차장님 결정)
 
-- □ 트레이딩뷰 알럿 만들기: 웹훅 URL = 웹앱 URL, 메시지 = `tradingview-alert.json` (token 채움)
+- □ 트레이딩뷰: `pine-alert-wiring.pine` 을 Pine 편집기에 붙여 차트에 올림 → 설정에서 WEBHOOK_TOKEN·ETH 수량·손절% 입력
+- □ 알럿 만들기: 조건 = 이 전략 → 「주문 체결 이벤트」, 웹훅 URL = 웹앱 URL, 메시지 칸 = `{{strategy.order.alert_message}}` 한 줄
+- □ 「1.거래로그」 상세 열에 `slTriggerPx` 가 값으로 들어 있다 (빈칸이면 손절이 안 실리는 것)
 - □ 실행 메뉴 `TEST_모의진입` → 로그 시트 「1.거래로그」에 `DRY-RUN` 행 1개
 - □ `TEST_중복차단` → 두 번째 행이 `REJECT DUP`
 - □ `TEST_토큰불일치` → `REJECT 토큰 불일치`

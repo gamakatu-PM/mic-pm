@@ -34,6 +34,10 @@
  *   - 자가진단에 허용 종목별 「1계약 = ○ ETH」 표시 (ETH 계약 단위는 예비값 없이 반드시 조회)
  *   - 「3.잔고추이」 탭: 매일 07시 USDT 잔고·전일 대비·누적을 한 줄씩 → 수입이 얼마인지 숫자로
  *
+ * v2.2 → v2.3 (2026-09-05, Pine 배선 원틀과 함께)
+ *   - 알럿에 price(진입가)가 오면 손절·익절 방향 검사 (롱 sl<price, 숏 sl>price 아니면 거절)
+ *   - 알럿 JSON 은 Pine 의 alert_message 에서 조립하는 방식을 표준으로 (coin/pine-alert-wiring.pine)
+ *
  * ★ 설치 (5분)
  *   프로젝트 설정 → 스크립트 속성:
  *     DC_API_KEY / DC_SECRET / DC_PASSPHRASE  = 딥코인 API 3종 (출금 권한 없는 키로)
@@ -47,7 +51,7 @@
  *   (폰에서 시트만 열면 된다. 스크립트 편집기 안 열어도 됨)
  ***********************************************************************/
 
-var VERSION = 'v2.2 (2026-09-05)';
+var VERSION = 'v2.3 (2026-09-05)';
 var BASE = 'https://api.deepcoin.com';
 var INST_FALLBACK_CTVAL = 0.001;           // BTC-USDT-SWAP 1계약 = 0.001 BTC (조회 실패 시 예비값)
 var TZ = 'Asia/Seoul';
@@ -189,7 +193,12 @@ function enter_(instId, posSide, p, live, keysReady, log) {
     sz: String(sz),
     clOrdId: ('KD' + Date.now()).slice(0, 20)
   };
-  // 손절 동시 설정 (Pine 이 sl 가격을 보내줌)
+  // 손절 동시 설정 (Pine 이 sl 가격을 보내줌). price(진입가)가 같이 오면 방향을 검사한다 — 롱 손절은 진입가 아래, 숏 손절은 위
+  var px = parseFloat(p.price), sl = parseFloat(p.sl), tp = parseFloat(p.tp);
+  if (px > 0 && sl > 0 && ((posSide === 'long' && sl >= px) || (posSide === 'short' && sl <= px)))
+    return { reject: '손절 방향 오류 — ' + posSide + ' 진입가 ' + px + ' 인데 sl=' + sl + ' (롱은 아래, 숏은 위여야 함). Pine 의 손절 계산을 확인' };
+  if (px > 0 && tp > 0 && ((posSide === 'long' && tp <= px) || (posSide === 'short' && tp >= px)))
+    return { reject: '익절 방향 오류 — ' + posSide + ' 진입가 ' + px + ' 인데 tp=' + tp };
   if (p.sl && parseFloat(p.sl) > 0) body.slTriggerPx = String(parseFloat(p.sl));
   // v1 에 있던 slOrdPx:'-1' 은 딥코인 규격에 없어 제거 (B등급 변경, 2026-09-05)
   if (p.tp && parseFloat(p.tp) > 0) body.tpTriggerPx = String(parseFloat(p.tp));

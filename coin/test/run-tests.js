@@ -314,6 +314,29 @@ function check(name, cond, info) { results.push({ name, ok: !!cond, info: info =
   check('22b 다음 날 잔고 80.5 → 전일 대비 +6.5, 누적 +6.5', bal.length === 3 && bal[2][2] === 80.5 && bal[2][4] === 6.5 && bal[2][5] === 6.5, JSON.stringify(bal));
   check('22c 자가진단 잔고 추이 문구', /\(전일 \+6\.5\)/.test(s.rows.find(x => x[0] === '잔고 추이')[2]), s.rows.find(x => x[0] === '잔고 추이')[2]); }
 
+// 23. (v2.3) 손절·익절 방향 검사 — Pine 이 부호를 거꾸로 계산해도 주문이 나가지 않게
+{ const ctx = boot(exchange());
+  const r1 = post(ctx, { action: 'ENTER_LONG', qty: '0.01', price: '60000', sl: '61000', id: 'd1' });
+  check('23 롱인데 sl 이 진입가 위 → REJECT', r1.status === 'REJECT' && /손절 방향/.test(r1.detail), r1.detail);
+  const r2 = post(ctx, { action: 'ENTER_SHORT', qty: '0.01', price: '60000', sl: '59000', id: 'd2' });
+  check('23a 숏인데 sl 이 진입가 아래 → REJECT', r2.status === 'REJECT' && /손절 방향/.test(r2.detail), r2.detail);
+  const r3 = post(ctx, { action: 'ENTER_LONG', qty: '0.01', price: '60000', sl: '59400', tp: '61200', id: 'd3' });
+  check('23b 롱 sl 아래·tp 위 → DRY-RUN, slTriggerPx/tpTriggerPx 전송', r3.status === 'DRY-RUN' && r3.detail.wouldSend.slTriggerPx === '59400' && r3.detail.wouldSend.tpTriggerPx === '61200', JSON.stringify(r3.detail.wouldSend));
+  post(ctx, { action: 'EXIT_LONG', id: 'd3x' });
+  const r4 = post(ctx, { action: 'ENTER_LONG', qty: '0.01', price: '60000', tp: '59000', id: 'd4' });
+  check('23c 롱인데 tp 가 진입가 아래 → REJECT', r4.status === 'REJECT' && /익절 방향/.test(r4.detail), r4.detail);
+  const r5 = post(ctx, { action: 'ENTER_LONG', qty: '0.01', sl: '61000', id: 'd5' });
+  check('23d price 없으면 방향 검사 못 함 → 통과 (Pine 원틀은 price 를 항상 보냄)', r5.status === 'DRY-RUN', r5.status); }
+
+// 24. (v2.3) Pine 원틀이 만드는 JSON 그대로 — 자리표시자 없이 전부 값
+{ const ctx = boot(exchange()); ctx.__mock.props.delete('ALLOWED_SYMBOLS'); ctx.__mock.sheets.delete('2.설정');
+  const pine = '{"token":"' + TOKEN + '","action":"ENTER_LONG","symbol":"ETH-USDT-SWAP","qty":"0.5","price":"3200.5","sl":"3168.495","tp":"","id":"ETHUSDT.P-1757030400000-ENTER_LONG"}';
+  const r = JSON.parse(ctx.doPost({ postData: { contents: pine } }).getContent());
+  check('24 Pine 원틀 JSON → ETH 0.5 = 50계약, sl 전달, tp 빈칸은 미전송', r.status === 'DRY-RUN' && r.detail.wouldSend.sz === '50' && r.detail.wouldSend.slTriggerPx === '3168.495' && r.detail.wouldSend.tpTriggerPx === undefined, r.status + ' ' + JSON.stringify(r.detail.wouldSend));
+  const pine2 = pine.replace('"id":"ETHUSDT.P-1757030400000-ENTER_LONG"', '"id":"ETHUSDT.P-1757030400000-EXIT_SHORT"').replace('"action":"ENTER_LONG"', '"action":"EXIT_SHORT"');
+  const r2 = JSON.parse(ctx.doPost({ postData: { contents: pine2 } }).getContent());
+  check('24a 같은 봉의 EXIT_SHORT 는 id 가 달라 DUP 아님 → SKIP(포지션 없음)', r2.status === 'SKIP', r2.status + ' ' + r2.detail); }
+
 // ── 결과 ──
 const fails = results.filter(r => !r.ok);
 for (const r of results) console.log((r.ok ? 'PASS' : 'FAIL') + '  ' + r.name + (r.ok ? '' : '   ← ' + r.info));

@@ -1,13 +1,35 @@
 {
-  "_설명": "트레이딩뷰 알럿 → 메시지(Message) 칸에 아래 JSON 을 넣는다. 웹훅 URL 칸에는 Apps Script 웹앱 URL. token 은 스크립트 속성 WEBHOOK_TOKEN 과 같아야 한다. {{...}} 는 트레이딩뷰 자리표시자.",
-  "token": "여기에_WEBHOOK_TOKEN",
-  "action": "{{strategy.order.alert_message}}",
-  "symbol": "ETH-USDT-SWAP",
-  "qty": "{{strategy.order.contracts}}",
-  "sl": "",
-  "tp": "",
-  "id": "{{ticker}}-{{timenow}}-{{strategy.order.alert_message}}",
-  "_action_허용값": ["ENTER_LONG", "ENTER_SHORT", "EXIT_LONG", "EXIT_SHORT"],
-  "_qty": "ETH 수량. 계약수로 직접 주려면 qty 대신 contracts 를 쓴다 (예: \"contracts\": \"10\"). 1계약이 몇 ETH 인지는 자가진단 탭 「계약 단위」 행이 보여준다",
+  "_설명": "알럿 메시지 두 가지 방식. A(권장)는 Pine 이 JSON 을 조립하므로 손절·익절·진입가가 자동으로 실린다. B 는 Pine 을 못 고칠 때만.",
+  "A_권장_메시지칸": "{{strategy.order.alert_message}}",
+  "A_조건": "coin/pine-alert-wiring.pine 을 차트에 올리고 알럿 조건을 「주문 체결 이벤트(Order fills)」로. 웹훅 URL = Apps Script 웹앱 URL. 메시지 칸에는 위 한 줄만",
+  "A_Pine이_보내는_JSON_예": {
+    "token": "(Pine 입력칸)",
+    "action": "ENTER_LONG",
+    "symbol": "ETH-USDT-SWAP",
+    "qty": "0.5",
+    "price": "3200.5",
+    "sl": "3168.495",
+    "tp": "",
+    "id": "ETHUSDT.P-1757030400000-ENTER_LONG"
+  },
+  "B_수동_JSON": {
+    "token": "여기에_WEBHOOK_TOKEN",
+    "action": "{{strategy.order.alert_message}}",
+    "symbol": "ETH-USDT-SWAP",
+    "qty": "{{strategy.order.contracts}}",
+    "price": "{{close}}",
+    "sl": "",
+    "tp": "",
+    "id": "{{ticker}}-{{timenow}}-{{strategy.order.alert_message}}"
+  },
+  "B_주의": "B 는 손절이 빈칸이라 거래소에 손절이 안 걸린다. {{strategy.order.contracts}} 가 ETH 수량인지는 DRY-RUN 로그의 요청sz 로 확인",
+  "_action_허용값": [
+    "ENTER_LONG",
+    "ENTER_SHORT",
+    "EXIT_LONG",
+    "EXIT_SHORT"
+  ],
+  "_qty": "ETH 수량. 계약수로 직접 주려면 qty 대신 contracts. 1계약이 몇 ETH 인지는 자가진단 「계약 단위」 행",
+  "_price": "진입가. 있으면 브리지가 손절·익절 방향을 검사해 거꾸로면 거절",
   "_id": "같은 id 가 두 번 오면 두 번째는 거절(DUP). 반드시 넣는다"
 }

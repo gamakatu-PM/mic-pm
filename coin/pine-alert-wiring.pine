@@ -1,0 +1,71 @@
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// KM 딥코인 브리지 배선 원틀 (2026-09-05)
+// 역할: 차장님 전략의 진입·청산 신호에 「브리지가 읽는 JSON」을 붙인다.
+//       수량은 ETH 입력칸, 손절·익절은 % 입력칸에서 자동 계산해 알럿에 실린다.
+//
+// 쓰는 법
+//   1. 아래 ★ 표시된 두 줄(longSig / shortSig)을 차장님 전략의 신호로 바꾼다.
+//      (전략 코드 전체가 있으면 그 안에 이 파일의 「알럿 조립」 부분만 옮겨 붙여도 된다)
+//   2. 차트에 올리고 설정(톱니)에서 WEBHOOK_TOKEN·ETH 수량·손절% 를 채운다.
+//   3. 알럿 만들기 → 조건: 이 전략 → 「주문 체결 이벤트(Order fills)」
+//      → 메시지 칸은 딱 한 줄:   {{strategy.order.alert_message}}
+//      → 웹훅 URL: Apps Script 웹앱 URL
+//   4. LIVE=NO 로 며칠 돌려 「1.거래로그」의 요청sz·ctVal 이 기대와 맞는지 본다.
+//
+// 브리지 v2.2 규격: action ENTER_LONG/ENTER_SHORT/EXIT_LONG/EXIT_SHORT,
+//   qty=ETH 수량(브리지가 ctVal 로 계약수 환산), sl/tp=가격, price=진입가(손절 방향 검사용), id=중복 차단 키
+// ─────────────────────────────────────────────────────────────────────────────
+strategy("KM 딥코인 브리지 배선", overlay = true, pyramiding = 0,
+     default_qty_type = strategy.fixed, default_qty_value = 1, calc_on_every_tick = false)
+
+// ── 차장님이 채우는 입력칸 ──
+token   = input.string("여기에_WEBHOOK_TOKEN", "WEBHOOK_TOKEN (스크립트 속성과 동일)")
+dcSym   = input.string("ETH-USDT-SWAP",         "딥코인 종목")
+qtyEth  = input.float(0.5,  "1회 진입 ETH 수량", minval = 0.001, step = 0.01)
+slPct   = input.float(1.0,  "손절 % (0 = 손절 안 보냄)", minval = 0, step = 0.1)
+tpPct   = input.float(0.0,  "익절 % (0 = 익절 안 보냄)", minval = 0, step = 0.1)
+useShort = input.bool(true, "숏 진입도 사용")
+
+// ── ★ 전략 신호 — 이 두 줄을 차장님 전략으로 교체 ──
+fast = ta.sma(close, 20)
+slow = ta.sma(close, 50)
+longSig  = ta.crossover(fast, slow)     // ★
+shortSig = ta.crossunder(fast, slow)    // ★
+
+// ── 알럿 JSON 조립 (브리지 v2.2 규격) ──
+f_num(x) => str.tostring(x, "#.####")
+f_msg(action, px, sl, tp) =>
+    '{"token":"' + token + '","action":"' + action + '","symbol":"' + dcSym +
+     '","qty":"' + f_num(qtyEth) + '","price":"' + f_num(px) +
+     '","sl":"' + (sl > 0 ? f_num(sl) : "") + '","tp":"' + (tp > 0 ? f_num(tp) : "") +
+     '","id":"' + syminfo.ticker + "-" + str.tostring(time) + "-" + action + '"}'
+
+longSL  = slPct > 0 ? close * (1 - slPct / 100) : 0.0
+longTP  = tpPct > 0 ? close * (1 + tpPct / 100) : 0.0
+shortSL = slPct > 0 ? close * (1 + slPct / 100) : 0.0
+shortTP = tpPct > 0 ? close * (1 - tpPct / 100) : 0.0
+
+// ── 진입: 반대 포지션이 있으면 먼저 청산 알럿, 그다음 진입 알럿 (브리지는 한 건씩 처리) ──
+if longSig
+    if strategy.position_size < 0
+        strategy.close("S", alert_message = f_msg("EXIT_SHORT", close, 0, 0))
+    strategy.entry("L", strategy.long, qty = qtyEth, alert_message = f_msg("ENTER_LONG", close, longSL, longTP))
+if shortSig and useShort
+    if strategy.position_size > 0
+        strategy.close("L", alert_message = f_msg("EXIT_LONG", close, 0, 0))
+    strategy.entry("S", strategy.short, qty = qtyEth, alert_message = f_msg("ENTER_SHORT", close, shortSL, shortTP))
+
+// ── 트레이딩뷰 쪽 손절·익절 (거래소 손절과 이중 안전장치) ──
+// 거래소에 slTriggerPx 가 먼저 걸려 청산되면, 이 알럿의 EXIT 는 브리지에서 「포지션 없음 → SKIP」 으로 끝난다 (무해).
+if strategy.position_size > 0 and (slPct > 0 or tpPct > 0)
+    strategy.exit("L-x", "L", stop = slPct > 0 ? strategy.position_avg_price * (1 - slPct / 100) : na,
+         limit = tpPct > 0 ? strategy.position_avg_price * (1 + tpPct / 100) : na,
+         alert_message = f_msg("EXIT_LONG", close, 0, 0))
+if strategy.position_size < 0 and (slPct > 0 or tpPct > 0)
+    strategy.exit("S-x", "S", stop = slPct > 0 ? strategy.position_avg_price * (1 + slPct / 100) : na,
+         limit = tpPct > 0 ? strategy.position_avg_price * (1 - tpPct / 100) : na,
+         alert_message = f_msg("EXIT_SHORT", close, 0, 0))
+
+plot(fast, "fast", color = color.new(color.blue, 0))
+plot(slow, "slow", color = color.new(color.orange, 0))
