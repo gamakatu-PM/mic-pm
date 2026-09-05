@@ -807,7 +807,7 @@ async function callGeminiVision(prompt, base64img, mimeType){
 // ── 클라우드 + localStorage ──
 const LS_KEY='km_pm_v5';
 let _loaded=false,_saveT=null,_saveFailShown=false;
-function saveLocal(){if(!_loaded)return false;try{localStorage.setItem(LS_KEY,JSON.stringify({sites,pipeline,workJournals,_ts:Date.now()}));_saveFailShown=false;const el=document.getElementById('autoSaveStatus');if(el){el.textContent='저장 '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});el.style.color='';}return true;}catch(e){const el=document.getElementById('autoSaveStatus');if(el){el.textContent='⚠ 저장 실패(용량 초과) — 서버저장 필요';el.style.color='var(--da)';}if(!_saveFailShown){_saveFailShown=true;toast('⚠ 브라우저 저장 실패: 용량 초과. 사진·첨부를 줄이거나 ☁️ 서버저장을 누르세요');}return false;}}
+function saveLocal(){if(!_loaded)return false;try{localStorage.setItem(LS_KEY,JSON.stringify({sites,pipeline,workJournals,_ts:Date.now()}));_saveFailShown=false;const el=document.getElementById('autoSaveStatus');if(el){el.textContent='저장 '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});el.style.color='';}return true;}catch(e){const quota=(e&&(e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'||e.code===22||e.code===1014));const why=quota?'용량 초과':'오류 '+(e&&e.name||'');const el=document.getElementById('autoSaveStatus');if(el){el.textContent='⚠ 저장 실패('+why+') — 서버저장 필요';el.style.color='var(--da)';}if(!_saveFailShown){_saveFailShown=true;toast(quota?'⚠ 브라우저 저장 실패: 용량 초과. 사진·첨부를 줄이거나 ☁️ 서버저장을 누르세요':'⚠ 브라우저 저장 실패: '+why+'. ☁️ 서버저장을 누르세요');}return false;}}
 // 화면을 다시 그릴 때마다(=데이터가 바뀔 때마다) 0.4초 뒤 저장. 30초 타이머만 믿지 않는다.
 function queueSave(){clearTimeout(_saveT);_saveT=setTimeout(saveLocal,400);}
 window.addEventListener('beforeunload',()=>{saveLocal();});
@@ -821,7 +821,7 @@ function loadLocal(){
     try{
       var raw=localStorage.getItem(allKeys[ki]);
       if(!raw)continue;
-      var d=JSON.parse(raw);
+      var d;try{d=JSON.parse(raw);}catch(pe){try{localStorage.setItem(allKeys[ki]+'_corrupt_'+Date.now(),raw);}catch(e2){}console.warn('손상된 저장 데이터 백업:',allKeys[ki]);continue;}
       if(d.sites&&d.sites.length){
         sites=d.sites;pipeline=d.pipeline||[];workJournals=d.workJournals||[];_localTs=d._ts||0;normSites();
         // 현재 키로 마이그레이션
@@ -837,7 +837,7 @@ function loadLocal(){
   return false;
 }
 async function saveCloud(){saveLocal();try{await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'save',data:{sites,pipeline,workJournals,_ts:Date.now()}})});toast('저장됐습니다 ✓');}catch(e){toast('로컬 저장됨');}}
-async function loadCloud(){const ok=loadLocal();_loaded=true;if(ok){autoEscalate();renderSL();dispatch();}try{const r=await fetch(SCRIPT_URL+'?action=load');const j=await r.json();if(j.status==='ok'&&j.data&&j.data.sites&&j.data.sites.length){const srvTs=j.data._ts||0;if(ok&&srvTs&&_localTs>srvTs){toast('이 기기 데이터가 서버보다 최신입니다 — ☁️ 서버저장을 눌러 올려주세요');}else{sites=j.data.sites;pipeline=j.data.pipeline||[];workJournals=j.data.workJournals||[];normSites();saveLocal();toast(ok?'서버 동기화 ✓':'불러오기 완료 ✓');}}else if(!ok)toast('데이터 없음');}catch(e){if(!ok)toast('서버 오프라인');}autoEscalate();renderSL();dispatch();}
+async function loadCloud(){const ok=loadLocal();_loaded=true;if(ok){autoEscalate();renderSL();dispatch();}try{const r=await fetch(SCRIPT_URL+'?action=load');const j=await r.json();if(j.status==='ok'&&j.data&&j.data.sites&&j.data.sites.length){const srvTs=j.data._ts||0;if(ok&&srvTs&&_localTs>srvTs){toast('이 기기 데이터가 서버보다 최신입니다 — ☁️ 서버저장을 눌러 올려주세요');}else if(ok&&!srvTs&&!confirm('서버 데이터에 저장 시각이 없어 어느 쪽이 최신인지 알 수 없습니다.\n서버 데이터(현장 '+j.data.sites.length+'개)로 이 기기 데이터(현장 '+sites.length+'개)를 교체할까요?\n[취소]하면 이 기기 데이터를 유지합니다.')){toast('이 기기 데이터 유지 — ☁️ 서버저장을 누르면 서버에 시각이 기록됩니다');}else{sites=j.data.sites;pipeline=j.data.pipeline||[];workJournals=j.data.workJournals||[];normSites();saveLocal();toast(ok?'서버 동기화 ✓':'불러오기 완료 ✓');}}else if(!ok)toast('데이터 없음');}catch(e){if(!ok)toast('서버 오프라인');}autoEscalate();renderSL();dispatch();}
 
 
 // ── 자동화 ──
@@ -969,7 +969,7 @@ function renderDash(){
       ${sites.map(s=>{const rem=calcRem(s);const urgCnt=s.issues.filter(i=>!i.done&&i.priority==='danger').length;return`<div class="ri" style="cursor:pointer" onclick="selSite(${s.id})"><div class="dot" style="background:${urgCnt>0?'var(--da)':'var(--gr)'}"></div><div style="flex:1"><div class="rtit">${s.name}</div><div class="rmeta">${STAGES[s.stage]} ${rem>0?`· 미수금 ${(rem/10000).toFixed(0)}만원`:''}</div></div>${urgCnt>0?`<span class="mb mb-r">긴급 ${urgCnt}</span>`:`<span class="mb mb-g">정상</span>`}</div>`;}).join('')}
     </div>`;
 }
-function getThisWeekEvents(){const now=new Date();const start=new Date(now);start.setDate(now.getDate()-now.getDay());const end=new Date(start);end.setDate(start.getDate()+7);return sites.flatMap(s=>(s.schedule||[]).filter(e=>ld(e.date)>=start&&ld(e.date)<=end).map(e=>({...e,site:s.name})));}
+function getThisWeekEvents(){const now=ld(td());const start=new Date(now);start.setDate(now.getDate()-now.getDay());const end=new Date(start);end.setDate(start.getDate()+7);return sites.flatMap(s=>(s.schedule||[]).filter(e=>ld(e.date)>=start&&ld(e.date)<=end).map(e=>({...e,site:s.name})));}
 
 // ── 수량표 ──
 function renderQty(site){
@@ -1545,7 +1545,7 @@ function renderIssues(site){
   var selItem=issSelId?(issSelType==='issue'?site.issues.find(function(i){return i.id===issSelId;}):site.actions.find(function(a){return a.id===issSelId;})):null;
   var detailHTML=selItem?getIssDetail(site,issSelId,issSelType):'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--tx2);font-size:12px;gap:8px"><span style="font-size:28px">←</span>항목 클릭=상세 / 체크=다중선택</div>';
   var openCnt=site.issues.filter(function(i){return !i.done;}).length;
-  var overAct=site.actions.filter(function(a){return !a.done&&a.due&&new Date(a.due)<new Date();}).length;
+  var overAct=site.actions.filter(function(a){return !a.done&&a.due&&ld(a.due)<ld(td());}).length;
   var result='<div class="card" style="margin-bottom:0"><div class="chdr">'
     +'<span class="ctit">미결이슈+후속조치 <span style="color:var(--da)">'+openCnt+'</span>'+(overAct>0?' <span style="color:var(--wa);font-size:10px">기한초과 '+overAct+'</span>':'')+'</span>'
     +'<div style="display:flex;gap:5px"><button class="cbtn" onclick="om(\'actModal\')">+ 액션</button><button class="cbtn" onclick="om(\'issModal\')">+ 이슈</button></div>'
@@ -1828,9 +1828,9 @@ function renderAI(site){return`<div class="card"><div class="chdr"><span class="
 async function sendAI(sid){const inp=$('aiInp');const q=inp.value.trim();if(!q)return;inp.value='';const site=sites.find(s=>s.id===sid);const msgs=$('aiMsgs');msgs.innerHTML+=`<div style="margin-bottom:7px"><div class="aiq">${q}</div></div>`;msgs.innerHTML+=`<div class="cf" id="aiLoading"><div class="aia"><div class="ai-loading"><div class="spin"></div>AI 분석 중...</div></div></div>`;msgs.scrollTop=msgs.scrollHeight;const ctx=`현장명: ${site.name}\n공정단계: ${STAGES[site.stage]}\n미결이슈: ${site.issues.filter(i=>!i.done).map(i=>i.title).join(', ')||'없음'}\n미완료액션: ${site.actions.filter(a=>!a.done).map(a=>a.title).join(', ')||'없음'}\n미수금: ${calcRem(site).toLocaleString()}원\n수량: ${Object.entries(site.qty||{}).map(([p,v])=>`${p} 발주${v.order}/납품${v.deliver}/설치${v.install}`).join(', ')||'없음'}`;try{const ans=await callClaude(`당신은 한국마이크로닉 현장관리 AI 비서입니다. 호텔 객실관리 시스템(RCU/BSP/챠임벨/키센서 등) 전문가입니다.\n\n현장 정보:\n${ctx}\n\n질문: ${q}\n\n간결하고 실용적으로 답변해주세요.`);$('aiLoading')?.remove();msgs.innerHTML+=`<div class="cf" style="margin-bottom:7px"><div class="aia">${ans.replace(/\n/g,'<br>')}</div></div>`;}catch(e){$('aiLoading')?.remove();msgs.innerHTML+=`<div class="cf" style="margin-bottom:7px"><div class="aia">오류: ${e.message}</div></div>`;}msgs.scrollTop=msgs.scrollHeight;}
 
 // ── 업무일지 ──
-function openWJModal(){$('wj-d').value=td();const qs=$('wjQuickSites');qs.innerHTML=sites.map(s=>`<button style="padding:3px 8px;border:1px solid var(--bd);border-radius:5px;background:var(--bg3);color:var(--tx);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif" onclick="insertSiteToWJ('${esc(s.name)}')">${s.name}</button>`).join('');const tmpl=genWJTemplate();$('wj-c').value=tmpl;om('wjModal');}
+function openWJModal(){$('wj-d').value=td();const qs=$('wjQuickSites');qs.innerHTML=sites.map(s=>`<button style="padding:3px 8px;border:1px solid var(--bd);border-radius:5px;background:var(--bg3);color:var(--tx);font-size:10px;cursor:pointer;font-family:Noto Sans KR,sans-serif" onclick="insertSiteToWJ(${s.id})">${s.name}</button>`).join('');const tmpl=genWJTemplate();$('wj-c').value=tmpl;om('wjModal');}
 function genWJTemplate(){return`1]내근\n-업무 내용:\n\n2]외근 (시간)\n-담당자 협의\n .내용\n\n사무실-\n예정사항: `;}
-function insertSiteToWJ(name){const ta=$('wj-c');const pos=ta.selectionStart;const v=ta.value;ta.value=v.slice(0,pos)+name+v.slice(pos);ta.selectionStart=ta.selectionEnd=pos+name.length;ta.focus();}
+function insertSiteToWJ(sid){const site=sites.find(s=>s.id===sid);const name=site?site.name:String(sid);const ta=$('wj-c');const pos=ta.selectionStart;const v=ta.value;ta.value=v.slice(0,pos)+name+v.slice(pos);ta.selectionStart=ta.selectionEnd=pos+name.length;ta.focus();}
 async function addWJ(){const c=$('wj-c').value.trim();if(!c)return;const date=$('wj-d').value||td();const preview=c.split('\n').find(l=>l.trim()&&l.trim().length>2)||c.slice(0,30);const w={id:Date.now(),date,content:c,preview:preview.trim().slice(0,38)};workJournals.push(w);selWJ=w.id;cm('wjModal');renderSL();renderWJPage();toast('업무일지 저장됨 — AI 분석 시작...');await runAIExtractGemini(c,curSite);}
 async function runAIExtractGemini(content,sid){
   var site=sites.find(function(s){return s.id===sid;});
