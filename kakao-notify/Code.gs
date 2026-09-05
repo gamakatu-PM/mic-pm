@@ -9,13 +9,14 @@
  *   morningBrief  평일 07:30  ① 오늘 할 일(무조건할일) ② D-day 경고 ③ 오늘 일정
  *   eveningBrief  평일 18:00  ① 내일 D-day ② 미완료 무조건할일 ③ 내일 일정
  *   hourlyCheck   매시간      ④ 신규 현장 ★ ⑤ 시스템 이상 (같은 건은 하루 1번만)
+ *   weekendReview 토·일 09:00 ⑥ 주말 검토판 — 미완료 전체(현장별)·무조건할일 상세·다음 주 일정·이번 주 신규 현장·시스템 상태
  *
  * 카카오 텍스트 메시지는 한 건 200자 제한 → 자동으로 나눠 보낸다 (1/3, 2/3 …).
  */
 
 // ───────────────────────── 고정 상수 (시트 규격 정본: km-11 / km-18 / km-site-radar) ─────────────────────────
 var KM = {
-  VERSION: 'v1 2026-09-05',
+  VERSION: 'v1.1 2026-09-05',
   TZ: 'Asia/Seoul',
   MEETING_SHEET_ID: '1RzDj_mm3fY6l42hF9AJ-r5KY50OCVIV7IwSIQeh3rms',   // 26년 회의록
   TAB_TODO: '할 일 모음',            // A기한 B종류 C현장 D할일 E상대 F상태 G(D-) H현장시트 I통화원본 J캘린더ID
@@ -45,7 +46,12 @@ var DEFAULT_SETTINGS = [
   ['시스템 경고', 'Y', '오류_ 파일 · 자가진단 ★ · 레이더 미수집'],
   ['무조건할일 J·K 기록', 'Y', '알림 보낼 때 J알림횟수·K마지막알림일 갱신 (Claude 전용 열)'],
   ['실패 시 이메일 대체', 'Y', '카카오 전송 실패 시 같은 내용을 내 Gmail로'],
-  ['레이더 미수집 기준(시간)', '36', '로그 탭 마지막 기록이 이 시간보다 오래되면 경고']
+  ['레이더 미수집 기준(시간)', '36', '로그 탭 마지막 기록이 이 시간보다 오래되면 경고'],
+  ['주말 검토판 발송', 'Y', '토·일 아침에 상세 검토판(미완료 전체·다음 주 일정·신규 현장·시스템)'],
+  ['주말 검토판 시각', '09:00', '바꾸면 installTriggers 다시 실행'],
+  ['주말 검토판 요일', '토,일', '쉼표로. 예: 토 / 토,일 / 일'],
+  ['주말 검토판 최대 줄수', '30', '한 종류 메시지에 담는 최대 줄 (200자 단위로 자동 분할)'],
+  ['주말 검토판 글자수', '60', '한 줄에 담는 내용 글자수 (평일은 40)']
 ];
 
 var SOURCE_HEADERS = ['출처 이름', '시트 ID', '탭 이름', '헤더 행', '날짜 열', '제목 열', '현장 열', '상태 열', '완료로 볼 값(쉼표)', '사용(Y/N)'];
@@ -68,7 +74,7 @@ function setup() {
 
 /** 트리거를 같은 이름끼리 전부 지우고 1개씩만 다시 만든다 (중복 트리거 사고 방지). */
 function installTriggers() {
-  var mine = { morningBrief: 1, eveningBrief: 1, hourlyCheck: 1 };
+  var mine = { morningBrief: 1, eveningBrief: 1, hourlyCheck: 1, weekendReview: 1 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (mine[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);
   });
@@ -77,7 +83,9 @@ function installTriggers() {
   ScriptApp.newTrigger('morningBrief').timeBased().everyDays(1).atHour(m.h).nearMinute(m.m).inTimezone(KM.TZ).create();
   ScriptApp.newTrigger('eveningBrief').timeBased().everyDays(1).atHour(e.h).nearMinute(e.m).inTimezone(KM.TZ).create();
   ScriptApp.newTrigger('hourlyCheck').timeBased().everyHours(1).create();
-  log_('installTriggers', true, 0, '아침 ' + pad2_(m.h) + ':' + pad2_(m.m) + ' / 저녁 ' + pad2_(e.h) + ':' + pad2_(e.m) + ' / 매시간');
+  var w = parseHHMM_(getSetting_('주말 검토판 시각', '09:00'));
+  ScriptApp.newTrigger('weekendReview').timeBased().everyDays(1).atHour(w.h).nearMinute(w.m).inTimezone(KM.TZ).create();
+  log_('installTriggers', true, 0, '아침 ' + pad2_(m.h) + ':' + pad2_(m.m) + ' / 저녁 ' + pad2_(e.h) + ':' + pad2_(e.m) + ' / 매시간 / 주말 검토판 ' + pad2_(w.h) + ':' + pad2_(w.m) + ' (' + getSetting_('주말 검토판 요일', '토,일') + ')');
 }
 
 /** 설정 스프레드시트(없으면 생성). ID는 Script Properties에 보관. */
@@ -574,6 +582,176 @@ function hourlyCheck() {
   return sent;
 }
 
+// ═══════════════════════════════ 5-1. 주말 검토판 ═══════════════════════════════
+
+/** 토·일 09:00 (설정으로 요일·시각 변경). 평일 브리핑보다 넓고 길게 — 검토용. */
+function weekendReview() {
+  var now = nowKST_();
+  if (!isYes_(getSetting_('주말 검토판 발송', 'Y'))) return 0;
+  var days = String(getSetting_('주말 검토판 요일', '토,일')).split(',').map(function (x) { return x.trim(); }).filter(String);
+  var todayName = '일월화수목금토'[now.getDay()];
+  if (days.indexOf(todayName) < 0) { log_('weekend', true, 0, todayName + '요일 — 대상 아님'); return 0; }
+  var msgs = buildWeekendMessages_(now);
+  var total = 0;
+  msgs.forEach(function (m) {
+    try { total += sendKakao_(m.text, m.link, m.button, 'weekend:' + m.kind); } catch (err) { /* 로그됨 */ }
+  });
+  try { markMustDoNotified_(readMustDo_()); } catch (err) { log_('mustdo-mark', false, 0, String(err)); }
+  return total;
+}
+
+/** 순수 조립 (전송 없음). 반환 [{kind, text, link, button}] */
+function buildWeekendMessages_(now) {
+  var maxLines = Number(getSetting_('주말 검토판 최대 줄수', '30')) || 30;
+  var W = Number(getSetting_('주말 검토판 글자수', '60')) || 60;
+  var msgs = [];
+  var cut = function (t) { return String(t || '').replace(/\s+/g, ' ').slice(0, W); };
+  var mon = addDays_(now, (8 - now.getDay()) % 7 || 7);           // 다음 주 월요일
+  var nextSun = addDays_(mon, 6);
+
+  // ① 미완료 할 일 전체 — 현장별 묶음, 기한 순, 기한 없는 것도 포함
+  var todos = safe_(readTodo_, []).concat(safe_(readExtraSources_, []));
+  if (todos.length) {
+    var over = 0, thisWk = 0, nextWk = 0, later = 0, noDue = 0;
+    todos.forEach(function (it) {
+      if (!it.due) { noDue++; return; }
+      var d = daysBetween_(now, it.due);
+      if (d < 0) over++; else if (it.due < mon) thisWk++; else if (it.due <= nextSun) nextWk++; else later++;
+    });
+    var bySite = {};
+    todos.forEach(function (it) { var k = it.site || '(현장 미기재)'; (bySite[k] = bySite[k] || []).push(it); });
+    var siteKeys = Object.keys(bySite).sort(function (a, b) { return minDue_(bySite[a]) - minDue_(bySite[b]); });
+    var lines = [];
+    siteKeys.forEach(function (k) {
+      lines.push('■ ' + k + ' ' + bySite[k].length + '건');
+      bySite[k].sort(function (a, b) { return (a.due ? a.due.getTime() : 9e15) - (b.due ? b.due.getTime() : 9e15); })
+        .forEach(function (it) {
+          lines.push(' ' + (it.due ? dday_(now, it.due) + ' ' + fmtMD_(it.due) : '기한없음') + ' ' + cut(it.task) + (it.who ? ' —' + it.who : '') + (it.src !== '할 일 모음' ? ' 〈' + it.src + '〉' : ''));
+        });
+    });
+    var head = '📋 미완료 할 일 전체 ' + todos.length + '건\n지남 ' + over + ' · 이번 주 ' + thisWk + ' · 다음 주 ' + nextWk + ' · 그 뒤 ' + later + ' · 기한없음 ' + noDue;
+    msgs.push({ kind: 'todo-all', text: head + '\n' + lines.slice(0, maxLines).join('\n') + (lines.length > maxLines ? '\n외 ' + (lines.length - maxLines) + '줄' : ''), link: sheetLink_(KM.MEETING_SHEET_ID, KM.GID_TODO), button: '할 일 모음 열기' });
+  }
+
+  // ② 무조건할일 상세 — 전부, 담당·날짜·알림 횟수까지
+  var mustdo = safe_(readMustDoDetail_, []);
+  if (mustdo.length) {
+    var l2 = mustdo.slice(0, maxLines).map(function (it) {
+      return (it.star ? '★ ' : '· ') + (it.site ? '[' + it.site + '] ' : '') + cut(it.content)
+        + (it.date ? ' (' + dday_(now, it.date) + ')' : '') + (it.who ? ' —' + it.who : '') + (it.kind ? ' /' + it.kind : '') + (it.notified ? ' 알림' + it.notified + '회' : '');
+    });
+    msgs.push({ kind: 'mustdo-all', text: '📌 무조건할일 미완료 ' + mustdo.length + '건 (★ ' + mustdo.filter(function (i) { return i.star; }).length + ')\n' + l2.join('\n') + (mustdo.length > maxLines ? '\n외 ' + (mustdo.length - maxLines) + '건' : ''), link: sheetLink_(KM.MEETING_SHEET_ID, KM.GID_MUSTDO), button: '무조건할일 열기' });
+  }
+
+  // ③ 다음 주 일정 — 월~일 날짜별
+  var evLines = [], evCount = 0;
+  for (var i = 0; i < 7; i++) {
+    var day = addDays_(mon, i);
+    var ev = readCalendar_(day);
+    if (!ev.length) continue;
+    evCount += ev.length;
+    evLines.push('▸ ' + fmtMD_(day));
+    ev.forEach(function (e) { evLines.push(' ' + cut(e)); });
+  }
+  if (evCount) msgs.push({ kind: 'calendar-week', text: '📅 다음 주 일정 ' + evCount + '건 (' + fmtMD_(mon) + '~' + fmtMD_(nextSun) + ')\n' + evLines.slice(0, maxLines).join('\n') + (evLines.length > maxLines ? '\n외 ' + (evLines.length - maxLines) + '줄' : ''), link: 'https://calendar.google.com/calendar/r/week', button: '캘린더 열기' });
+
+  // ④ 신규 현장 — 조사노트 ★ 전부 + △ 건수 (이번 주 알린 것 표시)
+  var radar = safe_(readRadarAll_, null);
+  if (radar && (radar.stars.length || radar.review)) {
+    var seen = getSeen_('radar'), weekAgo = ymd6_(addDays_(now, -7));
+    var l4 = radar.stars.slice(0, maxLines).map(function (s) {
+      var when = seen[s.key];
+      return '★ ' + (s.region ? s.region + ' ' : '') + cut(s.name || s.addr) + (s.rooms ? ' / ' + s.rooms : '') + (s.area ? ' / ' + fmtNum_(s.area) + '㎡' : '') + (when && when >= weekAgo ? ' 🆕' : '') + (s.next ? '\n  → ' + cut(s.next) : '');
+    });
+    msgs.push({ kind: 'radar-week', text: '🏗 신규 현장 검토 — ★ ' + radar.stars.length + '건 · △검토 ' + radar.review + '건 (🆕 = 이번 주 발견)\n' + l4.join('\n') + (radar.stars.length > maxLines ? '\n외 ' + (radar.stars.length - maxLines) + '건' : ''), link: sheetLink_(KM.RADAR_SHEET_ID, null), button: '레이더 열기' });
+  }
+
+  // ⑤ 시스템 상태 — 이번 주 전송 실패·경고·레이더·토큰
+  msgs.push({ kind: 'health', text: healthSummary_(now), link: sheetLink_(KM.MEETING_SHEET_ID, KM.GID_SELFCHECK), button: '자가진단 열기' });
+  return msgs;
+}
+
+function minDue_(arr) { var m = 9e15; arr.forEach(function (it) { if (it.due && it.due.getTime() < m) m = it.due.getTime(); }); return m; }
+
+/** 무조건할일 미완료 행 + J알림횟수 (readMustDo_ 확장) */
+function readMustDoDetail_() {
+  var sh = SpreadsheetApp.openById(KM.MEETING_SHEET_ID).getSheetByName(KM.TAB_MUSTDO);
+  if (!sh) return [];
+  var vals = sh.getDataRange().getValues();
+  var items = [];
+  for (var r = 1; r < vals.length; r++) {
+    var row = vals[r];
+    var content = String(row[5] || '').trim();
+    if (!content) continue;
+    if (row[0] === true || /^(true|완료|✔|✓)$/i.test(String(row[0]).trim())) continue;
+    items.push({ star: row[1] === true, date: parseDate_(row[2]), site: String(row[3] || '').trim(), who: String(row[4] || '').trim(), content: content, kind: String(row[6] || '').trim(), notified: Number(row[9] || 0), row: r + 1 });
+  }
+  items.sort(function (a, b) {
+    var s = (b.star ? 1 : 0) - (a.star ? 1 : 0); if (s) return s;
+    return (a.date ? a.date.getTime() : 9e15) - (b.date ? b.date.getTime() : 9e15);
+  });
+  return items;
+}
+
+/** 조사노트 전체: ★ 목록 + △ 건수 */
+function readRadarAll_() {
+  var sh = SpreadsheetApp.openById(KM.RADAR_SHEET_ID).getSheetByName(KM.TAB_SURVEY);
+  if (!sh) return null;
+  var vals = sh.getDataRange().getValues();
+  if (vals.length < 2) return { stars: [], review: 0 };
+  var h = vals[0].map(function (x) { return String(x).trim(); });
+  var ix = function (n) { return h.indexOf(n); };
+  var cJ = ix('판정'), cSi = ix('시군구'), cAd = ix('대지위치'), cNm = ix('건물명'), cAr = ix('연면적㎡'), cRm = ix('객실추정'), cNx = ix('다음 행동');
+  if (cJ < 0) return null;
+  var stars = [], review = 0;
+  for (var r = 1; r < vals.length; r++) {
+    var row = vals[r], j = String(row[cJ]);
+    if (j.indexOf('△') === 0) { review++; continue; }
+    if (j.indexOf('★') !== 0) continue;
+    stars.push({ key: String(row[cAd] || '') + '|' + String(row[cNm] || ''), region: String(row[cSi] || ''), addr: String(row[cAd] || ''), name: String(row[cNm] || ''), area: row[cAr], rooms: String(row[cRm] || ''), next: String(row[cNx] || '') });
+  }
+  return { stars: stars, review: review };
+}
+
+/** 이번 주 시스템 상태 한 장 */
+function healthSummary_(now) {
+  var lines = ['🩺 시스템 상태 (최근 7일)'];
+  // 발송로그
+  try {
+    var lg = getConfigSheet_().getSheetByName('발송로그');
+    var last = lg.getLastRow(), from = Math.max(2, last - 499);
+    var rows = last >= 2 ? lg.getRange(from, 1, last - from + 1, 5).getValues() : [];
+    var since = Utilities.formatDate(addDays_(now, -7), KM.TZ, 'yyyy-MM-dd');
+    var ok = 0, bad = 0, badKinds = {};
+    rows.forEach(function (r) {
+      if (String(r[0]) < since) return;
+      if (r[2] === 'O') ok++; else if (r[2] === 'X') { bad++; badKinds[r[1]] = (badKinds[r[1]] || 0) + 1; }
+    });
+    lines.push('· 카카오 전송 성공 ' + ok + ' / 실패 ' + bad + (bad ? ' (' + Object.keys(badKinds).map(function (k) { return k + ' ' + badKinds[k]; }).join(', ') + ')' : ''));
+  } catch (err) { lines.push('· 발송로그 못 읽음'); }
+  // 시스템 경고 키(이번 주)
+  var seenSys = getSeen_('sys'), weekAgo = ymd6_(addDays_(now, -7)), warnN = 0;
+  Object.keys(seenSys).forEach(function (k) { if (seenSys[k] >= weekAgo) warnN++; });
+  lines.push('· 시스템 경고 ' + warnN + '건');
+  // 지금 상태의 경고
+  var cur = safe_(systemChecks_, []);
+  if (cur.length) cur.forEach(function (w) { lines.push('  ⚠ ' + w.msg.split('\n')[0]); }); else lines.push('· 현재 경고 없음');
+  // 레이더 마지막 수집
+  try {
+    var rl = SpreadsheetApp.openById(KM.RADAR_SHEET_ID).getSheetByName(KM.TAB_RADAR_LOG);
+    if (rl && rl.getLastRow() >= 2) {
+      var lr = rl.getRange(rl.getLastRow(), 1, 1, Math.max(1, rl.getLastColumn())).getValues()[0];
+      var at = lr[0] instanceof Date ? lr[0] : parseDate_(lr[0]);
+      lines.push('· 레이더 마지막 수집 ' + (at ? Utilities.formatDate(at, KM.TZ, 'M/d HH:mm') : '(날짜 없음)'));
+    }
+  } catch (err) { /* 무시 */ }
+  // 토큰
+  var rexp = Number(PropertiesService.getScriptProperties().getProperty('KAKAO_REFRESH_EXP') || 0);
+  if (rexp) lines.push('· 카카오 인증 만료 ' + Utilities.formatDate(new Date(rexp), KM.TZ, 'M/d') + ' (자동 갱신)');
+  else lines.push('· 카카오 인증 정보 없음 — /exec 열어 인증');
+  return lines.join('\n');
+}
+
 // ═══════════════════════════════ 6. 중복 방지 (Script Properties) ═══════════════════════════════
 
 function getSeen_(bucket) {
@@ -657,6 +835,8 @@ function testSend() { return sendKakao_('🔔 KM 카카오 알림 테스트 ' + 
 function previewMorning() { var m = buildBriefMessages_('morning', nowKST_()); m.forEach(function (x) { Logger.log('[' + x.kind + '] ' + x.text.length + '자\n' + x.text); }); return m; }
 /** 전송 없이 저녁 브리핑 내용만 로그로 확인 */
 function previewEvening() { var m = buildBriefMessages_('evening', nowKST_()); m.forEach(function (x) { Logger.log('[' + x.kind + '] ' + x.text.length + '자\n' + x.text); }); return m; }
+/** 전송 없이 주말 검토판 내용만 로그로 확인 */
+function previewWeekend() { var m = buildWeekendMessages_(nowKST_()); m.forEach(function (x) { Logger.log('[' + x.kind + '] ' + x.text.length + '자\n' + x.text); }); return m; }
 /** 전송 없이 시스템 검사·신규 현장만 로그로 확인 */
 function previewHourly() { Logger.log(JSON.stringify({ radar: safe_(readNewRadarStars_, []), system: safe_(systemChecks_, []) }, null, 1)); }
 /** 중복 방지 기록 초기화 (다시 전부 알리고 싶을 때) */

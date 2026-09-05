@@ -256,5 +256,47 @@ check("colIdx_ A=0, F=5, AB=27, '3'=2, ''=-1", colIdx_('A') === 0 && colIdx_('F'
 check("dday_ 오늘/D-2/D+3", dday_(NOW, NOW) === 'D-day' && dday_(NOW, addDays_(NOW, 2)) === 'D-2' && dday_(NOW, addDays_(NOW, -3)) === 'D+3');
 check('markSeen_ 400개 초과 시 오래된 키 정리', (() => { seed(); markSeen_('t', Array.from({ length: 450 }, (_, i) => 'k' + i)); return Object.keys(getSeen_('t')).length === 400; })());
 
+// ═══ 11. 주말 검토판 ═══
+console.log('\n[11] weekendReview');
+seed();
+const SAT = new Date(2026, 8, 5, 9, 0); // 토요일 → 다음 주 월 9/7~일 9/13
+global.nowKST_ = () => new Date(SAT);
+calEvents[7] = [{ t: '조선호텔 현장회의', h: 10 }]; calEvents[10] = [{ t: '유한대 기구물 설치 확인', all: true }];
+props.SEEN_radar = JSON.stringify({ '양양읍 조산리 1-2|(가칭)양양 오션리조트': '260903' });
+props.SEEN_sys = JSON.stringify({ 'err-file|260902': '260902', 'old|260801': '260801' });
+props.KAKAO_REFRESH_EXP = String(new Date(2026, 10, 1).getTime());
+sheets.CFG._tabs['발송로그']._data.push(['2026-09-01 07:30:00', 'morning:mustdo', 'O', 120, ''], ['2026-09-03 18:00:00', 'evening:dday', 'X', 100, 'kapi 401'], ['2026-08-20 07:30:00', 'morning:dday', 'X', 100, '옛날']);
+const wk = buildWeekendMessages_(new Date(SAT));
+const wkinds = wk.map(x => x.kind);
+check('메시지 5종 (todo-all, mustdo-all, calendar-week, radar-week, health)', JSON.stringify(wkinds) === '["todo-all","mustdo-all","calendar-week","radar-week","health"]', wkinds.join(','));
+const ta = wk[0].text;
+check('미완료 전체 4건 (완료 제외), 기한 분류: 지남0·이번주1·다음주2·그뒤1·기한없음0', /전체 4건/.test(ta) && /지남 0 · 이번 주 1 · 다음 주 2 · 그 뒤 1 · 기한없음 0/.test(ta), ta);
+check('현장별 ■ 묶음, 청담PJ(D-15)도 포함', /■ 조선호텔 리뉴얼 1건/.test(ta) && /■ 청담PJ 1건/.test(ta) && /D-15/.test(ta), ta);
+check('현장 순서 = 가장 이른 기한 순 (조선호텔 → 유한대 → 제천 → 청담)', ta.indexOf('■ 조선호텔') < ta.indexOf('■ 유한대') && ta.indexOf('■ 유한대') < ta.indexOf('■ 제천') && ta.indexOf('■ 제천') < ta.indexOf('■ 청담'));
+check('담당자 —김과장 표시', /—김과장/.test(ta));
+const ma = wk[1].text;
+check('무조건할일 상세: 담당·구분·알림횟수 포함, ★ 먼저', /★ \[SK하이닉스\][^\n]*—배팀장 \/작업의뢰서 알림1회/.test(ma) && ma.indexOf('★') < ma.indexOf('· [조선호텔'), ma);
+const ca = wk[2].text;
+check('다음 주 일정 2건, 9/7(월)·9/10(목) 날짜별', /다음 주 일정 2건 \(9\/7\(월\)~9\/13\(일\)\)/.test(ca) && /▸ 9\/7\(월\)\n 10:00 조선호텔/.test(ca) && /▸ 9\/10\(목\)\n 종일 유한대/.test(ca), ca);
+const ra = wk[3].text;
+check('신규 현장: ★ 2 · △ 1, 이번 주 발견 🆕 표시(양양만)', /★ 2건 · △검토 1건/.test(ra) && /양양 오션리조트[^\n]*🆕/.test(ra) && !/해운대 호텔 신축[^\n]*🆕/.test(ra), ra);
+const ha = wk[4].text;
+check('시스템 상태: 성공1/실패1(7일 내만), 경고 1건(7일 내만), 레이더 수집시각, 인증 만료 11/1', /성공 1 \/ 실패 1 \(evening:dday 1\)/.test(ha) && /시스템 경고 1건/.test(ha) && /레이더 마지막 수집 9\/7 04:00/.test(ha) && /인증 만료 11\/1/.test(ha), ha);
+check('현재 경고: 자가진단 ★(260907)만 → ⚠ 1줄', (ha.match(/⚠/g) || []).length === 1 && /자가진단 ★경고/.test(ha), ha);
+const wn = weekendReview();
+check('토요일 실제 전송 ≥ 5건, 전부 ≤ 200자', wn >= 5 && sentTexts().every(t => t.length <= 200), wn + ' ' + sentTexts().map(t => t.length).join(','));
+check('긴 메시지는 (1/n) 분할 접두어', sentTexts().some(t => /^\(1\/\d+\) /.test(t)));
+fetchLog = []; global.nowKST_ = () => new Date(2026, 8, 7, 9, 0); // 월요일
+check('월요일 → 검토판 0건, 로그 "대상 아님"', weekendReview() === 0 && kapiCalls().length === 0 && logRows.some(r => /대상 아님/.test(r[4])));
+sheets.CFG._tabs['설정']._data.find(r => r[0] === '주말 검토판 요일')[1] = '토'; fetchLog = []; global.nowKST_ = () => new Date(2026, 8, 6, 9, 0); // 일요일
+check("요일 설정 '토' → 일요일 0건", weekendReview() === 0 && kapiCalls().length === 0);
+sheets.CFG._tabs['설정']._data.find(r => r[0] === '주말 검토판 발송')[1] = 'N'; global.nowKST_ = () => new Date(SAT); fetchLog = [];
+check('발송 N → 토요일도 0건', weekendReview() === 0 && kapiCalls().length === 0);
+global.nowKST_ = () => new Date(NOW);
+seed(); global.nowKST_ = () => new Date(SAT); sheets[KM.MEETING_SHEET_ID]._tabs['할 일 모음']._data.length = 2; sheets[KM.MEETING_SHEET_ID]._tabs['0.무조건할일']._data.length = 1; delete sheets[KM.RADAR_SHEET_ID];
+const wk2 = buildWeekendMessages_(new Date(SAT));
+check('할 일·레이더 없어도 health 1건은 나감', wk2.length === 1 && wk2[0].kind === 'health', wk2.map(x => x.kind).join(','));
+global.nowKST_ = () => new Date(NOW);
+
 console.log('\n결과: 통과 ' + pass + ' / 실패 ' + fail);
 process.exit(fail ? 1 : 0);
