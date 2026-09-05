@@ -29,6 +29,11 @@
  *   - KILL 은 60초 캐시 없이 매번 시트에서 / 종목 비교 대문자 / sl·tp 파싱값 전송 / 부동소수 보정
  *   - 초기화_중복기록() 추가 (id 고정 사고 복구용)
  *
+ * v2.1 → v2.2 (2026-09-05, 차장님: "이더리움인데 … 수입이 작아")
+ *   - 기본 종목 ETH-USDT-SWAP (알럿에 symbol 이 없으면 허용 목록의 첫 종목)
+ *   - 자가진단에 허용 종목별 「1계약 = ○ ETH」 표시 (ETH 계약 단위는 예비값 없이 반드시 조회)
+ *   - 「3.잔고추이」 탭: 매일 07시 USDT 잔고·전일 대비·누적을 한 줄씩 → 수입이 얼마인지 숫자로
+ *
  * ★ 설치 (5분)
  *   프로젝트 설정 → 스크립트 속성:
  *     DC_API_KEY / DC_SECRET / DC_PASSPHRASE  = 딥코인 API 3종 (출금 권한 없는 키로)
@@ -42,7 +47,7 @@
  *   (폰에서 시트만 열면 된다. 스크립트 편집기 안 열어도 됨)
  ***********************************************************************/
 
-var VERSION = 'v2.1 (2026-09-05)';
+var VERSION = 'v2.2 (2026-09-05)';
 var BASE = 'https://api.deepcoin.com';
 var INST_FALLBACK_CTVAL = 0.001;           // BTC-USDT-SWAP 1계약 = 0.001 BTC (조회 실패 시 예비값)
 var TZ = 'Asia/Seoul';
@@ -50,11 +55,12 @@ var TZ = 'Asia/Seoul';
 var SHEET_DIAG = '0.자가진단';
 var SHEET_LOG  = '1.거래로그';
 var SHEET_CFG  = '2.설정';
+var SHEET_BAL  = '3.잔고추이';   // 매일 07시 SELFCHECK 가 USDT 잔고를 한 줄씩 적는다 → 수입이 얼마인지 눈으로
 
 // 「2.설정」 탭 기본값 — 시트에 없으면 이 값. 시트가 있으면 시트 값이 우선.
 var CFG_DEFAULTS = {
   KILL:               'NO',              // YES 면 모든 주문 거절 (비상정지)
-  ALLOWED_SYMBOLS:    'BTC-USDT-SWAP',   // 쉼표로 여러 개
+  ALLOWED_SYMBOLS:    'ETH-USDT-SWAP',   // 쉼표로 여러 개. 첫 번째가 알럿에 symbol 이 없을 때의 기본 종목 (2026-09-05 차장님: 이더리움)
   MAX_CONTRACTS:      '50',              // 1회 주문 최대 계약수. 넘으면 거절(줄이지 않음)
   MAX_TRADES_PER_DAY: '20',              // 하루 실주문 상한 (LIVE 만 셈)
   ALLOW_PYRAMID:      'NO',              // 같은 방향 포지션이 있을 때 추가 진입 허용?
@@ -93,7 +99,8 @@ function doPost(e) {
     if (!lock.tryLock(20000)) { lock = null; return reply_(log, 'REJECT', 'BUSY — 다른 알럿 처리 중 (20초 대기 초과)'); }
 
     var action = String(p.action || '').toUpperCase();   // ENTER_LONG 등
-    var instId = String(p.symbol || 'BTC-USDT-SWAP').trim().toUpperCase();
+    var allowed = cfg_('ALLOWED_SYMBOLS').toUpperCase().split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s; });
+    var instId = String(p.symbol || allowed[0] || 'ETH-USDT-SWAP').trim().toUpperCase();   // symbol 없으면 허용 목록의 첫 종목
     log.action = action; log.symbol = instId;
 
     // 중복 알럿 차단 (같은 id 또는 같은 action+symbol+time 은 한 번만)
@@ -106,7 +113,6 @@ function doPost(e) {
     if (cfg_('KILL', true) === 'YES') return reply_(log, 'REJECT', 'KILL=YES — 비상정지 중 (2.설정 탭)');
 
     // 종목 허용 목록
-    var allowed = cfg_('ALLOWED_SYMBOLS').toUpperCase().split(',').map(function (s) { return s.trim(); });
     if (allowed.indexOf(instId) < 0) return reply_(log, 'REJECT', '허용 안 된 종목: ' + instId + ' (허용: ' + allowed.join(',') + ')');
 
     var live = (props.getProperty('LIVE') || 'NO').toUpperCase() === 'YES';
@@ -461,11 +467,20 @@ function SELFCHECK() {
   add('상한', true, 'MAX_CONTRACTS=' + cfg_('MAX_CONTRACTS') + ' / MAX_TRADES_PER_DAY=' + cfg_('MAX_TRADES_PER_DAY') + ' / ALLOW_PYRAMID=' + cfg_('ALLOW_PYRAMID'));
   add('알림 메일', !!cfg_('NOTIFY_EMAIL'), cfg_('NOTIFY_EMAIL') || '비어 있음 — 오류가 나도 메일이 안 옴');
 
-  var ct = getCtVal_('BTC-USDT-SWAP', keys);
-  add('공개 API (instruments)', true, 'BTC-USDT-SWAP ctVal=' + ct + (ct === INST_FALLBACK_CTVAL ? ' (예비값일 수 있음 — 조회 실패 시 같은 값)' : ''));
+  var syms = cfg_('ALLOWED_SYMBOLS').toUpperCase().split(',').map(function (x) { return x.trim(); }).filter(function (x) { return x; });
+  for (var si = 0; si < syms.length; si++) {
+    var ct = getCtVal_(syms[si], keys);
+    add('계약 단위 ' + syms[si], ct > 0, ct > 0 ? ('1계약 = ' + ct + ' ' + syms[si].split('-')[0] + (syms[si] === 'BTC-USDT-SWAP' && ct === INST_FALLBACK_CTVAL ? ' (조회 실패 시 예비값과 같음)' : ''))
+                                            : '조회 실패 — qty 알럿은 거절됨. contracts(계약수)로만 주문 가능');
+  }
 
   if (keys) {
-    try { var b = dcGet_('/deepcoin/account/balances', 'instType=SWAP', 0); var bal = (b.data || []).map(function (x) { return x.ccy + ' ' + x.availBal + '/' + x.bal; }).join(', '); add('잔고 조회 (키 유효)', true, bal || '잔고 0'); }
+    try {
+      var b = dcGet_('/deepcoin/account/balances', 'instType=SWAP', 0);
+      var bal = (b.data || []).map(function (x) { return x.ccy + ' ' + x.availBal + '/' + x.bal; }).join(', ');
+      add('잔고 조회 (키 유효)', true, bal || '잔고 0');
+      add('잔고 추이', true, recordBalance_(b.data || []));
+    }
     catch (e) { add('잔고 조회 (키 유효)', false, String(e)); }
     try { var pos = dcGet_('/deepcoin/account/positions', 'instType=SWAP', 0); var ps = (pos.data || []).map(function (x) { return x.instId + ' ' + x.posSide + ' ' + x.pos; }).join(', '); add('거래소 포지션', true, ps || '없음'); }
     catch (e) { add('거래소 포지션', false, String(e)); }
@@ -493,6 +508,31 @@ function SELFCHECK() {
   var summary = 'SELFCHECK ' + VERSION + ' — FAIL ' + fails + '건\n' + rows.map(function (r) { return r[1] + ' | ' + r[0] + ' | ' + r[2]; }).join('\n');
   Logger.log(summary);
   return { fails: fails, rows: rows, summary: summary };
+}
+
+// 「3.잔고추이」: 날짜 | 통화 | 총잔고 | 가용 | 전일 대비. 하루 한 줄(같은 날 다시 돌리면 덮어씀). 수익이 얼마인지는 이 탭이 답한다
+function recordBalance_(list) {
+  var book = logBook_(); if (!book) return '시트 없음';
+  var sh = sheetOrCreate_(book, SHEET_BAL, ['날짜', '통화', '총잔고', '가용잔고', '전일 대비', '누적(첫 기록 대비)']);
+  var today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  var rows = sh.getDataRange().getValues();
+  var out = [];
+  for (var i = 0; i < list.length; i++) {
+    var ccy = list[i].ccy, bal = parseFloat(list[i].bal) || 0, avail = parseFloat(list[i].availBal) || 0;
+    var prev = null, first = null, sameDayRow = -1;
+    for (var r = 1; r < rows.length; r++) {
+      if (String(rows[r][1]) !== ccy) continue;
+      if (String(rows[r][0]) === today) { sameDayRow = r + 1; continue; }
+      if (first === null) first = parseFloat(rows[r][2]);
+      prev = parseFloat(rows[r][2]);
+    }
+    var diff = (prev === null) ? '' : Math.round((bal - prev) * 10000) / 10000;
+    var cum  = (first === null) ? '' : Math.round((bal - first) * 10000) / 10000;
+    var row = [today, ccy, bal, avail, diff, cum];
+    if (sameDayRow > 0) sh.getRange(sameDayRow, 1, 1, row.length).setValues([row]); else sh.appendRow(row);
+    out.push(ccy + ' ' + bal + (diff === '' ? '' : ' (전일 ' + (diff >= 0 ? '+' : '') + diff + ')'));
+  }
+  return out.join(', ') || '잔고 0';
 }
 
 function dailyCheck_() {

@@ -33,6 +33,7 @@ function makeContext(scenario) {
     appendRow: (row) => { sheets.get(name).push(row.slice()); },
     getLastRow: () => sheets.get(name).length,
     getDataRange: () => ({ getValues: () => sheets.get(name).map(r => r.slice()) }),
+    getRange: (row, col, nRows, nCols) => ({ setValues: (vals) => { const rows = sheets.get(name); for (let i = 0; i < nRows; i++) { rows[row - 1 + i] = rows[row - 1 + i] || []; for (let j = 0; j < nCols; j++) rows[row - 1 + i][col - 1 + j] = vals[i][j]; } } }),
     clear: () => { sheets.set(name, []); }
   });
   const book = {

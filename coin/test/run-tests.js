@@ -18,11 +18,12 @@ function exchange(opts) {
     const u = new URL(rec.url);
     if (opts.networkDown) throw new Error('DNS 실패(모의)');
     if (u.pathname === '/deepcoin/market/instruments') {
-      return { status: 200, body: { code: '0', msg: '', data: [{ instId: 'BTC-USDT-SWAP', ctVal: '0.001', lotSz: '1', minSz: '1' }] } };
+      return { status: 200, body: { code: '0', msg: '', data: [{ instId: 'BTC-USDT-SWAP', ctVal: '0.001', lotSz: '1', minSz: '1' }, { instId: 'ETH-USDT-SWAP', ctVal: '0.01', lotSz: '1', minSz: '1' }] } };   // ETH ctVal 0.01 은 모의값 — 실제는 API 가 준다
     }
     if (u.pathname === '/deepcoin/account/positions') {
       const data = [];
-      for (const side of ['long', 'short']) if (st.pos[side] > 0) data.push({ instType: 'SWAP', instId: 'BTC-USDT-SWAP', posSide: side, pos: String(st.pos[side]), posId: '1' });
+      const inst = u.searchParams.get('instId') || 'BTC-USDT-SWAP';
+      for (const side of ['long', 'short']) if (st.pos[side] > 0) data.push({ instType: 'SWAP', instId: inst, posSide: side, pos: String(st.pos[side]), posId: '1' });
       return { status: 200, body: { code: '0', msg: '', data } };
     }
     if (u.pathname === '/deepcoin/account/balances') {
@@ -51,11 +52,15 @@ function boot(scn, propsInit) {
   const p = ctx.PropertiesService.getScriptProperties();
   p.setProperty('WEBHOOK_TOKEN', TOKEN);
   p.setProperty('LOG_SHEET_ID', 'sheet-1');
+  // 기존 검사는 BTC 수학(0.001) 기준으로 작성됨 → 2.설정 탭을 기본값 그대로 만들되 ALLOWED_SYMBOLS 만 BTC+ETH 로. 코드 기본값(ETH) 검사는 21번에서 따로
+  p.setProperty('ALLOWED_SYMBOLS', 'BTC-USDT-SWAP, ETH-USDT-SWAP');
+  ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['KILL', 'NO', ''], ['ALLOWED_SYMBOLS', 'BTC-USDT-SWAP, ETH-USDT-SWAP', ''], ['MAX_CONTRACTS', '50', ''], ['MAX_TRADES_PER_DAY', '20', ''], ['ALLOW_PYRAMID', 'NO', ''], ['NOTIFY_EMAIL', '', '']]);
   for (const k in (propsInit || {})) p.setProperty(k, propsInit[k]);
   return ctx;
 }
 function post(ctx, obj) {
   if (obj.token === undefined) obj.token = TOKEN;
+  if (obj.symbol === undefined) obj.symbol = 'BTC-USDT-SWAP';
   return JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(obj) } }).getContent());
 }
 function lastLog(ctx) { const rows = ctx.__mock.sheets.get('1.거래로그') || []; return rows[rows.length - 1]; }
@@ -84,7 +89,9 @@ function check(name, cond, info) { results.push({ name, ok: !!cond, info: info =
   const row = lastLog(ctx);
   check('3e 시트 로그 12열, 상태 DRY-RUN, 모드 DRY', row && row.length === 12 && row[1] === 'DRY-RUN' && row[2] === 'DRY', JSON.stringify(row));
   check('3f 로그에 토큰이 남지 않음', !JSON.stringify(ctx.__mock.sheets.get('1.거래로그')).includes(TOKEN) && !String(ctx.__mock.props.get('LAST_LOG')).includes(TOKEN));
-  check('3g 2.설정 탭 자동 생성 (기본값 6행)', (ctx.__mock.sheets.get('2.설정') || []).length === 7, (ctx.__mock.sheets.get('2.설정') || []).length);
+  ctx.__mock.sheets.delete('2.설정'); ctx.__mock.cache.clear(); post(ctx, { action: 'EXIT_SHORT', symbol: 'ETH-USDT-SWAP', id: 'a1g' });
+  check('3g 2.설정 탭 없으면 기본값 6행으로 자동 생성', (ctx.__mock.sheets.get('2.설정') || []).length === 7 && ctx.__mock.sheets.get('2.설정')[2][1] === 'ETH-USDT-SWAP', JSON.stringify(ctx.__mock.sheets.get('2.설정')));
+  ctx.__mock.sheets.get('2.설정')[2][1] = 'BTC-USDT-SWAP, ETH-USDT-SWAP'; ctx.__mock.cache.clear();
   // 3h 같은 방향 재진입 → ALREADY_IN
   const r2 = post(ctx, { action: 'ENTER_LONG', qty: '0.01', id: 'a2' });
   check('3h 같은 방향 재진입 → REJECT ALREADY_IN', r2.status === 'REJECT' && /ALREADY_IN/.test(r2.detail), r2.detail);
@@ -216,7 +223,7 @@ function check(name, cond, info) { results.push({ name, ok: !!cond, info: info =
 // 13. 시트 없이도 동작 (LOG_SHEET_ID 비움) / 시트 열기 실패해도 주문 로직은 동작
 { const ctx = boot(exchange()); ctx.__mock.props.delete('LOG_SHEET_ID');
   const r = post(ctx, { action: 'ENTER_LONG', qty: '0.01', id: 'S1' });
-  check('13 LOG_SHEET_ID 없음 → 시트 없이 DRY-RUN 정상', r.status === 'DRY-RUN' && ctx.__mock.sheets.size === 0); }
+  check('13 LOG_SHEET_ID 없음 → 시트에 안 쓰고 DRY-RUN 정상', r.status === 'DRY-RUN' && !ctx.__mock.sheets.has('1.거래로그'), r.status); }
 { const ctx = boot(Object.assign(exchange(), { sheetFails: true }));
   const r = post(ctx, { action: 'ENTER_LONG', qty: '0.01', id: 'S2' });
   check('13a 시트 열기 실패 → 기본 설정으로 DRY-RUN 정상 (주문 로직 멈추지 않음)', r.status === 'DRY-RUN', r.status); }
@@ -275,6 +282,37 @@ function check(name, cond, info) { results.push({ name, ok: !!cond, info: info =
   ctx.초기화_중복기록(); ctx.__mock.cache.clear();
   const r2 = post(ctx, { action: 'ENTER_LONG', qty: '0.001', id: 'fixed-id' });
   check('20 DUP → 초기화_중복기록 후 같은 id 다시 통과', r1.status === 'REJECT' && r2.status === 'DRY-RUN', r1.status + '/' + r2.status); }
+
+// 21. (v2.2) 기본 종목 = 허용 목록 첫 종목(ETH). ETH 계약 단위는 반드시 조회, 예비값 없음
+{ const ctx = boot(exchange()); ctx.__mock.props.delete('ALLOWED_SYMBOLS'); ctx.__mock.sheets.delete('2.설정');   // 코드 기본값 ETH-USDT-SWAP 만 허용
+  const r = JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify({ token: TOKEN, action: 'ENTER_LONG', qty: '0.5', id: 'e1' }) } }).getContent());
+  check('21 symbol 없으면 ETH-USDT-SWAP, 0.5 ETH / 0.01 = 50계약', r.status === 'DRY-RUN' && r.detail.wouldSend.instId === 'ETH-USDT-SWAP' && r.detail.wouldSend.sz === '50', r.status + ' ' + JSON.stringify(r.detail.wouldSend));
+  const r2 = post(ctx, { action: 'ENTER_LONG', symbol: 'BTC-USDT-SWAP', qty: '0.01', id: 'e2' });
+  check('21a 기본값에서 BTC 는 허용 안 됨 → REJECT', r2.status === 'REJECT' && /허용/.test(r2.detail), r2.detail); }
+{ const ctx = boot(exchange({ networkDown: true })); ctx.__mock.props.delete('ALLOWED_SYMBOLS'); ctx.__mock.sheets.delete('2.설정');
+  const r = JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify({ token: TOKEN, action: 'ENTER_LONG', qty: '0.5', id: 'e3' }) } }).getContent());
+  check('21b ETH 계약 단위 조회 실패 → REJECT (예비값 없음)', r.status === 'REJECT' && /ctVal/.test(r.detail), r.detail);
+  const s = ctx.SELFCHECK(); const row = s.rows.find(x => x[0] === '계약 단위 ETH-USDT-SWAP');
+  check('21c 자가진단에 「계약 단위 ETH」 FAIL 표시', row && row[1] === 'FAIL', JSON.stringify(row)); }
+{ const ctx = boot(exchange(), KEYS); ctx.__mock.props.delete('ALLOWED_SYMBOLS'); ctx.__mock.sheets.delete('2.설정');
+  const s = ctx.SELFCHECK(); const row = s.rows.find(x => x[0] === '계약 단위 ETH-USDT-SWAP');
+  check('21d 자가진단 「1계약 = 0.01 ETH」 OK', row && row[1] === 'OK' && /1계약 = 0.01 ETH/.test(row[2]), JSON.stringify(row)); }
+
+// 22. (v2.2) 3.잔고추이: 하루 한 줄, 전일 대비·누적, 같은 날 재실행은 덮어씀
+{ const ex = exchange(); const ctx = boot(ex, KEYS);
+  ctx.SELFCHECK();
+  let bal = ctx.__mock.sheets.get('3.잔고추이');
+  check('22 첫 실행: 머리글 + 1행, 전일 대비 빈칸', bal && bal.length === 2 && bal[1][1] === 'USDT' && bal[1][2] === 74 && bal[1][4] === '', JSON.stringify(bal));
+  ctx.SELFCHECK();
+  bal = ctx.__mock.sheets.get('3.잔고추이');
+  check('22a 같은 날 재실행 → 행 수 그대로 2', bal.length === 2, bal.length);
+  bal[1][0] = '2026-09-04';                                                     // 어제 기록으로 바꿔 놓고
+  const base = ex.route; ex.route = (rec) => { const r = base(rec); if (rec.url.includes('/account/balances')) r.body.data[0].bal = '80.5'; return r; };
+  ctx.SELFCHECK();
+  bal = ctx.__mock.sheets.get('3.잔고추이');
+  const s = ctx.SELFCHECK();
+  check('22b 다음 날 잔고 80.5 → 전일 대비 +6.5, 누적 +6.5', bal.length === 3 && bal[2][2] === 80.5 && bal[2][4] === 6.5 && bal[2][5] === 6.5, JSON.stringify(bal));
+  check('22c 자가진단 잔고 추이 문구', /\(전일 \+6\.5\)/.test(s.rows.find(x => x[0] === '잔고 추이')[2]), s.rows.find(x => x[0] === '잔고 추이')[2]); }
 
 // ── 결과 ──
 const fails = results.filter(r => !r.ok);
