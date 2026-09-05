@@ -225,6 +225,57 @@ function check(name, cond, info) { results.push({ name, ok: !!cond, info: info =
 { const ctx = boot(exchange()); const g = JSON.parse(ctx.doGet().getContent());
   check('14 doGet → ok, live=NO, 거래소 호출 0', g.ok === true && g.live === 'NO' && ctx.__mock.calls.length === 0, JSON.stringify(g)); }
 
+// 15. (감사 반영) 상한 설정값이 숫자가 아니면 거절 — 열림이 아니라 닫힘
+{ const ctx = boot(exchange()); ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['MAX_CONTRACTS', '오십', '']]);
+  const r = post(ctx, { action: 'ENTER_LONG', qty: '1', id: 'n1' });
+  check('15 MAX_CONTRACTS=오십 → REJECT (NaN 통과 금지)', r.status === 'REJECT' && /숫자가 아님/.test(r.detail), r.detail);
+  ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['MAX_CONTRACTS', '1,000', '']]); ctx.__mock.cache.clear();
+  const r2 = post(ctx, { action: 'ENTER_LONG', qty: '0.5', id: 'n2' });
+  check('15a MAX_CONTRACTS=1,000 (쉼표) → 1000 으로 읽어 500계약 통과', r2.status === 'DRY-RUN' && r2.detail.wouldSend.sz === '500', r2.status + ' ' + JSON.stringify(r2.detail.wouldSend)); }
+{ const ctx = boot(exchange(), Object.assign({ LIVE: 'YES' }, KEYS)); ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['MAX_TRADES_PER_DAY', 'abc', '']]);
+  const r = post(ctx, { action: 'ENTER_LONG', qty: '0.01', id: 'n3' });
+  check('15b MAX_TRADES_PER_DAY=abc → REJECT, 주문 0건', r.status === 'REJECT' && ctx.__mock.calls.filter(c => c.url.includes('/trade/order')).length === 0, r.detail); }
+
+// 16. (감사 반영) 틀린 토큰도 LAST_LOG 에 남지 않는다
+{ const ctx = boot(exchange()); post(ctx, { token: 'WRONG-SECRET-TOKEN-999', action: 'ENTER_LONG', qty: '0.01' });
+  check('16 틀린 토큰이 LAST_LOG 에 없음', !String(ctx.__mock.props.get('LAST_LOG')).includes('WRONG-SECRET-TOKEN-999'), ctx.__mock.props.get('LAST_LOG')); }
+
+// 17. (감사 반영) ctVal 조회 실패: BTC 만 예비값, 다른 종목은 거절
+{ const ex = exchange({ networkDown: true }); const ctx = boot(ex); ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['ALLOWED_SYMBOLS', 'BTC-USDT-SWAP, eth-usdt-swap', ''], ['MAX_CONTRACTS', '100000', '']]);
+  const r = post(ctx, { action: 'ENTER_LONG', symbol: 'ETH-USDT-SWAP', qty: '1', id: 'c1' });
+  check('17 ETH ctVal 조회 실패 → REJECT (BTC 값으로 환산 금지)', r.status === 'REJECT' && /ctVal/.test(r.detail), r.status + ' ' + JSON.stringify(r.detail));
+  const r2 = post(ctx, { action: 'ENTER_LONG', symbol: 'btc-usdt-swap', qty: '0.01', id: 'c2' });
+  check('17a BTC 는 예비값 0.001 로 10계약 + 소문자 종목 허용', r2.status === 'DRY-RUN' && r2.detail.wouldSend.sz === '10' && r2.detail.wouldSend.instId === 'BTC-USDT-SWAP', r2.status + ' ' + JSON.stringify(r2.detail.wouldSend));
+  const r3 = post(ctx, { action: 'ENTER_LONG', symbol: 'ETH-USDT-SWAP', contracts: '3', id: 'c3' });
+  check('17b contracts 로 주면 ctVal 없어도 진행', r3.status === 'DRY-RUN' && r3.detail.wouldSend.sz === '3', r3.status); }
+
+// 18. (감사 반영) 주문은 나갔는데 주문 후 조회 실패 → LIVE 로 기록, ordId 남김, 실주문 메일
+{ const ex = exchange(); let n = 0; const base = ex.route;
+  ex.route = (rec) => { if (rec.url.includes('/account/positions')) { n++; if (n > 1) throw new Error('조회 타임아웃(모의)'); } return base(rec); };
+  const ctx = boot(ex, Object.assign({ LIVE: 'YES' }, KEYS)); ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['NOTIFY_EMAIL', 'me@example.com', '']]);
+  const r = post(ctx, { action: 'ENTER_LONG', qty: '0.01', id: 'p1' });
+  check('18 주문 후 조회 실패 → 상태 LIVE + ordId + ⚠ 검증문구', r.status === 'LIVE' && r.detail.ordId === 'ORD1' && /주문은 나갔으나/.test(r.detail.verify), r.status + ' ' + JSON.stringify(r.detail));
+  check('18a 실주문 메일 1통(오류 메일 아님), 로그 포지션(후)=조회실패', ctx.__mock.mails.length === 1 && /실주문/.test(ctx.__mock.mails[0].subject) && lastLog(ctx)[7] === '조회실패' && lastLog(ctx)[1] === 'LIVE', ctx.__mock.mails.map(m => m.subject).join('|') + ' ' + JSON.stringify(lastLog(ctx))); }
+
+// 19. (감사 반영) KILL 은 캐시를 거치지 않는다 / sl 파싱값 / 부동소수
+{ const ctx = boot(exchange()); post(ctx, { action: 'EXIT_SHORT', id: 'z0' });
+  const cfg = ctx.__mock.sheets.get('2.설정'); cfg.find(r => r[0] === 'KILL')[1] = 'YES';           // 캐시 clear 없이
+  const r = post(ctx, { action: 'ENTER_LONG', qty: '0.01', id: 'z1' });
+  check('19 KILL=YES 즉시 반영 (캐시 안 거침)', r.status === 'REJECT' && /KILL/.test(r.detail), r.detail);
+  cfg.find(r => r[0] === 'KILL')[1] = 'NO';
+  const r2 = post(ctx, { action: 'ENTER_LONG', qty: '1.005', sl: '58000abc', id: 'z2' });
+  check('19a sl=58000abc → 58000 으로 전송, 1.005 BTC → 1005계약', r2.status === 'REJECT' && /1005/.test(r2.detail), r2.detail);
+  ctx.__mock.sheets.set('2.설정', [['키', '값', '설명'], ['MAX_CONTRACTS', '2000', '']]); ctx.__mock.cache.clear();
+  const r3 = post(ctx, { action: 'ENTER_LONG', qty: '1.005', sl: '58000abc', id: 'z3' });
+  check('19b 전송 본문 sz=1005, slTriggerPx=58000', r3.status === 'DRY-RUN' && r3.detail.wouldSend.sz === '1005' && r3.detail.wouldSend.slTriggerPx === '58000', JSON.stringify(r3.detail.wouldSend)); }
+
+// 20. (감사 반영) 초기화_중복기록 으로 DUP 복구
+{ const ctx = boot(exchange()); post(ctx, { action: 'ENTER_LONG', qty: '0.001', id: 'fixed-id' }); post(ctx, { action: 'EXIT_LONG', id: 'x' });
+  const r1 = post(ctx, { action: 'ENTER_LONG', qty: '0.001', id: 'fixed-id' });
+  ctx.초기화_중복기록(); ctx.__mock.cache.clear();
+  const r2 = post(ctx, { action: 'ENTER_LONG', qty: '0.001', id: 'fixed-id' });
+  check('20 DUP → 초기화_중복기록 후 같은 id 다시 통과', r1.status === 'REJECT' && r2.status === 'DRY-RUN', r1.status + '/' + r2.status); }
+
 // ── 결과 ──
 const fails = results.filter(r => !r.ok);
 for (const r of results) console.log((r.ok ? 'PASS' : 'FAIL') + '  ' + r.name + (r.ok ? '' : '   ← ' + r.info));

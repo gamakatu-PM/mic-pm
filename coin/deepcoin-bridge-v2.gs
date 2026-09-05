@@ -21,6 +21,14 @@
  *   5. 새로 추가(A등급): 잠금, 중복 차단, KILL, 상한 3종, 주문 후 검증,
  *      자가진단 시트, 메일 알림, 일일 점검 트리거, appid 헤더.
  *
+ * v2.0 → v2.1 (2026-09-05, 독립 감사 지적 반영)
+ *   - 상한 설정값이 숫자가 아니면 통과시키던 것(sz > NaN = false) → 거절
+ *   - 틀린 토큰이 LAST_LOG 속성에 남던 것 → 기록 전에 제거
+ *   - ctVal 조회 실패 시 BTC 값으로 다른 종목까지 환산하던 것 → BTC 외 종목은 거절
+ *   - 주문 후 포지션 조회가 실패하면 ERROR 로 뭉개던 것 → "주문은 나갔음" 을 LIVE 로 기록+메일
+ *   - KILL 은 60초 캐시 없이 매번 시트에서 / 종목 비교 대문자 / sl·tp 파싱값 전송 / 부동소수 보정
+ *   - 초기화_중복기록() 추가 (id 고정 사고 복구용)
+ *
  * ★ 설치 (5분)
  *   프로젝트 설정 → 스크립트 속성:
  *     DC_API_KEY / DC_SECRET / DC_PASSPHRASE  = 딥코인 API 3종 (출금 권한 없는 키로)
@@ -30,11 +38,11 @@
  *   실행 메뉴에서 SELFCHECK() 를 한 번 돌려 0.자가진단 탭이 전부 OK 인지 본다.
  *   설치_일일점검() 을 한 번 실행하면 매일 07:00 자가진단이 자동으로 돈다.
  *
- * ★ 비상정지: 시트 「2.설정」 탭의 KILL 을 YES 로 바꾸면 그 순간부터 모든 주문 거절.
+ * ★ 비상정지: 시트 「2.설정」 탭의 KILL 을 YES 로 바꾸면 다음 알럿부터 모든 주문 거절 (KILL 은 캐시 없이 매번 시트를 읽음).
  *   (폰에서 시트만 열면 된다. 스크립트 편집기 안 열어도 됨)
  ***********************************************************************/
 
-var VERSION = 'v2.0 (2026-09-05)';
+var VERSION = 'v2.1 (2026-09-05)';
 var BASE = 'https://api.deepcoin.com';
 var INST_FALLBACK_CTVAL = 0.001;           // BTC-USDT-SWAP 1계약 = 0.001 BTC (조회 실패 시 예비값)
 var TZ = 'Asia/Seoul';
@@ -72,21 +80,20 @@ function doPost(e) {
     var p;
     try { p = JSON.parse(e.postData.contents); }
     catch (pe) { return reply_(log, 'REJECT', 'JSON 파싱 실패'); }
-    log.recv = p;
     var props = PropertiesService.getScriptProperties();
+    log.recv = {}; for (var k in p) if (k !== 'token') log.recv[k] = p[k];   // 토큰은 맞든 틀리든 기록에 남기지 않는다
 
     // 보안: 토큰 불일치면 무시 (아무나 주문 못 쏘게)
     if (!p.token || p.token !== props.getProperty('WEBHOOK_TOKEN')) {
       return reply_(log, 'REJECT', '토큰 불일치');
     }
-    delete log.recv.token;                           // 로그에 토큰을 남기지 않는다
 
     // 잠금: 같은 순간 두 알럿이 오면 한 건씩 처리
     lock = LockService.getScriptLock();
     if (!lock.tryLock(20000)) { lock = null; return reply_(log, 'REJECT', 'BUSY — 다른 알럿 처리 중 (20초 대기 초과)'); }
 
     var action = String(p.action || '').toUpperCase();   // ENTER_LONG 등
-    var instId = String(p.symbol || 'BTC-USDT-SWAP');
+    var instId = String(p.symbol || 'BTC-USDT-SWAP').trim().toUpperCase();
     log.action = action; log.symbol = instId;
 
     // 중복 알럿 차단 (같은 id 또는 같은 action+symbol+time 은 한 번만)
@@ -96,10 +103,10 @@ function doPost(e) {
     markSeen_(alertId);                              // 처리 도중 오류가 나도 재시도 못 하게 먼저 표시
 
     // 비상정지
-    if (cfg_('KILL') === 'YES') return reply_(log, 'REJECT', 'KILL=YES — 비상정지 중 (2.설정 탭)');
+    if (cfg_('KILL', true) === 'YES') return reply_(log, 'REJECT', 'KILL=YES — 비상정지 중 (2.설정 탭)');
 
     // 종목 허용 목록
-    var allowed = cfg_('ALLOWED_SYMBOLS').split(',').map(function (s) { return s.trim(); });
+    var allowed = cfg_('ALLOWED_SYMBOLS').toUpperCase().split(',').map(function (s) { return s.trim(); });
     if (allowed.indexOf(instId) < 0) return reply_(log, 'REJECT', '허용 안 된 종목: ' + instId + ' (허용: ' + allowed.join(',') + ')');
 
     var live = (props.getProperty('LIVE') || 'NO').toUpperCase() === 'YES';
@@ -139,20 +146,23 @@ function enter_(instId, posSide, p, live, keysReady, log) {
     sz = parseInt(p.contracts, 10);
   } else {
     var ctVal = getCtVal_(instId, keysReady);
+    if (!(ctVal > 0)) return { reject: instId + ' 계약 단위(ctVal) 조회 실패 — 수량 환산 불가. contracts(계약수)로 보내거나 잠시 후 재시도' };
     var qtyBtc = parseFloat(p.qty);
     if (!(qtyBtc > 0)) return { reject: '수량 없음: qty=' + p.qty + ' (qty=BTC수량 또는 contracts=계약수 중 하나 필수)' };
-    sz = Math.floor(qtyBtc / ctVal);               // 계약수 (내림)
+    sz = Math.floor(qtyBtc / ctVal + 1e-9);        // 계약수 (내림. 1.005/0.001=1004.999… 같은 부동소수 오차 보정)
     log.ctVal = ctVal;
   }
   if (!(sz >= 1)) return { reject: '계약수 1 미만: ' + sz };
-  var maxSz = parseInt(cfg_('MAX_CONTRACTS'), 10);
+  var maxSz = numCfg_('MAX_CONTRACTS');
+  if (isNaN(maxSz)) return { reject: 'MAX_CONTRACTS 설정값이 숫자가 아님: "' + cfg_('MAX_CONTRACTS') + '" — 2.설정 탭 확인 (안전을 위해 거절)' };
   if (sz > maxSz) { notify_('[딥코인] 상한 초과로 거절', 'action=' + log.action + ' sz=' + sz + ' > MAX_CONTRACTS=' + maxSz); return { reject: '계약수 ' + sz + ' > MAX_CONTRACTS ' + maxSz + ' — 거절(줄이지 않음)' }; }
   log.sz = sz;
 
   // 일일 실주문 상한 (LIVE 만 센다)
   if (live) {
     var n = todayCount_();
-    var maxN = parseInt(cfg_('MAX_TRADES_PER_DAY'), 10);
+    var maxN = numCfg_('MAX_TRADES_PER_DAY');
+    if (isNaN(maxN)) return { reject: 'MAX_TRADES_PER_DAY 설정값이 숫자가 아님: "' + cfg_('MAX_TRADES_PER_DAY') + '" — 2.설정 탭 확인 (안전을 위해 거절)' };
     if (n >= maxN) { notify_('[딥코인] 일일 상한 도달', '오늘 ' + n + '건 >= MAX_TRADES_PER_DAY ' + maxN); return { reject: '오늘 실주문 ' + n + '건 — MAX_TRADES_PER_DAY ' + maxN + ' 도달' }; }
   }
 
@@ -174,9 +184,9 @@ function enter_(instId, posSide, p, live, keysReady, log) {
     clOrdId: ('KD' + Date.now()).slice(0, 20)
   };
   // 손절 동시 설정 (Pine 이 sl 가격을 보내줌)
-  if (p.sl && parseFloat(p.sl) > 0) body.slTriggerPx = String(p.sl);
+  if (p.sl && parseFloat(p.sl) > 0) body.slTriggerPx = String(parseFloat(p.sl));
   // v1 에 있던 slOrdPx:'-1' 은 딥코인 규격에 없어 제거 (B등급 변경, 2026-09-05)
-  if (p.tp && parseFloat(p.tp) > 0) body.tpTriggerPx = String(p.tp);
+  if (p.tp && parseFloat(p.tp) > 0) body.tpTriggerPx = String(parseFloat(p.tp));
 
   if (!live) {
     saveState_(instId, posSide, posBefore + sz);   // 모의에서도 상태는 기록
@@ -186,12 +196,9 @@ function enter_(instId, posSide, p, live, keysReady, log) {
   var res = dcPost_('/deepcoin/trade/order', body);
   log.ordId = res.data && res.data.ordId;
   bumpTodayCount_();
-  var posAfter = getPos_(instId, posSide);
-  log.posAfter = posAfter;
-  saveState_(instId, posSide, posAfter);
-  var verify = (posAfter >= posBefore + sz) ? 'OK' : ('⚠ 기대 ' + (posBefore + sz) + ' vs 실제 ' + posAfter);
-  notify_('[딥코인] 실주문 ' + log.action + ' ' + sz + '계약 (' + verify + ')', JSON.stringify({ body: body, res: res, posBefore: posBefore, posAfter: posAfter }, null, 1));
-  return { sent: body, ordId: log.ordId, posBefore: posBefore, posAfter: posAfter, verify: verify };
+  return afterOrder_(instId, posSide, body, res, log, function (posAfter) {
+    return (posAfter >= posBefore + sz) ? 'OK' : ('⚠ 기대 ' + (posBefore + sz) + ' vs 실제 ' + posAfter);
+  }, '실주문', posBefore);
 }
 
 // ═════════════════ ③ 청산 (반대 방향 reduceOnly 시장가, 거래소 수량 기준) ═════════════════
@@ -218,12 +225,25 @@ function exit_(instId, posSide, live, keysReady, log) {
   var res = dcPost_('/deepcoin/trade/order', body);
   log.ordId = res.data && res.data.ordId;
   bumpTodayCount_();
-  var posAfter = getPos_(instId, posSide);
-  log.posAfter = posAfter;
-  saveState_(instId, posSide, posAfter);
-  var verify = (posAfter === 0) ? 'OK' : ('⚠ PARTIAL — 청산 후에도 ' + posAfter + '계약 남음');
-  notify_('[딥코인] 실청산 ' + log.action + ' ' + sz + '계약 (' + verify + ')', JSON.stringify({ body: body, res: res, posAfter: posAfter }, null, 1));
-  return { sent: body, ordId: log.ordId, posBefore: sz, posAfter: posAfter, verify: verify };
+  return afterOrder_(instId, posSide, body, res, log, function (posAfter) {
+    return (posAfter === 0) ? 'OK' : ('⚠ PARTIAL — 청산 후에도 ' + posAfter + '계약 남음');
+  }, '실청산', sz);
+}
+
+// 주문이 나간 뒤: 포지션 재조회 → 검증 → 메일. 재조회가 실패해도 "주문은 나갔다"를 LIVE 로 남긴다 (ERROR 로 뭉개지 않음)
+function afterOrder_(instId, posSide, body, res, log, verifyFn, label, posBefore) {
+  var posAfter = null, verify;
+  try {
+    posAfter = getPos_(instId, posSide);
+    log.posAfter = posAfter;
+    saveState_(instId, posSide, posAfter);
+    verify = verifyFn(posAfter);
+  } catch (e) {
+    verify = '⚠ 주문은 나갔으나(ordId ' + (log.ordId || '?') + ') 주문 후 포지션 조회 실패 — 앱에서 직접 확인: ' + String(e);
+    log.posAfter = '조회실패';
+  }
+  notify_('[딥코인] ' + label + ' ' + log.action + ' ' + body.sz + '계약 (' + verify + ')', JSON.stringify({ body: body, res: res, posBefore: posBefore, posAfter: posAfter }, null, 1));
+  return { sent: body, ordId: log.ordId, posBefore: posBefore, posAfter: posAfter, verify: verify };
 }
 
 // ═════════════════ ④ 딥코인 서명·전송 (ccxt deepcoin 구현과 동일 규격) ═════════════════
@@ -308,7 +328,7 @@ function getCtVal_(instId, keysReady) {
       }
     }
   } catch (e) {}
-  return INST_FALLBACK_CTVAL;
+  return instId === 'BTC-USDT-SWAP' ? INST_FALLBACK_CTVAL : 0;   // 예비값은 BTC 전용. 다른 종목은 0 → 호출부가 거절
 }
 
 // ═════════════════ ⑤ 상태·중복·설정·카운터 ═════════════════
@@ -335,9 +355,9 @@ function todayCount_() { return parseInt(PropertiesService.getScriptProperties()
 function bumpTodayCount_() { PropertiesService.getScriptProperties().setProperty(todayKey_(), String(todayCount_() + 1)); }
 
 // 설정: 시트 「2.설정」 → 스크립트 속성 → 기본값. 60초 캐시.
-function cfg_(key) {
+function cfg_(key, nocache) {
   var cache = CacheService.getScriptCache();
-  var hit = cache.get('CFG_' + key);
+  var hit = nocache ? null : cache.get('CFG_' + key);
   if (hit !== null && hit !== undefined) return hit;
   var val = null;
   try {
@@ -352,9 +372,11 @@ function cfg_(key) {
   if (val === null) val = PropertiesService.getScriptProperties().getProperty(key);
   if (val === null || val === undefined) val = CFG_DEFAULTS[key];
   if (key === 'KILL' || key === 'ALLOW_PYRAMID') val = String(val).toUpperCase();
-  cache.put('CFG_' + key, String(val), 60);
+  if (!nocache) cache.put('CFG_' + key, String(val), 60);
   return String(val);
 }
+// 숫자 설정. 숫자가 아니면 NaN 을 돌려주고 호출부가 거절한다 (기본값으로 조용히 바꾸지 않는다)
+function numCfg_(key) { var v = String(cfg_(key)).replace(/,/g, '').trim(); return /^\d+$/.test(v) ? parseInt(v, 10) : NaN; }
 
 // ═════════════════ ⑥ 시트 (로그 · 설정 · 자가진단) ═════════════════
 function logBook_() {
@@ -399,7 +421,7 @@ function appendLog_(log) {
 function reply_(log, status, detail) {
   log.status = status; log.detail = detail;
   var props = PropertiesService.getScriptProperties();
-  props.setProperty('LAST_LOG', JSON.stringify(log).slice(0, 8000));   // 최근 1건은 속성에도 보관
+  try { props.setProperty('LAST_LOG', JSON.stringify(log).slice(0, 2500)); } catch (e) {}   // 최근 1건. 속성 한도 9KB(바이트) — 한글 3바이트라 2500자로
   props.setProperty('LAST_WEBHOOK_AT', log.time);
   if (status === 'ERROR') { bumpErrCount_(); notify_('[딥코인] 오류 ' + (log.action || ''), JSON.stringify(log, null, 1)); }
   appendLog_(log);
@@ -503,6 +525,11 @@ function TEST_중복차단() {            // 같은 id 두 번 → 두 번째는
 }
 function TEST_토큰불일치() {          // REJECT 토큰 불일치 가 나와야 정상
   Logger.log(doPost({ postData: { contents: JSON.stringify({ token: 'wrong', action: 'ENTER_LONG', qty: '0.001' }) } }).getContent());
+}
+// 알럿 id 가 고정돼 버려(자리표시자 오타 등) 정상 알럿까지 DUP 으로 막힐 때 실행 → 중복 기록을 비운다
+function 초기화_중복기록() {
+  PropertiesService.getScriptProperties().deleteProperty('RECENT_ALERTS');
+  return '중복 기록 비움 (캐시분은 최대 6시간 뒤 자동 소멸). 알럿 JSON 의 id 자리표시자를 먼저 고치십시오';
 }
 function TEST_최근로그() { Logger.log(PropertiesService.getScriptProperties().getProperty('LAST_LOG')); }
 function fake_(o) {
