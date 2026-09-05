@@ -208,8 +208,12 @@ def main():
     else:
         check_master_matching(wb)
         check_rates(wb)
-    wbc = check_computed(path)
-    report_totals(wbc)
+    try:
+        wbc = check_computed(path)
+        report_totals(wbc)
+    except FileNotFoundError as e:
+        # LibreOffice가 없는 환경(일부 코워크 등) — 재계산 검사만 생략하고 나머지는 유효
+        warn(f"재계산 검사 생략 (LibreOffice 사용 불가: {e}) — 결과 보고에 이 사실을 명시할 것")
     print(f"\ntotal_warnings: {len(warnings)}")
     print(f"total_errors: {len(errors)}")
     sys.exit(1 if errors else 0)
