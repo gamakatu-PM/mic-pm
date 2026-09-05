@@ -1,0 +1,16 @@
+{
+  "name": "한국마이크로닉 현장관리",
+  "short_name": "KM 현장관리",
+  "description": "현장 PM 대시보드 · 수량표 · 회의록 · 수금",
+  "start_url": "index.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0f14",
+  "theme_color": "#0d0f14",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,165 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KM 대시보드 — 코어크·코드·시트·폰 역할 지도</title>
+<style>
+:root{--blue:#2A6099;--org:#C77B2B;--red:#C0392B;--grey:#8E99A4;--grn:#2E7D5B;--pur:#6B4FA8;
+--bg:#F4F6F8;--card:#fff;--line:#DDE3E9;--tx:#1B2733}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Malgun Gothic","맑은 고딕",sans-serif;background:var(--bg);color:var(--tx);line-height:1.55;padding:14px}
+.wrap{max-width:520px;margin:0 auto}
+h1{font-size:19px;color:var(--blue)}
+.sub{font-size:12px;color:var(--grey);margin:4px 0 16px}
+h2{font-size:15px;color:var(--blue);margin:26px 0 10px;padding-bottom:5px;border-bottom:2px solid var(--line)}
+.legend{display:flex;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11.5px;margin-bottom:18px}
+.legend span{display:flex;align-items:center;gap:4px}
+.sw{width:22px;height:0;border-top:3px solid}
+.auto{border-color:var(--grn)} .hand{border-color:var(--org);border-top-style:dashed} .once{border-color:var(--pur)}
+
+.stage{margin-bottom:0}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--grey);margin-bottom:6px}
+.box{background:#fff;border:2px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:6px}
+.box b{font-size:13.5px;display:block}
+.box small{font-size:11.5px;color:var(--grey);display:block;margin-top:2px}
+.box.in{border-color:var(--grey)}
+.box.store{border-color:var(--blue);background:#F2F6FB}
+.box.view{border-color:var(--pur);background:#F5F2FB}
+.box.you{border-color:var(--red);background:#FDF2F1}
+.box.out{border-color:var(--grn);background:#F1F8F4}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.row .box{flex:1;min-width:105px}
+
+.ar{text-align:center;font-size:11.5px;font-weight:700;padding:4px 0;position:relative}
+.ar::before{content:"↓";display:block;font-size:19px;line-height:1}
+.ar.g{color:var(--grn)} .ar.o{color:var(--org)} .ar.p{color:var(--pur)}
+.ar.up::before{content:"↑"}
+
+.back{background:#fff;border:2px dashed var(--grn);border-radius:10px;padding:10px 12px;margin:6px 0;font-size:12px}
+.back b{color:var(--grn)}
+.note{background:#FFF8E1;border-left:4px solid var(--org);padding:10px 12px;font-size:12.5px;border-radius:6px;margin:14px 0}
+.warn{background:#FDECEA;border-left:4px solid var(--red);padding:10px 12px;font-size:12.5px;border-radius:6px;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:11.5px;background:#fff;margin-top:8px;word-break:keep-all}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tw table{min-width:100%}
+th,td{border:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+th{background:#EDF1F5;font-size:11.5px}
+.ex{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12.5px;margin-top:8px}
+.ex .step{padding:5px 0 5px 20px;position:relative;border-left:2px solid var(--line);margin-left:6px}
+.ex .step::before{content:"●";position:absolute;left:-7px;top:5px;color:var(--blue);font-size:11px;background:#fff}
+.ex .step:last-child::before{color:var(--grn)}
+.k{font-weight:700;color:var(--blue)}
+</style></head><body><div class="wrap">
+<body><div class="wrap">
+
+<h1>코어크 · 클로드 코드 · 시트 · 대시보드 — 누가 무엇을 하나</h1>
+<div class="sub">대시보드 역할 지도 v1 · 2026-09-05 · 이 대화(9/5)에서 확인한 것만 그림</div>
+
+<div class="legend">
+  <span><i class="sw auto"></i> 자동 (코드가 함)</span>
+  <span><i class="sw hand"></i> 차장님 손</span>
+  <span><i class="sw once"></i> 딱 한 번만 (만들 때·고칠 때)</span>
+</div>
+<div class="legend" style="margin-top:-10px">
+  <span>실선 테두리 = 지금 실제로 있음</span>
+  <span>점선 테두리 = 아직 설계</span>
+</div>
+
+<h2>큰 그림 — 코어크는 쓰고, 시트에 쌓이고, 코드가 읽어 폰에 보여줌</h2>
+
+<div class="stage">
+<div class="lbl">① 들어오는 것</div>
+<div class="row">
+  <div class="box in"><b>PLAUD 통화·회의</b><small>녹음 → 노트</small></div>
+  <div class="box in"><b>수량표 엑셀</b><small>차장님 첨부 ①</small></div>
+  <div class="box in"><b>수금정리 엑셀</b><small>차장님 첨부 ②</small></div>
+</div>
+</div>
+
+<div class="ar o">차장님 손 1 · 코어크에 「○일 PLAUD 정리해」</div>
+
+<div class="stage">
+<div class="lbl">② 코어크 = 사무실 책상 (판단하는 곳)</div>
+<div class="box view" style="border-color:#C77B2B;background:#FFF8E1"><b>🧠 코어크 (Claude)</b><small>PLAUD 판독 · 어느 현장인지 판정 · 핵심요약 C · 통찰 F · 기한 D/E · 할 일 모음<br><b>대시보드 화면은 그리지 않는다</b></small></div>
+</div>
+
+<div class="ar g">자동 · 큐 → 브리지 10분마다 시트에 기록</div>
+
+<div class="stage">
+<div class="lbl">③ 창고 = 데이터가 사는 곳 (안 보셔도 됨)</div>
+<div class="box store"><b>구글시트 「26년 회의록」</b><small>현장 탭 7열 · 할 일 모음 · 0.무조건할일 · 현장 갑지 · 키워드 사전<br>오늘 11:59 마지막 수정 — 살아 있음</small></div>
+<div class="box store" style="border-style:dashed"><b>수량표·수금 엑셀 저장분</b><small>대시보드 업로드 버튼으로 들어온 것 (수량표 입구 있음 · 수금 입구 없음)</small></div>
+</div>
+
+<div class="ar g">자동 · 폰에서 열 때마다 읽어옴 <span style="color:#8E99A4">(← 이 연결이 아직 설계)</span></div>
+
+<div class="stage">
+<div class="lbl">④ 창구 = 차장님이 보는 곳 <b style="color:#C0392B">하나뿐</b></div>
+<div class="box view" style="border-style:dashed"><b>📱 대시보드 (코드가 만든 웹 화면)</b><small>주소 하나 고정 · 폰·탭·노트북 같은 링크<br>맨 위 KPI → 오늘 볼 것(🔴만) → 현장별 상세 · 근거는 PLAUD 링크</small></div>
+</div>
+
+<div class="ar o">차장님 손 2 · 엑셀 바뀌면 업로드 버튼 &nbsp;|&nbsp; 차장님 손 3 · 보고 결정·체크</div>
+
+<div class="stage">
+<div class="lbl">⑤ 되돌아가는 곳</div>
+<div class="box out"><b>시트에 기록</b><small>무조건할일 완료 체크 · 할 일 상태 → 다음에 열면 그 항목은 사라짐</small></div>
+</div>
+
+<div class="back"><b>↺ 고리.</b> 코어크가 시트에 쓰고 → 코드가 시트를 읽어 보여주고 → 차장님이 체크하면 시트에 남고 → 코어크도 코드도 그 시트를 봅니다. <b>둘을 잇는 것은 시트 하나</b>입니다.</div>
+
+<h2>클로드 코드는 어디 있나 — 옆에 있는 공장</h2>
+<div class="row">
+  <div class="box" style="border-color:#6B4FA8;background:#F5F2FB"><b>🏭 클로드 코드 (이 창)</b><small>GitHub 저장소 mic-pm에 붙어 있음<br>대시보드 코드를 만들고 고침 · 결과가 커밋으로 남음</small></div>
+</div>
+<div class="ar p">딱 한 번 · 만들 때, 그리고 고칠 때만</div>
+<div class="box view" style="border-style:dashed"><b>📱 대시보드</b><small>고쳐도 주소는 그대로. 다음 창이 와도 코드는 GitHub에 있으니 다시 그리지 않음</small></div>
+<div class="note"><b>평소엔 부를 일이 없습니다.</b> 카카오톡 쓸 때 개발자를 안 부르는 것과 같습니다. "이거 고쳐" 할 때만 이 창에 옵니다. 그게 차장님 손 4번째인데, 매일이 아니라 고칠 때만입니다.</div>
+
+<h2>누가 무엇을 하나 — 한 표</h2>
+<div class="tw"><table>
+<tr><th></th><th>코어크</th><th>클로드 코드</th><th>시트</th><th>대시보드</th></tr>
+<tr><td><b>역할</b></td><td>판단·정리</td><td>화면 만들기·고치기</td><td>데이터 보관</td><td>보여주기</td></tr>
+<tr><td><b>언제</b></td><td>통화·회의마다</td><td>고칠 때만</td><td>항상 (뒤에서)</td><td>매일 아침 폰</td></tr>
+<tr><td><b>기억</b></td><td>창 바뀌면 없음</td><td>GitHub에 남음</td><td>남음 (정본)</td><td>없음 (시트를 읽음)</td></tr>
+<tr><td><b>사용량</b></td><td>쓸 때마다</td><td>고칠 때만</td><td>0</td><td><b>0</b> (Claude 안 부름)</td></tr>
+<tr><td><b>하면 안 되는 것</b></td><td><b>대시보드 HTML 그리기</b></td><td>회의록 판단</td><td>보기판 탭 만들기</td><td>데이터 따로 갖기</td></tr>
+</table></div>
+
+<h2>겹치는 곳 — 두 군데, 둘 다 막아야 함</h2>
+<div class="warn">
+<b>중복 1 · 코어크도 대시보드 HTML을 그릴 수 있음.</b> 그래서 저장소 루트에 km-pm-v4 · v4 (1) · v5 · v5 (1) · index.html(v5.7) 다섯 개가 쌓였습니다. 창마다 새로 그린 흔적입니다. → 규칙 한 줄로 막음: <b>「대시보드는 클로드 코드에서만 만든다」</b>
+</div>
+<div class="warn">
+<b>중복 2 · 지금 v5.7은 회의록을 자체 저장소에 따로 갖고 있음.</b> 시트에 정리된 것을 안 읽고, 붙여넣은 회의록을 브라우저 안 AI로 다시 판독합니다. 시트와 대시보드에 같은 회의록이 두 벌. → <b>시트만 정본, 대시보드는 읽기만</b>으로 바꿔야 함 (C등급 · 차장님 확정 필요)
+</div>
+
+<h2>끊긴 고리 — 지금 두 곳</h2>
+<div class="row">
+  <div class="box you"><b>1 · 시트 → 대시보드</b><small>v5.7이 26년 회의록 시트를 읽지 않음. 코어크가 정리한 것이 화면에 안 옴</small></div>
+  <div class="box you"><b>2 · 코어크 기억 → 스킬</b><small>「첨부 자료 2개」 약속이 스킬에 없어 새 창이 몰랐음 (오늘 실제 발생)</small></div>
+</div>
+
+<h2>실제로 한 번 따라가 보기 — 유한대 기숙사 17행</h2>
+<div class="ex">
+<div class="step">통화가 PLAUD에 녹음됨 → 차장님이 코어크에 「PLAUD 정리해」 ← <b>손 1</b></div>
+<div class="step">코어크가 판정·요약해 <span class="k">「유한대 기숙사」탭 17행</span>에 7열로 기록 (정답본으로 등록된 실제 행)</div>
+<div class="step">D열 기한이 <span class="k">할 일 모음</span>과 캘린더에 들어감 (자동)</div>
+<div class="step">차장님이 할 일 모음에서 ★ 체크 → <span class="k">0.무조건할일</span>로 넘어감 ← <b>손 3</b></div>
+<div class="step"><span style="color:#8E99A4">(설계)</span> 아침에 폰에서 대시보드 열기 → 맨 위 「오늘 볼 것」에 유한대 17행이 🔴로 뜸, 누르면 PLAUD 링크</div>
+<div class="step"><span style="color:#8E99A4">(설계)</span> 처리 후 체크 → 시트 A열 완료 → 다음에 열면 안 보임</div>
+</div>
+
+<h2>지금 없는 것 (점선 상자 전부)</h2>
+<div class="warn">
+① 대시보드가 26년 회의록 시트를 읽는 코드 &nbsp;② 수금정리 엑셀 입구 &nbsp;③ 폰에서 열 고정 주소(GitHub Pages 켜짐 여부 미확인) &nbsp;④ 코어크에 「대시보드 안 그린다」 규칙 저장<br>
+<b>①②는 이 창이 만들고, ③은 확인하면 되고, ④는 차장님이 코어크 창에서 저장하셔야 합니다.</b>
+</div>
+
+<h2>결론 숫자</h2>
+<div class="tw"><table>
+<tr><th>주황(차장님 손)</th><td><b>매일 3개</b> — PLAUD 정리 지시 · 엑셀 업로드(바뀔 때) · 결정·체크 &nbsp;+ 고칠 때만 1개</td></tr>
+<tr><th>끊긴 고리</th><td><b>2곳</b> — 시트→대시보드 미연결 · 코어크 기억→스킬 미저장</td></tr>
+<tr><th>중복</th><td><b>2곳</b> — 코어크의 HTML 그리기 · v5.7 자체 회의록 저장소</td></tr>
+</table></div>
+
+<div class="sub" style="margin-top:24px">※ 자가신고: 실선 상자(PLAUD·코어크·26년 회의록 시트·클로드 코드·GitHub 파일 5개·유한대 17행)는 이 대화에서 확인한 실제입니다. 점선 상자(시트→대시보드 연결·수금 입구·고정 주소)는 설계이며 아직 없습니다. 지어낸 숫자는 없고, GitHub Pages 켜짐 여부만 미확인입니다.</div>
+
+</div></body></html>
