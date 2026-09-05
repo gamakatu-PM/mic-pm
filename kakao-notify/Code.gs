@@ -8,7 +8,7 @@
  * 돌아가는 것
  *   morningBrief  평일 07:30  ① 오늘 할 일(무조건할일) ② D-day 경고 ③ 오늘 일정
  *   eveningBrief  평일 18:00  ① 내일 D-day ② 미완료 무조건할일 ③ 내일 일정
- *   hourlyCheck   매시간      ④ 신규 현장 ★ ⑤ 시스템 이상 (같은 건은 하루 1번만)
+ *   hourlyCheck   매시간      ④ 신규 현장 ★ ⑤ 시스템 이상 (같은 건은 하루 1번만) ⑦ 상황판(07~21시 매시간: 다음 일정·오늘 마감·무조건할일)
  *   weekendReview 토·일 09:00 ⑥ 주말 검토판 — 미완료 전체(현장별)·무조건할일 상세·다음 주 일정·이번 주 신규 현장·시스템 상태
  *
  * 카카오 텍스트 메시지는 한 건 200자 제한 → 자동으로 나눠 보낸다 (1/3, 2/3 …).
@@ -16,7 +16,7 @@
 
 // ───────────────────────── 고정 상수 (시트 규격 정본: km-11 / km-18 / km-site-radar) ─────────────────────────
 var KM = {
-  VERSION: 'v1.1 2026-09-05',
+  VERSION: 'v1.3 2026-09-05',
   TZ: 'Asia/Seoul',
   MEETING_SHEET_ID: '1RzDj_mm3fY6l42hF9AJ-r5KY50OCVIV7IwSIQeh3rms',   // 26년 회의록
   TAB_TODO: '할 일 모음',            // A기한 B종류 C현장 D할일 E상대 F상태 G(D-) H현장시트 I통화원본 J캘린더ID
@@ -51,7 +51,11 @@ var DEFAULT_SETTINGS = [
   ['주말 검토판 시각', '09:00', '바꾸면 installTriggers 다시 실행'],
   ['주말 검토판 요일', '토,일', '쉼표로. 예: 토 / 토,일 / 일'],
   ['주말 검토판 최대 줄수', '30', '한 종류 메시지에 담는 최대 줄 (200자 단위로 자동 분할)'],
-  ['주말 검토판 글자수', '60', '한 줄에 담는 내용 글자수 (평일은 40)']
+  ['주말 검토판 글자수', '60', '한 줄에 담는 내용 글자수 (평일은 40)'],
+  ['매시간 상황판', 'Y', '매시간 한 장: 다음 일정 · 오늘 마감 · 무조건할일 (아침·저녁 브리핑 시각은 건너뜀)'],
+  ['매시간 상황판 시간대', '07-21', '이 시간 안에서만. 예: 07-21 / 08-20'],
+  ['매시간 상황판 주말', 'Y', 'N이면 토·일은 상황판 없음'],
+  ['매시간 상황판 변화 없을 때', '보냄', '「생략」이면 직전과 내용이 같을 때 안 보냄']
 ];
 
 var SOURCE_HEADERS = ['출처 이름', '시트 ID', '탭 이름', '헤더 행', '날짜 열', '제목 열', '현장 열', '상태 열', '완료로 볼 값(쉼표)', '사용(Y/N)'];
@@ -68,7 +72,7 @@ function setup() {
   installTriggers();
   log_('setup', true, 0, '설정 시트: ' + ss.getUrl());
   Logger.log('설정 시트: ' + ss.getUrl());
-  Logger.log('다음: ① 설정 탭에 KAKAO_REST_KEY 입력 ② 웹앱 배포 후 /exec 열어 카카오 인증');
+  Logger.log('다음: ① 설정 탭에 KAKAO_REST_KEY 입력 ② 웹앱 배포 후 /exec?pin=(설정의 AUTH_PIN) 열어 카카오 인증');
   return ss.getUrl();
 }
 
@@ -105,12 +109,13 @@ function getConfigSheet_() {
     st.getRange(1, 1, 1, 3).setValues([['항목', '값', '설명']]).setFontWeight('bold');
     st.getRange(2, 1, DEFAULT_SETTINGS.length, 3).setValues(DEFAULT_SETTINGS);
     var r = DEFAULT_SETTINGS.length + 3;
-    st.getRange(r, 1, 3, 3).setValues([
+    st.getRange(r, 1, 4, 3).setValues([
       ['KAKAO_REST_KEY', '', '카카오 개발자 콘솔 → 앱 → 앱 키 → REST API 키'],
       ['KAKAO_CLIENT_SECRET', '', '보안 → Client Secret 을 「사용함」으로 켠 경우만'],
-      ['WEBAPP_URL', '', '배포 → 웹 앱 URL(/exec). 카카오 Redirect URI에 똑같이 등록']
+      ['WEBAPP_URL', '', '배포 → 웹 앱 URL(/exec). 카카오 Redirect URI에 똑같이 등록'],
+      ['AUTH_PIN', String(100000 + Math.floor(Math.random() * 900000)), '인증 페이지 열 때 ?pin=이값 을 붙여야 함 (남이 내 알림을 가로채지 못하게). 바꿔도 됨']
     ]);
-    st.getRange(2, 2, r + 2, 1).setBackground('#FFF2CC');
+    st.getRange(2, 2, r + 3, 1).setBackground('#FFF2CC');
     st.setColumnWidth(1, 200); st.setColumnWidth(2, 380); st.setColumnWidth(3, 420);
     st.setFrozenRows(1);
   }
@@ -129,21 +134,25 @@ function getConfigSheet_() {
   return ss;
 }
 
+var SETTINGS_CACHE_ = null;   // 실행 1회 동안만 유지 (Apps Script는 실행마다 전역이 새로 만들어진다)
 function getSetting_(key, dflt) {
   try {
-    var st = getConfigSheet_().getSheetByName('설정');
-    var vals = st.getRange(1, 1, st.getLastRow(), 2).getValues();
-    for (var i = 0; i < vals.length; i++) {
-      if (String(vals[i][0]).trim() === key) {
-        var v = vals[i][1];
-        if (v === '' || v === null || v === undefined) return dflt;
-        return String(v).trim();
-      }
+    if (!SETTINGS_CACHE_) {
+      var st = getConfigSheet_().getSheetByName('설정');
+      var vals = st.getRange(1, 1, Math.max(1, st.getLastRow()), 2).getValues();
+      var map = {};
+      for (var i = 0; i < vals.length; i++) map[String(vals[i][0]).trim()] = vals[i][1];
+      SETTINGS_CACHE_ = map;
     }
-  } catch (err) { /* 설정 시트 못 열면 기본값 */ }
-  return dflt;
+    var v = SETTINGS_CACHE_[key];
+    if (v === '' || v === null || v === undefined) return dflt;
+    return String(v).trim();
+  } catch (err) { return dflt; }
 }
+function clearSettingsCache_() { SETTINGS_CACHE_ = null; }
 function isYes_(v) { return /^(y|yes|예|on|true|1)$/i.test(String(v || '').trim()); }
+/** 숫자 설정. 0도 유효값. 숫자가 아니면 기본값. */
+function numSetting_(key, dflt) { var v = Number(String(getSetting_(key, dflt)).replace(/[^\d.-]/g, '')); return isNaN(v) ? dflt : v; }
 
 // ═══════════════════════════════ 2. 카카오 인증 (웹앱) ═══════════════════════════════
 
@@ -156,10 +165,24 @@ function doGet(e) {
   if (!redirect) return html_('<h3>설정 탭 WEBAPP_URL 에 이 페이지 주소(/exec)를 넣어 주세요.</h3>');
 
   if (p.error) return html_('<h3>카카오 인증 실패</h3><p>' + esc_(p.error) + ' — ' + esc_(p.error_description || '') + '</p>');
+  var props = PropertiesService.getScriptProperties();
 
   if (p.code) {
+    // ① state 검증: 이 스크립트가 10분 안에 발급한 state 여야 한다
+    var pending = props.getProperty('KAKAO_OAUTH_STATE') || '';
+    var parts = pending.split('|');
+    if (!p.state || parts[0] !== p.state || Date.now() - Number(parts[1] || 0) > 10 * 60 * 1000) {
+      log_('auth', false, 0, 'state 불일치/만료');
+      return html_('<h3>인증 요청이 만료됐거나 올바르지 않습니다.</h3><p>PIN을 붙인 주소로 처음부터 다시 열어 주세요.</p>');
+    }
+    props.deleteProperty('KAKAO_OAUTH_STATE');
     try {
       var tok = exchangeCode_(restKey, redirect, p.code);
+      // ② 소유자 잠금: 처음 인증한 카카오 계정만 허용. 다른 계정이면 저장하지 않는다
+      var me = kakaoUserId_(tok.access_token);
+      var owner = props.getProperty('KAKAO_OWNER_ID');
+      if (owner && me && owner !== me) { log_('auth', false, 0, '다른 카카오 계정 시도 ' + me); return html_('<h3>등록된 카카오 계정이 아닙니다.</h3><p>계정을 바꾸려면 편집기에서 resetKakaoAuth 를 실행한 뒤 다시 인증하세요.</p>'); }
+      if (!owner && me) props.setProperty('KAKAO_OWNER_ID', me);
       saveTokens_(tok);
       var n = sendKakao_('✅ KM 카카오 알림 연결 완료 (' + KM.VERSION + ')\n아침 ' + getSetting_('아침 브리핑 시각', '07:30') + ' · 저녁 ' + getSetting_('저녁 브리핑 시각', '18:00') + ' · 이상 시 즉시', null, null, 'auth');
       return html_('<h3>연결 완료 ✅</h3><p>카카오톡 「나와의 채팅」에 확인 메시지 ' + n + '건이 갔습니다. 이 창은 닫으셔도 됩니다.</p>');
@@ -168,10 +191,15 @@ function doGet(e) {
       return html_('<h3>토큰 발급 실패</h3><pre>' + esc_(String(err)) + '</pre><p>Redirect URI가 카카오 콘솔에 똑같이 등록됐는지 확인해 주세요.</p>');
     }
   }
+  // 시작 페이지: PIN이 맞아야 인증 링크를 만들어 준다
+  var pin = getSetting_('AUTH_PIN', '');
+  if (pin && String(p.pin || '') !== pin) return html_('<h3>KM 카카오 알림</h3><p>설정 시트의 AUTH_PIN 을 주소 뒤에 붙여 여세요.<br>예) …/exec?pin=123456</p>');
+  var state = Utilities.getUuid().replace(/-/g, '');
+  props.setProperty('KAKAO_OAUTH_STATE', state + '|' + Date.now());
   var url = 'https://kauth.kakao.com/oauth/authorize?response_type=code'
     + '&client_id=' + encodeURIComponent(restKey)
     + '&redirect_uri=' + encodeURIComponent(redirect)
-    + '&scope=talk_message';
+    + '&scope=talk_message&state=' + state;
   return html_('<h2>KM 카카오 알림</h2><p>아래를 누르면 카카오 로그인 → 「카카오톡 메시지 전송」 동의 → 자동으로 돌아옵니다.</p>'
     + '<p><a href="' + url + '" target="_top" style="display:inline-block;padding:14px 22px;background:#FEE500;color:#191919;border-radius:8px;font-size:18px;text-decoration:none;font-weight:bold">카카오 인증 시작</a></p>'
     + '<p style="color:#888;font-size:12px">Redirect URI: ' + esc_(redirect) + '</p>');
@@ -179,9 +207,19 @@ function doGet(e) {
 
 function html_(body) {
   return HtmlService.createHtmlOutput('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:sans-serif;padding:24px;max-width:520px">' + body + '</body>')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 function esc_(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+/** 카카오 사용자 id (소유자 잠금용). 실패하면 '' — 인증 자체는 막지 않는다 */
+function kakaoUserId_(accessToken) {
+  try {
+    var res = UrlFetchApp.fetch('https://kapi.kakao.com/v2/user/me', { method: 'get', muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + accessToken } });
+    if (res.getResponseCode() !== 200) return '';
+    var j = JSON.parse(res.getContentText());
+    return j && j.id ? String(j.id) : '';
+  } catch (err) { return ''; }
+}
 
 function exchangeCode_(restKey, redirect, code) {
   var payload = { grant_type: 'authorization_code', client_id: restKey, redirect_uri: redirect, code: code };
@@ -198,7 +236,7 @@ function tokenRequest_(payload) {
   var code = res.getResponseCode(), body = res.getContentText();
   var j = {};
   try { j = JSON.parse(body); } catch (err) { /* 비JSON */ }
-  if (code !== 200 || !j.access_token) throw new Error('kauth ' + code + ': ' + body);
+  if (code !== 200 || !j.access_token) throw new Error('kauth ' + code + ': ' + (j.error ? j.error + ' ' + (j.error_description || '') : '응답 ' + body.length + '자'));
   return j;
 }
 
@@ -407,7 +445,7 @@ function readNewRadarStars_() {
     var row = vals[r];
     if (String(row[cJ]).indexOf('★') !== 0) continue;
     var key = String(row[cAd] || '') + '|' + String(row[cNm] || '');
-    if (!key.replace('|', '').trim() || seen[key]) continue;
+    if (!key.replace('|', '').trim() || seen.has(key)) continue;
     out.push({ key: key, region: String(row[cSi] || ''), addr: String(row[cAd] || ''), name: String(row[cNm] || ''), use: String(row[cUs] || ''), area: row[cAr], rooms: String(row[cRm] || ''), next: String(row[cNx] || '') });
   }
   return out;
@@ -449,7 +487,7 @@ function systemChecks_() {
     if (lg && lg.getLastRow() >= 2) {
       var lastRow = lg.getRange(lg.getLastRow(), 1, 1, Math.max(1, lg.getLastColumn())).getValues()[0];
       var lastAt = lastRow[0] instanceof Date ? lastRow[0] : parseDate_(lastRow[0]);
-      var hrs = Number(getSetting_('레이더 미수집 기준(시간)', '36'));
+      var hrs = numSetting_('레이더 미수집 기준(시간)', 36);
       if (lastAt && (Date.now() - lastAt.getTime()) > hrs * 3600 * 1000) {
         out.push({ key: 'radar-stale|' + today, msg: '레이더 마지막 수집 ' + Utilities.formatDate(lastAt, KM.TZ, 'M/d HH:mm') + ' — ' + hrs + '시간 넘게 기록 없음' });
       }
@@ -479,7 +517,7 @@ function runBrief_(mode) {
   msgs.forEach(function (m) {
     try { total += sendKakao_(m.text, m.link, m.button, mode + ':' + m.kind); } catch (err) { /* 로그는 sendKakao_ 안에서 */ }
   });
-  if (mode === 'morning' || mode === 'evening') {
+  if (total > 0) {                                     // 실제로 카카오가 갔을 때만 알림 횟수를 올린다
     try { markMustDoNotified_(readMustDo_()); } catch (err) { log_('mustdo-mark', false, 0, String(err)); }
   }
   return total;
@@ -490,8 +528,8 @@ function runBrief_(mode) {
  * 반환: [{kind, text, link, button}]
  */
 function buildBriefMessages_(mode, now) {
-  var maxLines = Number(getSetting_('할 일 최대 줄수', '10')) || 10;
-  var warnDays = Number(getSetting_('D-day 경고 일수', '3')) || 3;
+  var maxLines = Math.max(1, numSetting_('할 일 최대 줄수', 10));
+  var warnDays = numSetting_('D-day 경고 일수', 3);
   var dayLabel = fmtMD_(now);
   var msgs = [];
   var mustdo = safe_(readMustDo_, []);
@@ -570,7 +608,7 @@ function hourlyCheck() {
   }
   if (isYes_(getSetting_('시스템 경고', 'Y'))) {
     var seen = getSeen_('sys');
-    var warns = safe_(systemChecks_, []).filter(function (w) { return !seen[w.key]; });
+    var warns = safe_(systemChecks_, []).filter(function (w) { return !seen.has(w.key); });
     if (warns.length) {
       var t2 = '🚨 시스템 이상 ' + warns.length + '건\n' + warns.map(function (w) { return '· ' + w.msg; }).join('\n');
       try {
@@ -579,7 +617,68 @@ function hourlyCheck() {
       } catch (err) { /* 로그됨 */ }
     }
   }
+  try { sent += hourlyPulse_(); } catch (err) { log_('pulse', false, 0, String(err)); }
   return sent;
+}
+
+// ═══════════════════════════════ 5-2. 매시간 상황판 ═══════════════════════════════
+
+/** 시간대 안이면 상황판 1장 전송. 아침·저녁 브리핑 시각과 겹치는 시간은 건너뜀. */
+function hourlyPulse_() {
+  if (!isYes_(getSetting_('매시간 상황판', 'Y'))) return 0;
+  var now = nowKST_();
+  if (isWeekend_(now) && !isYes_(getSetting_('매시간 상황판 주말', 'Y'))) return 0;
+  var rng = String(getSetting_('매시간 상황판 시간대', '07-21')).match(/(\d{1,2})\D+(\d{1,2})/);
+  var h0 = rng ? Number(rng[1]) : 7, h1 = rng ? Number(rng[2]) : 21, h = now.getHours();
+  if (h < h0 || h > h1) return 0;
+  var mh = parseHHMM_(getSetting_('아침 브리핑 시각', '07:30')).h, eh = parseHHMM_(getSetting_('저녁 브리핑 시각', '18:00')).h;
+  if (!isWeekend_(now) && (h === mh || h === eh)) { return 0; }   // 그 시간엔 브리핑이 간다
+  var m = buildPulseMessage_(now);
+  var props = PropertiesService.getScriptProperties();
+  var sig = m.text.replace(/^🕐 \S+ /, '');                        // 시각 부분 제외한 내용으로 비교
+  if (/생략/.test(getSetting_('매시간 상황판 변화 없을 때', '보냄')) && props.getProperty('PULSE_LAST') === sig) { log_('pulse', true, 0, '변화 없음 — 생략'); return 0; }
+  var n = sendKakao_(m.text, m.link, m.button, 'pulse');
+  props.setProperty('PULSE_LAST', sig);
+  return n;
+}
+
+/** 순수 조립. 200자 안에 들어가게 짧게. */
+function buildPulseMessage_(now) {
+  var lines = ['🕐 ' + pad2_(now.getHours()) + ':' + pad2_(now.getMinutes()) + ' 상황 ' + fmtMD_(now)];
+  // 다음 일정
+  var ev = readCalendarRaw_(now);
+  var upcoming = ev.filter(function (e) { return e.allDay || e.start.getTime() >= now.getTime() - 5 * 60000; });
+  if (upcoming.length) {
+    var first = upcoming[0];
+    lines.push('▸ 다음 일정: ' + (first.allDay ? '종일' : Utilities.formatDate(first.start, KM.TZ, 'HH:mm')) + ' ' + first.title.slice(0, 30) + (upcoming.length > 1 ? ' (이후 ' + (upcoming.length - 1) + '건)' : ''));
+  } else if (ev.length) lines.push('▸ 오늘 일정 끝 (' + ev.length + '건 완료)');
+  else lines.push('▸ 오늘 일정 없음');
+  // 오늘 마감·지남
+  var todos = safe_(readTodo_, []).concat(safe_(readExtraSources_, []));
+  var dd = ddayGroups_(todos, now, numSetting_('D-day 경고 일수', 3));
+  lines.push('▸ 마감: 지남 ' + dd.over + ' · 오늘 ' + dd.today + ' · 임박 ' + dd.soon);
+  var ddLines = dd.lines.slice(0, 3).map(function (l) { return ' ' + l.slice(0, 44); });
+  // 무조건할일
+  var md = safe_(readMustDo_, []);
+  var stars = md.filter(function (i) { return i.star; });
+  var tail = '▸ 무조건할일 미완료 ' + md.length + (stars.length ? ' (★' + stars.length + ': ' + stars[0].content.replace(/\s+/g, ' ').slice(0, 24) + ')' : '');
+  // 상황판은 한 장(190자) 고정 — 넘치면 마감 상세 줄을 뒤에서부터 뺀다
+  var text = lines.concat(ddLines, [tail]).join('\n');
+  while (text.length > KM.CHUNK_MAX && ddLines.length) { ddLines.pop(); text = lines.concat(ddLines, [tail]).join('\n'); }
+  if (text.length > KM.CHUNK_MAX) text = text.slice(0, KM.CHUNK_MAX - 1) + '…';
+  return { kind: 'pulse', text: text, link: sheetLink_(KM.MEETING_SHEET_ID, KM.GID_MUSTDO), button: '무조건할일 열기' };
+}
+
+/** 캘린더 하루치 원자료 → [{title, start, allDay}] 시각순 */
+function readCalendarRaw_(day) {
+  try {
+    var id = getSetting_('캘린더 ID', '');
+    var cal = id ? CalendarApp.getCalendarById(id) : CalendarApp.getDefaultCalendar();
+    if (!cal) return [];
+    return cal.getEventsForDay(day).map(function (e) { return { title: e.getTitle(), start: e.getStartTime(), allDay: e.isAllDayEvent() }; })
+      .filter(function (e) { return !/^\[완료\]/.test(e.title); })
+      .sort(function (a, b) { return (a.allDay ? -1 : a.start.getTime()) - (b.allDay ? -1 : b.start.getTime()); });
+  } catch (err) { log_('calendar', false, 0, String(err)); return []; }
 }
 
 // ═══════════════════════════════ 5-1. 주말 검토판 ═══════════════════════════════
@@ -596,14 +695,14 @@ function weekendReview() {
   msgs.forEach(function (m) {
     try { total += sendKakao_(m.text, m.link, m.button, 'weekend:' + m.kind); } catch (err) { /* 로그됨 */ }
   });
-  try { markMustDoNotified_(readMustDo_()); } catch (err) { log_('mustdo-mark', false, 0, String(err)); }
+  if (total > 0) { try { markMustDoNotified_(readMustDo_()); } catch (err) { log_('mustdo-mark', false, 0, String(err)); } }
   return total;
 }
 
 /** 순수 조립 (전송 없음). 반환 [{kind, text, link, button}] */
 function buildWeekendMessages_(now) {
-  var maxLines = Number(getSetting_('주말 검토판 최대 줄수', '30')) || 30;
-  var W = Number(getSetting_('주말 검토판 글자수', '60')) || 60;
+  var maxLines = Math.max(1, numSetting_('주말 검토판 최대 줄수', 30));
+  var W = Math.max(10, numSetting_('주말 검토판 글자수', 60));
   var msgs = [];
   var cut = function (t) { return String(t || '').replace(/\s+/g, ' ').slice(0, W); };
   var mon = addDays_(now, (8 - now.getDay()) % 7 || 7);           // 다음 주 월요일
@@ -660,7 +759,7 @@ function buildWeekendMessages_(now) {
   if (radar && (radar.stars.length || radar.review)) {
     var seen = getSeen_('radar'), weekAgo = ymd6_(addDays_(now, -7));
     var l4 = radar.stars.slice(0, maxLines).map(function (s) {
-      var when = seen[s.key];
+      var when = seen.has(s.key);
       return '★ ' + (s.region ? s.region + ' ' : '') + cut(s.name || s.addr) + (s.rooms ? ' / ' + s.rooms : '') + (s.area ? ' / ' + fmtNum_(s.area) + '㎡' : '') + (when && when >= weekAgo ? ' 🆕' : '') + (s.next ? '\n  → ' + cut(s.next) : '');
     });
     msgs.push({ kind: 'radar-week', text: '🏗 신규 현장 검토 — ★ ' + radar.stars.length + '건 · △검토 ' + radar.review + '건 (🆕 = 이번 주 발견)\n' + l4.join('\n') + (radar.stars.length > maxLines ? '\n외 ' + (radar.stars.length - maxLines) + '건' : ''), link: sheetLink_(KM.RADAR_SHEET_ID, null), button: '레이더 열기' });
@@ -731,7 +830,7 @@ function healthSummary_(now) {
   } catch (err) { lines.push('· 발송로그 못 읽음'); }
   // 시스템 경고 키(이번 주)
   var seenSys = getSeen_('sys'), weekAgo = ymd6_(addDays_(now, -7)), warnN = 0;
-  Object.keys(seenSys).forEach(function (k) { if (seenSys[k] >= weekAgo) warnN++; });
+  Object.keys(seenSys).forEach(function (k) { if (String(seenSys[k]) >= weekAgo) warnN++; });
   lines.push('· 시스템 경고 ' + warnN + '건');
   // 지금 상태의 경고
   var cur = safe_(systemChecks_, []);
@@ -754,16 +853,38 @@ function healthSummary_(now) {
 
 // ═══════════════════════════════ 6. 중복 방지 (Script Properties) ═══════════════════════════════
 
+/**
+ * 이미 알린 것 기록. Script Properties 값 1개는 9KB 한도라
+ * ① 키는 원문이 아니라 8자리 해시로 저장하고 ② 저장 문자열이 6,000자를 넘으면 오래된 것부터 지운다.
+ * 반환 객체는 {원문키: 날짜} 모양으로 쓸 수 있게 has()로 감싼다.
+ */
 function getSeen_(bucket) {
-  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('SEEN_' + bucket) || '{}'); } catch (err) { return {}; }
+  var raw = {};
+  try { raw = JSON.parse(PropertiesService.getScriptProperties().getProperty('SEEN_' + bucket) || '{}'); } catch (err) { raw = {}; }
+  var view = {};
+  Object.keys(raw).forEach(function (h) { view[h] = raw[h]; });
+  // 원문 키로도 조회되게 프록시 대신 함수 속성을 붙인다 (V8/Node 공통)
+  Object.defineProperty(view, 'has', { value: function (k) { return raw[hash_(k)] || raw[k] || null; }, enumerable: false });
+  return view;
 }
 function markSeen_(bucket, keys) {
-  var seen = getSeen_(bucket), today = ymd6_(nowKST_());
-  keys.forEach(function (k) { seen[k] = today; });
-  // 90일 넘은 키 정리 (속성 크기 9KB 한도)
-  var ks = Object.keys(seen);
-  if (ks.length > 400) ks.sort(function (a, b) { return String(seen[a]).localeCompare(String(seen[b])); }).slice(0, ks.length - 400).forEach(function (k) { delete seen[k]; });
-  PropertiesService.getScriptProperties().setProperty('SEEN_' + bucket, JSON.stringify(seen));
+  var props = PropertiesService.getScriptProperties();
+  var raw = {};
+  try { raw = JSON.parse(props.getProperty('SEEN_' + bucket) || '{}'); } catch (err) { raw = {}; }
+  var today = ymd6_(nowKST_());
+  keys.forEach(function (k) { raw[hash_(k)] = today; });
+  var json = JSON.stringify(raw);
+  if (json.length > 6000) {
+    var ks = Object.keys(raw).sort(function (a, b) { return String(raw[a]).localeCompare(String(raw[b])); });
+    while (json.length > 6000 && ks.length) { delete raw[ks.shift()]; json = JSON.stringify(raw); }
+  }
+  props.setProperty('SEEN_' + bucket, json);
+}
+/** djb2 → 8자리 16진수 (원문 키가 한글 수십 자라도 8바이트로 고정) */
+function hash_(str) {
+  var h = 5381, s = String(str);
+  for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return ('00000000' + (h >>> 0).toString(16)).slice(-8);
 }
 
 // ═══════════════════════════════ 7. 유틸 ═══════════════════════════════
@@ -837,9 +958,11 @@ function previewMorning() { var m = buildBriefMessages_('morning', nowKST_()); m
 function previewEvening() { var m = buildBriefMessages_('evening', nowKST_()); m.forEach(function (x) { Logger.log('[' + x.kind + '] ' + x.text.length + '자\n' + x.text); }); return m; }
 /** 전송 없이 주말 검토판 내용만 로그로 확인 */
 function previewWeekend() { var m = buildWeekendMessages_(nowKST_()); m.forEach(function (x) { Logger.log('[' + x.kind + '] ' + x.text.length + '자\n' + x.text); }); return m; }
+/** 전송 없이 매시간 상황판 내용만 로그로 확인 */
+function previewPulse() { var m = buildPulseMessage_(nowKST_()); Logger.log(m.text.length + '자\n' + m.text); return m; }
 /** 전송 없이 시스템 검사·신규 현장만 로그로 확인 */
 function previewHourly() { Logger.log(JSON.stringify({ radar: safe_(readNewRadarStars_, []), system: safe_(systemChecks_, []) }, null, 1)); }
 /** 중복 방지 기록 초기화 (다시 전부 알리고 싶을 때) */
 function resetSeen() { var p = PropertiesService.getScriptProperties(); p.deleteProperty('SEEN_radar'); p.deleteProperty('SEEN_sys'); log_('resetSeen', true, 0, '초기화'); }
 /** 카카오 토큰 삭제 (재인증할 때) */
-function resetKakaoAuth() { var p = PropertiesService.getScriptProperties(); ['KAKAO_ACCESS_TOKEN', 'KAKAO_ACCESS_EXP', 'KAKAO_REFRESH_TOKEN', 'KAKAO_REFRESH_EXP'].forEach(function (k) { p.deleteProperty(k); }); log_('resetKakaoAuth', true, 0, '토큰 삭제'); }
+function resetKakaoAuth() { var p = PropertiesService.getScriptProperties(); ['KAKAO_ACCESS_TOKEN', 'KAKAO_ACCESS_EXP', 'KAKAO_REFRESH_TOKEN', 'KAKAO_REFRESH_EXP', 'KAKAO_OWNER_ID', 'KAKAO_OAUTH_STATE'].forEach(function (k) { p.deleteProperty(k); }); log_('resetKakaoAuth', true, 0, '토큰·소유자 삭제'); }

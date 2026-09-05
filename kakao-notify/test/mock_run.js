@@ -11,18 +11,20 @@ const NOW = new Date(2026, 8, 7, 7, 30); // 2026-09-07(월) 07:30 KST 가정
 let fetchLog = [], mailLog = [], logRows = [], props = {}, sheets = {}, calEvents = {};
 const kapi = { status: 200, body: '{"result_code":0}' };
 const kauth = { status: 200, body: JSON.stringify({ access_token: 'AT2', expires_in: 21600, refresh_token: 'RT2', refresh_token_expires_in: 5184000 }) };
+const userMe = { status: 200, body: '{"id":111}' };
+let triggers = [];
 
 function mkSheet(name, rows) {
   const data = rows.map(r => r.slice());
   return {
     _name: name, _data: data,
     getName: () => name, setName(n) { this._name = n; return this; },
-    getDataRange() { const d = data; return { getValues: () => d.map(r => r.slice()) }; },
+    getDataRange() { const d = data; return { getValues: () => d.map(r => (r || []).slice()) }; },
     getLastRow: () => data.length, getLastColumn: () => Math.max(...data.map(r => r.length), 1),
     getRange(r, c, nr = 1, nc = 1) {
       return {
         getValues: () => Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => (data[r - 1 + i] || [])[c - 1 + j] ?? '')),
-        setValues(v) { for (let i = 0; i < nr; i++) { data[r - 1 + i] = data[r - 1 + i] || []; for (let j = 0; j < nc; j++) data[r - 1 + i][c - 1 + j] = v[i][j]; } return this; },
+        setValues(v) { if (v.length !== nr || v.some(row => row.length !== nc)) throw new Error('setValues 크기 불일치 ' + v.length + 'x' + (v[0] || []).length + ' vs ' + nr + 'x' + nc); for (let i = 0; i < nr; i++) { data[r - 1 + i] = data[r - 1 + i] || []; for (let j = 0; j < nc; j++) data[r - 1 + i][c - 1 + j] = v[i][j]; } return this; },
         setFontWeight() { return this; }, setBackground() { return this; }
       };
     },
@@ -32,21 +34,22 @@ function mkSheet(name, rows) {
 }
 function mkSS(id, tabs) {
   const ss = { _id: id, _tabs: tabs, getId: () => id, getUrl: () => 'https://docs.google.com/' + id,
-    getSheetByName: n => tabs[n] || null, getSheets: () => Object.values(tabs),
+    getSheetByName: n => tabs[n] || Object.values(tabs).find(t => t._name === n) || null, getSheets: () => Object.values(tabs),
     insertSheet(n) { tabs[n] = mkSheet(n, []); return tabs[n]; } };
   return ss;
 }
 global.SpreadsheetApp = { openById: id => { if (!sheets[id]) throw new Error('no sheet ' + id); return sheets[id]; }, create: t => { const ss = mkSS('CFG', { Sheet1: mkSheet('Sheet1', []) }); sheets.CFG = ss; return ss; } };
 global.PropertiesService = { getScriptProperties: () => ({ getProperty: k => props[k] ?? null, setProperty: (k, v) => { props[k] = v; }, setProperties: o => Object.assign(props, o), deleteProperty: k => { delete props[k]; } }) };
-global.UrlFetchApp = { fetch: (url, opt) => { fetchLog.push({ url, opt }); const r = url.indexOf('kauth') >= 0 ? kauth : kapi; return { getResponseCode: () => r.status, getContentText: () => r.body }; } };
-global.Utilities = { formatDate: (d, tz, fmt) => { const p = n => String(n).padStart(2, '0'); const m = { yyyy: d.getFullYear(), MM: p(d.getMonth() + 1), dd: p(d.getDate()), HH: p(d.getHours()), mm: p(d.getMinutes()), ss: p(d.getSeconds()), M: d.getMonth() + 1, d: d.getDate() }; return fmt.replace(/yyyy|MM|dd|HH|mm|ss|M|d/g, k => m[k]); } };
+global.UrlFetchApp = { fetch: (url, opt) => { fetchLog.push({ url, opt }); const r = url.indexOf('kauth') >= 0 ? kauth : url.indexOf('user/me') >= 0 ? userMe : kapi; return { getResponseCode: () => r.status, getContentText: () => r.body }; } };
+let uuidN = 0;
+global.Utilities = { getUuid: () => 'uuid-' + (++uuidN) + '-xxxx', formatDate: (d, tz, fmt) => { const p = n => String(n).padStart(2, '0'); const m = { yyyy: d.getFullYear(), MM: p(d.getMonth() + 1), dd: p(d.getDate()), HH: p(d.getHours()), mm: p(d.getMinutes()), ss: p(d.getSeconds()), M: d.getMonth() + 1, d: d.getDate() }; return fmt.replace(/yyyy|MM|dd|HH|mm|ss|M|d/g, k => m[k]); } };
 global.Logger = { log: () => {} };
 global.Session = { getEffectiveUser: () => ({ getEmail: () => 'me@example.com' }) };
 global.MailApp = { sendEmail: (to, sub, body) => mailLog.push({ to, sub, body }) };
 global.CalendarApp = { getDefaultCalendar: () => ({ getEventsForDay: d => (calEvents[d.getDate()] || []).map(e => ({ getTitle: () => e.t, isAllDayEvent: () => !!e.all, getStartTime: () => new Date(2026, 8, d.getDate(), e.h || 9, 0) })) }), getCalendarById: () => null };
 let driveFiles = [];
 global.DriveApp = { getFolderById: () => ({ getFiles: () => { let i = 0; return { hasNext: () => i < driveFiles.length, next: () => driveFiles[i++] }; } }), getFileById: () => ({ moveTo() {} }) };
-global.ScriptApp = { getProjectTriggers: () => [], deleteTrigger() {}, newTrigger: () => ({ timeBased() { return this; }, everyDays() { return this; }, everyHours() { return this; }, atHour() { return this; }, nearMinute() { return this; }, inTimezone() { return this; }, create() {} }), getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/X/exec' }) };
+global.ScriptApp = { getProjectTriggers: () => triggers.slice(), deleteTrigger(t) { triggers = triggers.filter(x => x !== t); }, newTrigger: (fn) => ({ _fn: fn, timeBased() { return this; }, everyDays() { return this; }, everyHours() { return this; }, atHour(h) { this._h = h; return this; }, nearMinute(m) { this._m = m; return this; }, inTimezone() { return this; }, create() { const t = { getHandlerFunction: () => fn, _h: this._h, _m: this._m }; triggers.push(t); return t; } }), getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/X/exec' }) };
 global.HtmlService = { createHtmlOutput: h => ({ _h: h, setXFrameOptionsMode() { return this; } }), XFrameOptionsMode: { ALLOWALL: 1 } };
 
 // Code.gs 로드 (전역 함수로)
@@ -58,7 +61,8 @@ const FIXED_NOW = NOW.getTime(); Date.now = () => FIXED_NOW;
 
 // ─── 시트 데이터 (실제 규격대로) ───
 function seed() {
-  fetchLog = []; mailLog = []; logRows = []; props = {}; driveFiles = []; calEvents = {};
+  fetchLog = []; mailLog = []; logRows = []; props = {}; driveFiles = []; calEvents = {}; triggers = [];
+  if (typeof clearSettingsCache_ === 'function') clearSettingsCache_();
   sheets = {};
   sheets[KM.MEETING_SHEET_ID] = mkSS(KM.MEETING_SHEET_ID, {
     '할 일 모음': mkSheet('할 일 모음', [
@@ -99,6 +103,7 @@ function seed() {
 
 // ─── 검사 도우미 ───
 let pass = 0, fail = 0;
+const setCfg = (k, v) => { sheets.CFG._tabs['설정']._data.find(r => r[0] === k)[1] = v; clearSettingsCache_(); };
 function check(name, cond, extra) { if (cond) { pass++; console.log('  ✔ ' + name); } else { fail++; console.log('  ✘ ' + name + (extra ? ' — ' + extra : '')); } }
 const kapiCalls = () => fetchLog.filter(f => f.url.indexOf('kapi') >= 0);
 const sentTexts = () => kapiCalls().map(f => JSON.parse(f.opt.payload.template_object).text);
@@ -240,11 +245,34 @@ kauth.body = JSON.stringify({ access_token: 'AT2', expires_in: 21600, refresh_to
 seed(); delete props.KAKAO_ACCESS_TOKEN; delete props.KAKAO_REFRESH_TOKEN;
 let pg = doGet({ parameter: {} });
 check('코드 없음 → 인증 시작 버튼 + scope=talk_message + redirect_uri', /kauth\.kakao\.com\/oauth\/authorize/.test(pg._h) && /scope=talk_message/.test(pg._h) && /redirect_uri=https%3A%2F%2Fscript/.test(pg._h));
+const st1 = (pg._h.match(/state=([a-z0-9-]+)/) || [])[1];
+check('state 발급·저장', !!st1 && props.KAKAO_OAUTH_STATE.indexOf(st1 + '|') === 0);
 pg = doGet({ parameter: { code: 'ABC' } });
-check('code 수신 → 토큰 교환(authorization_code) + 저장 + 확인 메시지 1건', fetchLog[0].opt.payload.grant_type === 'authorization_code' && fetchLog[0].opt.payload.code === 'ABC' && props.KAKAO_REFRESH_TOKEN === 'RT2' && /연결 완료/.test(pg._h) && kapiCalls().length === 1);
+check('state 없는 콜백 → 거부, 토큰 교환 없음', /만료됐거나 올바르지/.test(pg._h) && fetchLog.length === 0);
+pg = doGet({ parameter: { code: 'ABC', state: 'WRONG' } });
+check('state 틀린 콜백 → 거부', /만료됐거나 올바르지/.test(pg._h) && fetchLog.length === 0);
+pg = doGet({ parameter: {} }); const st2 = (pg._h.match(/state=([a-z0-9-]+)/) || [])[1];
+pg = doGet({ parameter: { code: 'ABC', state: st2 } });
+check('올바른 state → 토큰 교환 + user/me로 소유자 111 저장 + 확인 메시지 1건 + state 소거', fetchLog[0].opt.payload.grant_type === 'authorization_code' && fetchLog[0].opt.payload.code === 'ABC' && props.KAKAO_REFRESH_TOKEN === 'RT2' && props.KAKAO_OWNER_ID === '111' && /연결 완료/.test(pg._h) && kapiCalls().filter(f => /memo/.test(f.url)).length === 1 && !props.KAKAO_OAUTH_STATE, pg._h);
+pg = doGet({ parameter: {} }); const st3 = (pg._h.match(/state=([a-z0-9-]+)/) || [])[1];
+userMe.body = '{"id":999}'; props.KAKAO_REFRESH_TOKEN = 'RT2'; fetchLog = [];
+pg = doGet({ parameter: { code: 'EVIL', state: st3 } });
+check('다른 카카오 계정(999) → 거부, 기존 토큰 RT2 유지', /등록된 카카오 계정이 아닙니다/.test(pg._h) && props.KAKAO_REFRESH_TOKEN === 'RT2' && props.KAKAO_OWNER_ID === '111');
+userMe.body = '{"id":111}';
+pg = doGet({ parameter: {} }); const st4 = (pg._h.match(/state=([a-z0-9-]+)/) || [])[1];
+props.KAKAO_OAUTH_STATE = st4 + '|' + (FIXED_NOW - 11 * 60 * 1000); fetchLog = [];
+check('10분 지난 state → 거부', /만료됐거나 올바르지/.test(doGet({ parameter: { code: 'ABC', state: st4 } })._h) && fetchLog.length === 0);
+// PIN
+sheets.CFG._tabs['설정']._data.push(['AUTH_PIN', '246810', '']); clearSettingsCache_();
+pg = doGet({ parameter: {} });
+check('PIN 설정 시 pin 없이 열면 링크 없음', /AUTH_PIN/.test(pg._h) && pg._h.indexOf('kauth.kakao.com') < 0);
+pg = doGet({ parameter: { pin: '000000' } });
+check('틀린 pin → 링크 없음', pg._h.indexOf('kauth.kakao.com') < 0);
+pg = doGet({ parameter: { pin: '246810' } });
+check('맞는 pin → 인증 링크', pg._h.indexOf('kauth.kakao.com') > 0);
 pg = doGet({ parameter: { error: 'access_denied', error_description: 'user cancel' } });
 check('사용자 취소 → 실패 페이지, 전송 없음', /인증 실패/.test(pg._h));
-sheets.CFG._tabs['설정']._data.find(r => r[0] === 'KAKAO_REST_KEY')[1] = '';
+setCfg('KAKAO_REST_KEY', '');
 pg = doGet({ parameter: {} });
 check('REST 키 비어 있으면 안내만', /KAKAO_REST_KEY/.test(pg._h));
 
@@ -254,7 +282,7 @@ check("parseHHMM_('07:30')", JSON.stringify(parseHHMM_('07:30')) === '{"h":7,"m"
 check("parseHHMM_('18시')", JSON.stringify(parseHHMM_('18시')) === '{"h":18,"m":0}');
 check("colIdx_ A=0, F=5, AB=27, '3'=2, ''=-1", colIdx_('A') === 0 && colIdx_('F') === 5 && colIdx_('AB') === 27 && colIdx_('3') === 2 && colIdx_('') === -1);
 check("dday_ 오늘/D-2/D+3", dday_(NOW, NOW) === 'D-day' && dday_(NOW, addDays_(NOW, 2)) === 'D-2' && dday_(NOW, addDays_(NOW, -3)) === 'D+3');
-check('markSeen_ 400개 초과 시 오래된 키 정리', (() => { seed(); markSeen_('t', Array.from({ length: 450 }, (_, i) => 'k' + i)); return Object.keys(getSeen_('t')).length === 400; })());
+check('markSeen_ 450개 → 저장 문자열 6000자 이하로 오래된 키 정리, 최근 키는 유지', (() => { seed(); markSeen_('t', Array.from({ length: 450 }, (_, i) => 'k' + i)); return props.SEEN_t.length <= 6000 && Object.keys(getSeen_('t')).length >= 200; })());
 
 // ═══ 11. 주말 검토판 ═══
 console.log('\n[11] weekendReview');
@@ -288,15 +316,82 @@ check('토요일 실제 전송 ≥ 5건, 전부 ≤ 200자', wn >= 5 && sentText
 check('긴 메시지는 (1/n) 분할 접두어', sentTexts().some(t => /^\(1\/\d+\) /.test(t)));
 fetchLog = []; global.nowKST_ = () => new Date(2026, 8, 7, 9, 0); // 월요일
 check('월요일 → 검토판 0건, 로그 "대상 아님"', weekendReview() === 0 && kapiCalls().length === 0 && logRows.some(r => /대상 아님/.test(r[4])));
-sheets.CFG._tabs['설정']._data.find(r => r[0] === '주말 검토판 요일')[1] = '토'; fetchLog = []; global.nowKST_ = () => new Date(2026, 8, 6, 9, 0); // 일요일
+setCfg('주말 검토판 요일', '토'); fetchLog = []; global.nowKST_ = () => new Date(2026, 8, 6, 9, 0); // 일요일
 check("요일 설정 '토' → 일요일 0건", weekendReview() === 0 && kapiCalls().length === 0);
-sheets.CFG._tabs['설정']._data.find(r => r[0] === '주말 검토판 발송')[1] = 'N'; global.nowKST_ = () => new Date(SAT); fetchLog = [];
+setCfg('주말 검토판 발송', 'N'); global.nowKST_ = () => new Date(SAT); fetchLog = [];
 check('발송 N → 토요일도 0건', weekendReview() === 0 && kapiCalls().length === 0);
 global.nowKST_ = () => new Date(NOW);
 seed(); global.nowKST_ = () => new Date(SAT); sheets[KM.MEETING_SHEET_ID]._tabs['할 일 모음']._data.length = 2; sheets[KM.MEETING_SHEET_ID]._tabs['0.무조건할일']._data.length = 1; delete sheets[KM.RADAR_SHEET_ID];
 const wk2 = buildWeekendMessages_(new Date(SAT));
 check('할 일·레이더 없어도 health 1건은 나감', wk2.length === 1 && wk2[0].kind === 'health', wk2.map(x => x.kind).join(','));
 global.nowKST_ = () => new Date(NOW);
+
+// ═══ 12. 매시간 상황판 ═══
+console.log('\n[12] hourlyPulse_');
+seed(); const MON14 = new Date(2026, 8, 7, 14, 5); global.nowKST_ = () => new Date(MON14);
+calEvents[7] = [{ t: '조선호텔 현장회의', h: 10 }, { t: '유한대 방문', h: 15 }, { t: '설계팀 회의', h: 17 }, { t: '[완료] 끝', h: 16 }];
+props.SEEN_radar = JSON.stringify({ '양양읍 조산리 1-2|(가칭)양양 오션리조트': '260903', '우동 1500|해운대 호텔 신축': '260903' });
+const pm = buildPulseMessage_(new Date(MON14));
+check('상황판 ≤ 190자 한 장', pm.text.length <= 190, pm.text.length);
+check('머리 🕐 14:05 상황 9/7(월)', /^🕐 14:05 상황 9\/7\(월\)/.test(pm.text), pm.text);
+check('다음 일정 = 15:00 유한대 방문 (이후 1건), [완료] 제외', /▸ 다음 일정: 15:00 유한대 방문 \(이후 1건\)/.test(pm.text), pm.text);
+check('마감: 지남 1 · 오늘 1 · 임박 1 + 최대 3줄', /▸ 마감: 지남 1 · 오늘 1 · 임박 1/.test(pm.text) && /D\+2 \[조선호텔/.test(pm.text), pm.text);
+check('무조건할일 미완료 2 (★1: 내용 앞부분) — 190자 맞추려 마감 줄 1개 뺌', /▸ 무조건할일 미완료 2 \(★1: 2차공사 ZONE4·5·6/.test(pm.text) && (pm.text.match(/\n D/g) || []).length === 2, pm.text);
+const pulses = () => sentTexts().filter(t => /^🕐/.test(t)).length;
+let hp = hourlyCheck();
+check('14시 hourlyCheck → 상황판 1건 + 시스템(자가진단★) 1건, 레이더 0', hp === 2 && pulses() === 1 && sentTexts().some(t => /🚨/.test(t)), hp + ' ' + sentTexts().length);
+fetchLog = [];
+check("'보냄'(기본) → 같은 내용도 다음 시간 다시 보냄 (시스템은 중복 안 보냄)", hourlyCheck() === 1 && pulses() === 1);
+setCfg('매시간 상황판 변화 없을 때', '생략'); fetchLog = [];
+check("'생략' → 직전과 같으면 0건 + 로그", hourlyCheck() === 0 && logRows.some(r => /변화 없음/.test(r[4])));
+calEvents[7].push({ t: '추가 통화', h: 20 }); fetchLog = [];
+check("'생략'이라도 내용이 바뀌면 다시 보냄", hourlyCheck() === 1);
+global.nowKST_ = () => new Date(2026, 8, 7, 22, 10); fetchLog = [];
+check('22시 → 시간대(07-21) 밖 → 0', hourlyCheck() === 0);
+global.nowKST_ = () => new Date(2026, 8, 7, 18, 20); fetchLog = [];
+check('18시(저녁 브리핑 시각) → 상황판 건너뜀', hourlyCheck() === 0);
+global.nowKST_ = () => new Date(2026, 8, 5, 14, 0); fetchLog = []; setCfg('매시간 상황판 변화 없을 때', '보냄');
+hourlyCheck(); check('토요일 14시 (주말 Y) → 상황판 1건', pulses() === 1);
+setCfg('매시간 상황판 주말', 'N'); fetchLog = [];
+hourlyCheck(); check('토요일 (주말 N) → 상황판 0건', pulses() === 0);
+setCfg('매시간 상황판', 'N'); global.nowKST_ = () => new Date(MON14); fetchLog = [];
+hourlyCheck(); check('상황판 N → 평일 14시도 0건', pulses() === 0);
+setCfg('매시간 상황판', 'Y'); calEvents[7] = []; fetchLog = [];
+check('일정 없는 날 → "오늘 일정 없음"', /▸ 오늘 일정 없음/.test(buildPulseMessage_(new Date(MON14)).text));
+global.nowKST_ = () => new Date(2026, 8, 7, 19, 0); calEvents[7] = [{ t: '조선호텔 현장회의', h: 10 }];
+check('일정 다 지났으면 "오늘 일정 끝 (1건 완료)"', /▸ 오늘 일정 끝 \(1건 완료\)/.test(buildPulseMessage_(nowKST_()).text));
+global.nowKST_ = () => new Date(NOW);
+
+// ═══ 13. 감사 지적 반영 검사 ═══
+console.log('\n[13] 감사 지적 반영');
+seed(); setCfg('D-day 경고 일수', '0');
+const m13 = buildBriefMessages_('morning', new Date(NOW));
+check("'D-day 경고 일수'=0 → 임박 0건 (0이 기본값 3으로 바뀌지 않음)", /3일 내 0|0일 내 0/.test(m13[1].text) && m13[1].text.indexOf('제천') < 0, m13[1].text);
+seed(); kapi.status = 401; kapi.body = '{"code":-401}';
+runBrief_('morning');
+const jk13 = sheets[KM.MEETING_SHEET_ID].getSheetByName('0.무조건할일')._data;
+check('카카오 전부 실패 → 무조건할일 J·K 기록 안 함', jk13[1][9] === '' && jk13[1][10] === '' && jk13[3][9] === 1, JSON.stringify([jk13[1][9], jk13[3][9]]));
+kapi.status = 200; kapi.body = '{"result_code":0}';
+seed();
+markSeen_('big', Array.from({ length: 2000 }, (_, i) => '서울특별시 강남구 청담동 ' + i + '번지 어느 호텔 신축 공사 현장 건물명이 아주 긴 경우 ' + i));
+const big = props.SEEN_big;
+check('중복방지 저장 문자열 ≤ 6000자 (9KB 한도 안), 키는 8자리 해시', big.length <= 6000 && /^\{"[0-9a-f]{8}":"\d{6}"/.test(big), big.length);
+check('해시 키로도 원문 조회 됨 (has)', !!getSeen_('big').has('서울특별시 강남구 청담동 1999번지 어느 호텔 신축 공사 현장 건물명이 아주 긴 경우 1999') && !getSeen_('big').has('없는 키'));
+// 첫 설치 경로: 설정 시트 없음 → 생성
+seed(); delete props.CONFIG_SHEET_ID; delete sheets.CFG; clearSettingsCache_();
+const url13 = setup();
+const cfg = sheets.CFG;
+check('setup: 설정 시트 생성 + 탭 3개 (설정·추가출처·발송로그)', !!cfg && ['설정', '추가출처', '발송로그'].every(n => cfg.getSheetByName(n)) && props.CONFIG_SHEET_ID === 'CFG', url13);
+const setRows = cfg.getSheetByName('설정')._data.map(r => (r || [])[0]);
+check('설정 탭에 기본 항목 전부 + KAKAO_REST_KEY·WEBAPP_URL·AUTH_PIN(6자리)', DEFAULT_SETTINGS.every(d => setRows.indexOf(d[0]) >= 0) && ['KAKAO_REST_KEY', 'KAKAO_CLIENT_SECRET', 'WEBAPP_URL', 'AUTH_PIN'].every(k => setRows.indexOf(k) >= 0) && /^\d{6}$/.test(cfg.getSheetByName('설정')._data.find(r => r && r[0] === 'AUTH_PIN')[1]));
+check('setup: 트리거 4개 (morning 7:30 / evening 18:00 / hourly / weekend 9:00)', triggers.length === 4 && triggers.map(t => t.getHandlerFunction()).sort().join(',') === 'eveningBrief,hourlyCheck,morningBrief,weekendReview' && triggers.find(t => t.getHandlerFunction() === 'morningBrief')._h === 7 && triggers.find(t => t.getHandlerFunction() === 'weekendReview')._h === 9, triggers.map(t => t.getHandlerFunction() + ':' + t._h).join(','));
+installTriggers();
+check('installTriggers 재실행해도 트리거는 4개 (중복 없음)', triggers.length === 4);
+check('추가출처 탭 예시 2행 (사용 N)', cfg.getSheetByName('추가출처')._data.length === 3 && cfg.getSheetByName('추가출처')._data[1][9] === 'N');
+seed(); kauth.status = 400; kauth.body = '{"error":"invalid_grant","error_description":"bad","access_token_leak":"SECRET"}'; props.KAKAO_ACCESS_EXP = '0';
+let e13 = null; try { testSend(); } catch (err) { e13 = String(err); }
+check('토큰 오류 메시지에 응답 원문(비밀값) 미포함', /kauth 400: invalid_grant bad/.test(e13) && e13.indexOf('SECRET') < 0, e13);
+kauth.status = 200; kauth.body = JSON.stringify({ access_token: 'AT2', expires_in: 21600, refresh_token: 'RT2', refresh_token_expires_in: 5184000 });
 
 console.log('\n결과: 통과 ' + pass + ' / 실패 ' + fail);
 process.exit(fail ? 1 : 0);
