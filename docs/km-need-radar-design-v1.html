@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>지금 필요한 것 레이더</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f7f6f2;--sf:#ffffff;--sf2:#efede6;--bd:#d9d5ca;--tx:#1d2129;--tx2:#5b6270;--tx3:#8E99A4;
+  --blue:#2A6099;--orange:#C77B2B;--purple:#6B4FA8;--red:#C0392B;--grey:#8E99A4;--green:#2E7D5B;
+  --yellow:#fff3b0;--yellow-bd:#d9b400;
+  --red-bg:rgba(192,57,43,.09);--or-bg:rgba(199,123,43,.10);--gr-bg:rgba(46,125,91,.10);--bl-bg:rgba(42,96,153,.09);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14161b;--sf:#1c1f26;--sf2:#242832;--bd:#343945;--tx:#e8ebf1;--tx2:#aab2c0;--tx3:#7d8796;
+    --blue:#6ea3dd;--orange:#e0a05a;--purple:#a58ee0;--red:#e4695a;--green:#5fb58e;
+    --yellow:#4a4310;--yellow-bd:#b99a00;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14161b;--sf:#1c1f26;--sf2:#242832;--bd:#343945;--tx:#e8ebf1;--tx2:#aab2c0;--tx3:#7d8796;
+  --blue:#6ea3dd;--orange:#e0a05a;--purple:#a58ee0;--red:#e4695a;--green:#5fb58e;
+  --yellow:#4a4310;--yellow-bd:#b99a00;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:'Noto Sans KR',system-ui,sans-serif;font-size:14px;line-height:1.55}
+.wrap{max-width:860px;margin:0 auto;padding:20px 14px 60px}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:16px;margin:32px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--tx)}
+h3{font-size:13.5px;margin:16px 0 6px}
+p{margin:6px 0;max-width:62ch}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-bottom:8px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.meta{font-size:12px;color:var(--tx2)}
+.lead{font-size:15px;font-weight:500;background:var(--sf);border-left:4px solid var(--blue);padding:10px 14px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.alt{background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.alt.rec{border-color:var(--blue);box-shadow:0 0 0 2px var(--bl-bg)}
+.alt .t{font-weight:700;font-size:14px}
+.alt .lose{margin-top:auto;font-size:12.5px;color:var(--red);border-top:1px dashed var(--bd);padding-top:6px}
+.alt .lose b{color:var(--red)}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:3px;background:var(--bl-bg);color:var(--blue);font-weight:500}
+.tag.rec{background:var(--blue);color:#fff}
+/* phone mockup */
+.phone{max-width:390px;margin:14px auto;background:var(--sf);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
+.ph-hd{padding:10px 14px;background:var(--sf2);display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.ph-hd b{font-size:13px}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--bd)}
+.kpi div{padding:8px 4px;text-align:center;border-right:1px solid var(--bd)}
+.kpi div:last-child{border-right:0}
+.kpi .n{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .l{font-size:10px;color:var(--tx2)}
+.sec{padding:8px 12px 4px;font-size:11px;letter-spacing:.06em;color:var(--tx3);text-transform:uppercase}
+.row{display:grid;grid-template-columns:8px 1fr auto;gap:10px;align-items:start;padding:9px 12px;border-top:1px solid var(--bd)}
+.row .st{width:8px;height:8px;border-radius:50%;margin-top:6px}
+.row .site{font-weight:700;font-size:13px}
+.row .need{font-size:13px}
+.row .why{font-size:11px;color:var(--tx2)}
+.row .why .src{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:0 4px;border:1px solid var(--bd);border-radius:3px;margin-left:4px}
+.row .btn{font-size:11px;padding:4px 8px;border:1px solid var(--blue);color:var(--blue);border-radius:4px;white-space:nowrap;background:transparent}
+.dd{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500}
+.r{background:var(--red)} .o{background:var(--orange)} .g{background:var(--green)}
+.card-site{margin:0 12px 12px;border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.card-site .h{padding:8px 10px;background:var(--sf2);font-size:12px;display:flex;justify-content:space-between}
+.stages{display:flex;gap:2px;padding:8px 10px}
+.stages span{flex:1;height:6px;border-radius:2px;background:var(--bd)}
+.stages span.done{background:var(--green)} .stages span.now{background:var(--blue)}
+.stg-lbl{display:flex;justify-content:space-between;padding:0 10px 6px;font-size:10px;color:var(--tx2)}
+.need-list{padding:0 10px 10px;display:flex;flex-direction:column;gap:6px}
+.need-list div{display:flex;gap:8px;font-size:12.5px;align-items:baseline}
+.need-list .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);min-width:34px}
+.chk{display:inline-block;width:12px;height:12px;border:1.5px solid var(--tx3);border-radius:2px;vertical-align:-2px;margin-right:4px}
+.chk.on{background:var(--green);border-color:var(--green)}
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--bd);border-radius:6px;background:var(--sf)}
+table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:640px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--bd);vertical-align:top;text-align:left}
+th{background:var(--sf2);font-size:11.5px;font-weight:700;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.y{background:var(--yellow);border-left:3px solid var(--yellow-bd)}
+td .cmd{font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:var(--sf2);padding:1px 5px;border-radius:3px;white-space:nowrap}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;counter-reset:st}
+.flow div{background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:10px 12px;font-size:12.5px;position:relative}
+.flow div::before{counter-increment:st;content:counter(st);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);display:block;margin-bottom:2px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.box{background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:10px 14px}
+.box.y{background:var(--yellow);border-color:var(--yellow-bd)}
+ul{margin:4px 0;padding-left:18px} li{margin:3px 0}
+.foot{margin-top:36px;padding:12px 14px;border:1px dashed var(--tx3);border-radius:6px;font-size:12px;color:var(--tx2)}
+.legend{display:flex;gap:14px;font-size:11.5px;color:var(--tx2);margin:6px 0 0;flex-wrap:wrap}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+</style>
+
+<div class="wrap">
+<div class="eyebrow">한국마이크로닉 · 배성윤 차장 · 설계안 v1 · 2026-09-05</div>
+<h1>「지금 필요한 것」 레이더 — 설계안</h1>
+<div class="meta">저장 위치: GitHub mic-pm 저장소 `docs/` (이 파일) + 대화창. 구글 드라이브·노션에는 올리지 않음.</div>
+
+<div class="lead">결론: 현장마다 「공정단계 × 기록 상태 × 날짜」에서 지금 필요한 문서·행위를 <b>규칙표</b>로 뽑아, ①아침 ②현장 열 때 ③기록 저장 직후 세 시점에 한 줄씩 추천한다. 규칙표는 앱(JSON)과 스킬(md)에 <b>이중 저장</b>해 새 창도 같은 기준으로 추천한다.</div>
+
+<p>지금 앱(현장관리 v5.7)은 「일어난 일」(이슈·기한초과·미수금)만 경고한다. 「다음에 뭐가 필요한가」(외함 의뢰서 낼 때인가, 벽지 완료일을 물어야 하나, 계산서 2회차인가)는 차장님 머리에만 있다. 이 설계는 그 머리를 규칙표로 꺼내 앱이 대신 세게 만드는 것이다.</p>
+
+<h2>1. 대안 3개 — 어디서 추천이 나오는가</h2>
+<div class="grid3">
+  <div class="alt rec">
+    <div><span class="tag rec">A안 (권장)</span></div>
+    <div class="t">앱 안의 규칙 엔진</div>
+    <div>현장관리 웹앱에 「지금 필요한 것」 화면을 넣고, 앱이 가진 데이터(단계·이슈·의뢰서·계산서·마지막 기록일)만으로 규칙표를 돌린다. Claude 없이도, 오프라인에서도 돈다. 규칙표는 스킬에도 같이 저장.</div>
+    <div class="lose"><b>잃는 것:</b> 통화·회의의 뉘앙스는 못 읽는다. 규칙표에 없는 상황은 못 잡는다(그건 차장님이 규칙을 한 줄 추가해야 잡힌다).</div>
+  </div>
+  <div class="alt">
+    <div><span class="tag">B안</span></div>
+    <div class="t">아침 스케줄이 Claude 판단으로 추천</div>
+    <div>평일 07:30 「KM 정본 아침 작업」이 26년 회의록 시트·정본 대시보드를 읽고 현장별 추천 3줄을 푸시. 통화 내용까지 반영된다.</div>
+    <div class="lose"><b>잃는 것:</b> 하루 1회다. 낮에 상황이 바뀌면 다음 날 아침까지 모른다. Claude 판단이라 매 줄에 근거 태그가 붙어야 하고, 규칙표가 없으면 아침마다 기준이 흔들린다.</div>
+  </div>
+  <div class="alt">
+    <div><span class="tag">C안</span></div>
+    <div class="t">대화창 답변 끝 추천만 강화</div>
+    <div>km-00-router에 규칙표를 붙여, 세션에서 현장이 언급되면 그 현장 단계의 「필요한 것」을 답변 끝 추천 명령문으로 낸다. 앱 수정 없음.</div>
+    <div class="lose"><b>잃는 것:</b> 대화를 열어야만 나온다. 말 안 꺼낸 조용한 현장은 영영 안 뜬다. 200개 현장을 다 대화로 훑을 수 없다.</div>
+  </div>
+</div>
+<p class="meta">A안이 뼈대이고 B·C는 A의 규칙표를 그대로 쓰는 배달 통로다. A를 먼저 만들면 B·C는 규칙표 재사용이라 추가 비용이 작다. 반대로 B·C만 만들면 규칙표가 Claude 기억에만 남아 새 창마다 흔들린다.</p>
+
+<h2>2. 한 화면 그림 (A안 · 폰 기준)</h2>
+<div class="phone">
+  <div class="ph-hd"><b>지금 필요한 것</b><span class="mono">09-05 (금) 07:30</span></div>
+  <div class="kpi">
+    <div><div class="n" style="color:var(--red)">3</div><div class="l">내 결정</div></div>
+    <div><div class="n" style="color:var(--orange)">5</div><div class="l">남의 답 대기</div></div>
+    <div><div class="n" style="color:var(--blue)">2</div><div class="l">오늘 마감</div></div>
+    <div><div class="n" style="color:var(--grey)">4</div><div class="l">조용한 현장</div></div>
+  </div>
+  <div class="sec">오늘 볼 것 — 빨강만</div>
+  <div class="row"><span class="st r"></span><div><div class="site">SK하이닉스 기숙사 2차 <span class="dd">D-14</span></div><div class="need">속판 작업의뢰서 발행할 때</div><div class="why">속판 제작 2달 · 강전접속 예정 11-05 역산 <span class="src">규칙 S2</span></div></div><button class="btn">의뢰서 초안</button></div>
+  <div class="row"><span class="st r"></span><div><div class="site">광희동1가 (신보기전)</div><div class="need">벽지·페인트 완료일을 건축에 물을 때</div><div class="why">결선 단계 진입 12일째, 완료 예정일 미입력 <span class="src">규칙 S4</span></div></div><button class="btn">문자 초안</button></div>
+  <div class="row"><span class="st r"></span><div><div class="site">쏘비치 양양</div><div class="need">계산서 2회차(기구물 납품분)</div><div class="why">제품 설치 완료 체크 있음 · 계산서 기록 1회뿐 <span class="src">규칙 S5</span></div></div><button class="btn">발행 기록</button></div>
+  <div class="sec">확인 대기 — 남이 답해야 함</div>
+  <div class="row"><span class="st o"></span><div><div class="site">목포 선샤인</div><div class="need">외함 의뢰서 착수 확인 (발행 9일째)</div><div class="why">착수확인 버튼 미클릭 <span class="src">규칙 X2</span></div></div><button class="btn">착수 확인</button></div>
+  <div class="row"><span class="st o"></span><div><div class="site">청담PJ</div><div class="need">회의록 1건에 후속조치 0건</div><div class="why">08-29 공정회의 저장 후 의뢰서 후보 미추출 <span class="src">규칙 X1</span></div></div><button class="btn">후보 뽑기</button></div>
+  <div class="sec">현장을 열면 — 이 현장에 지금 필요한 것</div>
+  <div class="card-site">
+    <div class="h"><b>SK하이닉스 기숙사 2차</b><span>1,116실 · 준공 27-02-28</span></div>
+    <div class="stages"><span class="done"></span><span class="done"></span><span class="now"></span><span></span><span></span><span></span><span></span></div>
+    <div class="stg-lbl"><span>설계</span><span>외함</span><span><b>분전함</b></span><span>결선</span><span>설치</span><span>시운전</span><span>수금</span></div>
+    <div class="need-list">
+      <div><span class="k">S2</span><span><span class="chk on"></span>외함 작업의뢰서 — 발행 08-12 · 착수확인 08-14</span></div>
+      <div><span class="k">S2</span><span><span class="chk"></span><b>속판 작업의뢰서</b> — 09-19까지 (제작 2달 역산)</span></div>
+      <div><span class="k">S3</span><span><span class="chk"></span>강전 결선 일정 — 전기업체와 협의 (예정 11-05)</span></div>
+      <div><span class="k">S4</span><span><span class="chk"></span>기구물 작업의뢰서 — 벽지 완료일 미입력이라 계산 불가 → <span style="background:var(--yellow);padding:0 4px">벽지 완료 예정일 입력</span></span></div>
+      <div><span class="k">$</span><span><span class="chk on"></span>계산서 1회차(외함) 08-20 · 2회차 대기</span></div>
+    </div>
+  </div>
+  <div class="legend"><span><i class="r"></i>내 결정 필요</span><span><i class="o"></i>남이 답해야 함</span><span><i class="g"></i>이상 없음</span><span>· 규칙 번호를 누르면 왜 떴는지 근거가 열린다</span></div>
+</div>
+
+<h2>3. 규칙표 — 이것이 엔진의 전부다</h2>
+<p>각 규칙은 「어느 단계에서 · 무엇이 있으면/없으면 · 무엇이 필요하다 · 한 줄 추천 · 눌러서 할 것」 다섯 칸이다. 노란칸은 차장님이 숫자를 넣는 소요일이고, Claude가 정하지 않는다(km-site-schedule 확정값을 출발값으로).</p>
+
+<h3>3-1. 영업 파이프라인 (첫 접촉 → 계약)</h3>
+<div class="tbl"><table>
+<tr><th>#</th><th>단계</th><th>트리거 (앱 데이터)</th><th>필요한 것</th><th>추천 한 줄 · 누르면</th></tr>
+<tr><td class="mono">P1</td><td>첫 접촉</td><td>현장 등록됨 · 발주처/설계사/성급/실수 중 빈칸</td><td>현장 갑지 완성 + 별칭 중복 확인</td><td>「갑지 빈칸 3개 채우기」 → 입력칸 열림</td></tr>
+<tr><td class="mono">P2</td><td>설계의뢰</td><td>단위세대 도면 첨부 있음 · 수량표 탭 비어 있음</td><td>예상물량 수량표 (성급별 배치 규칙)</td><td><span class="cmd">예상 물량 뽑아</span> → km-room-layout</td></tr>
+<tr><td class="mono">P3</td><td>설계중</td><td>수량표 있음 · 설계 요청서/시방서 문서 없음</td><td>전기설계업체용 설계 요청서 · 특기시방서</td><td><span class="cmd">시방서 만들어</span> → km-spec-builder</td></tr>
+<tr><td class="mono">P4</td><td>견적제출</td><td>도면 납품 후 · 견적서 문서 없음, 또는 요율 3칸 빈칸</td><td>요율 입력(노란칸) → 실행 → 견적 원틀</td><td><span class="cmd">견적 원틀 만들어</span> → km-quote-builder (요율은 차장님 입력)</td></tr>
+<tr><td class="mono">P5</td><td>계약완료</td><td>계약서 문서 있음 · 준공일 빈칸 또는 역산표 없음</td><td>준공일 입력 → 역산표 → 의뢰서 3종 발행 시점</td><td><span class="cmd">역산표 만들어</span> → km-site-schedule</td></tr>
+</table></div>
+
+<h3>3-2. 현장 공정 7단계 (앱 STAGES 그대로)</h3>
+<div class="tbl"><table>
+<tr><th>#</th><th>단계</th><th>트리거</th><th>필요한 것</th><th>소요일 (차장님 입력)</th><th>추천 한 줄 · 누르면</th></tr>
+<tr><td class="mono">S1</td><td>설계중</td><td>외함 납품 예정일 − 외함 제작일 ≤ 오늘 · 외함 의뢰서 없음</td><td>외함 작업의뢰서</td><td class="y">외함 제작 2주</td><td><span class="cmd">외함 의뢰서 써</span> → km-work-order 외함 레시피</td></tr>
+<tr><td class="mono">S2</td><td>CB외함 납품</td><td>외함 납품 완료 체크 · 속판 의뢰서 없음 · 강전접속 예정일 − 속판 제작일 − 1달 ≤ 오늘</td><td>속판 작업의뢰서 · 계산서 1회차</td><td class="y">속판 제작 2달 · 강전접속 = 속판 납품 +1달</td><td><span class="cmd">속판 의뢰서 써</span> / 「계산서 1회차 기록」</td></tr>
+<tr><td class="mono">S3</td><td>분전함 설치</td><td>속판 납품 완료 · 강전 결선 일정 빈칸</td><td>전기업체 강전 일정 협의 · 시공팀 약전 배치</td><td class="y">—</td><td>「강전 일정 문자 초안」 → 전기업체 담당자(갑지)에게</td></tr>
+<tr><td class="mono">S4</td><td>결선 작업</td><td>결선 단계 진입 · 벽지 완료 예정일 빈칸, 또는 벽지일 − 기구물 제작일 ≤ 오늘 · 기구물 의뢰서 없음</td><td>벽지·페인트 완료일 확인(건축) → 기구물·커버 작업의뢰서</td><td class="y">기구물 제작 1.5~2달 · 빽커버 = 벽지 +1~2주</td><td>「벽지 완료일 물어보기」 / <span class="cmd">기구물 의뢰서 써</span></td></tr>
+<tr><td class="mono">S5</td><td>제품 설치</td><td>설치 완료 체크 · 계산서 기록 &lt; 2 · 사진 탭에 설치 사진 있음</td><td>계산서 2회차 · 사진대지(검수 증빙)</td><td class="y">설치 1주</td><td>「계산서 2회차 기록」 / <span class="cmd">사진대지 만들어</span></td></tr>
+<tr><td class="mono">S6</td><td>테스트</td><td>전원 인가 체크 · 시운전 완료 미체크 · 준공일 − 여유일 − 오늘 ≤ 7</td><td>시운전 완료 확인 → 계산서 3회차</td><td class="y">시운전 1주 · 준공 여유일</td><td>「시운전 완료 체크」 → 자동으로 S7 수금 규칙 켜짐</td></tr>
+<tr><td class="mono">S7</td><td>완료/수금</td><td>계약액 − 수금 &gt; 0 · 마지막 계산서 +30일</td><td>수금 독촉 · 증감내역서(견적 Rev와 같은 줄)</td><td class="y">독촉 기준일 30/60</td><td>「독촉 문자 초안」 / <span class="cmd">증감 뽑아</span></td></tr>
+</table></div>
+
+<h3>3-3. 단계와 무관한 횡단 규칙</h3>
+<div class="tbl"><table>
+<tr><th>#</th><th>트리거</th><th>필요한 것</th><th>색</th><th>추천 · 누르면</th></tr>
+<tr><td class="mono">X1</td><td>회의록 저장됨 · 후속조치 0건 (저장 직후 즉시)</td><td>회의록 → 작업의뢰서 후보·액션 추출</td><td>🟠</td><td>「후보 뽑기」 → 회의록 본문에서 의뢰 문장 추출(기존 AI추출 기능 재사용)</td></tr>
+<tr><td class="mono">X2</td><td>작업의뢰서 발행 · 착수확인 버튼 미클릭 +7일</td><td>부서 착수 확인 (한비로 API 없음 → 버튼으로 우회)</td><td>🟠</td><td>「착수 확인」 버튼 / 「담당 부서에 확인 문자」</td></tr>
+<tr><td class="mono">X3</td><td>이슈 기한 초과 (기존 autoEscalate)</td><td>내 결정</td><td>🔴</td><td>그대로 유지</td></tr>
+<tr><td class="mono">X4</td><td>진행 현장인데 마지막 기록(회의록·대화·일지) +21일</td><td>현장 상황 확인 통화</td><td>⚪</td><td>「조용한 현장」 묶음 → 통화 후 PLAUD가 시트로</td></tr>
+<tr><td class="mono">X5</td><td>준공일까지 남은 일수 &lt; 역산표 잔여 소요일 합</td><td>준공 못 맞춤 — 건축과 협의 또는 공정 압축</td><td>🔴</td><td>「역산표 열기」 → 어느 단계가 밀렸는지 빨강</td></tr>
+<tr><td class="mono">X6</td><td>오늘 업무일지 미작성 (기존)</td><td>일지</td><td>🔴</td><td>그대로 유지</td></tr>
+<tr><td class="mono">X7</td><td>미수금 +60일 (기존)</td><td>독촉</td><td>🟠</td><td>S7과 합침</td></tr>
+<tr><td class="mono">X8</td><td>같은 현장에 회의 3회 이상 · 순서도 없음</td><td>업무 흐름 정리(플로우맵)</td><td>⚪</td><td><span class="cmd">순서도 그려줘</span> → km-flowmap</td></tr>
+</table></div>
+
+<h2>4. 입력 → 출력 흐름</h2>
+<div class="flow">
+  <div><b>차장님 입력 (최소)</b><br>단계 넘김 버튼 · 준공일 · 벽지 완료 예정일 · 의뢰서 발행/착수확인 체크 · 계산서 기록</div>
+  <div><b>앱이 이미 가진 것</b><br>이슈·후속조치·회의록·문서 탭·계산서(calc)·마지막 기록일</div>
+  <div><b>규칙표 (JSON 1개)</b><br>P1~P5 · S1~S7 · X1~X8 · 소요일 노란칸</div>
+  <div><b>추천 카드</b><br>현장 · 필요한 것 · 왜(규칙번호+데이터) · 버튼 1개</div>
+  <div><b>3시점 배달</b><br>①07:30 푸시 3줄 ②현장 열 때 ③저장 직후 배지 · 대화창은 같은 규칙표로 명령문</div>
+</div>
+
+<h2>5. 차장님이 손댈 곳 vs 자동</h2>
+<div class="two">
+  <div class="box y"><b>손댈 곳 (노란칸)</b>
+    <ul>
+      <li>소요일 9칸 — 출발값은 km-site-schedule 확정값. 현장마다 고칠 수 있음</li>
+      <li>준공일 · 벽지/페인트 완료 예정일 · 외함 납품 예정일 (현장이 정하는 값)</li>
+      <li>단계 넘김 · 착수확인 · 계산서 기록 버튼</li>
+      <li>규칙 켜기/끄기 · 새 규칙 한 줄 추가 (트리거·필요한 것·추천문)</li>
+    </ul>
+  </div>
+  <div class="box"><b>자동</b>
+    <ul>
+      <li>역산 날짜 계산, D-day, 색 판정(🔴🟡🟢), 정렬(빨강 → 마감 임박 순)</li>
+      <li>규칙 근거 표시 — 모든 카드에 「규칙 번호 + 어떤 데이터 때문에」</li>
+      <li>버튼 → 기존 기능 호출(작업의뢰서 초안 genWO, 카톡 초안, 문서 탭 이동)</li>
+      <li>규칙표를 스킬 md로 내보내기 (이중 저장, 새 창이 같은 기준 사용)</li>
+    </ul>
+  </div>
+</div>
+
+<h2>6. 못 하는 것 · 모르는 것</h2>
+<ul>
+  <li><b>한비로 결재 상태를 못 읽는다.</b> 「착수확인」 버튼으로 우회한다(km-map 끊긴 고리 1). 차장님이 안 누르면 X2가 계속 뜬다.</li>
+  <li><b>통화 내용은 앱이 모른다.</b> PLAUD → 26년 회의록 시트 트랙은 별도다. 통화에서 나온 변경은 B안(아침 Claude)이 시트를 읽어야 반영된다. 1차에는 없다.</li>
+  <li><b>규칙표에 없는 상황은 못 잡는다.</b> 예: 발주처가 갑자기 성급을 올려 BSP로 바꾸는 경우. 이건 회의록 X1에서 사람이 잡는다.</li>
+  <li><b>현재 앱 데이터에 없는 칸 3개</b>: 준공일, 벽지 완료 예정일, 의뢰서 착수확인. 1차에서 현장 갑지에 추가해야 S1·S4·X2가 돈다.</li>
+  <li><b>불확실한 것</b>: 「조용한 현장」 기준 21일과 착수확인 7일은 Claude가 임시로 넣은 값이다. 노란칸으로 두고 차장님이 정한다.</li>
+</ul>
+
+<h2>7. 만드는 순서</h2>
+<div class="tbl"><table>
+<tr><th>차수</th><th>내용</th><th>바뀌는 파일</th><th>효과</th></tr>
+<tr><td>1차</td><td>규칙표 JSON + 「지금 필요한 것」 화면 + 갑지 칸 3개 추가 + 규칙표 md 내보내기</td><td>index.html (A등급 추가) · docs/km-need-rules.md · 스킬 km-need-radar v1</td><td>아침에 열면 현장별 필요한 것이 한 줄씩. 대화창도 같은 규칙으로 추천</td></tr>
+<tr><td>2차</td><td>저장 직후 배지(X1) · 착수확인(X2) · 07:30 푸시 3줄</td><td>index.html · 기존 아침 스케줄 프롬프트 1줄</td><td>기록하는 순간 다음 수가 뜬다</td></tr>
+<tr><td>3차</td><td>B안 연결 — 아침 Claude가 26년 회의록 시트의 통화 변경을 규칙표에 대입</td><td>아침 스케줄 프롬프트</td><td>통화로 바뀐 날짜가 추천에 반영</td></tr>
+</table></div>
+
+<div class="foot">
+<b>이것은 설계 목업이다.</b> 아래 숫자는 지어낸 값이다: 상단 KPI(3·5·2·4), 각 현장의 공정단계 위치·날짜(SK하이닉스 준공 27-02-28, 강전접속 11-05, 외함 발행 08-12, 계산서 08-20 / 광희동 결선 12일째 / 쏘비치 설치 완료 / 목포 발행 9일째 / 청담 08-29 회의). 현장명·실수(SK하이닉스 2차 1,116실)·소요일 출발값(외함 2주, 속판 2달, 기구물 1.5~2달, 시운전 1주)·요율 3종은 스킬 정본에서 가져온 실제 값이다. 조용한 현장 21일·착수확인 7일은 Claude 임시값.
+</div>
+</div>
+
+</html>
