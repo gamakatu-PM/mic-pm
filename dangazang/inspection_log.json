@@ -1,0 +1,25 @@
+{
+  "purpose": "야간 단가장 검진(경비원) 기록. 매일 새벽 자동 검진이 직전 기록과 비교해 악화 시에만 푸시한다. 이 파일은 검진 때마다 커밋된다.",
+  "latest": {
+    "date": "2026-09-06",
+    "checked_file": "CB모듈_단가장_v70 (fileId 1o_hNpJDD_fvUayPKaA1K6KWFTtLsYP-QqaCcaK5gwUQ, modified 2026-08-25)",
+    "total_errors": 2,
+    "errors": [
+      "전북연수원 기구물!A11 「방문자알림등 VL-800S」 총괄 미등록 — 금액 누락 (형번은 FL-800S로 확정된 구명칭)",
+      "5.변경 이력!F101 수식 오류값 #VALUE!"
+    ],
+    "total_warnings": 18,
+    "legacy_rate_sheets": 17,
+    "frozen_price_cells": 1,
+    "self_check_sheet": {
+      "site_named_rows_in_master": 17,
+      "duplicate_name_rows": 68,
+      "master_blank_prices": 40
+    },
+    "drive_duplicates": "CB모듈_단가장_v70 파일 2개 (내용 셀 단위 동일 — 이중 업로드, 1개 삭제 권장)"
+  },
+  "history": [
+    {"date": "2026-09-05", "file": "v70", "total_errors": 2, "total_warnings": 18, "legacy_rate_sheets": 17, "duplicate_name_rows": 68, "verdict": "기준선 수립 (validate.py 전체 실행)"},
+    {"date": "2026-09-06", "file": "v70 (미변경, modifiedTime 2026-08-25 그대로)", "total_errors": 2, "total_warnings": 18, "legacy_rate_sheets": 17, "duplicate_name_rows": 68, "verdict": "이상 없음 — 파일 미변경이므로 기준선과 동일, 푸시 없음"}
+  ]
+}
