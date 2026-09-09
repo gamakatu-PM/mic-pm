@@ -22,6 +22,7 @@
     {"date": "2026-09-05", "file": "v70", "total_errors": 2, "total_warnings": 18, "legacy_rate_sheets": 17, "duplicate_name_rows": 68, "verdict": "기준선 수립 (validate.py 전체 실행)"},
     {"date": "2026-09-06", "file": "v70 (미변경, modifiedTime 2026-08-25 그대로)", "total_errors": 2, "total_warnings": 18, "legacy_rate_sheets": 17, "duplicate_name_rows": 68, "verdict": "이상 없음 — 파일 미변경이므로 기준선과 동일, 푸시 없음"},
     {"date": "2026-09-07", "file": "v70 (미변경, modifiedTime 2026-08-25 그대로)", "total_errors": 2, "total_warnings": 18, "legacy_rate_sheets": 17, "duplicate_name_rows": 68, "verdict": "이상 없음 (파일 미변경) — 다운로드·검증 생략, 푸시 없음"},
-    {"date": "2026-09-08", "file": "v70 (미변경, modifiedTime 2026-08-25 그대로)", "total_errors": 2, "total_warnings": 18, "legacy_rate_sheets": 17, "duplicate_name_rows": 68, "verdict": "이상 없음 (파일 미변경) — 다운로드·검증 생략, 푸시 없음"}
+    {"date": "2026-09-08", "file": "v70 (미변경, modifiedTime 2026-08-25 그대로)", "total_errors": 2, "total_warnings": 18, "legacy_rate_sheets": 17, "duplicate_name_rows": 68, "verdict": "이상 없음 (파일 미변경) — 다운로드·검증 생략, 푸시 없음"},
+    {"date": "2026-09-09", "file": "v70 (미변경, modifiedTime 2026-08-25 그대로)", "total_errors": 2, "total_warnings": 18, "legacy_rate_sheets": 17, "duplicate_name_rows": 68, "verdict": "이상 없음 (파일 미변경) — 다운로드·검증 생략, 푸시 없음"}
   ]
 }
