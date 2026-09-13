@@ -8,7 +8,7 @@
   --blue:#2A6099; --blue-soft:#E7EEF7;
   --orange:#C77B2B; --orange-soft:#FAF0E2;
   --green:#2E7D5B; --green-soft:#E4F1EB;
-  --red:#C0392B; --purple:#6B4FA8;
+  --red:#C0392B; --red-soft:#FAEAE8; --purple:#6B4FA8;
   --shadow:0 1px 2px rgba(24,33,46,.06),0 8px 24px rgba(24,33,46,.06);
 }
 @media (prefers-color-scheme:dark){
@@ -19,7 +19,7 @@
     --blue:#6FA3DC; --blue-soft:#1E2B3B;
     --orange:#D9A05B; --orange-soft:#332718;
     --green:#5FB48C; --green-soft:#16291F;
-    --red:#E07A6E; --purple:#A28AD6;
+    --red:#E07A6E; --red-soft:#331E1B; --purple:#A28AD6;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.28);
   }
 }
@@ -30,7 +30,7 @@
   --blue:#6FA3DC; --blue-soft:#1E2B3B;
   --orange:#D9A05B; --orange-soft:#332718;
   --green:#5FB48C; --green-soft:#16291F;
-  --red:#E07A6E; --purple:#A28AD6;
+  --red:#E07A6E; --red-soft:#331E1B; --purple:#A28AD6;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.28);
 }
 *{box-sizing:border-box}
@@ -48,14 +48,12 @@ h3{font-size:16px; font-weight:600}
 p{margin:0}
 .eyebrow{font-size:11.5px; letter-spacing:.14em; font-weight:700; color:var(--muted); text-transform:uppercase}
 .lead{color:var(--ink-2); font-size:14.5px; max-width:62ch}
-.num{font-variant-numeric:tabular-nums}
+.small{font-size:13.5px}
 
-/* ── 머리 ── */
 header{display:flex; flex-direction:column; gap:10px; border-bottom:2px solid var(--ink); padding-bottom:16px}
 .hrow{display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; justify-content:space-between}
-.stamp{font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums}
+.stamp{font-size:12px; color:var(--green); font-weight:700; font-variant-numeric:tabular-nums}
 
-/* ── 오늘 카드 ── */
 .today{background:var(--surface); border:1px solid var(--line); border-left:5px solid var(--blue);
   border-radius:4px; box-shadow:var(--shadow); overflow:hidden}
 .today-top{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center;
@@ -77,28 +75,25 @@ header{display:flex; flex-direction:column; gap:10px; border-bottom:2px solid va
 .step b{display:block; font-size:12.5px; color:var(--blue)}
 .step span{font-size:12.5px; color:var(--ink-2)}
 
-/* ── 주간 띠 ── */
 .week{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
 .day{background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:11px 9px;
   display:flex; flex-direction:column; gap:5px; min-width:0}
 .day.on{border-color:var(--blue); border-width:2px; padding:10px 8px}
 .day .d{font-size:11.5px; font-weight:700; color:var(--muted); letter-spacing:.08em}
 .day .t{font-size:13px; font-weight:500; line-height:1.4; word-break:keep-all}
+.day .s{font-size:11.5px; color:var(--muted)}
 .day .dot{width:7px; height:7px; border-radius:50%}
 
-/* ── 표 ── */
 .tablebox{border:1px solid var(--line); border-radius:4px; background:var(--surface); overflow-x:auto; box-shadow:var(--shadow)}
-table{border-collapse:collapse; width:100%; min-width:640px; font-size:13.5px}
+table{border-collapse:collapse; width:100%; min-width:600px; font-size:13.5px}
 th,td{text-align:left; padding:10px 13px; border-bottom:1px solid var(--line-2); vertical-align:top}
 thead th{background:var(--surface-2); font-size:11.5px; letter-spacing:.06em; color:var(--muted);
-  font-weight:700; border-bottom:1px solid var(--line); position:sticky; top:0}
+  font-weight:700; border-bottom:1px solid var(--line)}
 tbody tr:last-child td{border-bottom:0}
 td.c{color:var(--ink-2)}
 td.n{font-variant-numeric:tabular-nums; color:var(--ink-2); white-space:nowrap}
-.done td{color:var(--muted)}
-.done td:first-child{text-decoration:line-through; text-decoration-color:var(--line)}
+tbody tr.now{background:var(--blue-soft)}
 
-/* ── 스위치 ── */
 .switch{background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:18px;
   display:flex; flex-direction:column; gap:14px; box-shadow:var(--shadow)}
 .cmds{display:flex; flex-direction:column; gap:8px}
@@ -106,24 +101,22 @@ td.n{font-variant-numeric:tabular-nums; color:var(--ink-2); white-space:nowrap}
   padding:10px 13px; background:var(--surface-2); border:1px solid var(--line-2); border-radius:3px}
 .cmd code{font-family:"Noto Sans KR",sans-serif; font-weight:700; font-size:14px; color:var(--ink)}
 .cmd span{font-size:13px; color:var(--muted)}
-.cmd::before{content:"“"; display:none}
 
-/* ── 3안 ── */
-.plans{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; align-items:start}
-.plan{background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:16px;
-  display:flex; flex-direction:column; gap:10px}
-.plan.rec{border-color:var(--blue); box-shadow:var(--shadow)}
-.plan h3{font-size:15.5px}
-.plan .how{font-size:13.5px; color:var(--ink-2)}
-.loss{font-size:13px; color:var(--red); border-top:1px dashed var(--line); padding-top:9px}
-.loss b{font-weight:700}
+.rows{display:flex; flex-direction:column; gap:0; border:1px solid var(--line); border-radius:4px;
+  background:var(--surface); overflow:hidden; box-shadow:var(--shadow)}
+.row{display:flex; flex-wrap:wrap; gap:4px 14px; padding:13px 16px; border-bottom:1px solid var(--line-2)}
+.row:last-child{border-bottom:0}
+.row .k{flex:0 0 100%; font-size:13px; font-weight:700; color:var(--ink)}
+.row .v{font-size:13.5px; color:var(--ink-2)}
+.row.warn{background:var(--red-soft)}
+.row.warn .k{color:var(--red)}
 
-/* ── 고지 ── */
 .note{border:1px solid var(--orange); background:var(--orange-soft); border-radius:4px; padding:15px 17px;
   display:flex; flex-direction:column; gap:8px}
 .note h3{font-size:14.5px; color:var(--orange)}
 .note ul{margin:0; padding-left:18px; font-size:13.5px; color:var(--ink-2)}
 .note li{margin-bottom:4px}
+a{color:var(--blue)}
 @media (max-width:560px){
   .week{grid-template-columns:repeat(2,1fr)}
   .kv{grid-template-columns:74px 1fr}
@@ -134,176 +127,161 @@ td.n{font-variant-numeric:tabular-nums; color:var(--ink-2); white-space:nowrap}
 <div class="wrap">
 
 <header>
-  <p class="eyebrow">한국마이크로닉㈜ · 배성윤 차장 · 설계 목업 v1</p>
+  <p class="eyebrow">한국마이크로닉㈜ · 배성윤 차장 · 운영본 v1</p>
   <div class="hrow">
     <h1>하루 한 장 제안서 은행</h1>
-    <p class="stamp">2026-09-13 작성 · 승인 전</p>
+    <p class="stamp">가동 중 · 첫 발송 9/14(월) 07:00</p>
   </div>
-  <p class="lead">제안서를 그때그때 급하게 쓰지 않고, <b>은행에 쌓아두고 하루 한 건씩 꺼내 완성</b>하는 구조입니다.
-  매일 아침 Claude가 은행에서 오늘 차례를 뽑아 자료조사 → 초안 → pptx까지 만들어 대화창으로 보냅니다.</p>
+  <p class="lead">제안서를 급할 때 몰아 쓰지 않고 <b>하루 한 건씩 꺼내 완성해 쌓는</b> 구조입니다.
+  평일 07:00에 Claude가 오늘 차례를 계산해 뽑고, 자료조사 → 초안 → pptx까지 만들어 대화창으로 보냅니다.
+  문서 자체는 기존 <b>km-proposal v10</b> 빌더가 만들고, 이 틀은 「무엇을 언제 만들지」만 정합니다.</p>
 </header>
 
-<!-- ① 오늘 나올 것 -->
+<!-- 오늘 -->
 <section>
-  <p class="eyebrow" style="margin-bottom:10px">① 매일 아침 이 카드 하나가 옵니다</p>
+  <p class="eyebrow" style="margin-bottom:10px">① 월요일 아침 07:00, 이 카드 하나가 옵니다</p>
   <div class="today">
     <div class="today-top">
-      <span class="pill p-blue">오늘 · 9/14 (월)</span>
-      <span class="pill p-orange">유형 I · 운영 시나리오</span>
+      <span class="pill p-blue">9/14 (월)</span>
+      <span class="pill p-orange">I 운영 시나리오</span>
       <span class="pill p-grey">7장</span>
-      <span class="stamp" style="margin-left:auto">은행 #003</span>
+      <span class="pill p-grey">38주차 · 순번 2</span>
     </div>
     <div class="today-body">
-      <h2 class="today-title">4~5성급 호텔 객실관리 운영 시나리오 — 체크인부터 퇴실까지</h2>
+      <h2 class="today-title">기숙사·연수원 운영 시나리오 — 입·퇴소 단체 관리</h2>
       <dl class="kv">
-        <dt>독자</dt><dd>발주처·운영사·설계사 (첫 미팅용 기본 자료)</dd>
-        <dt>디자인</dt><dd>네이비 표지 + 구성도 1장 + 시나리오 타임라인 2장 (Claude 판단)</dd>
-        <dt>근거</dt><dd>신라호텔 계보 운영시나리오 · 카스카디아 · LG화학 리더십센터</dd>
-        <dt>산출</dt><dd>pptx 원본 + 미리보기 PNG 7장 + 드라이브 링크</dd>
+        <dt>독자</dt><dd>발주처·운영사·설계사 (첫 미팅 기본 자료)</dd>
+        <dt>성격</dt><dd>14일 = 짝수 → 현장 맞춤 (자료 못 열면 범용으로 대체하고 보고 ④에 표시)</dd>
+        <dt>디자인</dt><dd>네이비 표지 + 구성도 1장 + 시나리오 타임라인 (Claude 판단)</dd>
+        <dt>산출</dt><dd>pptx 원본 + 미리보기 PNG 7장</dd>
       </dl>
       <div class="steps">
-        <div class="step"><b>07:00</b><span>은행에서 오늘 1건 뽑기</span></div>
-        <div class="step"><b>07:05</b><span>자료조사·구성도 작도</span></div>
+        <div class="step"><b>07:00</b><span>요일·주차로 오늘 1건 계산</span></div>
+        <div class="step"><b>07:05</b><span>자료조사 · 구성도 작도</span></div>
         <div class="step"><b>07:20</b><span>km-proposal 빌더로 pptx</span></div>
-        <div class="step"><b>07:30</b><span>대화창 도착 + 은행 상태 갱신</span></div>
+        <div class="step"><b>07:30</b><span>렌더 검수 후 대화창 도착</span></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ② 주간 로테이션 -->
+<!-- 이번 주 -->
 <section>
-  <p class="eyebrow" style="margin-bottom:10px">② 요일이 유형을 정합니다 (1안 기준)</p>
+  <p class="eyebrow" style="margin-bottom:10px">② 요일이 유형을, 주차가 순번을 정합니다 — 이번 주(38주차)</p>
   <div class="week">
     <div class="day on">
       <span class="d">월</span><span class="dot" style="background:var(--blue)"></span>
-      <span class="t">운영 시나리오</span>
+      <span class="t">기숙사·연수원 운영 시나리오</span><span class="s">현장 · 7장</span>
     </div>
     <div class="day">
       <span class="d">화</span><span class="dot" style="background:var(--orange)"></span>
-      <span class="t">객실 기구물 제안</span>
+      <span class="t">스위트·거실형 배치 제안</span><span class="s">범용 · 5장</span>
     </div>
     <div class="day">
       <span class="d">수</span><span class="dot" style="background:var(--green)"></span>
-      <span class="t">FIP·운영 매뉴얼</span>
+      <span class="t">객실 넘버링 운영계획</span><span class="s">현장 · 5장</span>
     </div>
     <div class="day">
       <span class="d">목</span><span class="dot" style="background:var(--purple)"></span>
-      <span class="t">제품 디자인·사양</span>
+      <span class="t">챠임벨·키센서 디자인</span><span class="s">범용 · 1장</span>
     </div>
     <div class="day">
       <span class="d">금</span><span class="dot" style="background:var(--red)"></span>
-      <span class="t">레퍼런스·실적</span>
+      <span class="t">CB 외함 매입 vs 노출 비교</span><span class="s">현장 · 7장</span>
     </div>
   </div>
-  <p class="lead" style="margin-top:10px; font-size:13.5px">유형이 5개라 월~금 한 바퀴입니다. 유형이 늘면 바퀴가 길어지고, 줄이면 짧아집니다.
-  급한 게 생기면 <b>“오늘은 FIP 매뉴얼로 바꿔”</b> 한마디로 새치기됩니다.</p>
+  <p class="lead small" style="margin-top:10px">요일이 유형을 정하고, <b>ISO 주차 ÷ 4의 나머지</b>가 그 유형 안의 순번을 정합니다 — 4주에 한 바퀴.
+  계산식이라 「어디까지 나갔나」를 기록하지 않아도 어긋나지 않습니다.
+  성격은 날짜로 갈립니다 — <b>홀수일 = 범용 표준본 / 짝수일 = 현장 맞춤</b>.</p>
 </section>
 
-<!-- ③ 은행 -->
+<!-- 은행 -->
 <section>
-  <p class="eyebrow" style="margin-bottom:10px">③ 제안서 은행 — 무엇이 쌓여 있고 어디까지 나갔는가</p>
+  <p class="eyebrow" style="margin-bottom:10px">③ 제안서 은행 — 5요일 × 4주차 = 20건</p>
   <div class="tablebox">
     <table>
       <thead>
-        <tr><th>제안서</th><th>유형</th><th>장수</th><th>상태</th><th>나간 날</th></tr>
+        <tr><th>요일 / 유형</th><th>1주차</th><th>2주차</th><th>3주차</th><th>4주차</th></tr>
       </thead>
       <tbody>
-        <tr class="done">
-          <td>객실관리 납품 레퍼런스 — 호텔·리조트 20선</td>
-          <td class="c">레퍼런스</td><td class="n">5</td>
-          <td><span class="pill p-green">완성</span></td><td class="n">9/11</td>
-        </tr>
-        <tr class="done">
-          <td>2000M 시리즈 기구물 디자인 카탈로그</td>
-          <td class="c">G 기구물</td><td class="n">5</td>
-          <td><span class="pill p-green">완성</span></td><td class="n">9/12</td>
+        <tr>
+          <td><b>월</b><br><span class="c">I 운영 시나리오</span></td>
+          <td class="c">PMS 연동 데이터 흐름</td>
+          <td class="c">4~5성급 체크인~퇴실</td>
+          <td class="c">리조트·콘도 장기체류</td>
+          <td class="c">기숙사·연수원 입·퇴소</td>
         </tr>
         <tr>
-          <td><b>4~5성급 운영 시나리오 — 체크인~퇴실</b></td>
-          <td class="c">I 운영</td><td class="n">7</td>
-          <td><span class="pill p-blue">오늘</span></td><td class="n">9/14</td>
+          <td><b>화</b><br><span class="c">객실 기구물 배치</span></td>
+          <td class="c">주거약자실 배치</td>
+          <td class="c">1~3성급 표준 배치</td>
+          <td class="c">4~5성급 표준 배치</td>
+          <td class="c">스위트·거실형 배치</td>
         </tr>
         <tr>
-          <td>FIP 사용 매뉴얼 — 층별 린넨실 단말 운영</td>
-          <td class="c">J 매뉴얼</td><td class="n">5</td>
-          <td><span class="pill p-grey">대기</span></td><td class="n">—</td>
+          <td><b>수</b><br><span class="c">J 매뉴얼 · K 넘버링</span></td>
+          <td class="c">준공 인계 매뉴얼</td>
+          <td class="c">FIP 사용 매뉴얼</td>
+          <td class="c">방재실 운영 PC 매뉴얼</td>
+          <td class="c">객실 넘버링 운영계획</td>
         </tr>
         <tr>
-          <td>1~3성급 객실 표준 배치 제안 (K·챠임벨·온조기+L)</td>
-          <td class="c">객실 배치</td><td class="n">5</td>
-          <td><span class="pill p-grey">대기</span></td><td class="n">—</td>
+          <td><b>목</b><br><span class="c">G 디자인 · D 사양카드</span></td>
+          <td class="c">타사 배선기구 결합 구분표</td>
+          <td class="c">2000M 디자인 카탈로그</td>
+          <td class="c">BSP 일체형 사양카드</td>
+          <td class="c">챠임벨·키센서 디자인</td>
         </tr>
         <tr>
-          <td>BSP 제안 — 온도+조명+USB+유니버셜 일체형</td>
-          <td class="c">D 사양</td><td class="n">1</td>
-          <td><span class="pill p-grey">대기</span></td><td class="n">—</td>
-        </tr>
-        <tr>
-          <td>CB 외함 매입형 vs 노출형 비교 검토서</td>
-          <td class="c">B 비교</td><td class="n">7</td>
-          <td><span class="pill p-grey">대기</span></td><td class="n">—</td>
-        </tr>
-        <tr>
-          <td>객실관리 공사한계 — 전기·통신·설비·인테리어</td>
-          <td class="c">A 공사한계</td><td class="n">5</td>
-          <td><span class="pill p-orange">차장님 확인</span></td><td class="n">—</td>
+          <td><b>금</b><br><span class="c">레퍼런스 · 비교 · 공동제안</span></td>
+          <td class="c">파트너 공동 제안(도어락)</td>
+          <td class="c">납품 레퍼런스 20선</td>
+          <td class="c">경쟁사 비교(루트론)</td>
+          <td class="c">CB 외함 매입 vs 노출</td>
         </tr>
       </tbody>
     </table>
   </div>
-  <p class="lead" style="margin-top:10px; font-size:13.5px">이 표가 정본입니다. 차장님이 한 줄 추가하면 그게 다음 차례가 되고, 지우면 안 나옵니다.
-  Claude는 이 표의 <b>상태·나간 날만</b> 고치고 제목·우선순위는 건드리지 않습니다.</p>
+  <p class="lead small" style="margin-top:10px">정본은 드라이브 구글시트
+  <a href="https://docs.google.com/spreadsheets/d/1P0u4kTxvHa4iHkjnjHsde614HNZhf-m9ymVhKpCVPjg/edit">「제안서 은행 (하루 한 장) v1」</a>입니다.
+  차장님이 한 줄 추가·수정하시면 그대로 반영됩니다. Claude는 <b>상태·나간날 두 칸만</b> 고치고 제목·요일·장수는 건드리지 않습니다.</p>
 </section>
 
-<!-- ④ 스위치 -->
+<!-- 스위치 -->
 <section>
   <p class="eyebrow" style="margin-bottom:10px">④ 켜고 끄는 법 — 말 한마디</p>
   <div class="switch">
     <div class="cmds">
-      <div class="cmd"><code>제안서 오프</code><span>→ 내일부터 안 옵니다. 은행은 그대로 남습니다</span></div>
-      <div class="cmd"><code>제안서 온</code><span>→ 다음 영업일부터 다시 시작. 끊긴 차례부터 이어서</span></div>
-      <div class="cmd"><code>제안서 이번주만 쉬어</code><span>→ 월요일에 자동 재개</span></div>
-      <div class="cmd"><code>오늘은 ○○로 바꿔</code><span>→ 오늘 것만 교체, 원래 차례는 내일로 밀림</span></div>
-      <div class="cmd"><code>은행에 ○○ 추가해</code><span>→ 표 맨 아래에 대기로 들어감</span></div>
+      <div class="cmd"><code>제안서 오프</code><span>→ 내일부터 중단. 은행은 그대로</span></div>
+      <div class="cmd"><code>제안서 온</code><span>→ 다음 영업일부터 재개. 밀린 것을 몰아 보내지 않음</span></div>
+      <div class="cmd"><code>제안서 이번주만 쉬어</code><span>→ 월요일 자동 재개</span></div>
+      <div class="cmd"><code>오늘은 ○○로 바꿔</code><span>→ 오늘 것만 교체</span></div>
+      <div class="cmd"><code>은행에 ○○ 추가해</code><span>→ 유형 판별 후 해당 요일에 추가</span></div>
     </div>
-    <p class="lead" style="font-size:13.5px">외근 중 모바일에서 한 줄 보내시면 됩니다. 앱이나 설정 화면에 들어갈 일은 없습니다.</p>
+    <p class="lead small">외근 중 모바일에서 한 줄 보내시면 됩니다. 설정 화면에 들어갈 일은 없습니다.</p>
   </div>
 </section>
 
-<!-- ⑤ 3안 -->
+<!-- 지금 상태 -->
 <section>
-  <p class="eyebrow" style="margin-bottom:10px">⑤ 뽑는 순서 — 이 셋 중 하나를 골라 주십시오</p>
-  <div class="plans">
-    <div class="plan rec">
-      <span class="pill p-blue" style="align-self:flex-start">1안 (권장)</span>
-      <h3>요일 고정 로테이션</h3>
-      <p class="how">월~금 유형이 고정. 같은 유형 안에서는 은행 위에서부터 순서대로.</p>
-      <p class="loss"><b>잃는 것:</b> 급한 유형이 금요일 자리면 나흘을 기다립니다(새치기 명령으로만 당깁니다).</p>
-    </div>
-    <div class="plan">
-      <span class="pill p-grey" style="align-self:flex-start">2안</span>
-      <h3>우선순위 한 줄 대기</h3>
-      <p class="how">유형 구분 없이 은행을 우선순위로 세워 위에서 하나씩 꺼냄.</p>
-      <p class="loss"><b>잃는 것:</b> 유형이 편중됩니다. 운영시나리오만 2주 연속 나올 수 있고, 요일로 예측이 안 됩니다.</p>
-    </div>
-    <div class="plan">
-      <span class="pill p-grey" style="align-self:flex-start">3안</span>
-      <h3>현장 연동 자동 선정</h3>
-      <p class="how">그 주 회의록·현장 진행 단계를 읽어 지금 필요한 제안서를 Claude가 고름.</p>
-      <p class="loss"><b>잃는 것:</b> 26년 회의록 시트 연동이 전제이고, 판단이 빗나가면 엉뚱한 게 옵니다. 연동이 끊기면 그날은 아무것도 안 옵니다.</p>
-    </div>
+  <p class="eyebrow" style="margin-bottom:10px">⑤ 지금 만들어 둔 것 · 남은 것</p>
+  <div class="rows">
+    <div class="row"><span class="k">✔ 자동 실행 예약</span><span class="v">평일 07:00 KST · 첫 발송 9/14(월) · 휴대폰 알림 켜짐 · ID <code>trig_01Psz…2nHy</code></span></div>
+    <div class="row"><span class="k">✔ 제안서 은행 20건</span><span class="v">드라이브 구글시트 + 저장소 CSV, 두 곳에 같은 내용</span></div>
+    <div class="row"><span class="k">✔ 운영 규칙 스킬</span><span class="v">km-daily-proposal v1 — 새 창이 이 규칙을 잊지 않게 하는 정본. 아래 파일로 보내드립니다</span></div>
+    <div class="row warn"><span class="k">⚠ 차장님이 하실 것 — 커넥터 연결</span><span class="v">자동 실행 세션에는 구글드라이브가 안 붙습니다(도구가 경고함). claude.ai → Routines → 「하루 한 장 제안서」에서 구글드라이브를 붙여 주셔야 ①현장 자료를 열어 짝수일 현장 맞춤이 되고 ②은행 시트가 자동 갱신됩니다. 붙이기 전에도 <b>범용 제안서는 정상 발송</b>됩니다</span></div>
+    <div class="row warn"><span class="k">⚠ 차장님이 하실 것 — 청담 샘플</span><span class="v">주시는 대로 정답본으로 등록하고 스킬을 v2로 올립니다. 그 전까지는 km-proposal v10 회사 표준 서식</span></div>
   </div>
 </section>
 
-<!-- ⑥ 고지 -->
+<!-- 왜 이렇게 -->
 <section class="note">
-  <h3>이것은 설계 목업입니다 — 아직 아무것도 만들지 않았습니다</h3>
+  <h3>이 설계로 안 되는 것 · 어떤 값이 지어낸 것인가</h3>
   <ul>
-    <li><b>지어낸 값:</b> 은행 8건의 제목·장수·상태, 날짜(9/11·9/12·9/14), 시각(07:00~07:30). 승인 후 차장님 실제 필요에 맞춰 다시 정합니다.</li>
-    <li><b>실제 값:</b> 유형 구분(A·B·D·G·I·J)과 장수 기준은 km-proposal 스킬 v10의 11종 분류, 배치 규칙(K·챠임벨·온조기+L·BSP)은 km-room-layout 확정 규칙입니다.</li>
-    <li><b>확인 못 한 것:</b> 「청담PJ」 산출물 — 이 창에 기억이 없습니다. 드라이브에서 청담 관련 폴더 5개(16-1-053 청담동S호텔, 청담동 복합시설 신축공사_코오롱글로벌 등)를 찾았을 뿐, 어느 것을 말씀하신 것인지 모릅니다. 알려 주시면 그 문서를 <b>정답본</b>으로 등록하고 이후 제안서가 그 형태를 따라갑니다.</li>
-    <li><b>엔진은 새로 만들지 않습니다.</b> 문서 생성은 기존 km-proposal 빌더(네이비 표지·16:9·맑은 고딕 고정)를 그대로 씁니다. 이 틀이 하는 일은 「무엇을 언제 만들지 정하고 끊기지 않게 돌리는 것」뿐입니다.</li>
+    <li><b>실제 값:</b> 유형 분류(I·J·K·G·D·B·B-2·E)와 장수 기준은 km-proposal v10, 배치 규칙(K+DM·BSP·챠임벨 위치·주거약자실 표기)은 km-room-layout 확정 규칙, 요일·홀짝·07:00은 2026-09-13 차장님 선택입니다.</li>
+    <li><b>지어낸 값:</b> 07:00~07:30 단계별 소요 시간(실제 실행 시간은 첫 발송 후 실측해 고칩니다).</li>
+    <li><b>2안·3안은 기각됐습니다.</b> 2안(우선순위 한 줄)은 유형 편중, 3안(현장 연동 자동선정)은 회의록 시트 연동이 전제이고 판단이 빗나가면 엉뚱한 것이 오기 때문입니다. 나중에 3안으로 바꾸고 싶으시면 커넥터가 붙은 뒤가 적기입니다.</li>
+    <li><b>제안서에는 금액을 넣지 않습니다.</b> 금액은 견적서(km-quote-builder)에서만 나갑니다 — 제안서에 단가가 섞이면 회수할 수 없습니다.</li>
   </ul>
 </section>
 
