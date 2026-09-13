@@ -1,0 +1,855 @@
+<title>블록 제도실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&family=Saira+Condensed:wght@500;600;700&display=swap">
+<style>
+  :root{
+    --ink:#0A1A29;
+    --ink-2:#0E2536;
+    --ink-3:#123048;
+    --line:rgba(125,193,230,.16);
+    --line-2:rgba(125,193,230,.34);
+    --line-3:rgba(125,193,230,.62);
+    --chalk:#D2E7F6;
+    --chalk-dim:#7FA6BF;
+    --accent:#EBB64C;
+    --danger:#E8625F;
+    --I:#4FD1E0; --J:#5B7CFA; --L:#E8964A; --O:#F0C544;
+    --S:#5FC97E; --T:#B47BE8; --Z:#E8625F;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--ink);
+    background-image:
+      radial-gradient(120% 80% at 50% -10%, rgba(79,209,224,.09), transparent 60%),
+      radial-gradient(90% 60% at 100% 110%, rgba(91,124,250,.08), transparent 60%);
+    color:var(--chalk);
+    font-family:"IBM Plex Sans KR","IBM Plex Mono",system-ui,sans-serif;
+    -webkit-text-size-adjust:100%;
+  }
+  .sheet{
+    max-width:980px;
+    margin:0 auto;
+    padding-inline:16px;
+    padding-block:22px 34px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+
+  /* ---- 표제 ---- */
+  .masthead{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+    border-bottom:1px solid var(--line-2);
+    padding-bottom:12px;
+  }
+  .masthead h1{
+    margin:0;
+    font-family:"Saira Condensed","IBM Plex Sans KR",sans-serif;
+    font-weight:700;
+    font-size:clamp(28px,7vw,44px);
+    letter-spacing:.02em;
+    line-height:1;
+    text-wrap:balance;
+  }
+  .masthead h1 span{color:var(--accent)}
+  .subtitle{
+    margin:6px 0 0;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:11px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--chalk-dim);
+  }
+  .rev{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:11px;
+    letter-spacing:.12em;
+    color:var(--chalk-dim);
+    text-align:right;
+    line-height:1.7;
+  }
+  .rev b{color:var(--chalk);font-weight:500}
+
+  /* ---- 본판 ---- */
+  .plate{
+    display:grid;
+    grid-template-columns:132px minmax(0,1fr) 150px;
+    gap:16px;
+    align-items:start;
+  }
+  .col{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+  .module{
+    border:1px solid var(--line-2);
+    background:linear-gradient(180deg, rgba(18,48,72,.55), rgba(10,26,41,.55));
+  }
+  .module > h2{
+    margin:0;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:10px;
+    font-weight:500;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--chalk-dim);
+    padding:6px 8px;
+    border-bottom:1px solid var(--line);
+  }
+  .module .body{padding:8px;display:flex;flex-direction:column;gap:8px;align-items:stretch;width:100%;min-width:0}
+  canvas{display:block;max-width:100%}
+  .mini{width:100%;min-width:0;height:auto;aspect-ratio:4/2.4}
+
+  /* ---- 보드 ---- */
+  .stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:0}
+  .board-frame{
+    position:relative;
+    border:1px solid var(--line-3);
+    padding:6px;
+    background:rgba(8,22,35,.75);
+    width:100%;
+    max-width:var(--boardw,340px);
+  }
+  .board-frame::before,.board-frame::after{
+    content:"";position:absolute;width:10px;height:10px;border:1px solid var(--line-3);
+  }
+  .board-frame::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+  .board-frame::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+  #board{width:100%;height:auto;aspect-ratio:10/20;background:#081623}
+  .dim{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:10px;letter-spacing:.14em;color:var(--chalk-dim);
+    display:flex;justify-content:space-between;padding-top:6px;
+    width:100%;max-width:var(--boardw,340px);
+  }
+
+  .overlay{
+    position:absolute;inset:6px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    background:rgba(8,22,35,.9);
+    text-align:center;padding:18px;
+  }
+  .overlay[hidden]{display:none}
+  .overlay h3{
+    margin:0;font-family:"Saira Condensed",sans-serif;font-weight:700;
+    font-size:clamp(22px,6vw,32px);letter-spacing:.04em;
+  }
+  .overlay p{margin:0;font-size:13px;color:var(--chalk-dim);line-height:1.7;max-width:30ch}
+  .overlay .final{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--chalk);letter-spacing:.08em}
+  button{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink);background:var(--accent);
+    border:0;padding:11px 20px;cursor:pointer;
+  }
+  button:hover{filter:brightness(1.08)}
+  button:focus-visible{outline:2px solid var(--chalk);outline-offset:2px}
+
+  /* ---- 표제란(스탯) ---- */
+  .titleblock{border:1px solid var(--line-2)}
+  .tb-row{
+    display:grid;grid-template-columns:1fr auto;gap:6px;
+    padding:7px 9px;border-bottom:1px solid var(--line);align-items:baseline;
+  }
+  .tb-row:last-child{border-bottom:0}
+  .tb-row .k{
+    font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--chalk-dim);
+  }
+  .tb-row .v{
+    font-family:"Saira Condensed",sans-serif;font-weight:600;font-size:20px;
+    font-variant-numeric:tabular-nums;line-height:1;
+  }
+  .tb-row.sm .v{font-size:14px;font-family:"IBM Plex Mono",monospace;font-weight:500}
+  .tb-row .v.hot{color:var(--accent)}
+  .badges{display:flex;gap:5px;flex-wrap:wrap;padding:7px 9px;border-top:1px solid var(--line)}
+  .badge{
+    font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.14em;
+    border:1px solid var(--line-2);padding:3px 6px;color:var(--chalk-dim);
+  }
+  .badge.on{color:var(--ink);background:var(--accent);border-color:var(--accent)}
+
+  /* ---- 범례 ---- */
+  .legend{display:flex;flex-direction:column;gap:5px;padding:8px 9px}
+  .legend div{
+    display:flex;justify-content:space-between;gap:8px;
+    font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--chalk-dim);
+  }
+  .legend kbd{
+    color:var(--chalk);border:1px solid var(--line-2);padding:1px 5px;
+    font-family:inherit;font-size:9.5px;
+  }
+
+  /* ---- 터치 조작 ---- */
+  .pad{display:none;gap:8px;grid-template-columns:repeat(5,1fr)}
+  .pad button{
+    background:transparent;color:var(--chalk);border:1px solid var(--line-2);
+    padding:14px 0;font-size:13px;letter-spacing:.06em;
+  }
+  .pad button:active{background:var(--ink-3)}
+  .pad .wide{grid-column:span 3;background:rgba(235,182,76,.12);border-color:var(--accent);color:var(--accent)}
+  .pad .hold{grid-column:span 2}
+
+  footer{
+    border-top:1px solid var(--line);padding-top:10px;
+    font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.12em;
+    color:var(--chalk-dim);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  }
+
+  @media (max-width:760px){
+    :root{--boardw:min(100%,28dvh)}
+    .plate{grid-template-columns:1fr 1fr}
+    .col-left,.col-right{display:contents}
+    #m-hold{grid-column:1;grid-row:1}
+    #m-next{grid-column:2;grid-row:1}
+    #m-legend{display:none}
+    .stage-col{grid-column:1 / -1;grid-row:2}
+    #m-stats{grid-column:1 / -1;grid-row:3}
+    #m-next .body{flex-direction:row;align-items:stretch}
+    #m-next .mini{flex:1 1 0;min-width:0;aspect-ratio:auto;height:56px}
+    #m-hold .mini{aspect-ratio:auto;height:58px}
+    .pad{display:grid;margin-top:12px}
+    .masthead h1{font-size:32px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="sheet">
+  <header class="masthead">
+    <div>
+      <h1>블록 <span>제도실</span></h1>
+      <p class="subtitle">Tetris · Drafting Sheet A-01</p>
+    </div>
+    <div class="rev">
+      축척 <b>1 : 1</b> · 단위 <b>CELL</b><br>
+      도면번호 <b>KM-TETRIS-01</b>
+    </div>
+  </header>
+
+  <div class="plate">
+    <div class="col col-left">
+      <section class="module" id="m-hold">
+        <h2>Hold · 보관</h2>
+        <div class="body"><canvas id="hold" class="mini"></canvas></div>
+      </section>
+      <section class="module" id="m-legend">
+        <h2>조작 범례</h2>
+        <div class="legend">
+          <div><span>이동</span><span><kbd>←</kbd><kbd>→</kbd></span></div>
+          <div><span>회전</span><span><kbd>↑</kbd><kbd>X</kbd></span></div>
+          <div><span>역회전</span><span><kbd>Z</kbd></span></div>
+          <div><span>내리기</span><span><kbd>↓</kbd></span></div>
+          <div><span>즉시낙하</span><span><kbd>Space</kbd></span></div>
+          <div><span>보관</span><span><kbd>C</kbd></span></div>
+          <div><span>일시정지</span><span><kbd>P</kbd></span></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="col stage-col">
+      <div class="stage">
+        <div class="board-frame">
+          <canvas id="board" width="300" height="600"></canvas>
+          <div class="overlay" id="overlay">
+            <h3 id="ov-title">도면 준비 완료</h3>
+            <p id="ov-text">7-bag 랜덤, SRS 회전, 홀드, 고스트까지 들어간 표준 규격입니다.</p>
+            <p class="final" id="ov-final" hidden></p>
+            <button id="ov-btn">시작</button>
+          </div>
+        </div>
+        <div class="dim"><span>W 10 CELL</span><span>H 20 CELL</span></div>
+      </div>
+      <div class="pad" aria-label="터치 조작">
+        <button id="b-left" aria-label="왼쪽">←</button>
+        <button id="b-ccw" aria-label="역회전">⟲</button>
+        <button id="b-cw" aria-label="회전">⟳</button>
+        <button id="b-down" aria-label="소프트 드롭">↓</button>
+        <button id="b-right" aria-label="오른쪽">→</button>
+        <button id="b-hold" class="hold" aria-label="보관">HOLD</button>
+        <button id="b-drop" class="wide" aria-label="즉시 낙하">HARD DROP</button>
+      </div>
+    </div>
+
+    <div class="col col-right">
+      <section class="module" id="m-next">
+        <h2>Next · 다음</h2>
+        <div class="body">
+          <canvas id="n0" class="mini"></canvas>
+          <canvas id="n1" class="mini"></canvas>
+          <canvas id="n2" class="mini"></canvas>
+        </div>
+      </section>
+      <section class="module titleblock" id="m-stats">
+        <h2>표제란</h2>
+        <div class="tb-row"><span class="k">Score 점수</span><span class="v hot" id="s-score">0</span></div>
+        <div class="tb-row"><span class="k">Lines 줄</span><span class="v" id="s-lines">0</span></div>
+        <div class="tb-row"><span class="k">Level 레벨</span><span class="v" id="s-level">1</span></div>
+        <div class="tb-row sm"><span class="k">Time 시간</span><span class="v" id="s-time">00:00</span></div>
+        <div class="tb-row sm"><span class="k">Pieces 블록</span><span class="v" id="s-pieces">0</span></div>
+        <div class="badges">
+          <span class="badge" id="b-b2b">B2B</span>
+          <span class="badge" id="b-combo">COMBO 0</span>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    <span>제도 규격 · SRS 월킥 / 7-BAG / LOCK DELAY 500MS</span>
+    <span id="f-state">대기</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var COLS=10, ROWS=20, BUF=2, TOTAL=ROWS+BUF;
+
+  var SHAPES={
+    I:[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    J:[[1,0,0],[1,1,1],[0,0,0]],
+    L:[[0,0,1],[1,1,1],[0,0,0]],
+    O:[[1,1],[1,1]],
+    S:[[0,1,1],[1,1,0],[0,0,0]],
+    T:[[0,1,0],[1,1,1],[0,0,0]],
+    Z:[[1,1,0],[0,1,1],[0,0,0]]
+  };
+  var COLORS={I:"#4FD1E0",J:"#5B7CFA",L:"#E8964A",O:"#F0C544",S:"#5FC97E",T:"#B47BE8",Z:"#E8625F"};
+  var TYPES=["I","J","L","O","S","T","Z"];
+
+  function rotCW(m){
+    var n=m.length,out=[],y,x;
+    for(y=0;y<n;y++){out.push([]);for(x=0;x<n;x++){out[y].push(m[n-1-x][y]);}}
+    return out;
+  }
+  var STATES={};
+  TYPES.forEach(function(t){
+    var s=[SHAPES[t]];
+    for(var i=1;i<4;i++) s.push(rotCW(s[i-1]));
+    STATES[t]=s;
+  });
+
+  // SRS kick tables (x, y with y-up); applied as y_screen -= ky
+  var KICK_JLSTZ={
+    "01":[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    "10":[[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    "12":[[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    "21":[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    "23":[[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+    "32":[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    "30":[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    "03":[[0,0],[1,0],[1,1],[0,-2],[1,-2]]
+  };
+  var KICK_I={
+    "01":[[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+    "10":[[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+    "12":[[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
+    "21":[[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+    "23":[[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+    "32":[[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+    "30":[[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+    "03":[[0,0],[-1,0],[2,0],[-1,2],[2,-1]]
+  };
+
+  var board=null, cur=null, hold=null, holdUsed=false, bag=[], queue=[];
+  var score=0, lines=0, level=1, pieces=0, combo=-1, b2b=false;
+  var state="ready"; // ready | playing | paused | over
+  var dropTimer=0, lockTimer=0, lockResets=0, clearTimer=0, clearRows=[], elapsed=0;
+  var trails=[];
+  var keys={left:false,right:false,down:false};
+  var dasTimer=0, arrTimer=0, dasDir=0;
+  var DAS=150, ARR=40, LOCK_DELAY=500, MAX_RESETS=15, CLEAR_TIME=140;
+
+  var boardC=document.getElementById("board"), bctx=boardC.getContext("2d");
+  var holdC=document.getElementById("hold");
+  var nexts=[document.getElementById("n0"),document.getElementById("n1"),document.getElementById("n2")];
+  var overlay=document.getElementById("overlay");
+  var ovTitle=document.getElementById("ov-title"), ovText=document.getElementById("ov-text");
+  var ovFinal=document.getElementById("ov-final"), ovBtn=document.getElementById("ov-btn");
+  var elScore=document.getElementById("s-score"), elLines=document.getElementById("s-lines");
+  var elLevel=document.getElementById("s-level"), elTime=document.getElementById("s-time");
+  var elPieces=document.getElementById("s-pieces"), elState=document.getElementById("f-state");
+  var elB2B=document.getElementById("b-b2b"), elCombo=document.getElementById("b-combo");
+
+  function emptyBoard(){
+    var b=[],y,x;
+    for(y=0;y<TOTAL;y++){b.push([]);for(x=0;x<COLS;x++) b[y].push(null);}
+    return b;
+  }
+
+  function refillBag(){
+    var b=TYPES.slice(),i,j,t;
+    for(i=b.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));t=b[i];b[i]=b[j];b[j]=t;}
+    bag=bag.concat(b);
+  }
+  function nextType(){
+    if(bag.length<7) refillBag();
+    return bag.shift();
+  }
+  function fillQueue(){ while(queue.length<4) queue.push(nextType()); }
+
+  function makePiece(type){
+    return {type:type,rot:0,x:type==="O"?4:3,y:1};
+  }
+  function cells(p,rot,px,py){
+    var m=STATES[p.type][(rot===undefined?p.rot:rot)];
+    var out=[],y,x;
+    for(y=0;y<m.length;y++) for(x=0;x<m[y].length;x++) if(m[y][x])
+      out.push([(px===undefined?p.x:px)+x,(py===undefined?p.y:py)+y]);
+    return out;
+  }
+  function collides(p,rot,px,py){
+    var c=cells(p,rot,px,py),i,x,y;
+    for(i=0;i<c.length;i++){
+      x=c[i][0]; y=c[i][1];
+      if(x<0||x>=COLS||y>=TOTAL) return true;
+      if(y>=0&&board[y][x]) return true;
+    }
+    return false;
+  }
+
+  function spawn(){
+    fillQueue();
+    cur=makePiece(queue.shift());
+    fillQueue();
+    holdUsed=false;
+    dropTimer=0; lockTimer=0; lockResets=0;
+    pieces++;
+    if(collides(cur)) gameOver();
+    paintSide(); paintStats();
+  }
+
+  function gravityMs(){
+    var l=Math.min(level,20);
+    var s=Math.pow(0.8-((l-1)*0.007),l-1);
+    return Math.max(s*1000,25);
+  }
+
+  function move(dx){
+    if(!cur||state!=="playing"||clearTimer>0) return false;
+    if(!collides(cur,cur.rot,cur.x+dx,cur.y)){
+      cur.x+=dx;
+      if(grounded()&&lockResets<MAX_RESETS){lockTimer=0;lockResets++;}
+      return true;
+    }
+    return false;
+  }
+
+  function rotate(dir){
+    if(!cur||state!=="playing"||clearTimer>0) return;
+    if(cur.type==="O") return;
+    var from=cur.rot, to=(cur.rot+(dir>0?1:3))%4;
+    var table=(cur.type==="I"?KICK_I:KICK_JLSTZ)[""+from+to];
+    for(var i=0;i<table.length;i++){
+      var kx=table[i][0], ky=table[i][1];
+      var nx=cur.x+kx, ny=cur.y-ky;
+      if(!collides(cur,to,nx,ny)){
+        cur.rot=to; cur.x=nx; cur.y=ny;
+        if(grounded()&&lockResets<MAX_RESETS){lockTimer=0;lockResets++;}
+        return;
+      }
+    }
+  }
+
+  function grounded(){ return collides(cur,cur.rot,cur.x,cur.y+1); }
+
+  function ghostY(){
+    var y=cur.y;
+    while(!collides(cur,cur.rot,cur.x,y+1)) y++;
+    return y;
+  }
+
+  function softDrop(){
+    if(!cur||state!=="playing"||clearTimer>0) return;
+    if(!grounded()){ cur.y++; score+=1; dropTimer=0; paintStats(); }
+    else { lockTimer=LOCK_DELAY; }
+  }
+
+  function hardDrop(){
+    if(!cur||state!=="playing"||clearTimer>0) return;
+    var gy=ghostY(), dist=gy-cur.y;
+    if(dist>0){
+      trails.push({cells:cells(cur,cur.rot,cur.x,cur.y),dist:dist,life:180,max:180,color:COLORS[cur.type]});
+      score+=dist*2;
+    }
+    cur.y=gy;
+    lock();
+  }
+
+  function doHold(){
+    if(!cur||state!=="playing"||holdUsed||clearTimer>0) return;
+    var t=cur.type;
+    if(hold===null){ hold=t; fillQueue(); cur=makePiece(queue.shift()); fillQueue(); }
+    else { var h=hold; hold=t; cur=makePiece(h); }
+    holdUsed=true; lockTimer=0; lockResets=0; dropTimer=0;
+    if(collides(cur)) gameOver();
+    paintSide();
+  }
+
+  function lock(){
+    var c=cells(cur),i,x,y,full,row;
+    for(i=0;i<c.length;i++){
+      x=c[i][0]; y=c[i][1];
+      if(y>=0&&y<TOTAL) board[y][x]=cur.type;
+    }
+    clearRows=[];
+    for(row=0;row<TOTAL;row++){
+      full=true;
+      for(x=0;x<COLS;x++){ if(!board[row][x]){full=false;break;} }
+      if(full) clearRows.push(row);
+    }
+    if(clearRows.length){ clearTimer=CLEAR_TIME; cur=null; }
+    else {
+      combo=-1;
+      paintStats();
+      cur=null;
+      spawn();
+    }
+  }
+
+  function finishClear(){
+    var n=clearRows.length,i,y;
+    for(i=0;i<clearRows.length;i++){
+      board.splice(clearRows[i],1);
+      var blank=[]; for(y=0;y<COLS;y++) blank.push(null);
+      board.unshift(blank);
+    }
+    var base=[0,100,300,500,800][n];
+    var isTetris=(n===4);
+    if(isTetris&&b2b) base=Math.floor(base*1.5);
+    score+=base*level;
+    combo++;
+    if(combo>0) score+=50*combo*level;
+    b2b=isTetris;
+    lines+=n;
+    level=Math.floor(lines/10)+1;
+    clearRows=[];
+    paintStats();
+    spawn();
+  }
+
+  function gameOver(){
+    state="over";
+    elState.textContent="종료";
+    ovTitle.textContent="도면 마감";
+    ovText.textContent="블록이 상단을 넘었습니다. 새 판을 뜨시겠습니까?";
+    ovFinal.hidden=false;
+    ovFinal.textContent="SCORE "+score.toLocaleString()+"  ·  LINES "+lines+"  ·  LV "+level;
+    ovBtn.textContent="새 판";
+    overlay.hidden=false;
+  }
+
+  function start(saved){
+    board=emptyBoard(); bag=[]; queue=[]; hold=null; holdUsed=false;
+    score=0; lines=0; level=1; pieces=0; combo=-1; b2b=false;
+    dropTimer=0; lockTimer=0; lockResets=0; clearTimer=0; clearRows=[]; elapsed=0; trails=[];
+    if(saved&&saved.board){
+      board=saved.board; queue=saved.queue||[]; bag=saved.bag||[]; hold=saved.hold||null;
+      cur=saved.cur||null; score=saved.score||0; lines=saved.lines||0; level=saved.level||1;
+      pieces=saved.pieces||0; combo=(saved.combo===undefined?-1:saved.combo); b2b=!!saved.b2b;
+      elapsed=saved.elapsed||0; state=saved.state||"paused";
+      fillQueue();
+      if(!cur&&state==="playing") spawn();
+      overlay.hidden=(state==="playing");
+      if(state==="paused"){ showPause(); }
+      elState.textContent=state==="playing"?"진행":"일시정지";
+    } else {
+      fillQueue(); spawn();
+      state="playing"; overlay.hidden=true; ovFinal.hidden=true;
+      elState.textContent="진행";
+    }
+    paintStats(); paintSide();
+  }
+
+  function showPause(){
+    ovTitle.textContent="일시정지";
+    ovText.textContent="P 키 또는 아래 버튼으로 이어서 진행합니다.";
+    ovFinal.hidden=true;
+    ovBtn.textContent="계속";
+    overlay.hidden=false;
+  }
+
+  function togglePause(){
+    if(state==="playing"){ state="paused"; elState.textContent="일시정지"; showPause(); }
+    else if(state==="paused"){ state="playing"; overlay.hidden=true; elState.textContent="진행"; }
+  }
+
+  /* ---------- 렌더 ---------- */
+  function fitCanvas(c,cssW,cssH){
+    var dpr=Math.min(window.devicePixelRatio||1,2);
+    var w=Math.round(cssW*dpr), h=Math.round(cssH*dpr);
+    if(c.width!==w||c.height!==h){ c.width=w; c.height=h; }
+    var ctx=c.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return ctx;
+  }
+
+  function blockFace(ctx,px,py,s,color,alpha){
+    ctx.globalAlpha=alpha===undefined?1:alpha;
+    ctx.fillStyle=color;
+    ctx.fillRect(px+1,py+1,s-2,s-2);
+    ctx.globalAlpha=(alpha===undefined?1:alpha)*0.55;
+    ctx.strokeStyle="rgba(8,22,35,.9)";
+    ctx.lineWidth=1;
+    ctx.strokeRect(px+1.5,py+1.5,s-3,s-3);
+    ctx.globalAlpha=(alpha===undefined?1:alpha)*0.45;
+    ctx.fillStyle="rgba(255,255,255,.85)";
+    ctx.fillRect(px+3,py+3,s-6,1.5);
+    ctx.fillRect(px+3,py+3,1.5,s-6);
+    ctx.globalAlpha=1;
+  }
+
+  function drawBoard(){
+    var cssW=boardC.clientWidth||300, cssH=boardC.clientHeight||600;
+    var ctx=fitCanvas(boardC,cssW,cssH);
+    var s=cssW/COLS;
+    ctx.clearRect(0,0,cssW,cssH);
+    ctx.fillStyle="#081623"; ctx.fillRect(0,0,cssW,cssH);
+
+    // 제도 그리드
+    ctx.lineWidth=1;
+    var i;
+    for(i=1;i<COLS;i++){
+      ctx.strokeStyle=(i%5===0)?"rgba(125,193,230,.20)":"rgba(125,193,230,.09)";
+      ctx.beginPath(); ctx.moveTo(Math.round(i*s)+.5,0); ctx.lineTo(Math.round(i*s)+.5,cssH); ctx.stroke();
+    }
+    for(i=1;i<ROWS;i++){
+      ctx.strokeStyle=(i%5===0)?"rgba(125,193,230,.20)":"rgba(125,193,230,.09)";
+      ctx.beginPath(); ctx.moveTo(0,Math.round(i*s)+.5); ctx.lineTo(cssW,Math.round(i*s)+.5); ctx.stroke();
+    }
+
+    if(!board) return;
+
+    // 하드드롭 궤적
+    for(i=trails.length-1;i>=0;i--){
+      var tr=trails[i], a=(tr.life/tr.max)*0.28;
+      if(a<=0){ trails.splice(i,1); continue; }
+      ctx.globalAlpha=a; ctx.fillStyle=tr.color;
+      for(var k=0;k<tr.cells.length;k++){
+        var cx=tr.cells[k][0], cy=tr.cells[k][1]-BUF;
+        ctx.fillRect(cx*s+s*0.3,(cy)*s,s*0.4,(tr.dist+1)*s);
+      }
+      ctx.globalAlpha=1;
+    }
+
+    // 쌓인 블록
+    var y,x,isClearing;
+    for(y=BUF;y<TOTAL;y++){
+      isClearing=clearRows.indexOf(y)>=0;
+      for(x=0;x<COLS;x++){
+        if(!board[y][x]) continue;
+        if(isClearing){
+          var f=clearTimer/CLEAR_TIME;
+          ctx.globalAlpha=0.35+0.65*f;
+          ctx.fillStyle="#EAF6FF";
+          ctx.fillRect(x*s+1,(y-BUF)*s+1,s-2,s-2);
+          ctx.globalAlpha=1;
+        } else {
+          blockFace(ctx,x*s,(y-BUF)*s,s,COLORS[board[y][x]]);
+        }
+      }
+    }
+
+    // 고스트 + 현재 블록
+    if(cur&&state!=="over"){
+      var gy=ghostY(), g=cells(cur,cur.rot,cur.x,gy),j;
+      ctx.strokeStyle=COLORS[cur.type]; ctx.globalAlpha=.42; ctx.lineWidth=1;
+      ctx.setLineDash([3,3]);
+      for(j=0;j<g.length;j++){
+        if(g[j][1]<BUF) continue;
+        ctx.strokeRect(g[j][0]*s+2.5,(g[j][1]-BUF)*s+2.5,s-5,s-5);
+      }
+      ctx.setLineDash([]); ctx.globalAlpha=1;
+      var c=cells(cur);
+      for(j=0;j<c.length;j++){
+        if(c[j][1]<BUF) continue;
+        blockFace(ctx,c[j][0]*s,(c[j][1]-BUF)*s,s,COLORS[cur.type]);
+      }
+    }
+  }
+
+  function drawMini(canvas,type){
+    var cssW=canvas.clientWidth||120, cssH=canvas.clientHeight||70;
+    var ctx=fitCanvas(canvas,cssW,cssH);
+    ctx.clearRect(0,0,cssW,cssH);
+    ctx.fillStyle="rgba(8,22,35,.6)"; ctx.fillRect(0,0,cssW,cssH);
+    ctx.strokeStyle="rgba(125,193,230,.10)"; ctx.lineWidth=1;
+    var step=cssW/4,i;
+    for(i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(Math.round(i*step)+.5,0); ctx.lineTo(Math.round(i*step)+.5,cssH); ctx.stroke(); }
+    if(!type) return;
+    var m=STATES[type][0],minX=9,maxX=-1,minY=9,maxY=-1,x,y;
+    for(y=0;y<m.length;y++) for(x=0;x<m[y].length;x++) if(m[y][x]){
+      if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y;
+    }
+    var w=maxX-minX+1, h=maxY-minY+1;
+    var s=Math.min(cssW/(w+1.2),cssH/(h+1.2),22);
+    var ox=(cssW-w*s)/2, oy=(cssH-h*s)/2;
+    for(y=minY;y<=maxY;y++) for(x=minX;x<=maxX;x++) if(m[y][x])
+      blockFace(ctx,ox+(x-minX)*s,oy+(y-minY)*s,s,COLORS[type]);
+  }
+
+  function paintSide(){
+    drawMini(holdC,hold);
+    for(var i=0;i<3;i++) drawMini(nexts[i],queue[i]);
+  }
+
+  function paintStats(){
+    elScore.textContent=score.toLocaleString();
+    elLines.textContent=lines;
+    elLevel.textContent=level;
+    elPieces.textContent=pieces;
+    elB2B.className="badge"+(b2b?" on":"");
+    elCombo.className="badge"+(combo>0?" on":"");
+    elCombo.textContent="COMBO "+(combo>0?combo:0);
+  }
+
+  function paintTime(){
+    var t=Math.floor(elapsed/1000);
+    var mm=String(Math.floor(t/60)).padStart(2,"0");
+    var ss=String(t%60).padStart(2,"0");
+    elTime.textContent=mm+":"+ss;
+  }
+
+  /* ---------- 루프 ---------- */
+  var last=0;
+  function frame(now){
+    if(!last) last=now;
+    var dt=Math.min(now-last,100); last=now;
+    if(state==="playing"){
+      elapsed+=dt; paintTime();
+      for(var i=0;i<trails.length;i++) trails[i].life-=dt;
+
+      if(clearTimer>0){
+        clearTimer-=dt;
+        if(clearTimer<=0) finishClear();
+      } else if(cur){
+        // DAS/ARR
+        if(dasDir!==0){
+          dasTimer-=dt;
+          if(dasTimer<=0){
+            arrTimer-=dt;
+            if(arrTimer<=0){ move(dasDir); arrTimer=ARR; }
+          }
+        }
+        if(keys.down){
+          dropTimer+=dt*20;
+        }
+        dropTimer+=dt;
+        var g=gravityMs();
+        while(dropTimer>=g){
+          dropTimer-=g;
+          if(!grounded()){ cur.y++; if(keys.down) score+=1; }
+          else break;
+        }
+        if(grounded()){
+          lockTimer+=dt;
+          if(lockTimer>=LOCK_DELAY) lock();
+        } else { lockTimer=0; }
+      }
+    }
+    drawBoard();
+    requestAnimationFrame(frame);
+  }
+
+  /* ---------- 입력 ---------- */
+  function pressLeft(){ if(move(-1)){ dasDir=-1; dasTimer=DAS; arrTimer=0; } }
+  function pressRight(){ if(move(1)){ dasDir=1; dasTimer=DAS; arrTimer=0; } }
+
+  document.addEventListener("keydown",function(e){
+    var k=e.key;
+    if(["ArrowLeft","ArrowRight","ArrowDown","ArrowUp"," ","Spacebar"].indexOf(k)>=0) e.preventDefault();
+    if(state==="ready"||state==="over"){
+      if(k===" "||k==="Enter"){ ovBtn.click(); }
+      return;
+    }
+    if(k==="p"||k==="P"){ togglePause(); return; }
+    if(state!=="playing") return;
+    if(e.repeat&&(k==="ArrowLeft"||k==="ArrowRight")) return;
+    switch(k){
+      case "ArrowLeft": keys.left=true; pressLeft(); break;
+      case "ArrowRight": keys.right=true; pressRight(); break;
+      case "ArrowDown": keys.down=true; softDrop(); break;
+      case "ArrowUp": case "x": case "X": rotate(1); break;
+      case "z": case "Z": rotate(-1); break;
+      case "c": case "C": doHold(); break;
+      case " ": case "Spacebar": hardDrop(); break;
+    }
+  });
+  document.addEventListener("keyup",function(e){
+    var k=e.key;
+    if(k==="ArrowLeft"){ keys.left=false; if(dasDir===-1){ dasDir=keys.right?1:0; dasTimer=DAS; } }
+    if(k==="ArrowRight"){ keys.right=false; if(dasDir===1){ dasDir=keys.left?-1:0; dasTimer=DAS; } }
+    if(k==="ArrowDown"){ keys.down=false; }
+  });
+
+  function bindTouch(id,fn,repeat){
+    var el=document.getElementById(id), timer=null, hold=null;
+    function down(ev){
+      ev.preventDefault();
+      fn();
+      if(repeat){
+        hold=setTimeout(function(){ timer=setInterval(fn,ARR); },DAS);
+      }
+    }
+    function up(){ if(hold){clearTimeout(hold);hold=null;} if(timer){clearInterval(timer);timer=null;} }
+    el.addEventListener("touchstart",down,{passive:false});
+    el.addEventListener("touchend",up);
+    el.addEventListener("touchcancel",up);
+    el.addEventListener("mousedown",down);
+    el.addEventListener("mouseup",up);
+    el.addEventListener("mouseleave",up);
+  }
+  bindTouch("b-left",function(){ move(-1); },true);
+  bindTouch("b-right",function(){ move(1); },true);
+  bindTouch("b-down",function(){ softDrop(); },true);
+  bindTouch("b-cw",function(){ rotate(1); },false);
+  bindTouch("b-ccw",function(){ rotate(-1); },false);
+  bindTouch("b-hold",function(){ doHold(); },false);
+  bindTouch("b-drop",function(){ hardDrop(); },false);
+
+  ovBtn.addEventListener("click",function(){
+    if(state==="paused"){ state="playing"; overlay.hidden=true; elState.textContent="진행"; }
+    else { start(null); }
+  });
+
+  document.addEventListener("visibilitychange",function(){
+    if(document.hidden&&state==="playing") togglePause();
+  });
+
+  window.addEventListener("resize",function(){ paintSide(); });
+
+  /* ---------- 재발행 시 상태 유지 ---------- */
+  function snapshotData(){
+    return {board:board,queue:queue,bag:bag,hold:hold,cur:cur,score:score,lines:lines,
+            level:level,pieces:pieces,combo:combo,b2b:b2b,elapsed:elapsed,
+            state:state==="playing"?"paused":state};
+  }
+  try{
+    if(window.claude&&window.claude.hot&&window.claude.hot.snapshot){
+      window.claude.hot.snapshot(snapshotData);
+    }
+  }catch(e){}
+
+  function boot(saved){
+    if(saved&&saved.board){ start(saved); }
+    else {
+      board=emptyBoard(); fillQueue(); paintSide(); paintStats(); paintTime();
+      state="ready"; overlay.hidden=false;
+    }
+    requestAnimationFrame(frame);
+  }
+  try{
+    if(window.claude&&window.claude.hot&&window.claude.hot.ready){
+      window.claude.hot.ready(boot);
+    } else {
+      boot((window.claude&&window.claude.hot&&window.claude.hot.data)||null);
+    }
+  }catch(e){ boot(null); }
+})();
+</script>
