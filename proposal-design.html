@@ -1759,6 +1759,7 @@ function mix(a, b, t){
   var x = hx(a), y = hx(b);
   return hs([x[0]+(y[0]-x[0])*t, x[1]+(y[1]-x[1])*t, x[2]+(y[2]-x[2])*t]);
 }
+function inkOn(c){ return lum(c) > 0.45 ? '#262A2F' : '#EFF1F4'; }
 function btnColor(F, g){
   if(g.btnTone === 'same') return shade(F.c, 3);
   if(g.btnTone === 'darker') return shade(F.c, -22);
@@ -1904,7 +1905,7 @@ function drawBtn(ctx, c, g, F, bc, W){
   if(sh === 'touchdot'){
     var d = min*0.15;
     ctx.save(); ctx.globalAlpha = .82;
-    ctx.beginPath(); ctx.arc(c.x+c.w/2, c.y+c.h*0.5, d/2, 0, Math.PI*2);
+    ctx.beginPath(); ctx.arc(c.x+c.w/2, c.y+c.h*0.38, d/2, 0, Math.PI*2);
     ctx.fillStyle = bc; ctx.fill(); ctx.restore();
     return {x:c.x, y:c.y, w:c.w, h:c.h, r:0, flat:true};
   }
@@ -1946,17 +1947,23 @@ function drawBulb(ctx, cx, cy, s, col){
   ctx.beginPath(); ctx.moveTo(cx-s*0.12, cy+s*0.52); ctx.lineTo(cx+s*0.12, cy+s*0.52); ctx.stroke();
   ctx.restore();
 }
-function drawLabel(ctx, B, c, g, F, W, i){
+function drawLabel(ctx, B, c, g, F, W, i, bc){
   if(g.label === 'none') return;
   var fs = Math.max(6, Math.min(B.w, B.h)*0.20);
-  ctx.save(); ctx.globalAlpha = .82; ctx.fillStyle = F.ink;
+  var onPlate = (g.labelPos === 'below') || B.flat;
+  var ink = onPlate ? F.ink : inkOn(bc || F.c);
+  ctx.save(); ctx.globalAlpha = .82; ctx.fillStyle = ink;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if(g.label === 'icon'){
-    drawBulb(ctx, B.x+B.w/2, B.y+B.h*0.40, fs*1.3, F.ink);
+    drawBulb(ctx, B.x+B.w/2, B.flat ? c.y+c.h*0.62 : B.y+B.h*0.40, fs*1.3, ink);
   } else {
     ctx.font = '700 ' + fs + 'px ' + FONT;
-    var y = (g.labelPos === 'below') ? c.y+c.h-fs*0.75 : B.y+B.h*(g.labelPos === 'side' ? 0.5 : 0.40);
-    var x = (g.labelPos === 'side') ? B.x+B.w*0.26 : B.x+B.w/2;
+    var y, x;
+    if(B.flat){ y = c.y + c.h*0.60; x = c.x + c.w/2; }
+    else {
+      y = (g.labelPos === 'below') ? c.y+c.h-fs*0.75 : B.y+B.h*(g.labelPos === 'side' ? 0.5 : 0.40);
+      x = (g.labelPos === 'side') ? B.x+B.w*0.26 : B.x+B.w/2;
+    }
     ctx.fillText(CELLTXT[i%6], x, y);
   }
   ctx.restore();
@@ -1966,7 +1973,7 @@ function drawSwitch(ctx, P, A, g, F, n, W){
   cellsOf(A, n, vert, g.btnGap).forEach(function(c, i){
     var B = drawBtn(ctx, c, g, F, bc, W);
     drawLed(ctx, B, g, W);
-    drawLabel(ctx, B, c, g, F, W, i);
+    drawLabel(ctx, B, c, g, F, W, i, bc);
   });
 }
 function drawSocket(ctx, c, kind, g, F, W){
@@ -2041,7 +2048,7 @@ function drawThermo(ctx, P, A, g, F, v, W){
     var k = ctrls[i];
     if(k === 'usb' || k === 'uni'){ drawSocket(ctx, c, k === 'usb' ? 'usb' : 'uni', g, F, W); return; }
     var B = drawBtn(ctx, c, g, F, bc, W);
-    ctx.save(); ctx.globalAlpha = .8; ctx.fillStyle = F.ink;
+    ctx.save(); ctx.globalAlpha = .82; ctx.fillStyle = B.flat ? F.ink : inkOn(bc);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     var fs2 = Math.max(6, Math.min(B.w, B.h)*0.34);
     ctx.font = '800 ' + fs2 + 'px ' + FONT;
@@ -2078,7 +2085,7 @@ function drawDoor(ctx, P, A, g, F, v, W){
   function CH(a){
     var d = Math.min(a.w, a.h)*0.52;
     var B = drawBtn(ctx, {x:a.x+(a.w-d)/2, y:a.y+a.h*0.22, w:d, h:d}, {btnShape:'round', btnGap:0}, F, bc, W);
-    ctx.save(); ctx.globalAlpha = .55; ctx.strokeStyle = F.ink;
+    ctx.save(); ctx.globalAlpha = .62; ctx.strokeStyle = B.flat ? F.ink : inkOn(bc);
     ctx.lineWidth = Math.max(.9, d*0.035);
     ctx.beginPath(); ctx.arc(B.x+B.w/2, B.y+B.h*0.54, d*0.18, Math.PI, 0); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(B.x+B.w/2-d*0.22, B.y+B.h*0.54); ctx.lineTo(B.x+B.w/2+d*0.22, B.y+B.h*0.54); ctx.stroke();
