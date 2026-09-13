@@ -1,0 +1,594 @@
+<title>센터간식</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#eef0f4; --card:#ffffff; --card2:#f7f8fa;
+  --ink:#16202c; --muted:#5c6878; --line:#d6dae2;
+  --navy:#1b2a41; --navy2:#24364f; --navy-ink:#eef1f6;
+  --gold:#8a6626; --gold-line:#c9a35a; --gold-soft:rgba(201,163,90,.14);
+  --note:#f0e3c2; --note-line:#cfa94f; --note-ink:#5a4415;
+  --radius:3px;
+  --f-disp:'Gowun Batang',"Apple SD Gothic Neo",serif;
+  --f-body:'Noto Sans KR',"Apple SD Gothic Neo",sans-serif;
+  --f-num:'JetBrains Mono',ui-monospace,monospace;
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0d141c; --card:#151f2a; --card2:#111a24;
+    --ink:#e6ecf3; --muted:#94a1b2; --line:#25323f;
+    --navy:#101a26; --navy2:#1b2a41; --navy-ink:#e6ecf3;
+    --gold:#c9a35a; --gold-line:#8d6f30; --gold-soft:rgba(201,163,90,.10);
+    --note:#2a2312; --note-line:#8d6f30; --note-ink:#e2cd97;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0d141c; --card:#151f2a; --card2:#111a24;
+  --ink:#e6ecf3; --muted:#94a1b2; --line:#25323f;
+  --navy:#101a26; --navy2:#1b2a41; --navy-ink:#e6ecf3;
+  --gold:#c9a35a; --gold-line:#8d6f30; --gold-soft:rgba(201,163,90,.10);
+  --note:#2a2312; --note-line:#8d6f30; --note-ink:#e2cd97;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-weight:400;line-height:1.65;word-break:keep-all;-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:var(--f-disp);font-weight:700;text-wrap:balance;margin:0;letter-spacing:-.01em}
+p{margin:0}
+a{color:inherit}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:500}
+.wrap{width:100%;max-width:1000px;margin:0 auto;padding-inline:20px}
+.eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:500}
+
+/* ── header ───────────────────────────── */
+.top{position:sticky;top:0;z-index:20;background:var(--navy);color:var(--navy-ink);border-bottom:1px solid rgba(201,163,90,.35)}
+.top .wrap{display:flex;align-items:center;gap:18px;min-height:58px;padding-block:8px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;line-height:1.15;margin-right:auto}
+.brand b{font-family:var(--f-disp);font-size:19px;letter-spacing:.02em}
+.brand span{font-size:10px;letter-spacing:.26em;color:var(--gold-line)}
+.nav{display:flex;gap:16px;font-size:13px}
+.nav a{text-decoration:none;color:rgba(238,241,246,.82);padding-block:4px;border-bottom:1px solid transparent}
+.nav a:hover,.nav a:focus-visible{color:#fff;border-bottom-color:var(--gold-line)}
+.callbtn{display:inline-flex;align-items:center;gap:7px;text-decoration:none;font-family:var(--f-num);font-size:13px;padding:7px 13px;border:1px solid var(--gold-line);color:var(--gold-line);border-radius:var(--radius)}
+.callbtn:hover{background:var(--gold-line);color:var(--navy)}
+
+/* ── hero ─────────────────────────────── */
+.hero{background:var(--navy);color:var(--navy-ink)}
+.hero .wrap{padding-block:54px 40px}
+.hero .eyebrow{color:rgba(238,241,246,.6)}
+.hero h1{font-size:clamp(30px,6vw,50px);line-height:1.25;margin-top:14px;max-width:19em}
+.hero h1 em{font-style:normal;color:var(--gold-line)}
+.lede{margin-top:16px;max-width:34em;color:rgba(238,241,246,.78);font-weight:300;font-size:15px}
+.anchors{display:flex;flex-wrap:wrap;gap:0;margin-top:34px;border-top:1px solid rgba(201,163,90,.3);border-bottom:1px solid rgba(201,163,90,.3)}
+.anchor{flex:1 1 160px;padding:18px 20px 18px 0;border-right:1px solid rgba(255,255,255,.07)}
+.anchor:last-child{border-right:0}
+.anchor dt{font-size:12px;color:rgba(238,241,246,.66);margin-bottom:4px}
+.anchor dd{margin:0;font-family:var(--f-num);font-size:25px;color:var(--gold-line);font-variant-numeric:tabular-nums}
+.anchor dd small{font-size:12px;color:rgba(238,241,246,.6);font-family:var(--f-body);margin-left:4px}
+.herofoot{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:22px;flex-wrap:wrap}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-body);font-size:14px;font-weight:500;padding:11px 20px;border-radius:var(--radius);border:1px solid var(--gold-line);background:var(--gold-line);color:#16202c;text-decoration:none;cursor:pointer}
+.btn:hover{filter:brightness(1.07)}
+.btn.ghost{background:transparent;color:var(--gold-line)}
+.btn.ghost:hover{background:rgba(201,163,90,.12)}
+.floor{font-family:var(--f-num);font-size:12px;color:rgba(238,241,246,.55);letter-spacing:.1em}
+
+/* ── sections ─────────────────────────── */
+section{padding-block:56px}
+.shead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:28px}
+.shead h2{font-size:clamp(21px,3.4vw,27px)}
+.shead p{font-size:13px;color:var(--muted);margin-left:auto}
+
+/* menu */
+.menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:26px 40px}
+.cat h3{font-size:15px;letter-spacing:.02em;display:flex;align-items:center;gap:9px;padding-bottom:9px;border-bottom:1px solid var(--gold-line)}
+.cat h3 span{font-family:var(--f-num);font-size:11px;color:var(--gold);font-weight:400}
+.rows{list-style:none;margin:0;padding:0}
+.rows li{display:flex;align-items:baseline;gap:8px;padding-block:7px;border-bottom:1px dotted var(--line);font-size:14px}
+.rows li .n{flex:0 1 auto;word-break:keep-all}
+.rows li .d{flex:1 1 auto;min-width:14px}
+.rows li .p{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:14px;white-space:nowrap}
+.rows li .tag{font-size:11px;color:var(--muted)}
+.menunote{margin-top:22px;font-size:12.5px;color:var(--muted)}
+
+/* group order */
+.sets{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.set{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--navy2);border-radius:var(--radius);padding:20px}
+.set b{font-family:var(--f-disp);font-size:17px;display:block}
+.set .who{font-size:12px;color:var(--muted);margin-bottom:12px}
+.set ul{list-style:none;margin:0;padding:0;font-size:13.5px}
+.set ul li{padding-block:4px;display:flex;justify-content:space-between;gap:10px}
+.set ul li span{color:var(--muted);font-family:var(--f-num);font-size:12.5px}
+.pricein{margin-top:14px;padding-top:12px;border-top:1px dotted var(--line);display:flex;align-items:center;gap:8px;font-size:13px}
+.pricein label{color:var(--muted);white-space:nowrap}
+.pricein input{width:88px;padding:6px 8px;font-family:var(--f-num);font-size:13px;text-align:right;background:var(--note);border:1px solid var(--note-line);color:var(--note-ink);border-radius:var(--radius)}
+.sum{margin-left:auto;font-family:var(--f-num);font-weight:500}
+
+/* calculator */
+.calc{margin-top:30px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius)}
+.calc .ch{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.calc .ch b{font-family:var(--f-disp);font-size:16px}
+.calc .ch span{font-size:12.5px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:0}
+.item{display:flex;align-items:center;gap:10px;padding:11px 20px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-size:13.5px}
+.item .nm{flex:1 1 auto;word-break:keep-all;line-height:1.35}
+.item .pr{font-family:var(--f-num);font-size:12.5px;color:var(--muted);white-space:nowrap}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.stepper button{width:26px;height:26px;border:0;background:var(--card2);color:var(--ink);font-size:14px;cursor:pointer;line-height:1}
+.stepper button:hover{background:var(--gold-soft)}
+.stepper input{width:34px;height:26px;border:0;border-inline:1px solid var(--line);background:transparent;color:var(--ink);text-align:center;font-family:var(--f-num);font-size:13px}
+.total{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--card2);flex-wrap:wrap}
+.total .lbl{font-size:13px;color:var(--muted)}
+.total .val{font-family:var(--f-num);font-size:24px;font-weight:500;color:var(--gold)}
+.total .right{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+.btn.dark{background:var(--navy2);border-color:var(--navy2);color:#fff}
+.btn.line{background:transparent;border-color:var(--line);color:var(--ink)}
+.btn.line:hover{background:var(--gold-soft)}
+
+/* form */
+.formwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:24px;margin-top:30px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.f{display:flex;flex-direction:column;gap:5px}
+.f.full{grid-column:1/-1}
+.f label{font-size:12px;color:var(--muted);letter-spacing:.02em}
+.f input,.f select,.f textarea{font-family:var(--f-body);font-size:14px;padding:9px 11px;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:var(--radius)}
+.f textarea{min-height:70px;resize:vertical}
+.f input:focus-visible,.f select:focus-visible,.f textarea:focus-visible,.stepper input:focus-visible,.pricein input:focus-visible{outline:2px solid var(--gold-line);outline-offset:1px}
+.preview{background:var(--navy);color:var(--navy-ink);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column}
+.preview .eyebrow{color:rgba(238,241,246,.55)}
+.preview pre{flex:1 1 auto;margin:12px 0 0;white-space:pre-wrap;word-break:break-word;font-family:var(--f-num);font-size:12.5px;line-height:1.75;color:rgba(238,241,246,.92);overflow:auto;max-height:340px}
+.preview .pactions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.toast{font-size:12px;color:var(--gold-line);min-height:16px;margin-top:6px}
+.rulecards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:26px}
+.rule{border-left:2px solid var(--gold-line);padding:2px 0 2px 14px}
+.rule dt{font-size:12px;color:var(--muted)}
+.rule dd{margin:2px 0 0;font-size:14px}
+.rule dd.pending{font-size:12.5px;color:var(--note-ink);background:var(--note);border:1px solid var(--note-line);display:inline-block;padding:2px 7px;border-radius:var(--radius)}
+
+/* visit */
+.visit{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+.addr{font-size:15px;line-height:1.8}
+.addr .big{font-family:var(--f-disp);font-size:19px}
+.steps{list-style:none;counter-reset:s;margin:22px 0 0;padding:0}
+.steps li{counter-increment:s;position:relative;padding-left:34px;padding-block:8px;font-size:14px;border-bottom:1px dotted var(--line)}
+.steps li::before{content:counter(s);position:absolute;left:0;top:9px;width:21px;height:21px;border:1px solid var(--gold-line);color:var(--gold);border-radius:50%;font-family:var(--f-num);font-size:11px;display:flex;align-items:center;justify-content:center}
+.mapbox{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.mapbox svg{width:100%;height:auto;display:block}
+.maplinks{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+
+/* print sheet */
+.sheet{background:#fff;color:#16202c;border:1px solid var(--line);border-radius:var(--radius);padding:34px;display:grid;grid-template-columns:1.3fr .7fr;gap:30px;align-items:start}
+.sheet h3{font-size:26px;color:#1b2a41}
+.sheet .sk{font-size:11px;letter-spacing:.26em;color:#8a6626;text-transform:uppercase}
+.sheet .srows{margin-top:18px}
+.sheet .srows li{border-bottom:1px dotted #cfd4dd;color:#16202c}
+.sheet .sfoot{margin-top:18px;font-size:13px;color:#4a5564}
+.qrbox{text-align:center}
+#qr{width:150px;height:150px;margin:0 auto;border:1px solid #d6dae2;display:flex;align-items:center;justify-content:center;background:#fff}
+#qr img,#qr canvas{display:block}
+.qrcap{font-size:11.5px;color:#5c6878;margin-top:9px;line-height:1.5}
+footer{background:var(--navy);color:rgba(238,241,246,.7);font-size:12.5px}
+footer .wrap{padding-block:26px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+footer a{color:var(--gold-line);text-decoration:none}
+footer .fr{margin-left:auto;font-family:var(--f-num)}
+
+@media (max-width:820px){
+  .formwrap,.visit{grid-template-columns:1fr}
+  .sheet{grid-template-columns:1fr}
+}
+@media (max-width:460px){
+  .fields{grid-template-columns:1fr}
+  .anchor{flex:1 1 100%;border-right:0;border-bottom:1px solid rgba(255,255,255,.07);padding-right:0}
+  .anchor:last-child{border-bottom:0}
+  section{padding-block:42px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media print{
+  body{background:#fff}
+  .no-print{display:none!important}
+  #print{padding:0}
+  .shead{display:none}
+  .sheet{border:0;padding:0;page-break-inside:avoid}
+  @page{size:A4;margin:16mm}
+}
+</style>
+
+<header class="top no-print">
+  <div class="wrap">
+    <span class="brand"><b>센터간식</b><span>CENTER SNACK</span></span>
+    <nav class="nav">
+      <a href="#menu">메뉴</a>
+      <a href="#group">단체주문</a>
+      <a href="#visit">오시는 길</a>
+    </nav>
+    <a class="callbtn" href="tel:01046681679">010-4668-1679</a>
+  </div>
+</header>
+
+<div class="hero no-print">
+  <div class="wrap">
+    <p class="eyebrow">성남 중원구 사기막골로62번길 33 · RB104</p>
+    <h1>사무실에서 가장 가까운 <em>점심과 커피</em>.</h1>
+    <p class="lede">지식산업센터 안에서 밥·면·김밥·샌드위치를 그 자리에서 만듭니다. 회의 간식과 야근 도시락은 사무실로 가져다 드립니다.</p>
+    <dl class="anchors">
+      <div class="anchor"><dt>커피 HOT · ICE</dt><dd>1,500<small>원</small></dd></div>
+      <div class="anchor"><dt>김밥</dt><dd>3,500<small>원부터</small></dd></div>
+      <div class="anchor"><dt>덮밥 · 라면세트</dt><dd>5,500<small>원</small></dd></div>
+    </dl>
+    <div class="herofoot">
+      <div class="actions">
+        <a class="btn" href="#group">단체주문 알아보기</a>
+        <a class="btn ghost" href="#menu">메뉴 전체 보기</a>
+      </div>
+      <span class="floor">RB104 &nbsp;2F ↑</span>
+    </div>
+  </div>
+</div>
+
+<section id="menu" class="no-print">
+  <div class="wrap">
+    <div class="shead">
+      <h2>메뉴</h2>
+      <p>매장 메뉴판 기준 · 가격은 원(₩)</p>
+    </div>
+    <div class="menu">
+      <div class="cat">
+        <h3>밥 · 국 <span>RICE</span></h3>
+        <ul class="rows">
+          <li><span class="n">센터김밥</span><span class="d"></span><span class="p">3,500</span></li>
+          <li><span class="n">매운어묵김밥</span><span class="d"></span><span class="p">4,000</span></li>
+          <li><span class="n">스팸김밥</span><span class="d"></span><span class="p">4,500</span></li>
+          <li><span class="n">제육덮밥</span><span class="d"></span><span class="p">5,500</span></li>
+          <li><span class="n">스팸마요덮밥</span><span class="d"></span><span class="p">5,500</span></li>
+          <li><span class="n">김치스팸덮밥</span><span class="d"></span><span class="p">5,500</span></li>
+          <li><span class="n">사골떡만두국 <span class="tag">+공기밥</span></span><span class="d"></span><span class="p">6,500</span></li>
+        </ul>
+      </div>
+      <div class="cat">
+        <h3>면 · 분식 <span>NOODLE</span></h3>
+        <ul class="rows">
+          <li><span class="n">라면 <span class="tag">토핑 +1,000</span></span><span class="d"></span><span class="p">3,500~4,000</span></li>
+          <li><span class="n">짜파게티 <span class="tag">+계란후라이</span></span><span class="d"></span><span class="p">4,500</span></li>
+          <li><span class="n">떡볶이</span><span class="d"></span><span class="p">4,000</span></li>
+          <li><span class="n">라볶이</span><span class="d"></span><span class="p">5,000</span></li>
+          <li><span class="n">오뎅</span><span class="d"></span><span class="p">1,000</span></li>
+        </ul>
+      </div>
+      <div class="cat">
+        <h3>샌드위치 · 버거 <span>SANDWICH</span></h3>
+        <ul class="rows">
+          <li><span class="n">샌드위치 · 토스트</span><span class="d"></span><span class="p">3,000~3,500</span></li>
+          <li><span class="n">클럽샌드위치</span><span class="d"></span><span class="p">3,500</span></li>
+          <li><span class="n">돈까스샌드위치</span><span class="d"></span><span class="p">5,000</span></li>
+          <li><span class="n">점보버거</span><span class="d"></span><span class="p">5,000</span></li>
+          <li><span class="n">뉴욕핫도그</span><span class="d"></span><span class="p">4,000</span></li>
+          <li><span class="n">미니햄버거</span><span class="d"></span><span class="p">4,000</span></li>
+        </ul>
+      </div>
+      <div class="cat">
+        <h3>세트 · 사이드 <span>SET</span></h3>
+        <ul class="rows">
+          <li><span class="n">진라면 + 꼬마김밥 3줄</span><span class="d"></span><span class="p">5,500</span></li>
+          <li><span class="n">짜파게티 + 꼬마김밥 3줄</span><span class="d"></span><span class="p">6,000</span></li>
+          <li><span class="n">김밥 변경 <span class="tag">매운어묵 · 스팸</span></span><span class="d"></span><span class="p">+1,000</span></li>
+          <li><span class="n">샐러드</span><span class="d"></span><span class="p">5,000</span></li>
+          <li><span class="n">커피 <span class="tag">HOT · ICE</span></span><span class="d"></span><span class="p">1,500</span></li>
+        </ul>
+      </div>
+    </div>
+    <p class="menunote">덮밥은 요일에 따라 종류가 바뀝니다. 전체 메뉴는 약 30종이며, 위 목록은 자주 나가는 품목만 정리한 것입니다.</p>
+  </div>
+</section>
+
+<section id="group" class="no-print" style="background:var(--card2);border-block:1px solid var(--line)">
+  <div class="wrap">
+    <div class="shead">
+      <h2>회의 · 야근 단체주문</h2>
+      <p>사무실 배달 또는 매장 픽업</p>
+    </div>
+    <div class="sets" id="sets"></div>
+
+    <div class="calc">
+      <div class="ch">
+        <b>수량으로 금액 바로 확인</b>
+        <span>메뉴판 가격 그대로 계산합니다. 담은 품목은 아래 주문서에 자동으로 들어갑니다.</span>
+      </div>
+      <div class="grid" id="items"></div>
+      <div class="total">
+        <span class="lbl">담은 품목</span><span class="val" id="qtyAll">0<small>개</small></span>
+        <span class="lbl">합계</span><span class="val" id="totalAll">0원</span>
+        <span class="right">
+          <button type="button" class="btn line" id="reset">비우기</button>
+          <a class="btn dark" href="#order">주문서 작성</a>
+        </span>
+      </div>
+    </div>
+
+    <dl class="rulecards">
+      <div class="rule"><dt>접수</dt><dd>전화 · 문자 010-4668-1679</dd></div>
+      <div class="rule"><dt>주문 마감</dt><dd class="pending" id="ruleCut">확정 전 — 전화로 확인</dd></div>
+      <div class="rule"><dt>배달 시간</dt><dd class="pending" id="ruleTime">확정 전 — 전화로 확인</dd></div>
+      <div class="rule"><dt>최소 인원</dt><dd class="pending" id="ruleMin">확정 전 — 전화로 확인</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section id="order" class="no-print">
+  <div class="wrap">
+    <div class="shead">
+      <h2>주문서</h2>
+      <p>작성하면 오른쪽에 주문서가 만들어집니다 · 문자 또는 전화로 보내주세요</p>
+    </div>
+    <div class="formwrap">
+      <div class="fields">
+        <div class="f"><label for="f-co">회사명</label><input id="f-co" type="text" placeholder="예) 대한전자"></div>
+        <div class="f"><label for="f-room">호실</label><input id="f-room" type="text" placeholder="예) 5층 512호"></div>
+        <div class="f"><label for="f-name">담당자</label><input id="f-name" type="text" placeholder="성함"></div>
+        <div class="f"><label for="f-tel">연락처</label><input id="f-tel" type="tel" inputmode="tel" placeholder="010-0000-0000"></div>
+        <div class="f"><label for="f-date">희망 날짜</label><input id="f-date" type="date"></div>
+        <div class="f"><label for="f-time">희망 시간</label><input id="f-time" type="time" step="600"></div>
+        <div class="f"><label for="f-people">인원</label><input id="f-people" type="number" min="1" step="1" value="5"></div>
+        <div class="f"><label for="f-how">받는 방법</label>
+          <select id="f-how"><option>사무실 배달</option><option>매장 픽업</option></select>
+        </div>
+        <div class="f full"><label for="f-memo">요청사항</label><textarea id="f-memo" placeholder="예) 매운 것 1개 빼주세요 / 커피는 ICE 3잔"></textarea></div>
+      </div>
+      <div class="preview">
+        <p class="eyebrow">주문서 미리보기</p>
+        <pre id="sheetText">담은 품목과 정보를 입력하면 여기에 주문서가 만들어집니다.</pre>
+        <div class="pactions">
+          <a class="btn" id="smsBtn" href="#">문자로 보내기</a>
+          <button type="button" class="btn ghost" id="copyBtn">주문서 복사</button>
+          <a class="btn ghost" href="tel:01046681679">전화하기</a>
+        </div>
+        <p class="toast" id="toast"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="visit" class="no-print" style="background:var(--card2);border-block:1px solid var(--line)">
+  <div class="wrap">
+    <div class="shead"><h2>오시는 길</h2><p>지식산업센터 안 RB104</p></div>
+    <div class="visit">
+      <div>
+        <p class="addr"><span class="big">성남시 중원구 사기막골로62번길 33</span><br>지하1층 RB104호 · 전화 <span class="num">010-4668-1679</span></p>
+        <ol class="steps">
+          <li>건물 옆 화단을 따라 난 통로로 걸어 올라옵니다.</li>
+          <li>올라온 층의 복도로 들어오면 창문이 보입니다.</li>
+          <li>문 위 간판 <b>센터간식</b> — RB104호.</li>
+        </ol>
+        <p class="menunote" id="hoursLine" hidden>영업시간 <span class="num" id="hoursVal"></span></p>
+        <div class="maplinks">
+          <button type="button" class="btn line" id="addrCopy">주소 복사</button>
+          <a class="btn line" href="https://map.naver.com/p/search/성남시%20중원구%20사기막골로62번길%2033" target="_blank" rel="noopener">네이버 지도</a>
+          <a class="btn line" href="https://map.kakao.com/?q=성남시%20중원구%20사기막골로62번길%2033" target="_blank" rel="noopener">카카오맵</a>
+        </div>
+      </div>
+      <div class="mapbox">
+        <svg viewBox="0 0 420 250" role="img" aria-label="도로에서 화단 통로를 따라 올라와 RB104호로 들어오는 약도">
+          <rect x="0" y="0" width="420" height="250" fill="none"/>
+          <rect x="0" y="196" width="420" height="54" fill="#8892a0" opacity=".16"/>
+          <line x1="0" y1="223" x2="420" y2="223" stroke="#8892a0" stroke-width="2" stroke-dasharray="16 14"/>
+          <text x="14" y="243" font-family="Noto Sans KR, sans-serif" font-size="12" fill="#5c6878">사기막골로62번길</text>
+          <rect x="96" y="34" width="290" height="136" fill="#1b2a41" opacity=".92"/>
+          <text x="112" y="60" font-family="Gowun Batang, serif" font-size="15" fill="#eef1f6">지식산업센터</text>
+          <rect x="252" y="86" width="118" height="66" fill="#c9a35a" opacity=".22"/>
+          <rect x="252" y="86" width="118" height="66" fill="none" stroke="#c9a35a" stroke-width="1.5"/>
+          <text x="264" y="112" font-family="Gowun Batang, serif" font-size="15" fill="#c9a35a">센터간식</text>
+          <text x="264" y="132" font-family="JetBrains Mono, monospace" font-size="12" fill="#c9a35a">RB104</text>
+          <path d="M48 214 L48 150 L96 120" fill="none" stroke="#c9a35a" stroke-width="2.4"/>
+          <path d="M96 120 l-13 1 l7 9 z" fill="#c9a35a"/>
+          <text x="8" y="140" font-family="Noto Sans KR, sans-serif" font-size="12" fill="#8a6626">화단 통로</text>
+          <text x="60" y="106" font-family="JetBrains Mono, monospace" font-size="13" fill="#8a6626">2F ↑</text>
+          <circle cx="48" cy="214" r="5" fill="#5c6878"/>
+          <text x="16" y="192" font-family="Noto Sans KR, sans-serif" font-size="11" fill="#5c6878">도로에서 출발</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="print">
+  <div class="wrap">
+    <div class="shead no-print"><h2>게시용 안내문</h2><p>엘리베이터 · 로비 게시용 A4 — 인쇄하면 이 장만 나옵니다</p></div>
+    <div class="sheet">
+      <div>
+        <p class="sk">Center Snack · RB104</p>
+        <h3>점심 · 간식 · 커피<br>같은 건물 안에서</h3>
+        <ul class="rows srows">
+          <li><span class="n">진라면 + 꼬마김밥 3줄</span><span class="d"></span><span class="p">5,500</span></li>
+          <li><span class="n">짜파게티 + 꼬마김밥 3줄</span><span class="d"></span><span class="p">6,000</span></li>
+          <li><span class="n">제육덮밥</span><span class="d"></span><span class="p">5,500</span></li>
+          <li><span class="n">클럽샌드위치</span><span class="d"></span><span class="p">3,500</span></li>
+          <li><span class="n">센터김밥</span><span class="d"></span><span class="p">3,500</span></li>
+          <li><span class="n">커피 HOT · ICE</span><span class="d"></span><span class="p">1,500</span></li>
+        </ul>
+        <p class="sfoot">회의 · 야근 간식 사무실 배달 — <b class="num">010-4668-1679</b><br>사기막골로62번길 33 · RB104 &nbsp;<span class="num">2F ↑</span></p>
+      </div>
+      <div class="qrbox">
+        <div id="qr"><span class="qrcap">QR</span></div>
+        <p class="qrcap">메뉴 · 단체주문<br>휴대폰으로 스캔</p>
+        <button type="button" class="btn line no-print" id="printBtn" style="margin-top:14px">A4로 인쇄</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="no-print">
+  <div class="wrap">
+    <span>센터간식 · 성남시 중원구 사기막골로62번길 33 RB104</span>
+    <a href="tel:01046681679">010-4668-1679</a>
+    <span class="fr">2F ↑</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ── 사장님 입력칸 ─────────────────────────────────────────────
+   확정되면 아래 값만 채우면 화면에 반영됩니다. 빈 문자열이면 "확정 전"으로 표시.
+   예) hours: "평일 08:00 – 18:00", cutoff: "전날 오후 3시", delivery: "11:00 / 15:00", minPeople: "5인" */
+const STORE = { hours:"", cutoff:"", delivery:"", minPeople:"" };
+const TEL = "010-4668-1679", TEL_RAW = "01046681679";
+const ADDR = "성남시 중원구 사기막골로62번길 33 지하1층 RB104호";
+
+const SETS = [
+  { key:"A", name:"A · 가볍게", who:"짧은 회의 · 오후 간식 (5인 기준)",
+    items:[["꼬마김밥","15줄"],["오뎅","5인"],["커피 HOT·ICE","5잔"]] },
+  { key:"B", name:"B · 든든하게", who:"점심 회의 (5인 기준)",
+    items:[["센터김밥","5줄"],["클럽샌드위치","5개"],["커피 HOT·ICE","5잔"]] },
+  { key:"C", name:"C · 야근", who:"저녁 · 야근 (5인 기준)",
+    items:[["덮밥","5개"],["라볶이","2인"],["커피 HOT·ICE","5잔"]] }
+];
+
+const MENU = [
+  ["센터김밥",3500],["매운어묵김밥",4000],["스팸김밥",4500],
+  ["제육덮밥",5500],["스팸마요덮밥",5500],["김치스팸덮밥",5500],
+  ["사골떡만두국+공기밥",6500],["짜파게티+계란후라이",4500],
+  ["떡볶이",4000],["라볶이",5000],["오뎅",1000],
+  ["클럽샌드위치",3500],["돈까스샌드위치",5000],["점보버거",5000],
+  ["뉴욕핫도그",4000],["미니햄버거",4000],
+  ["진라면세트",5500],["짜파게티세트",6000],["샐러드",5000],["커피 HOT·ICE",1500]
+];
+
+const won = n => n.toLocaleString("ko-KR") + "원";
+const $ = id => document.getElementById(id);
+const qty = {};
+
+/* 세트 카드 — 1인 가격은 사장님이 넣는 값 */
+$("sets").innerHTML = SETS.map(s => `
+  <div class="set">
+    <b>${s.name}</b>
+    <p class="who">${s.who}</p>
+    <ul>${s.items.map(([n,q]) => `<li>${n}<span>${q}</span></li>`).join("")}</ul>
+    <div class="pricein">
+      <label for="sp-${s.key}">1인 가격</label>
+      <input id="sp-${s.key}" type="number" min="0" step="100" placeholder="입력" data-set="${s.key}" aria-label="${s.name} 1인 가격">
+      <span class="sum" id="ss-${s.key}">—</span>
+    </div>
+  </div>`).join("");
+
+/* 계산기 */
+$("items").innerHTML = MENU.map(([n,p],i) => `
+  <div class="item">
+    <span class="nm">${n}</span><span class="pr">${p.toLocaleString("ko-KR")}</span>
+    <span class="stepper">
+      <button type="button" data-i="${i}" data-d="-1" aria-label="${n} 줄이기">−</button>
+      <input type="text" inputmode="numeric" id="q-${i}" value="0" aria-label="${n} 수량">
+      <button type="button" data-i="${i}" data-d="1" aria-label="${n} 늘리기">+</button>
+    </span>
+  </div>`).join("");
+
+function picked(){
+  return MENU.map(([n,p],i) => [n,p,qty[i]||0]).filter(r => r[2] > 0);
+}
+function renderTotals(){
+  const rows = picked();
+  const cnt = rows.reduce((a,r) => a + r[2], 0);
+  const sum = rows.reduce((a,r) => a + r[1]*r[2], 0);
+  $("qtyAll").innerHTML = cnt + "<small>개</small>";
+  $("totalAll").textContent = won(sum);
+  renderSheet();
+}
+function setQty(i,v){
+  qty[i] = Math.max(0, Math.min(999, v|0));
+  $("q-"+i).value = qty[i];
+  renderTotals();
+}
+$("items").addEventListener("click", e => {
+  const b = e.target.closest("button[data-i]");
+  if(!b) return;
+  const i = +b.dataset.i;
+  setQty(i, (qty[i]||0) + (+b.dataset.d));
+});
+$("items").addEventListener("input", e => {
+  if(e.target.tagName !== "INPUT") return;
+  const i = +e.target.id.slice(2);
+  qty[i] = Math.max(0, Math.min(999, parseInt(e.target.value.replace(/\D/g,""),10) || 0));
+  renderTotals();
+});
+$("reset").addEventListener("click", () => {
+  MENU.forEach((_,i) => { qty[i] = 0; $("q-"+i).value = 0; });
+  renderTotals();
+});
+
+/* 세트 1인 가격 × 인원 */
+function renderSets(){
+  const people = Math.max(1, parseInt($("f-people").value,10) || 1);
+  SETS.forEach(s => {
+    const v = parseInt($("sp-"+s.key).value,10);
+    $("ss-"+s.key).textContent = v > 0 ? `${people}인 ${won(v*people)}` : "—";
+  });
+}
+document.addEventListener("input", e => {
+  if(e.target.dataset && e.target.dataset.set) renderSets();
+});
+
+/* 주문서 문구 */
+function renderSheet(){
+  const co = $("f-co").value.trim(), room = $("f-room").value.trim();
+  const nm = $("f-name").value.trim(), tel = $("f-tel").value.trim();
+  const d = $("f-date").value, t = $("f-time").value;
+  const people = $("f-people").value, how = $("f-how").value;
+  const memo = $("f-memo").value.trim();
+  const rows = picked();
+  const sum = rows.reduce((a,r) => a + r[1]*r[2], 0);
+  const L = ["[센터간식 단체주문]"];
+  if(co || room) L.push("회사 : " + [co, room].filter(Boolean).join(" "));
+  if(nm || tel) L.push("담당 : " + [nm, tel].filter(Boolean).join(" / "));
+  if(d || t) L.push("일시 : " + [d, t].filter(Boolean).join(" "));
+  L.push("인원 : " + (people || "-") + "명 / " + how);
+  if(rows.length){
+    L.push("주문 :");
+    rows.forEach(([n,p,q]) => L.push(`  - ${n} ${q}개 (${won(p*q)})`));
+    L.push("합계 : " + won(sum));
+  }
+  if(memo) L.push("요청 : " + memo);
+  const txt = L.join("\n");
+  $("sheetText").textContent = (rows.length || co || nm) ? txt : "담은 품목과 정보를 입력하면 여기에 주문서가 만들어집니다.";
+  $("smsBtn").href = "sms:" + TEL_RAW + "?&body=" + encodeURIComponent(txt);
+  return txt;
+}
+["f-co","f-room","f-name","f-tel","f-date","f-time","f-people","f-how","f-memo"]
+  .forEach(id => $(id).addEventListener("input", () => { renderSheet(); renderSets(); }));
+
+function toast(m){ $("toast").textContent = m; setTimeout(() => { $("toast").textContent = ""; }, 2600); }
+async function copy(text, msg){
+  try{ await navigator.clipboard.writeText(text); toast(msg); }
+  catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); toast(msg); }
+    catch(e2){ toast("복사가 안 됩니다. 주문서를 길게 눌러 선택해 주세요."); }
+    ta.remove();
+  }
+}
+$("copyBtn").addEventListener("click", () => copy(renderSheet(), "주문서를 복사했습니다."));
+$("addrCopy").addEventListener("click", () => copy(ADDR, "주소를 복사했습니다."));
+$("printBtn").addEventListener("click", () => window.print());
+
+/* 운영 규칙 · 영업시간 (STORE 값이 있을 때만) */
+function fill(id, val){
+  if(!val) return;
+  const el = $(id);
+  el.textContent = val;
+  el.classList.remove("pending");
+}
+fill("ruleCut", STORE.cutoff); fill("ruleTime", STORE.delivery); fill("ruleMin", STORE.minPeople);
+if(STORE.hours){ $("hoursVal").textContent = STORE.hours; $("hoursLine").hidden = false; }
+
+/* QR — 이 페이지 주소 */
+(function(){
+  const box = $("qr");
+  const url = location.href.split("#")[0];
+  if(window.QRCode){
+    box.innerHTML = "";
+    try{ new QRCode(box, { text:url, width:148, height:148, colorDark:"#1b2a41", colorLight:"#ffffff", correctLevel:QRCode.CorrectLevel.M }); }
+    catch(e){ box.innerHTML = '<span class="qrcap">' + url + '</span>'; }
+  } else {
+    box.innerHTML = '<span class="qrcap">' + url + '</span>';
+  }
+})();
+
+renderTotals(); renderSets();
+</script>
