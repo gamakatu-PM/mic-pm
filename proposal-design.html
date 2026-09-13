@@ -92,6 +92,34 @@ select{width:100%; padding:8px; border:1px solid var(--line); border-radius:7px;
   position:absolute; right:0; top:0; width:17px; height:17px; background:rgba(192,57,43,.92); color:#fff;
   font-style:normal; font-size:11px; line-height:17px; text-align:center; cursor:pointer;
 }
+.dgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:9px}
+@media(max-width:900px){.dgrid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.dgrid{grid-template-columns:repeat(2,1fr); gap:7px}}
+.tile{position:relative; border:1px solid var(--line); border-radius:9px; overflow:hidden; background:#fff; cursor:pointer}
+.tile canvas{width:100%; display:block}
+.tile.on{border:2px solid var(--red)}
+.tile .hb{
+  position:absolute; right:5px; bottom:5px; width:27px; height:27px; border-radius:50%;
+  background:rgba(255,255,255,.9); border:1px solid var(--line); color:#C9D0D8;
+  font-size:14px; line-height:25px; text-align:center; cursor:pointer;
+}
+.tile.on .hb{background:var(--red); color:#fff; border-color:var(--red)}
+.tile .sc{position:absolute; left:5px; bottom:5px; font-size:10px; font-weight:800; color:var(--ink2);
+  background:rgba(255,255,255,.88); border-radius:9px; padding:1px 6px}
+button.big{
+  border:0; border-radius:8px; padding:11px 15px; font-size:13.5px; font-weight:800;
+  cursor:pointer; font-family:inherit; color:#fff; background:var(--green);
+}
+button.big.alt{background:var(--blue)}
+button.big.gh{background:#fff; color:var(--ink2); border:1px solid var(--line)}
+.stat{font-size:12px; color:var(--ink2)} .stat b{color:var(--blue); font-size:13.5px}
+.modal{display:none; position:fixed; inset:0; background:rgba(16,20,26,.72); z-index:50; padding:16px; overflow:auto}
+.modal.on{display:flex; align-items:center; justify-content:center}
+.mbox{background:#fff; border-radius:12px; padding:14px; max-width:520px; width:100%}
+.mbox canvas{width:100%; border:1px solid var(--line); border-radius:8px; display:block}
+.minfo{margin-top:10px; font-size:12px; color:var(--ink2); line-height:1.65}
+.minfo b{color:var(--ink)}
+
 .pane{display:none}
 .pane.on{display:block}
 .tag{display:inline-block; background:#EEF2F7; color:var(--ink2); border-radius:4px; padding:1px 5px; font-size:10.5px; margin-left:4px}
@@ -109,6 +137,7 @@ footer{padding:14px; text-align:center; color:var(--gray); font-size:11px}
   <button id="tb1" class="on" onclick="tab(1)">① 낱장 가공기</button>
   <button id="tb2" onclick="tab(2)">② 쪽 조판</button>
   <button id="tb3" onclick="tab(3)">③ 프롬프트 작도</button>
+  <button id="tb4" onclick="tab(4)">④ 디자인 탐색기</button>
 </div>
 
 <div class="warn">
@@ -319,9 +348,81 @@ footer{padding:14px; text-align:center; color:var(--gray); font-size:11px}
 </div>
 </div>
 
+<!-- ================= 탭 ④ : 제품 디자인 탐색기 ================= -->
+<div class="pane" id="pane4">
+
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end">
+      <div style="flex:1 1 260px">
+        <div class="lab">제품 <i id="prodNow">조명스위치</i></div>
+        <div class="btns sm" id="prodBtns"></div>
+      </div>
+      <div style="flex:0 1 200px" id="gangBox">
+        <div class="lab">구수 <i id="gangNow">3구</i></div>
+        <div class="btns sm" id="gangBtns"></div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:flex-end">
+      <div style="flex:1 1 210px">
+        <div class="lab">저장 폴더 <i id="dirNow">아직 안 정함</i></div>
+        <div class="btns sm">
+          <button onclick="pickFolder()" id="dirBtn">폴더 정하기</button>
+          <button onclick="toggleAutoSave()" id="asBtn">자동저장 끔</button>
+        </div>
+      </div>
+      <div style="flex:1 1 210px">
+        <div class="lab">일정 시간마다 하나씩 <i id="autoNow">끔</i></div>
+        <div class="btns sm" id="autoBtns"></div>
+      </div>
+      <div style="flex:1 1 240px">
+        <div class="lab">저장 기준 점수 <span id="thTxt">60점 이상만</span></div>
+        <input type="range" id="th" min="0" max="90" value="60">
+      </div>
+    </div>
+    <div class="hint" id="dirHint">
+      폴더 저장은 <b>PC 크롬·엣지</b>에서만 됩니다. 폴더를 고를 때 <b>「방문할 때마다 허용」</b>을 누르시면 그 뒤로는 묻지 않고 계속 저장됩니다. 휴대폰에서는 마음에 드는 안을 눌러 이미지를 길게 눌러 저장하세요.
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+      <button class="big" onclick="moreDesigns()">더 내줘 (24안)</button>
+      <button class="big alt" onclick="saveLiked()">♥ 고른 것 폴더에 저장</button>
+      <button class="big gh" onclick="clearLiked()">♥ 비우기</button>
+      <div style="flex:1"></div>
+      <div class="stat">
+        <b id="stLiked">0</b> 고름 ·
+        <b id="stSaved">0</b> 저장 ·
+        <b id="stSeen">0</b> 본 것 ·
+        <b id="stDrop">0</b> 버림
+      </div>
+    </div>
+    <div class="hint" id="whyHint">버린 이유: —</div>
+  </div>
+
+  <div class="card">
+    <h2>디자인 <span class="tag" id="genTag">1세대</span> <span class="tag">♥ 를 누르면 비슷한 것을 더 냅니다</span></h2>
+    <div id="grid" class="dgrid"></div>
+  </div>
+
+  <div id="big" class="modal" onclick="closeBig(event)">
+    <div class="mbox" onclick="event.stopPropagation()">
+      <canvas id="bigcv"></canvas>
+      <div id="bigInfo" class="minfo"></div>
+      <div class="btns sm" style="margin-top:10px">
+        <button onclick="likeBig()" id="bigLike">♥ 고르기</button>
+        <button onclick="saveBig()">이 안만 저장</button>
+        <button onclick="briefBig(this)">제작 의뢰문 복사</button>
+        <button onclick="closeBig(1)">닫기</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 </div><!-- /wrap -->
 
-<footer>제안서 디자인 스튜디오 v2 · 2026-09-13 · 모든 처리는 이 브라우저 안에서만 일어나며 사진은 어디로도 전송되지 않습니다.</footer>
+<footer>제안서 디자인 스튜디오 v3 · 2026-09-13 · 모든 처리는 이 브라우저 안에서만 일어나며 사진은 어디로도 전송되지 않습니다.</footer>
 
 <script>
 /* ===================== 공통 ===================== */
@@ -393,7 +494,7 @@ function mkBtns(box, list, cur, fn){
 var curTab = 1;
 function tab(n){
   curTab = n;
-  for(var i=1;i<=3;i++){
+  for(var i=1;i<=4;i++){
     $('#pane'+i).className = 'pane' + (n===i?' on':'');
     $('#tb'+i).className = (n===i?'on':'');
   }
@@ -1552,10 +1653,682 @@ function aiGen(btn){
     .then(function(){ btn.textContent = o; });
 }
 
+/* ===================== 탭 ④ 제품 디자인 탐색기 ===================== */
+var PRODUCTS = {
+  'switch':{t:'조명스위치', lab:'구수',  vars:['1구','2구','3구','4구','5구','6구']},
+  'outlet':{t:'콘센트·멀티아울렛', lab:'구성', vars:['유니버셜 1','유니버셜+콘센트2','유니버셜+콘센트2+USB','콘센트2+USB']},
+  'thermo':{t:'온도조절기', lab:'형태', vars:['기본형','온도+조명','BSP 통합형']},
+  'door'  :{t:'문 입구 3종', lab:'종류', vars:['키센서 K','DM','챠임벨','K+DM']}
+};
+var FACE = [
+  {t:'화이트',        c:'#F4F5F7', ink:'#3A424C'},
+  {t:'아이보리',      c:'#F1EBE0', ink:'#4A443A'},
+  {t:'샴페인골드',    c:'#D8C5A2', ink:'#453B28'},
+  {t:'실버',          c:'#CBD1D7', ink:'#333A42'},
+  {t:'스페이스그레이',c:'#6E747C', ink:'#EDEFF2'},
+  {t:'매트블랙',      c:'#2A2D31', ink:'#E6E9ED'},
+  {t:'딥네이비',      c:'#2B3A4E', ink:'#E2E8F0'},
+  {t:'우드',          c:'#A97C50', ink:'#F7EFE4'}
+];
+var LEDC = {amber:'#FFB020', blue:'#4DA3FF', green:'#3FD08A', white:'#FFFFFF', red:'#FF5B4A'};
+var LEDT = {amber:'앰버', blue:'블루', green:'그린', white:'화이트', red:'레드'};
+var MATT = {matte:'무광', gloss:'유광', metal:'메탈', glass:'글라스'};
+var SHAPET = {full:'전면 로커', bar:'바', pill:'필', round:'원형', square:'각형', touchdot:'터치(무버튼)'};
+var TONET = {same:'동색', darker:'어둡게', lighter:'밝게', accent:'포인트색', inverse:'반전'};
+var LEDPT = {none:'없음', dot:'점', line:'라인', ring:'링', edge:'테두리', under:'하단 글로우'};
+var CELLTXT = ['전실','침실','욕실','현관','스탠드','보조'];
+
+var GKEYS = ['ar','radius','bezel','bezelStyle','face','material','btnShape','btnTone',
+             'btnGap','btnInset','split','led','ledColor','label','labelPos'];
+var GNUM = {ar:[0.52,1.82], radius:[0,0.20], bezel:[0.02,0.14], btnGap:[0.005,0.055], btnInset:[0.015,0.15]};
+var GCAT = {
+  bezelStyle:['none','flat','step','chamfer','ring'],
+  face:[0,1,2,3,4,5,6,7],
+  material:['matte','gloss','metal','glass'],
+  btnShape:['full','bar','pill','round','square','touchdot'],
+  btnTone:['same','darker','lighter','accent','inverse'],
+  split:['v','h'],
+  led:['none','dot','line','ring','edge','under'],
+  ledColor:['amber','blue','green','white','red'],
+  label:['none','text','icon'],
+  labelPos:['on','below','side']
+};
+function moduleCount(){
+  if(D.product === 'switch') return (D.variant+1 <= 3) ? 1 : 2;
+  if(D.product === 'outlet') return [1,2,3,2][D.variant];
+  if(D.product === 'thermo') return [1,2,3][D.variant];
+  return (D.variant === 3) ? 2 : 1;
+}
+/* 가로형 1연 86x86 / 2연 86x146 / 3연 86x206, 세로형은 그 역수 */
+var GANGW = [1.00, 1.70, 2.40], GANGH = [1.00, 0.59, 0.42];
+function snapAr(g){
+  var M = moduleCount(), wide = (g.ar >= 1);
+  var base = (wide ? GANGW : GANGH)[M-1];
+  return base * (0.94 + ((g.ar*997) % 1)*0.12);
+}
+function cellsW(A, ws, vert, gapR){
+  var gap = Math.min(A.w, A.h)*gapR, n = ws.length, tot = 0, i;
+  for(i=0;i<n;i++) tot += ws[i];
+  var span = (vert ? A.h : A.w) - gap*(n-1), out = [], p = vert ? A.y : A.x;
+  for(i=0;i<n;i++){
+    var len = span*ws[i]/tot;
+    out.push(vert ? {x:A.x, y:p, w:A.w, h:len} : {x:p, y:A.y, w:len, h:A.h});
+    p += len + gap;
+  }
+  return out;
+}
+function rng(seed){ var s = (seed>>>0) || 1; return function(){ s ^= s<<13; s>>>=0; s ^= s>>17; s ^= s<<5; s>>>=0; return s/4294967296; }; }
+function gval(k, r){
+  if(GNUM[k]) return GNUM[k][0] + r()*(GNUM[k][1]-GNUM[k][0]);
+  var a = GCAT[k]; return a[Math.floor(r()*a.length)];
+}
+function newGene(r, parents){
+  var g = {};
+  if(parents && parents.length && r() < 0.68){
+    var a = parents[Math.floor(r()*parents.length)], b = parents[Math.floor(r()*parents.length)];
+    GKEYS.forEach(function(k){ g[k] = (r() < 0.5 ? a[k] : b[k]); });
+    var n = 1 + (r() < 0.45 ? 1 : 0) + (r() < 0.18 ? 1 : 0);
+    for(var i=0;i<n;i++){ var k = GKEYS[Math.floor(r()*GKEYS.length)]; g[k] = gval(k, r); }
+  } else {
+    GKEYS.forEach(function(k){ g[k] = gval(k, r); });
+  }
+  return g;
+}
+function gkey(g){
+  return GKEYS.map(function(k){ return GNUM[k] ? Math.round(g[k]*40) : g[k]; }).join('|');
+}
+function gsim(a, b){
+  var s = 0;
+  GKEYS.forEach(function(k){
+    if(GNUM[k]){ var R = GNUM[k][1]-GNUM[k][0]; s += 1 - Math.min(1, Math.abs(a[k]-b[k])/R); }
+    else s += (a[k] === b[k]) ? 1 : 0;
+  });
+  return s/GKEYS.length;
+}
+function maxSim(g, list){
+  var m = 0; for(var i=0;i<list.length;i++) m = Math.max(m, gsim(g, list[i].g || list[i])); return m;
+}
+
+/* ---- 색 도구 ---- */
+function hx(c){ return [parseInt(c.substr(1,2),16), parseInt(c.substr(3,2),16), parseInt(c.substr(5,2),16)]; }
+function hs(a){ return '#' + a.map(function(v){ v=Math.max(0,Math.min(255,Math.round(v))); return (v<16?'0':'')+v.toString(16); }).join(''); }
+function shade(c, p){ var a = hx(c); return hs(a.map(function(v){ return v + (p/100)*(p>0 ? 255-v : v); })); }
+function lum(c){ var a = hx(c).map(function(v){ v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+.055)/1.055, 2.4); });
+  return .2126*a[0] + .7152*a[1] + .0722*a[2]; }
+function mix(a, b, t){
+  var x = hx(a), y = hx(b);
+  return hs([x[0]+(y[0]-x[0])*t, x[1]+(y[1]-x[1])*t, x[2]+(y[2]-x[2])*t]);
+}
+function btnColor(F, g){
+  if(g.btnTone === 'same') return shade(F.c, 3);
+  if(g.btnTone === 'darker') return shade(F.c, -22);
+  if(g.btnTone === 'lighter') return shade(F.c, 20);
+  if(g.btnTone === 'inverse') return lum(F.c) > .4 ? '#32363B' : '#EDEFF2';
+  /* 포인트색: 면적이 큰 버튼은 원색을 그대로 못 쓴다 — 판 색에 섞어 톤을 낮춘다 */
+  var big = (g.btnShape === 'full' || g.btnShape === 'bar' || g.btnShape === 'pill');
+  return mix(F.c, LEDC[g.ledColor], big ? 0.30 : 0.85);
+}
+
+/* ---- 채점 (취향이 아니라 눈에 보이는 것·만들 수 있는 것만 본다) ---- */
+var D = { product:'switch', variant:0, seed:(Date.now()>>>0), gen:1,
+          items:[], liked:[], saved:[], seen:{}, seenN:0, dropN:0, why:{},
+          dir:null, autoSave:false, autoMs:0, timer:null, th:60, cap:200 };
+
+function judge(g){
+  if(D.seen[gkey(g)]) return {ok:false, s:0, why:'똑같은 안'};
+  var ar = snapAr(g);
+  var F = FACE[g.face], bc = btnColor(F, g);
+  var ct = Math.abs(lum(F.c) - lum(bc));
+  if(g.btnShape !== 'touchdot' && ct < 0.035) return {ok:false, s:0, why:'버튼이 안 보임(대비 부족)'};
+  var n = (D.product === 'switch') ? D.variant + 1 : 2;
+  var inner = 1 - g.bezel*2 - g.btnInset*2;
+  var cell = inner / n - g.btnGap;
+  var thin = (g.split === 'v') ? cell / Math.max(1, ar) : cell * Math.max(1, ar);
+  if(thin < 0.085) return {ok:false, s:0, why:'버튼이 너무 얇아 손가락으로 못 누름'};
+  if(g.bezel + g.btnInset > 0.24) return {ok:false, s:0, why:'테두리가 두꺼워 버튼 자리가 안 나옴'};
+  var likeS = D.liked.length ? maxSim(g, D.liked) : 0.5;
+  var saveS = D.saved.length ? maxSim(g, D.saved) : 0;
+  var s = 50 + 25*likeS + 15*Math.min(1, ct/0.45) + 10*Math.min(1, (thin-0.085)/0.18) - 35*saveS;
+  return {ok:true, s:Math.max(0, Math.min(100, Math.round(s))), why:''};
+}
+
+/* ---- 지정 폴더 (File System Access API) ---- */
+function idb(){ return new Promise(function(res, rej){
+  var q = indexedDB.open('kmDesign', 1);
+  q.onupgradeneeded = function(){ q.result.createObjectStore('kv'); };
+  q.onsuccess = function(){ res(q.result); }; q.onerror = function(){ rej(q.error); };
+}); }
+function idbPut(k, v){ return idb().then(function(db){ return new Promise(function(res, rej){
+  var t = db.transaction('kv','readwrite'); t.objectStore('kv').put(v, k);
+  t.oncomplete = function(){ res(); }; t.onerror = function(){ rej(t.error); }; }); }); }
+function idbGet(k){ return idb().then(function(db){ return new Promise(function(res, rej){
+  var t = db.transaction('kv','readonly'), q = t.objectStore('kv').get(k);
+  q.onsuccess = function(){ res(q.result); }; q.onerror = function(){ rej(q.error); }; }); }); }
+
+function pickFolder(){
+  if(!window.showDirectoryPicker){
+    alert('이 브라우저는 폴더 저장을 지원하지 않습니다.\n\nPC의 크롬 또는 엣지에서 열어주세요.\n휴대폰에서는 마음에 드는 안을 눌러 이미지를 길게 눌러 저장하시면 됩니다.');
+    return;
+  }
+  window.showDirectoryPicker({ mode:'readwrite', id:'km-design', startIn:'documents' }).then(function(h){
+    D.dir = h; idbPut('dir', h).catch(function(){});
+    D.autoSave = true; syncDir();
+  }).catch(function(){});
+}
+function syncDir(){
+  $('#dirNow').textContent = D.dir ? D.dir.name : '아직 안 정함';
+  $('#dirBtn').textContent = D.dir ? '폴더 바꾸기' : '폴더 정하기';
+  $('#asBtn').textContent = D.autoSave ? '자동저장 켬' : '자동저장 끔';
+  $('#asBtn').className = D.autoSave ? 'on' : '';
+}
+function toggleAutoSave(){
+  if(!D.dir && !D.autoSave){ pickFolder(); return; }
+  D.autoSave = !D.autoSave; syncDir();
+}
+function fname(g, sc){
+  var v = PRODUCTS[D.product].vars[D.variant].replace(/[·+\s]/g,'');
+  return 'KM_' + PRODUCTS[D.product].t.replace(/[·\s]/g,'') + '_' + v + '_' + fileStamp()
+       + '_' + sc + '점_' + FACE[g.face].t + '.png';
+}
+function writeFile(name, blob){
+  if(!D.dir) return Promise.reject(new Error('폴더 없음'));
+  return D.dir.getFileHandle(name, {create:true}).then(function(fh){
+    return fh.createWritable().then(function(w){ return w.write(blob).then(function(){ return w.close(); }); });
+  });
+}
+function saveGene(g, sc){
+  var cv = document.createElement('canvas');
+  drawDesign(cv, 1400, g, D.product, D.variant, true);
+  return new Promise(function(res){
+    cv.toBlob(function(b){
+      if(D.dir && D.autoSave && D.saved.length < D.cap){
+        writeFile(fname(g, sc), b).then(function(){
+          D.saved.push({g:g, s:sc}); syncStats(); res(true);
+        }).catch(function(e){ alert('저장 실패: ' + e.message); res(false); });
+      } else {
+        downloadCanvas(cv, fname(g, sc)); D.saved.push({g:g, s:sc}); syncStats(); res(true);
+      }
+    }, 'image/png');
+  });
+}
+
+/* ---- 탭④ 작도: 제품 그리기 ---- */
+function plateRect(W, H, g){
+  var ar = snapAr(g);
+  var m = Math.min(W,H)*0.11, aw = W-2*m, ah = H-2*m, pw, ph;
+  if(aw/ah > ar){ ph = ah; pw = ah*ar; } else { pw = aw; ph = aw/ar; }
+  return {x:(W-pw)/2, y:(H-ph)/2, w:pw, h:ph};
+}
+function faceFill(ctx, x, y, w, h, F, g){
+  var gr;
+  if(g.material === 'metal'){
+    gr = ctx.createLinearGradient(x, y, x+w, y);
+    gr.addColorStop(0, shade(F.c,-13)); gr.addColorStop(.17, shade(F.c,11));
+    gr.addColorStop(.40, shade(F.c,-5)); gr.addColorStop(.61, shade(F.c,14));
+    gr.addColorStop(.84, shade(F.c,-9)); gr.addColorStop(1, shade(F.c,3));
+  } else if(g.material === 'gloss'){
+    gr = ctx.createLinearGradient(x, y, x, y+h);
+    gr.addColorStop(0, shade(F.c,17)); gr.addColorStop(.44, F.c);
+    gr.addColorStop(.46, shade(F.c,-7)); gr.addColorStop(1, shade(F.c,7));
+  } else if(g.material === 'glass'){
+    gr = ctx.createLinearGradient(x, y, x+w, y+h);
+    gr.addColorStop(0, shade(F.c,17)); gr.addColorStop(.5, F.c); gr.addColorStop(1, shade(F.c,-11));
+  } else {
+    gr = ctx.createLinearGradient(x, y, x, y+h);
+    gr.addColorStop(0, shade(F.c,5)); gr.addColorStop(1, shade(F.c,-6));
+  }
+  ctx.fillStyle = gr;
+}
+function recess(ctx, x, y, w, h, r, F, W){
+  rrect(ctx, x, y, w, h, r); ctx.fillStyle = shade(F.c,-17); ctx.fill();
+  ctx.save(); rrect(ctx, x, y, w, h, r); ctx.clip();
+  var g2 = ctx.createLinearGradient(x, y, x, y+h);
+  g2.addColorStop(0, 'rgba(0,0,0,.22)'); g2.addColorStop(.28, 'rgba(0,0,0,0)');
+  g2.addColorStop(1, 'rgba(255,255,255,.16)');
+  ctx.fillStyle = g2; ctx.fillRect(x, y, w, h); ctx.restore();
+}
+function hole(ctx, x, y, w, h, r){
+  rrect(ctx, x-w/2, y-h/2, w, h, r === undefined ? Math.min(w,h)/2 : r);
+  ctx.fillStyle = '#15181C'; ctx.fill();
+}
+function cellsOf(A, n, vert, gapR){
+  var gap = Math.min(A.w, A.h)*gapR, out = [];
+  for(var i=0;i<n;i++){
+    if(vert){ var ch = (A.h - gap*(n-1))/n; out.push({x:A.x, y:A.y+i*(ch+gap), w:A.w, h:ch}); }
+    else { var cw = (A.w - gap*(n-1))/n; out.push({x:A.x+i*(cw+gap), y:A.y, w:cw, h:A.h}); }
+  }
+  return out;
+}
+function drawBtn(ctx, c, g, F, bc, W){
+  var min = Math.min(c.w, c.h), sh = g.btnShape, bx, by, bw, bh, r;
+  if(sh === 'touchdot'){
+    var d = min*0.15;
+    ctx.save(); ctx.globalAlpha = .82;
+    ctx.beginPath(); ctx.arc(c.x+c.w/2, c.y+c.h*0.5, d/2, 0, Math.PI*2);
+    ctx.fillStyle = bc; ctx.fill(); ctx.restore();
+    return {x:c.x, y:c.y, w:c.w, h:c.h, r:0, flat:true};
+  }
+  if(sh === 'round'){ var d1 = min*0.70; bx = c.x+(c.w-d1)/2; by = c.y+(c.h-d1)/2; bw = bh = d1; r = d1/2; }
+  else if(sh === 'square'){ var d2 = min*0.74; bx = c.x+(c.w-d2)/2; by = c.y+(c.h-d2)/2; bw = bh = d2; r = d2*0.19; }
+  else { bx = c.x; by = c.y; bw = c.w; bh = c.h;
+         r = (sh === 'pill') ? min*0.5 : (sh === 'bar') ? min*0.17 : min*0.055; }
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.22)'; ctx.shadowBlur = W*0.009; ctx.shadowOffsetY = W*0.003;
+  rrect(ctx, bx, by, bw, bh, r); ctx.fillStyle = bc; ctx.fill(); ctx.restore();
+  ctx.save(); rrect(ctx, bx, by, bw, bh, r); ctx.clip();
+  var gr = ctx.createLinearGradient(bx, by, bx, by+bh);
+  gr.addColorStop(0, 'rgba(255,255,255,.32)'); gr.addColorStop(.48, 'rgba(255,255,255,.04)');
+  gr.addColorStop(1, 'rgba(0,0,0,.11)');
+  ctx.fillStyle = gr; ctx.fillRect(bx, by, bw, bh); ctx.restore();
+  ctx.save(); rrect(ctx, bx, by, bw, bh, r);
+  ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = Math.max(.8, W*0.0014); ctx.stroke(); ctx.restore();
+  return {x:bx, y:by, w:bw, h:bh, r:r};
+}
+function drawLed(ctx, B, g, W){
+  if(g.led === 'none' || g.led === 'edge' || g.led === 'under') return;
+  var col = LEDC[g.ledColor];
+  ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = W*0.014; ctx.fillStyle = col; ctx.strokeStyle = col;
+  if(g.led === 'dot'){
+    var d = Math.min(B.w, B.h)*0.11;
+    ctx.beginPath(); ctx.arc(B.x+B.w/2, B.y+B.h-Math.max(d*1.4, B.h*0.15), d/2, 0, Math.PI*2); ctx.fill();
+  } else if(g.led === 'line'){
+    var lw = B.w*0.42, lh = Math.max(1.4, B.h*0.035);
+    rrect(ctx, B.x+(B.w-lw)/2, B.y+B.h-lh*3.4, lw, lh, lh/2); ctx.fill();
+  } else if(g.led === 'ring'){
+    ctx.globalAlpha = .85; ctx.lineWidth = Math.max(1.2, W*0.0026);
+    rrect(ctx, B.x+B.w*0.07, B.y+B.h*0.07, B.w*0.86, B.h*0.86, Math.max(1,(B.r||6)*0.85)); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawBulb(ctx, cx, cy, s, col){
+  ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = Math.max(.9, s*0.10); ctx.globalAlpha = .75;
+  ctx.beginPath(); ctx.arc(cx, cy-s*0.10, s*0.36, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-s*0.18, cy+s*0.34); ctx.lineTo(cx+s*0.18, cy+s*0.34); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-s*0.12, cy+s*0.52); ctx.lineTo(cx+s*0.12, cy+s*0.52); ctx.stroke();
+  ctx.restore();
+}
+function drawLabel(ctx, B, c, g, F, W, i){
+  if(g.label === 'none') return;
+  var fs = Math.max(6, Math.min(B.w, B.h)*0.20);
+  ctx.save(); ctx.globalAlpha = .82; ctx.fillStyle = F.ink;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if(g.label === 'icon'){
+    drawBulb(ctx, B.x+B.w/2, B.y+B.h*0.40, fs*1.3, F.ink);
+  } else {
+    ctx.font = '700 ' + fs + 'px ' + FONT;
+    var y = (g.labelPos === 'below') ? c.y+c.h-fs*0.75 : B.y+B.h*(g.labelPos === 'side' ? 0.5 : 0.40);
+    var x = (g.labelPos === 'side') ? B.x+B.w*0.26 : B.x+B.w/2;
+    ctx.fillText(CELLTXT[i%6], x, y);
+  }
+  ctx.restore();
+}
+function drawSwitch(ctx, P, A, g, F, n, W){
+  var bc = btnColor(F, g), vert = (g.split === 'v');
+  cellsOf(A, n, vert, g.btnGap).forEach(function(c, i){
+    var B = drawBtn(ctx, c, g, F, bc, W);
+    drawLed(ctx, B, g, W);
+    drawLabel(ctx, B, c, g, F, W, i);
+  });
+}
+function drawSocket(ctx, c, kind, g, F, W){
+  var min = Math.min(c.w, c.h);
+  if(kind === 'uni'){
+    var d = min*0.92, x = c.x+(c.w-d)/2, y = c.y+(c.h-d)/2;
+    recess(ctx, x, y, d, d, d*0.20, F, W);
+    ctx.beginPath(); ctx.arc(x+d/2, y+d/2, d*0.36, 0, Math.PI*2);
+    ctx.fillStyle = shade(F.c,-27); ctx.fill();
+    hole(ctx, x+d/2-d*0.145, y+d/2, d*0.055, d*0.20, d*0.028);
+    hole(ctx, x+d/2+d*0.145, y+d/2, d*0.055, d*0.20, d*0.028);
+    hole(ctx, x+d/2, y+d/2-d*0.145, d*0.20, d*0.055, d*0.028);
+    hole(ctx, x+d/2, y+d/2+d*0.145, d*0.20, d*0.055, d*0.028);
+  } else if(kind === 'p2'){
+    var d3 = min*0.88, x3 = c.x+(c.w-d3)/2, y3 = c.y+(c.h-d3)/2;
+    recess(ctx, x3, y3, d3, d3, d3/2, F, W);
+    ctx.beginPath(); ctx.arc(x3+d3/2, y3+d3/2, d3*0.34, 0, Math.PI*2);
+    ctx.fillStyle = shade(F.c,-27); ctx.fill();
+    hole(ctx, x3+d3/2-d3*0.135, y3+d3/2, d3*0.085, d3*0.085);
+    hole(ctx, x3+d3/2+d3*0.135, y3+d3/2, d3*0.085, d3*0.085);
+  } else {
+    var uw = c.w*0.74, uh = Math.min(c.h*0.30, uw*0.34);
+    var ux = c.x+(c.w-uw)/2, uy = c.y+c.h*0.5-uh*1.15;
+    [0,1].forEach(function(k){
+      var yy = uy + k*(uh*1.5);
+      recess(ctx, ux, yy, uw, uh, uh*0.28, F, W);
+      hole(ctx, ux+uw/2, yy+uh*0.5, uw*0.58, uh*0.34, uh*0.12);
+    });
+    ctx.save(); ctx.globalAlpha = .7; ctx.fillStyle = F.ink;
+    ctx.font = '800 ' + Math.max(5, uh*0.55) + 'px ' + FONT;
+    ctx.textAlign = 'center'; ctx.fillText('USB', c.x+c.w/2, c.y+c.h*0.5+uh*2.1); ctx.restore();
+  }
+}
+function drawOutlet(ctx, P, A, g, F, v, W){
+  var items = [['uni'], ['uni','p2','p2'], ['uni','p2','p2','usb'], ['p2','p2','usb']][v] || ['uni'];
+  var ws = items.map(function(k){ return k === 'uni' ? 1.0 : (k === 'p2' ? 0.88 : 0.62); });
+  cellsW(A, ws, A.h > A.w, g.btnGap).forEach(function(c, i){
+    drawSocket(ctx, c, items[i], g, F, W);
+  });
+}
+function drawThermo(ctx, P, A, g, F, v, W){
+  var col = LEDC[g.ledColor];
+  var tall = (A.h > A.w*1.15);
+  var dh = A.h*(tall ? 0.30 : (v === 2 ? 0.40 : 0.50)), Dp = {x:A.x, y:A.y, w:A.w, h:dh};
+  var r = Math.min(Dp.w, Dp.h)*0.13;
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.40)'; ctx.shadowBlur = W*0.007;
+  rrect(ctx, Dp.x, Dp.y, Dp.w, Dp.h, r); ctx.fillStyle = '#14171B'; ctx.fill(); ctx.restore();
+  ctx.save(); rrect(ctx, Dp.x, Dp.y, Dp.w, Dp.h, r); ctx.clip();
+  var sg = ctx.createLinearGradient(Dp.x, Dp.y, Dp.x+Dp.w, Dp.y+Dp.h);
+  sg.addColorStop(0, 'rgba(255,255,255,.14)'); sg.addColorStop(.55, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sg; ctx.fillRect(Dp.x, Dp.y, Dp.w, Dp.h);
+  ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = col; ctx.shadowBlur = W*0.012;
+  var fs = Math.min(Dp.h*0.50, Dp.w*0.40);
+  ctx.font = '300 ' + fs + 'px ' + FONT;
+  var nw = ctx.measureText('24.5').width, us = fs*0.30;
+  var ncx = Dp.x + Dp.w*0.5 - us*0.85;
+  ctx.fillText('24.5', ncx, Dp.y+Dp.h*0.46);
+  ctx.font = '700 ' + us + 'px ' + FONT;
+  ctx.fillText('°C', ncx + nw/2 + us*0.75, Dp.y+Dp.h*0.46 - fs*0.22);
+  ctx.shadowBlur = 0; ctx.globalAlpha = .5;
+  var mode = (Dp.w > fs*4.6) ? 'AUTO    냉방    풍량' : 'AUTO  냉방';
+  var ms = fitText(ctx, mode, Dp.w*0.88, Math.max(5, fs*0.22), '700');
+  if(ctx.measureText(mode).width <= Dp.w*0.92 && Dp.h > fs*1.55)
+    ctx.fillText(mode, Dp.x+Dp.w*0.5, Dp.y+Dp.h*0.84);
+  ctx.restore();
+  var ctrls = [['up','down','fan'], ['up','down','L','L'], ['up','down','L','usb','uni']][v] || ['up','down'];
+  var CA = {x:A.x, y:A.y+dh+A.h*0.06, w:A.w, h:A.h-dh-A.h*0.06};
+  var bc = btnColor(F, g);
+  var cw = ctrls.map(function(k){ return (k === 'uni') ? 1.15 : (k === 'usb' ? 0.75 : 1.0); });
+  cellsW(CA, cw, CA.h > CA.w, g.btnGap).forEach(function(c, i){
+    var k = ctrls[i];
+    if(k === 'usb' || k === 'uni'){ drawSocket(ctx, c, k === 'usb' ? 'usb' : 'uni', g, F, W); return; }
+    var B = drawBtn(ctx, c, g, F, bc, W);
+    ctx.save(); ctx.globalAlpha = .8; ctx.fillStyle = F.ink;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    var fs2 = Math.max(6, Math.min(B.w, B.h)*0.34);
+    ctx.font = '800 ' + fs2 + 'px ' + FONT;
+    ctx.fillText({up:'▲', down:'▼', fan:'✱', L:'L'}[k], B.x+B.w/2, B.y+B.h*0.5);
+    ctx.restore();
+    if(k === 'L') drawLed(ctx, B, g, W);
+  });
+}
+function drawDoor(ctx, P, A, g, F, v, W){
+  var col = LEDC[g.ledColor], bc = btnColor(F, g);
+  function K(a){
+    var sw = a.w*0.72, sh = Math.max(a.h*0.11, a.w*0.10);
+    recess(ctx, a.x+(a.w-sw)/2, a.y+a.h*0.26, sw, sh, sh*0.35, F, W);
+    hole(ctx, a.x+a.w/2, a.y+a.h*0.26+sh/2, sw*0.90, sh*0.46, sh*0.16);
+    ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = W*0.014; ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(a.x+a.w/2, a.y+a.h*0.62, Math.min(a.w,a.h)*0.055, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = .7; ctx.fillStyle = F.ink; ctx.textAlign = 'center';
+    ctx.font = '800 ' + Math.max(6, a.h*0.085) + 'px ' + FONT;
+    ctx.fillText('KEY', a.x+a.w/2, a.y+a.h*0.82); ctx.restore();
+  }
+  function DMv(a){
+    var d = Math.min(a.w, a.h)*0.46;
+    recess(ctx, a.x+(a.w-d)/2, a.y+a.h*0.20, d, d, d/2, F, W);
+    ctx.beginPath(); ctx.arc(a.x+a.w/2, a.y+a.h*0.20+d/2, d*0.33, 0, Math.PI*2);
+    ctx.fillStyle = '#0E1115'; ctx.fill();
+    ctx.save(); ctx.globalAlpha = .35; ctx.fillStyle = '#7FB6FF';
+    ctx.beginPath(); ctx.arc(a.x+a.w/2-d*0.10, a.y+a.h*0.20+d/2-d*0.10, d*0.11, 0, Math.PI*2); ctx.fill(); ctx.restore();
+    for(var i=0;i<3;i++){
+      var ly = a.y+a.h*0.74+i*(a.h*0.055);
+      recess(ctx, a.x+a.w*0.28, ly, a.w*0.44, Math.max(1.4, a.h*0.022), a.h*0.011, F, W);
+    }
+  }
+  function CH(a){
+    var d = Math.min(a.w, a.h)*0.52;
+    var B = drawBtn(ctx, {x:a.x+(a.w-d)/2, y:a.y+a.h*0.22, w:d, h:d}, {btnShape:'round', btnGap:0}, F, bc, W);
+    ctx.save(); ctx.globalAlpha = .55; ctx.strokeStyle = F.ink;
+    ctx.lineWidth = Math.max(.9, d*0.035);
+    ctx.beginPath(); ctx.arc(B.x+B.w/2, B.y+B.h*0.54, d*0.18, Math.PI, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(B.x+B.w/2-d*0.22, B.y+B.h*0.54); ctx.lineTo(B.x+B.w/2+d*0.22, B.y+B.h*0.54); ctx.stroke();
+    ctx.restore();
+    drawLed(ctx, B, g, W);
+    ctx.save(); ctx.globalAlpha = .62; ctx.fillStyle = F.ink; ctx.textAlign = 'center';
+    ctx.font = '800 ' + Math.max(6, a.h*0.075) + 'px ' + FONT;
+    ctx.fillText('PUSH', a.x+a.w/2, a.y+a.h*0.88); ctx.restore();
+  }
+  if(v === 0) K(A);
+  else if(v === 1) DMv(A);
+  else if(v === 2) CH(A);
+  else { var cs = cellsOf(A, 2, A.h > A.w, g.btnGap*1.6); K(cs[0]); DMv(cs[1]); }
+}
+function drawPlate(ctx, P, g, product, variant, W){
+  var F = FACE[g.face], R = Math.min(P.w, P.h)*g.radius;
+  ctx.save(); rrect(ctx, P.x, P.y, P.w, P.h, R); ctx.clip();
+  faceFill(ctx, P.x, P.y, P.w, P.h, F, g); ctx.fillRect(P.x, P.y, P.w, P.h);
+  if(g.material === 'glass'){
+    var sg = ctx.createLinearGradient(P.x, P.y, P.x+P.w, P.y+P.h);
+    sg.addColorStop(0, 'rgba(255,255,255,.22)'); sg.addColorStop(.44, 'rgba(255,255,255,0)');
+    sg.addColorStop(.56, 'rgba(255,255,255,.10)'); sg.addColorStop(1, 'rgba(0,0,0,.07)');
+    ctx.fillStyle = sg; ctx.fillRect(P.x, P.y, P.w, P.h);
+  }
+  ctx.restore();
+  var b = Math.min(P.w, P.h)*g.bezel;
+  var I = {x:P.x+b, y:P.y+b, w:P.w-2*b, h:P.h-2*b}, IR = Math.max(0, R-b*0.65);
+  if(g.bezelStyle === 'step'){
+    ctx.save(); rrect(ctx, I.x, I.y, I.w, I.h, IR);
+    ctx.strokeStyle = 'rgba(0,0,0,.17)'; ctx.lineWidth = Math.max(1, W*0.0026); ctx.stroke(); ctx.restore();
+  } else if(g.bezelStyle === 'chamfer'){
+    ctx.save(); rrect(ctx, P.x, P.y, P.w, P.h, R); ctx.clip();
+    var cg = ctx.createLinearGradient(P.x, P.y, P.x, P.y+P.h);
+    cg.addColorStop(0, 'rgba(255,255,255,.42)'); cg.addColorStop(.5, 'rgba(255,255,255,0)');
+    cg.addColorStop(1, 'rgba(0,0,0,.20)');
+    ctx.fillStyle = cg; ctx.fillRect(P.x, P.y, P.w, P.h);
+    rrect(ctx, I.x, I.y, I.w, I.h, IR); ctx.fillStyle = F.c; ctx.fill(); ctx.restore();
+  } else if(g.bezelStyle === 'ring'){
+    ctx.save(); ctx.globalAlpha = .6; ctx.shadowColor = LEDC[g.ledColor]; ctx.shadowBlur = W*0.012;
+    rrect(ctx, I.x, I.y, I.w, I.h, IR);
+    ctx.strokeStyle = LEDC[g.ledColor]; ctx.lineWidth = Math.max(1.4, W*0.004); ctx.stroke(); ctx.restore();
+  }
+  ctx.save(); rrect(ctx, P.x, P.y, P.w, P.h, R);
+  ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = Math.max(1, W*0.002); ctx.stroke(); ctx.restore();
+  var A = {x:I.x+I.w*g.btnInset, y:I.y+I.h*g.btnInset, w:I.w*(1-2*g.btnInset), h:I.h*(1-2*g.btnInset)};
+  if(product === 'switch') drawSwitch(ctx, P, A, g, F, variant+1, W);
+  else if(product === 'outlet') drawOutlet(ctx, P, A, g, F, variant, W);
+  else if(product === 'thermo') drawThermo(ctx, P, A, g, F, variant, W);
+  else drawDoor(ctx, P, A, g, F, variant, W);
+  if(g.led === 'edge'){
+    ctx.save(); ctx.globalAlpha = .75; ctx.shadowColor = LEDC[g.ledColor]; ctx.shadowBlur = W*0.02;
+    rrect(ctx, P.x+W*0.004, P.y+W*0.004, P.w-W*0.008, P.h-W*0.008, Math.max(0,R-W*0.004));
+    ctx.strokeStyle = LEDC[g.ledColor]; ctx.lineWidth = Math.max(1.2, W*0.0028); ctx.stroke(); ctx.restore();
+  }
+  if(g.led === 'under'){
+    ctx.save(); ctx.globalAlpha = .55; ctx.shadowColor = LEDC[g.ledColor]; ctx.shadowBlur = W*0.03;
+    var lw = P.w*0.52, lh = Math.max(2, W*0.005);
+    rrect(ctx, P.x+(P.w-lw)/2, P.y+P.h-lh*1.6, lw, lh, lh/2);
+    ctx.fillStyle = LEDC[g.ledColor]; ctx.fill(); ctx.restore();
+  }
+}
+function drawDesign(cv, W, g, product, variant, hq){
+  var H = Math.round(W*0.86);
+  cv.width = W; cv.height = H;
+  var ctx = cv.getContext('2d');
+  var bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#FCFDFE'); bg.addColorStop(1, '#E9EDF2');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  var P = plateRect(W, H, g);
+  ctx.save();
+  ctx.shadowColor = 'rgba(18,24,32,.24)'; ctx.shadowBlur = W*0.038; ctx.shadowOffsetY = W*0.014;
+  rrect(ctx, P.x, P.y, P.w, P.h, Math.min(P.w,P.h)*g.radius); ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.restore();
+  drawPlate(ctx, P, g, product, variant, W);
+  if(hq){
+    ctx.fillStyle = 'rgba(90,102,117,.85)'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.font = '700 ' + Math.round(W*0.020) + 'px ' + FONT;
+    ctx.fillText(PRODUCTS[product].t + '  ·  ' + PRODUCTS[product].vars[variant] + '  ·  ' + FACE[g.face].t
+                 + ' ' + MATT[g.material], W*0.035, H - W*0.028);
+    ctx.textAlign = 'right';
+    ctx.fillText('한국마이크로닉(주) · 디자인 검토안', W - W*0.035, H - W*0.028);
+    ctx.textAlign = 'left';
+  }
+}
+
+/* ---- 탭④ 화면·조작 ---- */
+function genBatch(n){
+  var r = rng(D.seed++), out = [], tries = 0, drops = {}, par = D.liked.map(function(x){ return x.g; });
+  var floor = Math.max(0, D.th - 15);
+  while(out.length < n && tries < n*60){
+    tries++;
+    var g = newGene(r, par), j = judge(g);
+    if(!j.ok){ D.dropN++; drops[j.why] = (drops[j.why]||0)+1; continue; }
+    if(j.s < floor){ D.dropN++; drops['기준 점수 미달'] = (drops['기준 점수 미달']||0)+1; continue; }
+    D.seen[gkey(g)] = 1; D.seenN++;
+    out.push({g:g, s:j.s, like:false});
+  }
+  D.why = drops;
+  return out;
+}
+function syncStats(){
+  $('#stLiked').textContent = D.liked.length;
+  $('#stSaved').textContent = D.saved.length;
+  $('#stSeen').textContent = D.seenN;
+  $('#stDrop').textContent = D.dropN;
+  var w = Object.keys(D.why).map(function(k){ return k + ' ' + D.why[k]; });
+  $('#whyHint').innerHTML = '버린 이유: ' + (w.length ? w.join('  ·  ') : '—')
+    + '<br><b>버리는 기준은 취향이 아니라 눈에 보이는 것·만들 수 있는 것만 봅니다</b> — ①똑같은 안 ②매입박스 규격(가로세로비 0.55~1.75) ③버튼 대비 부족 ④버튼이 너무 얇아 못 누름 ⑤이미 저장한 것과 너무 비슷함. 「예쁘다」는 제가 판정하지 않습니다 — ♥ 누르신 것만 학습합니다.';
+  $('#genTag').textContent = D.gen + '세대';
+}
+function toggleLike(i){
+  var it = D.items[i];
+  it.like = !it.like;
+  if(it.like) D.liked.push({g:it.g, s:it.s});
+  else D.liked = D.liked.filter(function(x){ return gkey(x.g) !== gkey(it.g); });
+  renderGrid();
+}
+function clearLiked(){ D.liked = []; D.items.forEach(function(it){ it.like = false; }); renderGrid(); }
+function renderGrid(){
+  var box = $('#grid'); box.innerHTML = '';
+  D.items.forEach(function(it, i){
+    var d = document.createElement('div'); d.className = 'tile' + (it.like ? ' on' : '');
+    var cv = document.createElement('canvas');
+    drawDesign(cv, 520, it.g, D.product, D.variant, false);
+    d.appendChild(cv);
+    var sc = document.createElement('div'); sc.className = 'sc'; sc.textContent = it.s + '점'; d.appendChild(sc);
+    var hb = document.createElement('div'); hb.className = 'hb'; hb.textContent = '♥';
+    hb.onclick = function(e){ e.stopPropagation(); toggleLike(i); };
+    d.appendChild(hb);
+    d.onclick = function(){ openBig(i); };
+    box.appendChild(d);
+  });
+  syncStats();
+}
+function moreDesigns(){ D.gen++; D.items = genBatch(24); renderGrid(); }
+function saveLiked(){
+  var todo = D.liked.filter(function(x){ return !D.saved.some(function(y){ return gkey(y.g) === gkey(x.g); }); });
+  if(!todo.length){ alert('새로 저장할 ♥ 가 없습니다.'); return; }
+  if(!D.dir) alert('폴더를 안 정하셔서 브라우저 기본 다운로드 폴더로 ' + todo.length + '장 내려받습니다.');
+  (function next(i){
+    if(i >= todo.length) return;
+    saveGene(todo[i].g, todo[i].s).then(function(){ next(i+1); });
+  })(0);
+}
+
+/* ---- 큰 화면 ---- */
+var bigIdx = -1;
+function openBig(i){
+  bigIdx = i;
+  var it = D.items[i];
+  drawDesign($('#bigcv'), 1100, it.g, D.product, D.variant, true);
+  $('#bigInfo').innerHTML = specHTML(it.g, it.s);
+  $('#bigLike').textContent = it.like ? '♥ 고름 — 취소' : '♥ 고르기';
+  $('#big').className = 'modal on';
+}
+function closeBig(e){ if(e === 1 || e.target.id === 'big') $('#big').className = 'modal'; }
+function likeBig(){ if(bigIdx < 0) return; toggleLike(bigIdx); openBig(bigIdx); }
+function saveBig(){ if(bigIdx < 0) return; var it = D.items[bigIdx]; saveGene(it.g, it.s); }
+function specLines(g, s){
+  return [
+    '제품: ' + PRODUCTS[D.product].t + ' ' + PRODUCTS[D.product].vars[D.variant],
+    '플레이트: ' + moduleCount() + '연' + (moduleCount() === 1 ? '' : (snapAr(g) >= 1 ? ' 가로형' : ' 세로형'))
+      + ' (가로세로비 ' + snapAr(g).toFixed(2) + ') / 모서리 R ' + Math.round(g.radius*100) + '% / 베젤 '
+      + Math.round(g.bezel*100) + '% (' + ({none:'없음',flat:'평면',step:'스텝',chamfer:'챔퍼',ring:'링'}[g.bezelStyle]) + ')',
+    '색·재질: ' + FACE[g.face].t + ' / ' + MATT[g.material],
+    '버튼: ' + SHAPET[g.btnShape] + ' / ' + TONET[g.btnTone] + ' / '
+      + (g.split === 'v' ? '세로 배열' : '가로 배열') + ' / 간격 ' + (g.btnGap*100).toFixed(1)
+      + '% / 여백 ' + (g.btnInset*100).toFixed(1) + '%',
+    '표시등: ' + LEDPT[g.led] + (g.led === 'none' ? '' : ' / ' + LEDT[g.ledColor]),
+    '각인: ' + ({none:'없음',text:'글자',icon:'아이콘'}[g.label])
+      + (g.label === 'none' ? '' : ' / ' + ({on:'버튼 위',below:'버튼 아래',side:'좌측'}[g.labelPos])),
+    '점수: ' + s + '점'
+  ];
+}
+function specHTML(g, s){
+  return specLines(g, s).map(function(l){
+    var i = l.indexOf(':');
+    return '<b>' + l.slice(0, i) + '</b>' + l.slice(i);
+  }).join('<br>')
+  + '<br><span style="color:#C0392B">※ 외형 검토안입니다. 실제 치수·금형·인증·부품 배치는 개발팀 확인이 필요합니다.</span>';
+}
+function briefBig(btn){
+  if(bigIdx < 0) return;
+  var it = D.items[bigIdx];
+  var t = ['[한국마이크로닉(주) 배성윤 차장] 제품 외형 디자인 검토안', ''].concat(
+    specLines(it.g, it.s).map(function(l){ return '· ' + l; }),
+    ['', '※ 외형 검토용입니다. 실제 치수·금형·인증·부품 배치는 개발팀 확인 필요.',
+     '※ 조명 구수는 전기설계 확정 후 결정되므로 이 안은 구수만 바꿔 재사용합니다.']
+  ).join('\n');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){
+      var o = btn.textContent; btn.textContent = '복사됨';
+      setTimeout(function(){ btn.textContent = o; }, 1600);
+    }).catch(function(){ prompt('아래를 복사하세요', t); });
+  } else prompt('아래를 복사하세요', t);
+}
+
+/* ---- 탭④ 버튼 ---- */
+var AUTOB = [{k:0,t:'끔'},{k:60,t:'1분'},{k:300,t:'5분'},{k:900,t:'15분'},{k:1800,t:'30분'}];
+var DEFVAR = {'switch':2, outlet:2, thermo:0, door:3};
+function setProduct(k){ D.product = k; D.variant = DEFVAR[k]; buildBtns4(); moreDesigns(); }
+function setVariant(k){ D.variant = k; buildBtns4(); moreDesigns(); }
+function setAuto(k){
+  D.autoMs = k*1000;
+  if(D.timer){ clearInterval(D.timer); D.timer = null; }
+  if(k > 0) D.timer = setInterval(autoTick, D.autoMs);
+  $('#autoNow').textContent = k ? (AUTOB.filter(function(a){ return a.k === k; })[0].t + '마다 1장') : '끔';
+  buildBtns4();
+}
+function autoTick(){
+  if(D.saved.length >= D.cap){ setAuto(0); alert('저장 한도 ' + D.cap + '장에 도달해 자동 생성을 멈췄습니다.'); return; }
+  var r = rng(D.seed++), par = D.liked.map(function(x){ return x.g; }), best = null;
+  for(var i=0;i<200;i++){
+    var g = newGene(r, par), j = judge(g);
+    if(!j.ok || j.s < D.th){ D.dropN++; D.why[j.why || '기준 점수 미달'] = (D.why[j.why || '기준 점수 미달']||0)+1; continue; }
+    best = {g:g, s:j.s}; break;
+  }
+  if(!best){ syncStats(); return; }
+  D.seen[gkey(best.g)] = 1; D.seenN++;
+  D.items.unshift({g:best.g, s:best.s, like:false});
+  if(D.items.length > 24) D.items.pop();
+  renderGrid();
+  if(D.dir && D.autoSave) saveGene(best.g, best.s);
+}
+function buildBtns4(){
+  mkBtns($('#prodBtns'), Object.keys(PRODUCTS).map(function(k){ return {k:k, t:PRODUCTS[k].t}; }), D.product, setProduct);
+  mkBtns($('#gangBtns'), PRODUCTS[D.product].vars.map(function(t, i){ return {k:i, t:t}; }), D.variant, setVariant);
+  mkBtns($('#autoBtns'), AUTOB, D.autoMs/1000, setAuto);
+  $('#prodNow').textContent = PRODUCTS[D.product].t;
+  $('#gangNow').textContent = PRODUCTS[D.product].vars[D.variant];
+  $('#gangNow').parentNode.firstChild.nodeValue = PRODUCTS[D.product].lab + ' ';
+  syncDir();
+}
+$('#th').oninput = function(){ D.th = +this.value; $('#thTxt').textContent = D.th + '점 이상만'; };
+
+/* 지난번에 정한 폴더를 다시 잡는다 (허용이 남아 있을 때만) */
+try{
+  idbGet('dir').then(function(h){
+    if(!h || !h.queryPermission) return;
+    h.queryPermission({mode:'readwrite'}).then(function(p){
+      if(p === 'granted'){ D.dir = h; D.autoSave = true; syncDir(); }
+    }).catch(function(){});
+  }).catch(function(){});
+}catch(e){}
+
 /* ===================== 시작 ===================== */
 buildBtns1(); syncFxText(); render1();
 buildBtns2(); render2();
 buildBtns3(); render3();
+buildBtns4(); moreDesigns();
 </script>
 </body>
 </html>
