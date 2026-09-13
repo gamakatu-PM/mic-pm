@@ -1,0 +1,198 @@
+{
+ "size": [
+  12,
+  5.4
+ ],
+ "boxes": [
+  {
+   "id": "pms",
+   "x": 0.2,
+   "y": 4.25,
+   "w": 3.3,
+   "h": 0.9,
+   "style": "sub",
+   "title": "주전산 PMS SERVER",
+   "lines": [
+    "프론트 (지상 1층)",
+    "* 발주처 공사분"
+   ],
+   "fs": 12,
+   "lfs": 9
+  },
+  {
+   "id": "lock",
+   "x": 8.5,
+   "y": 4.25,
+   "w": 3.3,
+   "h": 0.9,
+   "style": "sub",
+   "title": "도어락 시스템",
+   "lines": [
+    "객실·공용부 출입관리",
+    "* 발주처 업체 선정"
+   ],
+   "fs": 12,
+   "lfs": 9
+  },
+  {
+   "id": "svr",
+   "x": 0.2,
+   "y": 2.35,
+   "w": 3.3,
+   "h": 1.4,
+   "style": "main",
+   "title": "객실관리 서버 ×2",
+   "lines": [
+    "방재실 (지하 1층)",
+    "이중화 운영"
+   ],
+   "fs": 12.5,
+   "lfs": 9
+  },
+  {
+   "id": "fip",
+   "x": 4.35,
+   "y": 2.35,
+   "w": 3.3,
+   "h": 1.4,
+   "style": "device",
+   "title": "FIP",
+   "lines": [
+    "각층 린넨실 1EA",
+    "Floor Indicator Panel"
+   ],
+   "fs": 12.5,
+   "lfs": 9
+  },
+  {
+   "id": "cb",
+   "x": 8.5,
+   "y": 2.35,
+   "w": 3.3,
+   "h": 1.4,
+   "style": "main",
+   "title": "CONTROL BOX",
+   "lines": [
+    "객실 입구",
+    "RCU / 제어 분전함"
+   ],
+   "fs": 12.5,
+   "lfs": 9
+  },
+  {
+   "id": "pc",
+   "x": 0.2,
+   "y": 0.85,
+   "w": 3.3,
+   "h": 0.9,
+   "style": "device",
+   "title": "운영 PC",
+   "lines": [
+    "방재실 1EA · 객실현황 조회"
+   ],
+   "fs": 12,
+   "lfs": 9
+  },
+  {
+   "id": "room",
+   "x": 8.5,
+   "y": 0.85,
+   "w": 3.3,
+   "h": 0.9,
+   "style": "device",
+   "title": "객실 기구물",
+   "lines": [
+    "키센서 · 온도조절기 · 조명 · 챠임벨"
+   ],
+   "fs": 12,
+   "lfs": 8.5
+  }
+ ],
+ "links": [
+  {
+   "from": "pms",
+   "to": "svr",
+   "style": "comm",
+   "side": "v",
+   "x": 1.85,
+   "label": "TCP/IP  ·  INTERFACE",
+   "arrow": "<->"
+  },
+  {
+   "from": "svr",
+   "to": "fip",
+   "style": "comm",
+   "side": "h",
+   "y": 3.05,
+   "label": "TCP/IP  호텔 전용망 (동일 망내)",
+   "arrow": "<->"
+  },
+  {
+   "from": "fip",
+   "to": "cb",
+   "style": "comm",
+   "side": "h",
+   "y": 3.05,
+   "label": "RS-485  ·  AWG#24 1P",
+   "arrow": "<->"
+  },
+  {
+   "from": "svr",
+   "to": "pc",
+   "style": "comm",
+   "side": "v",
+   "x": 1.85,
+   "arrow": "<->"
+  },
+  {
+   "from": "lock",
+   "to": "cb",
+   "style": "weak",
+   "side": "v",
+   "x": 10.15,
+   "label": "카드키 연동",
+   "arrow": "-"
+  },
+  {
+   "from": "cb",
+   "to": "room",
+   "style": "comm",
+   "side": "v",
+   "x": 10.15,
+   "arrow": "<->"
+  }
+ ],
+ "notes": [
+  {
+   "x": 6.0,
+   "y": 1.95,
+   "text": "PMS에서 받는 것 : 체크인 · 체크아웃 DATA      ／      PMS에 주는 것 : 청소완료 · 객실판매가능 DATA",
+   "color": "blue",
+   "bold": true,
+   "fs": 10.5,
+   "ha": "center"
+  },
+  {
+   "x": 6.0,
+   "y": 0.35,
+   "text": "PMS 서버 · 호텔 전용망 · 도어락은 발주처 공사분입니다. 객실관리는 INTERFACE 지점부터 객실 기구물까지를 담당합니다.",
+   "color": "gray_tx",
+   "fs": 9.5,
+   "ha": "center"
+  }
+ ],
+ "legend": [
+  {
+   "x": 4.6,
+   "y": 1.3,
+   "style": "comm",
+   "label": "통신선 (약전)"
+  },
+  {
+   "x": 6.4,
+   "y": 1.3,
+   "style": "weak",
+   "label": "발주처 · 타 공종"
+  }
+ ]
+}
