@@ -20,6 +20,7 @@ DEFAULTS = {
     'biseo':   r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\_현장비서',
     'template':r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\_원틀',
     'out':     r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\_도구결과',
+    'handover':r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\KM_인수인계함',
 }
 
 def cfg(key):
