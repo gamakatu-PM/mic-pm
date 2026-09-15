@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""KM 현장비서 도구모음 - 번호 메뉴 (24종).
+"""KM 현장비서 도구모음 - 번호 메뉴 (25종).
 기존 시작.bat(PLAUD 회의록)은 건드리지 않습니다. 이것은 그 옆에 붙는 별도 런처입니다."""
 import os, sys, importlib, traceback
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -23,7 +23,8 @@ GROUPS = [
    ('자재사양서         원틀에 현장명만 갈아끼움', 't19_matspec'),
    ('시방서 갈아끼우기  원틀에 현장/객실수 치환', 't20_specbook'),
    ('부서 전달 메일     회의록을 부서별 초안으로', 't16_deptmail'),
-   ('사진대지           사진 폴더를 A4 엑셀로', 't08_photo')]),
+   ('사진대지           사진 폴더를 A4 엑셀로', 't08_photo'),
+   ('이미지 모음 PPT    참고사진을 PPT 한 개로(출처 자동표기)', 't25_imagedeck')]),
  ('일정 / 돈', [
    ('납기 역산 경보     준공일에서 거꾸로', 't05_schedule'),
    ('수금 레이더        미발행/입금대기 D-day', 't06_collect'),

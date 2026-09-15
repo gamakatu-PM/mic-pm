@@ -6,10 +6,10 @@ echo.
 where py > nul 2>&1
 if %errorlevel%==0 (
   py -3 -m pip install --upgrade pip
-  py -3 -m pip install openpyxl pillow
+  py -3 -m pip install openpyxl pillow python-pptx
 ) else (
   python -m pip install --upgrade pip
-  python -m pip install openpyxl pillow
+  python -m pip install openpyxl pillow python-pptx
 )
 echo.
 echo 끝났습니다. 이제 도구모음.bat 을 누르시면 됩니다.
