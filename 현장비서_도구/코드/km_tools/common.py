@@ -121,3 +121,87 @@ def write_csv(path, rows, header=None):
         for r in rows:
             w.writerow(r)
     return path
+
+# ---- v2 추가분 (도구 13~23 공용) ----
+
+def find_template(*keys):
+    """_원틀 폴더에서 키워드가 든 파일을 찾는다. 없으면 None.
+    원틀은 절대 새로 그리지 않는다 (km-operating-rules 6.6-1)."""
+    root = cfg('template')
+    if not os.path.isdir(root):
+        return None
+    cands = []
+    for p in walk_files(root):
+        b = os.path.basename(p)
+        if b.startswith('~$'):
+            continue
+        if all(k.lower() in b.lower() for k in keys):
+            cands.append(p)
+    if not cands:
+        return None
+    cands.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    return cands[0]
+
+def no_template(what, *keys):
+    print('[원틀 없음] %s' % what)
+    print('  찾은 곳 : %s' % cfg('template'))
+    print('  찾은 이름 조건 : %s' % ' + '.join(keys))
+    print('  -> 원틀 파일을 그 폴더에 넣어주십시오. 서식은 새로 그리지 않습니다.')
+
+def zip_replace(src, dst, mapping):
+    """zip 기반 문서(pptx/hwpx/docx)의 본문 텍스트만 치환해 다른 이름으로 저장.
+    서식(틀)은 전혀 건드리지 않는다."""
+    import zipfile, shutil
+    shutil.copy(src, dst)
+    zin = zipfile.ZipFile(src)
+    names = zin.namelist()
+    tmp = dst + '.tmp'
+    zout = zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED)
+    hit = 0
+    for n in names:
+        data = zin.read(n)
+        if n.lower().endswith(('.xml', '.rels', '.txt')):
+            try:
+                t = data.decode('utf-8')
+                for k, v in mapping.items():
+                    if k in t:
+                        t = t.replace(k, str(v)); hit += 1
+                data = t.encode('utf-8')
+            except Exception:
+                pass
+        zout.writestr(n, data)
+    zout.close(); zin.close()
+    os.replace(tmp, dst)
+    return hit
+
+def write_html(path, title_text, blocks):
+    """블록 = [(제목, [(색, 줄)])]. 색 : red/yellow/green/gray"""
+    C = {'red': '#C0392B', 'yellow': '#C77B2B', 'green': '#2E7D5B', 'gray': '#8E99A4',
+         'blue': '#2A6099', 'purple': '#6B4FA8'}
+    h = ['<!doctype html><meta charset="utf-8"><title>%s</title>' % title_text,
+         '<style>body{font-family:"맑은 고딕",system-ui;margin:0;padding:16px;background:#fff;color:#111}',
+         'h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px;border-bottom:2px solid #eee;padding-bottom:4px}',
+         '.r{display:flex;gap:8px;padding:7px 10px;border-left:5px solid #ccc;background:#fafafa;margin:4px 0;font-size:14px;line-height:1.45}',
+         '.n{color:#8E99A4;font-size:12px;margin:2px 0 10px}</style>',
+         '<h1>%s</h1><div class="n">%s 생성 · KM 현장비서</div>' % (title_text, today().isoformat())]
+    for name, rows in blocks:
+        h.append('<h2>%s</h2>' % name)
+        if not rows:
+            h.append('<div class="r" style="border-color:%s">없음</div>' % C['gray'])
+        for color, line in rows:
+            h.append('<div class="r" style="border-color:%s">%s</div>' % (C.get(color, '#ccc'), line))
+    io.open(path, 'w', encoding='utf-8').write('\n'.join(h))
+    return path
+
+def log(tool, msg):
+    p = os.path.join(cfg('out'), '_실행기록.txt')
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with io.open(p, 'a', encoding='utf-8') as fp:
+        fp.write('%s\t%s\t%s\n' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), tool, msg))
+
+def open_folder(p):
+    try:
+        os.makedirs(p, exist_ok=True)
+        os.system(('start "" "%s"' if os.name == 'nt' else 'xdg-open "%s" 2>/dev/null &') % p)
+    except Exception:
+        pass
