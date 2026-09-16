@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""실행산출 6시트 만들기 - 정답본(주일능 v7) 틀을 복사해 값만 채운다. 사람 손이 안 들어가므로 매번 같은 모양.
+"""실행산출 6시트 만들기 - 정답본(주일능_실행산출_v5_260828 = 프로님 기준) 틀을 복사해 값만 채운다. 사람 손이 안 들어가므로 매번 같은 모양.
 28번이 부르고, 클로드도 이 함수로만 만든다.
 
 시트 : 0.자가진단 / 1.입력판 / 2.CB 실행 / 3.견적↔실행 대조 / 4.확인 목록 / 5.변경 이력
@@ -8,17 +8,26 @@ import os, re, copy, shutil, collections, glob
 from common import *
 
 SHEETS = ['0.자가진단', '1.입력판', '2.CB 실행', '3.견적↔실행 대조', '4.확인 목록', '5.변경 이력']
-YEL = 'FFF2CC'; GRY = 'E8EAED'; GRN = 'D6EFD8'
+YEL = 'FFF2A8'; GRY = 'E8EAED'; GRN = 'D6EFD8'; ORG = 'FF9900'
 
 def template():
-    """정답본 폴더의 실행산출 정답본 (없으면 None -> 같은 구조로 새로 그림)"""
+    """정답본 폴더의 실행산출 정답본. 37번 등록부(_정답본.csv)의 「실행산출」 줄이 가리키는 파일이 1순위,
+    없으면 6시트가 맞는 것 중 최신. (프로님 기준 = 주일능_실행산출_v5_260828)"""
+    import openpyxl
     d = os.path.join(cfg('template'), '정답본')
+    try:
+        import t37_check
+        for e in t37_check.registry():
+            if e['kind'] == '실행산출':
+                g = t37_check.find_golden(e)
+                if g: return g
+    except Exception:
+        pass
     for p in sorted(glob.glob(os.path.join(d, '*.xlsx')), key=os.path.getmtime, reverse=True):
         b = os.path.basename(p)
         if b.startswith('~$'):
             continue
         try:
-            import openpyxl
             wb = openpyxl.load_workbook(p, read_only=True)
             ok = all(any(re.sub(r'\s', '', s) == re.sub(r'\s', '', n) for s in wb.sheetnames) for n in SHEETS)
             wb.close()
@@ -96,9 +105,18 @@ def build(site, out_path, qty, cb_qty, cb_rows, mult, unknown, meta):
     put(ws, r, 3, 'CB 대수 합. 기구물 수량과 일치해야 함', sC); R['rooms'] = r; r += 2
     put(ws, r, 1, '■ 미확인 실행단가 — 숫자를 넣으면 전 시트가 자동으로 바뀝니다', sH, fill=None if sH else '2A6099', bold=True, white=True); ws.merge_cells('A%d:C%d' % (r, r)); r += 1
     R['unk'] = {}
-    for what, why, cand in unknown:
+    unknown = [tuple(u) + ('',) * (4 - len(u)) for u in unknown]
+    for what, why, cand, grp in [u for u in unknown if u[3] != '도어락']:
         put(ws, r, 1, what, sI); put(ws, r, 2, None, sB, fill=YEL, num='#,##0'); put(ws, r, 3, '%s %s' % (why, ('— 후보: ' + cand) if cand else ''), sC); R['unk'][what] = r; r += 1
     R['unk_first'] = min(R['unk'].values()) if R['unk'] else r; R['unk_last'] = max(R['unk'].values()) if R['unk'] else r
+    doors = [u for u in unknown if u[3] == '도어락']
+    R['door_first'] = R['door_last'] = None
+    if doors:
+        r += 1
+        put(ws, r, 1, '■ 도어락 파트 — 직접단가 품목. 실행가(원가)가 전 현장 공통으로 미확인', sH, fill=None if sH else '2A6099', bold=True, white=True); ws.merge_cells('A%d:C%d' % (r, r)); r += 1
+        for what, why, cand, grp in doors:
+            put(ws, r, 1, what, sI); put(ws, r, 2, None, sB, fill=YEL, num='#,##0'); put(ws, r, 3, '%s %s' % (why, ('— 후보: ' + cand) if cand else ''), sC); R['unk'][what] = r
+            R['door_first'] = R['door_first'] or r; R['door_last'] = r; r += 1
     for col, w in (('A', 46), ('B', 14), ('C', 95)): ws.column_dimensions[col].width = w
 
     # ---------- 2.CB 실행 ----------
@@ -144,66 +162,66 @@ def build(site, out_path, qty, cb_qty, cb_rows, mult, unknown, meta):
     r += 1
     R_Q = sub('▷ 참고 — 견적서 CONTROL BOX 단가', lambda c: "=ROUND(%s%d*'1.입력판'!$B$%d,0)" % (c, R_A, R['견적배수']), None,
               '견적서 발행 전: 【A】× 견적배수 잠정' if not meta.get('견적서') else '견적서 발행단가로 교체하십시오')
+    R_D = sub(' * 견적가 - 실행', lambda c: '=%s%d-%s%d' % (c, R_Q, c, R_A), ORG)
+    if S.get('orange'):
+        for c in range(1, cN + 1): ws.cell(R_D, c)._style = copy.copy(S['orange']); ws.cell(R_D, c).fill = _fill(ORG)
     sub('▷ 견적단가 ÷ 【A】실행가 = 실제 적용된 배수', lambda c: '=IF(%s%d=0,"",%s%d/%s%d)' % (c, R_A, c, R_Q, c, R_A))
     for i, w in enumerate([30, 46] + [13] * nT + [13] + [14] * nT + [70], 1): ws.column_dimensions[L(i)].width = w
 
-    # ---------- 3.견적↔실행 대조 ----------
+    # ---------- 3.견적↔실행 대조 ----------  (정답본 v5 : 머리글 1행 / 실행단가·금액 → 견적단가·금액 → 이윤·이윤율 → 견적 2블록(L~O))
     ws = wb['3.견적↔실행 대조']; S = styles['3.견적↔실행 대조'] or {}
-    ws['A1'] = '견적서 전 라인 ↔ 실행 대조 · 이윤 산출 — %s%s' % (site, '' if meta.get('견적서') else ' (견적서 미발행: 견적단가 = 실행 × 견적배수 잠정)')
-    hdr(ws, 3, ['순번', '품명/기능', '규격', '단위', '수량', '견적단가', '견적금액', '실행단가', '실행금액', '이윤', '이윤율', '비고'], S.get('head'))
-    r = 4; n = 0; lines = []
+    NC = 15
+    hdr(ws, 1, ['순번', '품명/기능', '규격', '단위', '수량', '실행단가', '실행금액', '견적단가', '견적금액', '이윤', '이윤율', '견적단가', '견적금액', '이윤', '이윤율'], S.get('head'))
+    r = 2; n = 0; subs = []
     def sec(t):
         nonlocal r
-        put(ws, r, 1, t, S.get('sec'), fill=GRY)
-        for c in range(2, 13): ws.cell(r, c).fill = _fill(GRY)
-        r += 1
-    def line(name, spec, unit, q, cost, memo, ref=None):
+        put(ws, r, 1, t, S.get('sec'), bold=True); r += 1
+    def line(name, spec, unit, q, cost, ref=None):
         nonlocal r, n
         n += 1
-        vals = [n, name, spec, unit, q, "=ROUND(H%d*'1.입력판'!$B$%d,0)" % (r, R['견적배수']), '=E%d*F%d' % (r, r),
-                ref if ref else cost, '=E%d*H%d' % (r, r), '=G%d-I%d' % (r, r), '=IF(G%d=0,"",(G%d-I%d)/G%d)' % (r, r, r, r), memo]
+        vals = [n, name, spec, unit, q, ref if ref else cost, '=E%d*F%d' % (r, r),
+                "=ROUND(F%d*'1.입력판'!$B$%d,0)" % (r, R['견적배수']), '=E%d*H%d' % (r, r), '=I%d-G%d' % (r, r), '=IF(I%d=0,"",(I%d-G%d)/I%d)' % (r, r, r, r),
+                '=H%d' % r, '=L%d*E%d' % (r, r), '=M%d-G%d' % (r, r), '=IF(M%d=0,"",(M%d-G%d)/M%d)' % (r, r, r, r)]
         for c, v in enumerate(vals, 1):
-            put(ws, r, c, v, (S.get('cols') or [None] * 12)[c - 1], num='#,##0' if c in (5, 6, 7, 8, 9, 10) else ('0.0%' if c == 11 else None))
-        if ref and "입력판" in str(ref): ws.cell(r, 8).fill = _fill(YEL); ws.cell(r, 12).fill = _fill(YEL)
-        lines.append(r); r += 1
-    groups = collections.OrderedDict((('중앙', '1. 중앙 시스템'), ('객실', '2. 객실 (CB · 기구물 · 노무)'), ('도어락', '3. RF DOOR LOCK SYSTEM (직접단가)')))
+            put(ws, r, c, v, (S.get('cols') or [None] * NC)[c - 1], num='#,##0' if c in (5, 6, 7, 8, 9, 10, 12, 13, 14) else ('0.0%' if c in (11, 15) else None))
+        if cost is None: ws.cell(r, 6).fill = _fill(YEL)
+        r += 1
+    def subtotal(r0, r1):
+        nonlocal r
+        for c in (7, 9, 10, 13, 14): put(ws, r, c, '=SUM(%s%d:%s%d)' % (L(c), r0, L(c), r1), (S.get('sub') or [None] * NC)[c - 1], num='#,##0')
+        put(ws, r, 11, '=IF(I%d=0,"",(I%d-G%d)/I%d)' % (r, r, r, r), (S.get('sub') or [None] * NC)[10], num='0.0%')
+        put(ws, r, 15, '=IF(M%d=0,"",(M%d-G%d)/M%d)' % (r, r, r, r), (S.get('sub') or [None] * NC)[14], num='0.0%')
+        subs.append(r); r += 1
+    groups = collections.OrderedDict((('중앙', '1. 중앙 시스템'), ('객실', '2. 객실 (CB · 기구물 · 노무)'), ('도어락', '3. RF DOOR LOCK SYSTEM (직접단가 품목 — 요율을 곱하지 않습니다)')))
     for gk, gt in groups.items():
-        rows = [x for x in qty if x[6] == gk] + ([] if gk != '객실' else [])
+        rows = [x for x in qty if x[6] == gk]
         if gk == '객실':
-            sec(gt)
+            rows = rows + [x for x in qty if x[6] == '노무']
+        elif not rows:
+            continue
+        sec(gt); r0 = r
+        if gk == '객실':
             for i, t in enumerate(cb_qty):
-                line('CONTROL BOX %s%s' % (t[0], (' (%s)' % t[2]) if len(t) > 2 and t[2] else ''), meta.get('CB형번', 'CB-30BCB_4F 계열'), 'EA', "='1.입력판'!$B$%d" % R['cb'][i], None,
-                     '【A】외함 포함 실행가. 2.CB 실행 참조', ref="='2.CB 실행'!$%s$%d" % (L(cA0 + i), R_A))
-            for name, spec, unit, q, cost, memo, g in rows + [x for x in qty if x[6] == '노무']:
-                key = _key(R, name) if cost is None else None
-                line(name, spec, unit, q, cost, memo, ref=("='1.입력판'!$B$%d" % R['unk'][key]) if key else None)
-                if cost is None and not key:
-                    ws.cell(r - 1, 8).fill = _fill(YEL); ws.cell(r - 1, 12).fill = _fill(YEL)
-        elif rows:
-            sec(gt)
-            for name, spec, unit, q, cost, memo, g in rows:
-                key = _key(R, name) if cost is None else None
-                line(name, spec, unit, q, cost, memo, ref=("='1.입력판'!$B$%d" % R['unk'][key]) if key else None)
-                if cost is None and not key:
-                    ws.cell(r - 1, 8).fill = _fill(YEL); ws.cell(r - 1, 12).fill = _fill(YEL)
-    r += 1; R_TOT = r
-    tot = [None, 'TOTAL (견적서 발행본 대조)', None, None, None, None, '=' + '+'.join('G%d' % x for x in lines), None,
-           '=' + '+'.join('I%d' % x for x in lines), '=G%d-I%d' % (r, r), '=IF(G%d=0,"",(G%d-I%d)/G%d)' % (r, r, r, r), None]
-    for c, v in enumerate(tot, 1): put(ws, r, c, v, (S.get('tot') or [None] * 12)[c - 1], fill=GRN, num='#,##0' if c in (7, 9, 10) else ('0.0%' if c == 11 else None))
-    r += 1; R_NOGO = r
-    put(ws, r, 2, '견적서 표기 총액 (NOGO)', (S.get('cols') or [None] * 12)[1]); put(ws, r, 7, meta.get('견적총액'), (S.get('cols') or [None] * 12)[6], fill=YEL if not meta.get('견적총액') else None, num='#,##0')
-    put(ws, r, 12, '견적서 발행 후 총액을 넣으십시오' if not meta.get('견적총액') else '', (S.get('cols') or [None] * 12)[11])
-    r += 1; R_CHK = r
-    put(ws, r, 2, '검산 — 위 TOTAL 과의 차이', (S.get('cols') or [None] * 12)[1]); put(ws, r, 7, '=IF(G%d="","견적서 미발행",G%d-G%d)' % (R_NOGO, R_TOT, R_NOGO), (S.get('cols') or [None] * 12)[6], num='#,##0')
-    put(ws, r, 12, '0 이면 전 라인 누락 없음 ✔', (S.get('cols') or [None] * 12)[11])
-    for i, w in enumerate([6, 38, 24, 6, 9, 12, 14, 12, 14, 12, 9, 70], 1): ws.column_dimensions[L(i)].width = w
+                line('CONTROL BOX %s%s' % (t[0], (' (%s)' % t[2]) if len(t) > 2 and t[2] else ''), meta.get('CB형번', 'CB-30BCB_4F 계열'), 'EA',
+                     "='1.입력판'!$B$%d" % R['cb'][i], 0, ref="='2.CB 실행'!$%s$%d" % (L(cA0 + i), R_A))
+        for name, spec, unit, q, cost, memo, g in rows:
+            key = _key(R, name) if cost is None else None
+            line(name, spec, unit, q, cost, ref=("='1.입력판'!$B$%d" % R['unk'][key]) if key else None)
+        subtotal(r0, r - 1)
+    R_TOT = r
+    tot = [None, 'TOTAL ', None, None, None, None, '=' + '+'.join('G%d' % x for x in subs), None, '=' + '+'.join('I%d' % x for x in subs),
+           '=I%d-G%d' % (r, r), '=IF(I%d=0,"",(I%d-G%d)/I%d)' % (r, r, r, r), None, '=' + '+'.join('M%d' % x for x in subs),
+           '=M%d-G%d' % (r, r), '=IF(M%d=0,"",(M%d-G%d)/M%d)' % (r, r, r, r)]
+    for c, v in enumerate(tot, 1): put(ws, r, c, v, (S.get('tot') or [None] * NC)[c - 1], fill=GRN, bold=True, num='#,##0' if c in (7, 9, 10, 13, 14) else ('0.0%' if c in (11, 15) else None))
+    for i, w in enumerate([6, 31, 17, 6, 9, 12, 14, 12, 14, 13, 9, 12, 14, 13, 9], 1): ws.column_dimensions[L(i)].width = w
 
     # ---------- 4.확인 목록 ----------
     ws = wb['4.확인 목록']; S = styles['4.확인 목록'] or {}
     ws['A1'] = '확인해 주실 것 — 숫자만 알려주시면 1.입력판에 넣고 전 시트가 바뀝니다'
     hdr(ws, 3, ['#', '무엇을', '왜 못 정했나', '차장님 답', '금액 영향'], S.get('head'))
     r = 4
-    for i, (what, why, cand) in enumerate(unknown, 1):
+    for i, u in enumerate(unknown, 1):
+        what, why, cand = u[0], u[1], u[2]
         for c, v in enumerate([i, what, why, None, cand], 1): put(ws, r, c, v, (S.get('cols') or [None] * 5)[c - 1], fill=YEL if c == 4 else None)
         r += 1
     for i, w in enumerate([5, 40, 58, 16, 44], 1): ws.column_dimensions[L(i)].width = w
@@ -224,11 +242,14 @@ def build(site, out_path, qty, cb_qty, cb_rows, mult, unknown, meta):
     ws['A1'] = '0. 자가진단 — 이 파일이 스스로 검사합니다 (%s)' % site
     ws['A2'] = '파일을 열면 이 시트부터 보십시오. 빨간 판정이 있으면 1.입력판 노란칸을 채우십시오.'
     hdr(ws, 4, ['검사 항목', '현재값', '기준', '판정', '뜻'], S.get('head'))
-    rows0 = [('견적 총액 검산 (라인 합계 − NOGO 표기)', "='3.견적↔실행 대조'!$G$%d" % R_CHK, '0', '=IF(B5="견적서 미발행","— 견적서 미발행",IF(N(B5)=0,"✔ 정상","⚠ 조치 필요"))', '견적서가 나오면 0이어야 전 라인 누락 없음'),
+    nogo = meta.get('견적총액')
+    rows0 = [('견적 총액 검산 (라인 합계 − NOGO 표기)', "='3.견적↔실행 대조'!$I$%d-%s" % (R_TOT, int(nogo) if nogo else 0), '0',
+              '=IF(N(B5)=0,"✔ 정상","⚠ 조치 필요")' if nogo else '— 견적서 미발행 (발행 후 B5 수식 끝의 0 을 NOGO 금액으로)',
+              '0이면 견적서 라인을 하나도 빠뜨리지 않았다는 뜻'),
              ('실 수 검산 (CB1+CB2+… − 기구물 수량)', "='1.입력판'!$B$%d-%d" % (R['rooms'], meta.get('객실수', 0)), '0', '=IF(N(B6)=0,"✔ 정상","⚠ 조치 필요")', '0이면 CB 대수와 실 수 일치'),
-             ('단가 미입력 노란칸 수', "=COUNTBLANK('1.입력판'!B%d:B%d)" % (R['unk_first'], R['unk_last']), '0', '=IF(N(B7)=0,"✔ 정상","⚠ 조치 필요")', '남아 있으면 그만큼 실행금액이 0으로 잡혀 이윤이 과대평가됩니다'),
-             ('현재 산출된 실행 총액', "='3.견적↔실행 대조'!$I$%d" % R_TOT, '—', '—', '미입력 칸이 0인 상태의 값'),
-             ('현재 이윤율', "=IF('3.견적↔실행 대조'!$G$%d=0,\"\",'3.견적↔실행 대조'!$K$%d)" % (R_TOT, R_TOT), '—', '—', '견적서 미발행이면 (배수−1)/배수 로 고정. 발행 후 F열을 발행단가로 바꾸면 진짜 이윤율')]
+             ('단가 미입력 노란칸 수', "=COUNTBLANK('1.입력판'!B%d:B%d)%s" % (R['unk_first'], R['unk_last'], ("+COUNTBLANK('1.입력판'!B%d:B%d)" % (R['door_first'], R['door_last'])) if R.get('door_first') else ''), '0', '=IF(N(B7)=0,"✔ 정상","⚠ 조치 필요")', '남아 있으면 그만큼 실행금액이 0으로 잡혀 이윤이 과대평가됩니다'),
+             ('현재 산출된 실행 총액', "='3.견적↔실행 대조'!$G$%d" % R_TOT, '—', '—', '미입력 칸이 0인 상태의 값'),
+             ('현재 이윤율', "=IF('3.견적↔실행 대조'!$I$%d=0,\"\",('3.견적↔실행 대조'!$I$%d-'3.견적↔실행 대조'!$G$%d)/'3.견적↔실행 대조'!$I$%d)" % (R_TOT, R_TOT, R_TOT, R_TOT), '—', '—', '견적서 미발행이면 (배수−1)/배수 로 고정. 발행 후 H열을 발행단가로 바꾸면 진짜 이윤율')]
     r = 5
     for row in rows0:
         for c, v in enumerate(row, 1): put(ws, r, c, v, (S.get('cols') or [None] * 5)[c - 1], num='#,##0' if c == 2 else None)
@@ -263,9 +284,11 @@ def _snap(ws):
         elif t == '2.CB 실행':
             S['head'] = copy.copy(ws['A3']._style); S['item'] = copy.copy(ws['A4']._style); S['itemB'] = copy.copy(ws['B4']._style)
             S['num'] = copy.copy(ws['C4']._style); S['price'] = copy.copy(ws['E4']._style); S['amt'] = copy.copy(ws['F4']._style); S['memo'] = copy.copy(ws['H4']._style)
+            if str(ws['A28'].value or '').strip().startswith('* 견적가'): S['orange'] = copy.copy(ws['A28']._style)
         elif t == '3.견적↔실행 대조':
-            S['head'] = copy.copy(ws['A3']._style); S['sec'] = copy.copy(ws['A4']._style)
-            S['cols'] = [copy.copy(ws.cell(5, c)._style) for c in range(1, 13)]; S['tot'] = [copy.copy(ws.cell(33, c)._style) for c in range(1, 13)]
+            S['head'] = copy.copy(ws['A1']._style); S['sec'] = copy.copy(ws['A2']._style)
+            S['cols'] = [copy.copy(ws.cell(3, c)._style) for c in range(1, 16)]; S['sub'] = [copy.copy(ws.cell(9, c)._style) for c in range(1, 16)]
+            S['tot'] = [copy.copy(ws.cell(23, c)._style) for c in range(1, 16)]
         elif t == '4.확인 목록':
             S['head'] = copy.copy(ws['A3']._style); S['cols'] = [copy.copy(ws.cell(4, c)._style) for c in range(1, 6)]
         elif t == '5.변경 이력':

@@ -16,11 +16,11 @@ from common import *
 TOOL = '검수'
 GDIR = '정답본'
 GREG = '_정답본.csv'
-YELLOWS = ('FFF2CC', 'FFF7CC', 'FFFF00', 'FFFFCC')
+YELLOWS = ('FFF2A8', 'FFF2CC', 'FFF7CC', 'FFFF00', 'FFFFCC')
 GREG_DEFAULT = [
  ['# 정답본 등록부. 종류별로 「이 모양이어야 한다」 는 파일을 적습니다. 파일은 이 폴더에 넣으십시오.', '', '', ''],
  ['종류', '정답본파일(포함되면)', '필수시트(|로 구분, 비우면 정답본 시트 그대로)', '검산셀(시트!열 - 비우면 「검산」 글자로 찾음)'],
- ['실행산출', '주일능_실행산출', '', '3.견적↔실행 대조!G'],
+ ['실행산출', '주일능_실행산출_v5', '', '3.견적↔실행 대조!I'],
  ['견적서', '광희동1가_견적서', '갑지|내역서', ''],
  ['통합견적', '양양쏠비치', '', ''],
 ]
@@ -31,6 +31,20 @@ def gdir():
     p = os.path.join(cfg('template'), GDIR)
     os.makedirs(p, exist_ok=True)
     reg = os.path.join(p, GREG)
+    if os.path.exists(reg):
+        # v21 이전 기본값(주일능_실행산출 → v7 도 잡힘)을 프로님 기준(v5_260828)으로 승격
+        try:
+            t = read_text(reg)
+            if '주일능_실행산출_v5' not in t and '주일능_실행산출,' in t:
+                t2 = t.replace('주일능_실행산출,', '주일능_실행산출_v5,')
+                for enc in ('cp949', 'utf-8-sig'):
+                    try:
+                        with _io.open(reg, 'w', encoding=enc, newline='', errors='strict') as fp: fp.write(t2)
+                        break
+                    except Exception:
+                        continue
+        except Exception:
+            pass
     if not os.path.exists(reg):
         for enc in ('cp949', 'utf-8-sig'):
             try:
@@ -54,10 +68,13 @@ def registry():
     return out
 
 def find_golden(entry):
-    for p in glob.glob(os.path.join(gdir(), '*.xlsx')):
-        if entry['file'] and entry['file'] in os.path.basename(p) and not os.path.basename(p).startswith('~$'):
-            return p
-    return None
+    """등록부 이름이 들어간 파일. 여러 개면(v5·v7 같이 있을 때) 등록부에 적힌 글자와 더 길게 맞는 것 > 최신 수정."""
+    hits = [p for p in glob.glob(os.path.join(gdir(), '*.xlsx'))
+            if entry['file'] and entry['file'] in os.path.basename(p) and not os.path.basename(p).startswith('~$')]
+    if not hits:
+        return None
+    hits.sort(key=lambda p: (-len(os.path.commonprefix([os.path.basename(p), entry['file']])), -os.path.getmtime(p)))
+    return hits[0]
 
 def sheet_norm(n):
     return re.sub(r'\s+', '', str(n))

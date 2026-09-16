@@ -361,7 +361,7 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
             q_rows.append((lab, hit[0], 'EA', rooms, int(hit[1]), '단가장 %s' % hit[0], '노무'))
         else:
             q_rows.append((lab, '', 'EA', rooms, None, '[확인] 노무 3종 실행가 미확인 — 1.입력판', '노무'))
-            unknown.append((lab, '노무 3종 실행가 미확인 (단가장 직접단가 시트에 없음)', '견적 스킬 표준 약전 12만 / 취부 13만 / 시운전 5만'))
+            unknown.append((lab, '노무 3종 실행가 미확인 (단가장 직접단가 시트에 없음)', '%s × 단가 — 견적 스킬 표준 약전 12만 / 취부 13만 / 시운전 5만' % rooms))
     # CB 내부
     cbr = []
     for g, mod, per, cost, amt, why in cb_rows_priced:
@@ -370,16 +370,18 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
             unknown.append((mod, '단가장에 없는 모듈', ''))
     # 외함
     enc = next(((m, c) for g, m, c in pb if '외함' in m and '노출' in m), None)
-    unknown.insert(0, ('CB 외함 세트 실행가 (1대당)', '규격 미정', ' / '.join('%s %s' % (m, won(c)) for g, m, c in pb if '외함' in m)[:120]))
+    unknown.insert(0, ('CB 외함 세트 실행가 (1대당)', '규격 미정', ('%s대 × 외함가 — 후보: ' % rooms) + ' / '.join('%s %s' % (m, won(c)) for g, m, c in pb if '외함' in m)[:120]))
     # 단가 없는 기구물
     for m in miss:
         if str(m[0]).startswith('CB내부)') or 'CONTROL BOX' in str(m[0]).upper() or str(m[0]).upper().startswith('CB'):
             continue           # CB 본체는 2.CB 실행 시트가 계산한다
-        unknown.append((m[0], m[2] if len(m) > 2 else '단가없음', m[3] if len(m) > 3 else ''))
+        nm0 = str(m[0]); grp = '도어락' if ('DOOR' in nm0.upper() or '도어락' in nm0) else ''
+        unknown.append((nm0, m[2] if len(m) > 2 else '단가없음', m[3] if len(m) > 3 else '', grp))
     meta = {'도면': qty_name, '견적서': None, '단가장': os.path.basename(_find_pb_file() or ''), 'CB출처': C_CBC_NOTE(), '객실수': rooms,
             '자가신고': ['이 파일은 28번 코드가 정답본 틀에 값만 채운 것입니다. 사람 손으로 만든 칸이 없습니다.',
                         'CB 내부 구성은 CB구성.csv 기준입니다. 현장 배선도로 확정될 때까지 잠정치입니다.',
-                        '견적서가 없으면 견적단가 = 실행 × 견적배수 잠정입니다. 발행 후 3.대조 F열을 발행단가로 바꾸십시오.',
+                        '견적서가 없으면 견적단가 = 실행 × 견적배수 잠정입니다. 발행 후 3.대조 H열을 발행단가로 바꾸십시오.',
+                        '3.대조 L~O(두 번째 견적 블록)의 뜻을 확인 못 해 첫 블록(H)과 같은 값으로 두었습니다. 정답본 v5 는 CB 480,000 / 450,000 두 값입니다.',
                         '노란칸(1.입력판)은 단가장에 없어 비운 것입니다. 추정치를 넣지 않았습니다.']}
     out = os.path.join(od, '%s_실행산출_v1.xlsx' % tag)
     execsheet.build(site, out, q_rows, cb_types, cbr, mult, unknown, meta)
