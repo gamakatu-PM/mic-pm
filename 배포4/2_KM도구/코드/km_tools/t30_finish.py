@@ -1,0 +1,416 @@
+# -*- coding: utf-8 -*-
+"""30. 완성품 만들기 - 파이썬이 할 수 있는 데까지 하고, 못 한 것만 클로드에게 넘긴다.
+
+두 가지 모드
+  [1] 점검 + 부탁서 만들기
+      27·28·29번 결과를 모아 「다 됐는지」 점검하고,
+      안 된 것만 모아 「_클로드부탁서_{현장}.md」 한 장을 만든다.
+      그 파일 하나만 대화창에 끌어다 넣으시면 됩니다.
+  [2] 받은 답 반영하기
+      클로드가 준 답 csv 를 3_공통사용\\단가장\\받은답\\ 에 넣고 30번을 다시 누르면
+      단가장·별칭·기호사전·배수·CB구성에 자동 반영하고 완성품을 다시 냅니다.
+
+완성품 = 견적서 원틀에 부어넣은 엑셀. 원틀이 없으면 자체 서식으로 내고 원틀을 요청합니다.
+금액·배수는 제가 정하지 않습니다.
+"""
+import os, re, csv, glob, shutil, collections
+from common import *
+import t27_drawing as D
+import t28_cost as C
+
+TOOL = '완성품'
+ANS_DIR = '받은답'
+ANS_HEAD = ['종류', '이름', '값', '비고']
+ANS_KIND = ('단가', '별칭', '기호', '배수', 'CB구성')
+
+# ---------------- 모아 읽기 ----------------
+
+def latest(pat):
+    xs = glob.glob(pat)
+    xs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    return xs[0] if xs else None
+
+def gather_state(site=''):
+    """27·28·29번이 낸 것을 모아 무엇이 비었는지 본다."""
+    out = {'수량표': None, '금액표': None, '모르는기호': [], '단가없음': [],
+           '없는모듈': [], '못읽은도면': [], '원틀': None}
+    o = cfg('out')
+    out['수량표'] = latest(os.path.join(o, '도면수량', '*', '*도면에적힌수량표*.csv')) \
+        or latest(os.path.join(o, '도면수량', '*', '*도면수량*.csv'))
+    out['금액표'] = latest(os.path.join(o, '단가붙이기', '*', '*실행견적_기구물.csv'))
+    for key, pat in (('모르는기호', os.path.join(o, '도면수량', '*', '*모르는기호*.csv')),
+                     ('단가없음', os.path.join(o, '단가붙이기', '*', '*단가없는것*.csv')),
+                     ('없는모듈', os.path.join(o, '단가장채우기', '*', '*단가장에없는모듈*.csv')),
+                     ('못읽은도면', os.path.join(o, '도면수량', '*', '_클로드에게_주실파일*.csv'))):
+        p = latest(pat)
+        if not p:
+            continue
+        rows = []
+        for i, line in enumerate(read_text(p).splitlines()):
+            if not line.strip() or i == 0:
+                continue
+            try:
+                rows.append([c.strip() for c in next(csv.reader([line]))])
+            except Exception:
+                pass
+        out[key] = rows
+    out['원틀'] = find_template('견적')
+    return out
+
+# ---------------- 부탁서 ----------------
+
+def make_request(site, st):
+    """클로드에게 넘길 한 장. 이 파일만 대화창에 끌어다 넣으면 된다."""
+    L = []
+    a = L.append
+    a('# 클로드 부탁서 - %s  (%s)' % (site, today().isoformat()))
+    a('')
+    a('파이썬(KM 도구)이 할 수 있는 데까지 했습니다. 아래만 채워 주십시오.')
+    a('답은 아래 「답 서식」 그대로 csv 한 장으로 주시면 30번이 자동 반영합니다.')
+    a('')
+    a('## 지금까지 된 것')
+    a('- 수량표 : %s' % (os.path.basename(st['수량표']) if st['수량표'] else '없음 (27번을 먼저 돌려야 합니다)'))
+    a('- 금액표 : %s' % (os.path.basename(st['금액표']) if st['금액표'] else '없음 (28번을 먼저 돌려야 합니다)'))
+    a('- 견적서 원틀 : %s' % (os.path.basename(st['원틀']) if st['원틀'] else '없음 -> 원틀을 _원틀 폴더에 넣어야 완성품이 나옵니다'))
+    a('')
+    n = 0
+    if st['단가없음']:
+        n += 1
+        a('## %d. 단가가 없어 금액을 비운 것' % n)
+        a('| 품목 | 수량 | 왜 | 단가장 후보 |')
+        a('|---|---|---|---|')
+        for r in st['단가없음'][:40]:
+            r = (r + ['', '', '', ''])[:4]
+            a('| %s | %s | %s | %s |' % tuple(r))
+        a('')
+        a('-> 답 서식 : `단가,<품목 또는 형번>,<실행가 숫자>,근거`')
+        a('')
+    if st['없는모듈']:
+        n += 1
+        a('## %d. 단가장에 없는 CB 내부 모듈' % n)
+        for r in st['없는모듈'][:40]:
+            a('- %s  (배선도에 %s회)' % (r[0], r[1] if len(r) > 1 else ''))
+        a('')
+        a('-> 답 서식 : `단가,<모듈 형번>,<실행가 숫자>,근거`')
+        a('')
+    if st['모르는기호']:
+        n += 1
+        a('## %d. 도면에서 못 알아본 기호' % n)
+        for r in st['모르는기호'][:40]:
+            a('- [%s] %s : %s회' % tuple((r + ['', '', ''])[:3]))
+        a('')
+        a('-> 답 서식 : `기호,<도면기호>,<우리 품목명>,정확 또는 포함`')
+        a('')
+    if st['못읽은도면']:
+        n += 1
+        a('## %d. 파이썬이 못 읽은 도면 (이 파일들을 같이 주셔야 합니다)' % n)
+        for r in st['못읽은도면'][:20]:
+            a('- %s  (%s)' % tuple((r + ['', ''])[:2]))
+        a('')
+    if not st['원틀']:
+        n += 1
+        a('## %d. 견적서 원틀이 없습니다' % n)
+        a('`_원틀` 폴더에 회사 견적서 원틀(갑지+내역서)을 넣어야 완성품이 나옵니다.')
+        a('드라이브의 「광희동1가_견적서_Rev1」(일반형) 또는 「양양쏠비치_동별내역_통합견적」(층별형)을')
+        a('xlsx 로 내려받아 넣으시면 됩니다.')
+        a('')
+    n += 1
+    a('## %d. 배수 확인' % n)
+    m = C.load_mult()
+    a('- 지금 값 : 계약 %s / 견적 %s / 예산 %s / 조립비율 %s'
+      % (m.get('계약배수'), m.get('견적배수'), m.get('예산배수'), m.get('조립비율')))
+    a('- 광희동1가 산출서에 두 체계가 병기되어 있고 「배수 확정 전 대외 제출 금지」로 적혀 있습니다.')
+    a('-> 답 서식 : `배수,예산배수,2.1,확정`')
+    a('')
+    a('## 답 서식 (이대로 csv 한 장)')
+    a('```')
+    a(','.join(ANS_HEAD))
+    a('단가,EXIO MK-EX101A,15000,구매팀 확인')
+    a('기호,L-SW,조명스위치(L),정확')
+    a('별칭,BED SIDE PANEL(온도,BSP-2000M-T,')
+    a('배수,예산배수,2.1,확정')
+    a('CB구성,SMPS FLS30-12,1,CB1대당')
+    a('```')
+    a('')
+    a('넣는 곳 : `3_공통사용\\단가장\\%s\\` 에 아무 이름으로 저장 -> 30번 다시 누르기' % ANS_DIR)
+    od = outdir(TOOL)
+    p = os.path.join(od, '_클로드부탁서_%s_%s.md' % (safe_name(site), ymd6()))
+    import io as _io
+    _io.open(p, 'w', encoding='utf-8').write('\n'.join(L))
+    return p, n
+
+# ---------------- 받은 답 반영 ----------------
+
+def apply_answers():
+    """받은답 폴더의 csv 를 단가장·별칭·기호사전·배수·CB구성에 반영한다.
+    원본은 덮어쓰지 않는다 - 단가장은 새 버전, 나머지는 줄 추가."""
+    ad = os.path.join(C.root(), ANS_DIR)
+    os.makedirs(ad, exist_ok=True)
+    files = [p for p in glob.glob(os.path.join(ad, '*.csv'))
+             if not os.path.basename(p).startswith('_처리')]
+    if not files:
+        return 0, [], ad
+    got = collections.defaultdict(list)
+    for p in files:
+        for i, line in enumerate(read_text(p).splitlines()):
+            if not line.strip() or line.lstrip().startswith('#'):
+                continue
+            try:
+                r = [c.strip() for c in next(csv.reader([line]))]
+            except Exception:
+                continue
+            if len(r) < 3 or r[0] not in ANS_KIND:
+                continue
+            got[r[0]].append(r)
+    log_lines = []
+
+    # 배수
+    if got['배수']:
+        rows = C.rows_of(C.MULT)
+        d = {r[0]: r for r in rows if len(r) >= 2}
+        for _, k, v, *rest in [(x + [''])[:4] for x in got['배수']]:
+            if k in d:
+                old = d[k][1]; d[k][1] = v
+                log_lines.append('배수 %s : %s -> %s' % (k, old, v))
+            else:
+                rows.append([k, v, '추가'])
+                log_lines.append('배수 %s 추가 = %s' % (k, v))
+        C.seed(C.MULT, C.MULT_DEFAULT)
+        p = os.path.join(C.root(), C.MULT)
+        import io as _io
+        for enc in ('cp949', 'utf-8-sig'):
+            try:
+                with _io.open(p, 'w', encoding=enc, newline='', errors='strict') as fp:
+                    w = csv.writer(fp)
+                    w.writerow(['# 30번이 클로드 답을 반영했습니다 (%s)' % today().isoformat(), '', ''])
+                    w.writerow(['항목', '값', '비고'])
+                    for r in rows:
+                        if len(r) >= 2 and r[0] != '항목':
+                            w.writerow((r + ['', '', ''])[:3])
+                break
+            except Exception:
+                continue
+
+    # 기호사전 (27번)
+    if got['기호']:
+        p = D.dict_path()
+        import io as _io
+        add = []
+        cur = read_text(p)
+        for _, sym, item, *rest in [(x + [''])[:4] for x in got['기호']]:
+            mode = (rest[0] if rest and rest[0] in ('정확', '포함', '무시') else '포함')
+            if sym and (',' + sym + ',') not in cur:
+                add.append('%s,%s,%s' % (sym, item, mode))
+        if add:
+            for enc in ('cp949', 'utf-8-sig'):
+                try:
+                    with _io.open(p, 'a', encoding=enc, errors='strict') as fp:
+                        fp.write('\n# 클로드 답 반영 %s\n' % today().isoformat())
+                        fp.write('\n'.join(add) + '\n')
+                    break
+                except Exception:
+                    continue
+            log_lines.append('기호사전 %d줄 추가' % len(add))
+
+    # 별칭 (28번)
+    if got['별칭']:
+        p = os.path.join(C.root(), C.ALIAS_F)
+        C.seed(C.ALIAS_F, C.ALIAS_DEFAULT)
+        import io as _io
+        add = ['%s,%s' % (r[1], r[2]) for r in got['별칭'] if len(r) >= 3 and r[1] and r[2]]
+        if add:
+            for enc in ('cp949', 'utf-8-sig'):
+                try:
+                    with _io.open(p, 'a', encoding=enc, errors='strict') as fp:
+                        fp.write('\n# 클로드 답 반영 %s\n' % today().isoformat())
+                        fp.write('\n'.join(add) + '\n')
+                    break
+                except Exception:
+                    continue
+            log_lines.append('별칭 %d줄 추가' % len(add))
+
+    # CB구성
+    if got['CB구성']:
+        p = os.path.join(C.root(), C.CBC)
+        C.seed(C.CBC, C.CBC_DEFAULT)
+        import io as _io
+        add = ['%s,%s,%s' % ('확인', r[1], r[2]) for r in got['CB구성'] if len(r) >= 3]
+        if add:
+            for enc in ('cp949', 'utf-8-sig'):
+                try:
+                    with _io.open(p, 'a', encoding=enc, errors='strict') as fp:
+                        fp.write('\n# 클로드 답 반영 %s\n' % today().isoformat())
+                        fp.write('\n'.join(add) + '\n')
+                    break
+                except Exception:
+                    continue
+            log_lines.append('CB구성 %d줄 추가' % len(add))
+
+    # 단가 -> 단가장 새 버전
+    if got['단가']:
+        src = C._find_pb_file()
+        rows = [(r[1], r[2]) for r in got['단가'] if len(r) >= 3 and num_ok(r[2])]
+        if src and rows and os.path.splitext(src)[1].lower() in ('.xlsx', '.xlsm'):
+            import t29_pricebook as P
+            newp = fill_prices_xlsx(src, rows, C.load_mult())
+            if newp:
+                log_lines.append('단가장 새 버전 : %s (%d줄 단가 채움)'
+                                 % (os.path.basename(newp), len(rows)))
+        elif rows:
+            p = os.path.join(C.root(), '단가_클로드답_%s.csv' % ymd6())
+            write_csv(p, [[a, b] for a, b in rows], ['모듈명(형번)', '실행가'])
+            log_lines.append('단가장이 엑셀이 아니라 따로 뽑았습니다 : %s' % os.path.basename(p))
+
+    # 처리한 답 파일 표시 (지우지 않는다)
+    for p in files:
+        d, b = os.path.split(p)
+        try:
+            os.rename(p, os.path.join(d, '_처리완료_%s_%s' % (ymd6(), b)))
+        except Exception:
+            pass
+    return sum(len(v) for v in got.values()), log_lines, ad
+
+def num_ok(v):
+    return C.num(v) is not None
+
+def fill_prices_xlsx(src, rows, mult):
+    """단가장 새 버전을 만들고, 이름이 맞는 줄의 실행가를 채운다. 없으면 주황 줄로 추가."""
+    try:
+        import openpyxl
+        from openpyxl.styles import PatternFill
+    except ImportError:
+        return None
+    import t29_pricebook as P
+    dst = P.next_version(src)
+    shutil.copy(src, dst)
+    wb = openpyxl.load_workbook(dst)
+    names = sorted(wb.sheetnames, key=lambda n: ('총괄' not in n, n))
+    ws = wb[names[0]]
+    hrow, ci = None, {}
+    for r in range(1, min(ws.max_row, 30) + 1):
+        cells = [('' if ws.cell(r, c).value is None else str(ws.cell(r, c).value).strip())
+                 for c in range(1, min(ws.max_column, 12) + 1)]
+        j = ' '.join(cells)
+        if '실행' in j and any(k in j for k in ('모듈', '형번', '품명', '품목')):
+            for i, v in enumerate(cells, start=1):
+                if '구분' in v and 'grp' not in ci: ci['grp'] = i
+                if any(k in v for k in ('모듈', '형번', '품명', '품목')) and 'mod' not in ci: ci['mod'] = i
+                if '실행' in v and 'cost' not in ci: ci['cost'] = i
+                if '견적' in v and 'q' not in ci: ci['q'] = i
+                if '예산' in v and 'b' not in ci: ci['b'] = i
+            hrow = r; break
+    if not hrow:
+        return None
+    green = PatternFill('solid', fgColor='D9EAD3')
+    qm = mult.get('견적배수'); bm = mult.get('예산배수')
+    done = set()
+    for r in range(hrow + 1, ws.max_row + 1):
+        mv = ws.cell(r, ci['mod']).value
+        if not mv:
+            continue
+        nm = C.norm(mv)
+        for name, cost in rows:
+            if C.norm(name) and (C.norm(name) in nm or nm in C.norm(name)):
+                ws.cell(r, ci['cost'], int(round(float(C.num(cost)))))
+                cl = ws.cell(r, ci['cost']).column_letter
+                if 'q' in ci and qm:
+                    ws.cell(r, ci['q'], '=ROUND(%s%d*%s,0)' % (cl, r, qm))
+                if 'b' in ci and bm:
+                    ws.cell(r, ci['b'], '=ROUND(%s%d*%s,0)' % (cl, r, bm))
+                for c in range(1, max(ci.values()) + 1):
+                    ws.cell(r, c).fill = green
+                done.add(C.norm(name))
+                break
+    r = ws.max_row + 1
+    for name, cost in rows:
+        if C.norm(name) in done:
+            continue
+        if 'grp' in ci: ws.cell(r, ci['grp'], '클로드답')
+        ws.cell(r, ci['mod'], name)
+        ws.cell(r, ci['cost'], int(round(float(C.num(cost)))))
+        cl = ws.cell(r, ci['cost']).column_letter
+        if 'q' in ci and qm: ws.cell(r, ci['q'], '=ROUND(%s%d*%s,0)' % (cl, r, qm))
+        if 'b' in ci and bm: ws.cell(r, ci['b'], '=ROUND(%s%d*%s,0)' % (cl, r, bm))
+        for c in range(1, max(ci.values()) + 1):
+            ws.cell(r, c).fill = green
+        r += 1
+    wb.save(dst)
+    return dst
+
+# ---------------- 실행 ----------------
+
+def run():
+    title('30. 완성품 만들기   (되는 건 파이썬 / 안 되는 것만 클로드)')
+    C.root(); C.seed(C.MULT, C.MULT_DEFAULT); C.seed(C.CBC, C.CBC_DEFAULT)
+    C.seed(C.ALIAS_F, C.ALIAS_DEFAULT)
+    # 받은 답이 있으면 먼저 반영
+    n, lines, ad = apply_answers()
+    if n:
+        print('[받은 답 %d줄을 반영했습니다]' % n)
+        for x in lines:
+            print('  + %s' % x)
+        print('')
+        print('  >> 반영이 끝났습니다. 28번(금액)과 29번(단가장)을 한 번 더 돌리시면')
+        print('     아래 「빈 곳」 숫자가 줄어듭니다. 아래 숫자는 지난번 결과를 본 것입니다.')
+        print('')
+    st = gather_state()
+    site = ask('현장명 > ', (os.path.basename(st['수량표'] or '현장미정').split('_')[0]))
+    print('')
+    print('%-16s %s' % ('27 수량표', os.path.basename(st['수량표']) if st['수량표'] else '없음'))
+    print('%-16s %s' % ('28 금액표', os.path.basename(st['금액표']) if st['금액표'] else '없음'))
+    print('%-16s %s' % ('견적서 원틀', os.path.basename(st['원틀']) if st['원틀'] else '없음'))
+    print('%-16s %d건' % ('단가 비운 것', len(st['단가없음'])))
+    print('%-16s %d건' % ('없는 모듈', len(st['없는모듈'])))
+    print('%-16s %d건' % ('모르는 기호', len(st['모르는기호'])))
+    print('%-16s %d건' % ('못 읽은 도면', len(st['못읽은도면'])))
+
+    blank = (len(st['단가없음']) + len(st['없는모듈']) + len(st['모르는기호'])
+             + len(st['못읽은도면']) + (0 if st['원틀'] else 1))
+    od = outdir(TOOL)
+    made = []
+    if blank:
+        p, cnt = make_request(site, st)
+        made.append(p)
+        print('')
+        print('=' * 74)
+        print(' 아직 %d군데가 비어 있습니다. 부탁서를 만들었습니다.' % blank)
+        print(' 이 파일 하나만 클로드 대화창에 끌어다 넣으십시오.')
+        print('   %s' % p)
+        print('=' * 74)
+        print(' 클로드 답(csv)을 받으시면 아래에 넣고 30번을 다시 누르십시오.')
+        print('   %s' % ad)
+    else:
+        print('')
+        print('빈 곳이 없습니다. 완성품을 만들 수 있습니다.')
+        if st['원틀']:
+            print('원틀에 부어넣기는 12번(견적서 채우기)이 합니다 -> 12번을 누르십시오.')
+        made.append(write_csv(os.path.join(od, '%s_완성점검_%s.csv' % (safe_name(site), ymd6())),
+                              [['수량표', os.path.basename(st['수량표'] or '')],
+                               ['금액표', os.path.basename(st['금액표'] or '')],
+                               ['원틀', os.path.basename(st['원틀'] or '')],
+                               ['빈 곳', 0]], ['항목', '값']))
+
+    blocks = [('지금 상태',
+               [('green' if st['수량표'] else 'red', '27 수량표 : %s' % (os.path.basename(st['수량표']) if st['수량표'] else '없음')),
+                ('green' if st['금액표'] else 'red', '28 금액표 : %s' % (os.path.basename(st['금액표']) if st['금액표'] else '없음')),
+                ('green' if st['원틀'] else 'red', '견적서 원틀 : %s' % (os.path.basename(st['원틀']) if st['원틀'] else '없음'))]),
+              ('클로드에게 넘길 것',
+               [('yellow', '단가 비운 것 %d건' % len(st['단가없음'])),
+                ('yellow', '단가장에 없는 모듈 %d건' % len(st['없는모듈'])),
+                ('yellow', '모르는 기호 %d건' % len(st['모르는기호'])),
+                ('red', '못 읽은 도면 %d건 (파일도 같이 주셔야 합니다)' % len(st['못읽은도면']))]),
+              ('다음에 할 일',
+               [('blue', '부탁서를 대화창에 끌어다 넣기'),
+                ('blue', '답 csv 를 %s 에 넣고 30번 다시 누르기' % ANS_DIR),
+                ('blue', '빈 곳이 0 이 되면 12번으로 견적서 원틀에 부어넣기')])]
+    f9 = write_html(os.path.join(od, '%s_완성품점검_%s.html' % (safe_name(site), ymd6())),
+                    '%s 완성품 점검' % site, blocks, files=made)
+    print('')
+    for x in made + [f9]:
+        print('  %s' % x)
+    log(TOOL, '%s 빈곳%d 반영%d' % (site, blank, n))
+    if not open_file(f9):
+        open_folder(od)
+
+if __name__ == '__main__':
+    run(); pause()
