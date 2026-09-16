@@ -61,10 +61,10 @@ def is_mod(s, skips=None):
 
 # ---------------- 배선도 읽기 ----------------
 
-def pick_files():
+def pick_files(folder=None):
     """도면 폴더에서 배선도로 보이는 것을 먼저 고른다."""
-    root = D.dwg_root()
-    files = D.gather(os.path.join(root, D.INBOX)) or D.gather(root)
+    root = folder or D.dwg_root()
+    files = D.gather(folder) if folder else (D.gather(os.path.join(root, D.INBOX)) or D.gather(root))
     if not files:
         print('[도면이 없습니다] %s 에 배선도를 넣어주십시오.' % os.path.join(root, D.INBOX))
         open_folder(os.path.join(root, D.INBOX))
@@ -197,7 +197,7 @@ def add_rows_xlsx(src, rows, mult):
 
 # ---------------- 실행 ----------------
 
-def run():
+def run(folder=None, site_hint=None):
     title('29. 단가장 채우기   (배선도 -> 없는 모듈 찾아 단가장에 줄 추가. 토큰 0)')
     pb = C.load_pricebook()
     if not pb:
@@ -212,7 +212,7 @@ def run():
     print('단가장 : %s  (%d줄)' % (os.path.basename(src), len(pb)))
     print('-' * 74)
 
-    files = pick_files()
+    files = pick_files(folder)
     if not files:
         return
     print('')
@@ -226,7 +226,7 @@ def run():
         print(' 사진·스캔이면 저(클로드)에게 그 파일을 주십시오.')
         return
 
-    site = ask('\n현장명 > ', D.guess_site(files, ''))
+    site = ask('\n현장명 > ', site_hint or D.guess_site(files, ''))
     print('')
     print('%-46s %7s  %s' % ('배선도에서 뽑은 모듈 후보', '횟수', '단가장'))
     print('-' * 78)

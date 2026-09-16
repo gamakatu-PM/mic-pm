@@ -339,7 +339,7 @@ def fill_prices_xlsx(src, rows, mult):
 
 # ---------------- 실행 ----------------
 
-def run():
+def run(site_hint=None):
     title('30. 완성품 만들기   (되는 건 파이썬 / 안 되는 것만 클로드)')
     C.root(); C.seed(C.MULT, C.MULT_DEFAULT); C.seed(C.CBC, C.CBC_DEFAULT)
     C.seed(C.ALIAS_F, C.ALIAS_DEFAULT)
@@ -354,7 +354,7 @@ def run():
         print('     아래 「빈 곳」 숫자가 줄어듭니다. 아래 숫자는 지난번 결과를 본 것입니다.')
         print('')
     st = gather_state()
-    site = ask('현장명 > ', (os.path.basename(st['수량표'] or '현장미정').split('_')[0]))
+    site = ask('현장명 > ', site_hint or (os.path.basename(st['수량표'] or '현장미정').split('_')[0]))
     print('')
     print('%-16s %s' % ('27 수량표', os.path.basename(st['수량표']) if st['수량표'] else '없음'))
     print('%-16s %s' % ('28 금액표', os.path.basename(st['금액표']) if st['금액표'] else '없음'))

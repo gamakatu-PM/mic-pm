@@ -60,31 +60,28 @@ IGNORE_ROWS = [
 
 # ---------------- 폴더 / 사전 ----------------
 
-GUIDE = '''도면을 여기에 넣으십시오.
+GUIDE = '''도면 보관소 - 현장별로 도면을 쌓아 두는 곳입니다.
 
-[넣는 곳]  이 폴더 안의  _여기에_넣으십시오  폴더
+[폴더 약속]
+  {현장명}\\              현장마다 폴더 하나. 캐드(dwg/dxf)·PDF·수량표(xlsx)를 그냥 넣어 두십시오
+      _도면대장.csv        31번이 스스로 씁니다 (어느 파일을 언제 몇 판으로 읽었나)
+  _여기에_넣으십시오\\    현장이 정해지지 않은 도면 임시 자리 (판 비교는 안 됩니다)
+  기호사전.csv            도면 기호 -> 우리 품목. 안 맞는 것만 한 줄 추가
+
+[새 도면이 오면]
+  그 현장 폴더에 넣고  32번(현장 한 방에) 을 누르십시오.
+  31 접수·판 비교 -> 27 수량 -> 28 금액 -> 29 단가장 -> 30 부탁서  가 묻지 않고 돌아갑니다.
+  이전 판이 있으면 품목별 증감이 같이 나옵니다.
+  파일은 옮기거나 지우지 않습니다. 대장에 적기만 합니다.
 
 [읽히는 것]
   DXF   가장 정확합니다. 블록 개수를 그대로 셉니다.
-  DWG   그대로는 못 읽습니다.
-        캐드에서 「다른 이름으로 저장 -> DXF」 로 한 번만 바꿔 주십시오.
-        (ODA File Converter 가 깔려 있으면 자동으로 바꿔 읽습니다)
-  PDF   글자가 살아 있는 PDF 면 글자를 셉니다.
-  사진/캡처   파이썬으로는 못 셉니다. 클로드에게 주셔야 합니다.
+  DWG   ODA File Converter 가 깔려 있으면 자동 변환. 없으면 캐드에서 DXF 로 한 번 저장.
+  PDF   NOTE(범례) 수량표가 있으면 그것을 그대로 옮깁니다. 글자가 살아 있어야 합니다.
+  사진/캡처/스캔   파이썬으로는 못 읽습니다. 30번 부탁서에 목록으로 남으니 클로드에게 주십시오.
 
-[쓰는 법]
-  1. 도면을 _여기에_넣으십시오 에 넣는다
-  2. 시작.py 를 눌러 메뉴에서 27 을 누른다
-  3. 결과는 _도구결과\\도면수량\\ 에 쌓입니다
-
-[기호사전.csv]
-  도면에 쓰는 기호와 우리 품목을 잇는 표입니다.
-  현장마다 기호가 다르면 이 파일에 한 줄 추가하시면 다음부터 셉니다.
-  품목칸에 「무시」 를 넣으면 그 낱말은 아예 안 셉니다.
-
-[수량은 제가 정하지 않습니다]
-  블록기준 / 글자기준을 나란히 보여드리고, 어느 쪽을 썼는지 적어 둡니다.
-  쪼개서 맞춘 것과 사전에 없는 기호는 따로 뽑아 드리니 확인하고 쓰십시오.
+[수량·금액은 도구가 정하지 않습니다]
+  도면에 적힌 값과 단가장 값을 옮길 뿐입니다. 못 찾으면 비워 두고 부탁서로 넘깁니다.
 '''
 
 def dwg_root():
@@ -500,14 +497,17 @@ def cant_read(unread, files):
     print(' 목록을 만들어 뒀습니다 : %s' % f)
     log(TOOL, '못읽음 %d개' % len(unread))
 
-def run():
+def run(folder=None, site_hint=None):
     title('27. 도면 수량 뽑기   (토큰 0 - 내 PC 안에서만 돕니다)')
     root = dwg_root()
     inbox = os.path.join(root, INBOX)
-    files = gather(inbox)
-    where = inbox
-    if not files:
-        files = gather(root); where = root
+    if folder:
+        files = gather(folder); where = folder
+    else:
+        files = gather(inbox)
+        where = inbox
+        if not files:
+            files = gather(root); where = root
     if not files:
         print('도면 넣는 곳 : %s' % inbox)
         print('')
@@ -607,7 +607,7 @@ def run():
         print('  없음')
 
     # 4) 현장명 - 폴더/파일 이름에서 짐작해 기본값으로 내민다 (엔터만 누르시면 됩니다)
-    g = guess_site(files, inbox)
+    g = site_hint or guess_site(files, inbox)
     print('')
     site = ask('현장명 [%s] (엔터=그대로) > ' % g, g) or g
 
@@ -664,6 +664,7 @@ def run():
                    [['[현장]', site, '', '', ''], ['[읽은 파일]', len(files), '', '', ''],
                     ['', '', '', '', '']] + body,
                    ['품목', '블록으로센것', '글자나온횟수(수량아님)', '채택수량', '채택근거'])
+    made = [f1]
     if table:
         f0 = write_csv(os.path.join(od, '%s_도면에적힌수량표_%s.csv' % (safe_name(site), ymd6())),
                        [[r['sym'], r['name'], r['qty'], '%s쪽' % r['page'], r.get('file', '')]
@@ -674,6 +675,7 @@ def run():
                    unk_rows, ['어디서', '기호', '횟수'])
     f3 = write_csv(os.path.join(od, '%s_읽은파일_%s.csv' % (safe_name(site), ymd6())),
                    [list(x) for x in per_file], ['파일', '종류', '블록수', '글자수', '비고'])
+    made += [f2, f3]
     if split_log:
         write_csv(os.path.join(od, '%s_쪼개서맞춘것_%s.csv' % (safe_name(site), ymd6())),
                   split_log, ['어디서', '도면기호', '맞춘품목', '횟수'])
@@ -694,7 +696,6 @@ def run():
     real_dwg = [f for f in dwg if not is_xref(f)]
     if real_dwg and not oda_exe():
         need_ai.append(('yellow', 'DWG %d개 - 캐드에서 「다른 이름으로 저장 -> DXF」로 주시면 정확히 셉니다.' % len(real_dwg)))
-    made = [f1, f2, f3]
     f4 = write_html(os.path.join(od, base + '.html'), '%s 도면 수량' % site,
                     [('뽑은 수량 (도면에 적힌 값이 있으면 그것이 정답)', hint),
                      ('이름을 쪼개서 맞춘 것 (확인 필요)',

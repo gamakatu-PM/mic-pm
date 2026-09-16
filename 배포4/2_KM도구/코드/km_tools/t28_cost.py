@@ -320,7 +320,18 @@ def read_qty(path):
 
 # ---------------- 실행 ----------------
 
-def run():
+def rooms_of(site):
+    """현장대장에 객실수가 있으면 CB 대수 기본값으로 쓴다"""
+    try:
+        import sitebook
+        for d in sitebook.load():
+            if norm(d['site']) == norm(site) or (norm(site) and norm(site) in norm(d['site'])):
+                return str(d.get('rooms') or '0')
+    except Exception:
+        pass
+    return '0'
+
+def run(site_hint=None):
     title('28. 단가 붙이기   (수량표 + 단가장 -> 금액. 토큰 0)')
     rt = root()
     seed(MULT, MULT_DEFAULT); seed(CBC, CBC_DEFAULT); seed(ALIAS_F, ALIAS_DEFAULT)
@@ -352,7 +363,7 @@ def run():
     if not qty:
         print('[수량표에서 품목/수량을 못 읽었습니다] 1칸=품목, 어딘가에 수량 숫자가 있어야 합니다.')
         return
-    site = ask('현장명 > ', os.path.basename(qf).split('_')[0])
+    site = ask('현장명 > ', site_hint or os.path.basename(qf).split('_')[0])
     series = ask('기구물 계열 (엔터=2000M) > ', '2000M')
 
     # --- 기구물/중앙장비 ---
@@ -402,7 +413,7 @@ def run():
             print('  %-44s 조립비 %12s  (자재 x %s)'
                   % ('', won(cb_one - cb_mat), asm_rate))
             print('  %-44s 1대당 %12s' % ('', won(cb_one)))
-    cbq = int(num(ask('\nCB 대수 (엔터=건너뜀) > ', '0')) or 0)
+    cbq = int(num(ask('\nCB 대수 (엔터=%s) > ' % rooms_of(site), rooms_of(site))) or 0)
     cb_tot = cb_one * cbq if (cb_one and cbq) else 0
 
     # --- 총괄 ---

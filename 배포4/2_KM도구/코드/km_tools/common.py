@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-VERSION = 'v16'
+VERSION = 'v17'
 VERSION_DATE = '2026-09-16'
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -187,7 +187,12 @@ def title(s):
     line = '=' * 56
     print(line); print(' ' + s); print(line)
 
+AUTO = False   # True 면 묻지 않고 기본값으로 간다 (32번 「한 방에」 가 켠다)
+
 def ask(msg, default=''):
+    if AUTO:
+        print('%s%s   [자동]' % (msg, default))
+        return default
     try:
         v = input(msg).strip()
     except EOFError:
