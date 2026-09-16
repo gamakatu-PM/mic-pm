@@ -52,10 +52,12 @@ GROUPS = [
    ('현황판             모든 결과를 한 장으로 (클로드도 읽음)', 't33_dashboard'),
    ('캘린더 내보내기    납기·결정·도면접수를 .ics 로', 't34_calendar'),
    ('아침 메일          현황판을 05:00 에 내 메일로', 't35_morningmail')]),
+ ('오늘', [
+   ('오늘 한 방에       새 zip 적용→도면 분류→새 판 처리→현황판 (엔터와 같음)', 't36_today')]),
  ('검수', [
    ('검수               만든 엑셀이 정답본대로 됐나 (간단→제대로→고칠까요?)', 't37_check')]),
  ('손 0', [
-   ('자동 실행 등록     로그온+30분마다 조용히 「오늘 한 방에」. 새 판도 스스로 받음', 't38_autorun')]),
+   ('자동 실행 등록     (원하실 때만) 로그온+30분마다 조용히. 기본은 도면 폴더의 ★바로가기 클릭', 't38_autorun')]),
 ]
 
 def flat():
@@ -63,6 +65,37 @@ def flat():
     for _, items in GROUPS:
         out.extend(items)
     return out
+
+def run_number(s):
+    """번호 하나로 바로 실행 (메뉴 없이). '' 또는 '36' = 오늘 한 방에, '98' = 업데이트, 그 외 메뉴 번호."""
+    s = str(s).strip()
+    items = flat()
+    try:
+        if s in ('', '36'):
+            m = _il.import_module('t36_today'); m.run(); return True
+        if s == '98':
+            m = _il.import_module('t98_update'); m.run(); return True
+        if s == '99':
+            open_folder(cfg('out')); return True
+        if s.isdigit() and 1 <= int(s) <= len(items):
+            m = _il.import_module(items[int(s) - 1][1]); m.run(); return True
+        print('[%s] 는 없는 번호입니다. 1~%d, 36(엔터), 98, 99 중 하나입니다.' % (s, len(items)))
+        return False
+    except Exception:
+        print('')
+        print('[오류] 아래 글자를 그대로 클로드에게 보여주십시오.')
+        traceback.print_exc()
+        return False
+
+def ask_and_run():
+    """★번호입력 바로가기가 부른다 : 번호 하나 받고 실행"""
+    title('KM 도구  [%s]   클로드가 알려준 번호를 넣으십시오 (엔터만 = 오늘 한 방에)' % VERSION)
+    try:
+        s = input('번호 > ').strip()
+    except EOFError:
+        return
+    run_number(s)
+    pause()
 
 def main():
     items = flat()

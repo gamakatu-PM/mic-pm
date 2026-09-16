@@ -51,6 +51,8 @@ def run(quiet=False):
     title('오늘 한 방에   (엔터 한 번. 새 zip 적용 -> 도면 분류 -> 새 판 처리 -> 현황판)')
     common.AUTO = True
     try:
+        for sc in make_shortcuts(I.D.dwg_root()):
+            print('바로가기 만듦 : %s' % sc)
         if auto_update(quiet=quiet):
             return
         print('')

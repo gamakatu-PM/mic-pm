@@ -2,7 +2,7 @@
 """KM 현장비서 도구모음 - 공통 유틸
 한국마이크로닉(주) 배성윤 프로 전용. 토큰 0(로컬 파이썬)으로 도는 도구들의 공용 부품.
 """
-import os, re, sys, io, configparser, datetime
+import os, io, re, sys, configparser, datetime
 
 # ---- 콘솔 한글 ----
 try:
@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-VERSION = 'v29'
+VERSION = 'v30'
 VERSION_DATE = '2026-09-16'
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -450,3 +450,39 @@ def finish_xlsx(path):
         return '파이썬 %d칸' % n
     except Exception:
         return ''
+
+
+# ---------------- 도면 폴더 바로가기 (클릭 한 번) ----------------
+_SHORTCUT = """# -*- coding: utf-8 -*-
+# KM 바로가기 - 더블클릭만 하십시오. (2_KM도구\\시작.py 를 찾아 %(what)s)
+import os, sys, subprocess
+d = os.path.dirname(os.path.abspath(__file__))
+start = None
+for _ in range(7):
+    c = os.path.join(d, '2_KM도구', '시작.py')
+    if os.path.exists(c):
+        start = c; break
+    d = os.path.dirname(d)
+if not start:
+    print('2_KM도구\\시작.py 를 못 찾았습니다. 이 파일은 「!!클로드가 저장하는 폴더」 안에 있어야 합니다.')
+    input('엔터...'); sys.exit(1)
+subprocess.call([sys.executable, start] + %(args)s)
+"""
+
+def make_shortcuts(folder):
+    """도면 폴더(등)에 바로가기 2개를 둔다. 이미 있으면 그대로.
+       ★도면넣고_여기클릭.py  = 36 오늘 한 방에 (번호 미리 들어 있음)
+       ★번호입력.py            = 클로드가 알려준 번호 하나 넣고 실행"""
+    made = []
+    try:
+        os.makedirs(folder, exist_ok=True)
+        for name, what, args in (('★도면넣고_여기클릭.py', '「오늘 한 방에」 를 돌립니다', "['36']"),
+                                 ('★번호입력.py', '번호를 물어 그 도구를 돌립니다', "['--ask']")):
+            pth = os.path.join(folder, name)
+            if not os.path.exists(pth):
+                with io.open(pth, 'w', encoding='utf-8') as fp:
+                    fp.write(_SHORTCUT % {'what': what, 'args': args})
+                made.append(pth)
+    except Exception:
+        pass
+    return made

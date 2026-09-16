@@ -55,6 +55,17 @@ def main():
     if '--auto' in sys.argv:
         import common; common.AUTO = True
         import t36_today; t36_today.run(quiet=True); return
+    arg = next((a for a in sys.argv[1:] if not a.startswith('-')), None)
+    import menu as _menu
+    if '--ask' in sys.argv:
+        _menu.ask_and_run(); return
+    if arg is not None and arg.isdigit():
+        _menu.run_number(arg)
+        try:
+            input('\n엔터를 누르면 닫힙니다...')
+        except EOFError:
+            pass
+        return
     import runpy
     try:
         runpy.run_path(os.path.join(TOOLS, 'menu.py'), run_name='__main__')
