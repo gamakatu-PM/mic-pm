@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-VERSION = 'v30'
+VERSION = 'v31'
 VERSION_DATE = '2026-09-16'
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -452,37 +452,60 @@ def finish_xlsx(path):
         return ''
 
 
-# ---------------- 도면 폴더 바로가기 (클릭 한 번) ----------------
+# ---------------- 바로가기 (어디에 두어도 됨 : 시작.py 절대 경로가 안에 적혀 있다) ----------------
 _SHORTCUT = """# -*- coding: utf-8 -*-
-# KM 바로가기 - 더블클릭만 하십시오. (2_KM도구\\시작.py 를 찾아 %(what)s)
+# KM 바로가기 - 더블클릭만 하십시오. 어디에 두어도 됩니다. (%(what)s)
 import os, sys, subprocess
-d = os.path.dirname(os.path.abspath(__file__))
-start = None
-for _ in range(7):
-    c = os.path.join(d, '2_KM도구', '시작.py')
-    if os.path.exists(c):
-        start = c; break
-    d = os.path.dirname(d)
-if not start:
-    print('2_KM도구\\시작.py 를 못 찾았습니다. 이 파일은 「!!클로드가 저장하는 폴더」 안에 있어야 합니다.')
+START = %(start)r
+if not os.path.exists(START):
+    # 폴더를 옮기셨으면 이 파일 위쪽 7단계에서 2_KM도구\\시작.py 를 찾아본다
+    d = os.path.dirname(os.path.abspath(__file__)); START = None
+    for _ in range(7):
+        c = os.path.join(d, '2_KM도구', '시작.py')
+        if os.path.exists(c):
+            START = c; break
+        d = os.path.dirname(d)
+if not START:
+    print('2_KM도구\\시작.py 를 못 찾았습니다. 시작.py 를 한 번 눌러 주시면 바로가기가 다시 만들어집니다.')
     input('엔터...'); sys.exit(1)
-subprocess.call([sys.executable, start] + %(args)s)
+subprocess.call([sys.executable, START] + %(args)s)
 """
 
-def make_shortcuts(folder):
-    """도면 폴더(등)에 바로가기 2개를 둔다. 이미 있으면 그대로.
-       ★도면넣고_여기클릭.py  = 36 오늘 한 방에 (번호 미리 들어 있음)
-       ★번호입력.py            = 클로드가 알려준 번호 하나 넣고 실행"""
+def start_py():
+    return os.path.join(os.path.dirname(os.path.dirname(HERE)), '시작.py')
+
+def desktop_dir():
+    home = os.path.expanduser('~')
+    for d in (os.path.join(home, 'OneDrive', 'Desktop'), os.path.join(home, 'OneDrive', '바탕 화면'),
+              os.path.join(home, 'Desktop'), os.path.join(home, '바탕 화면')):
+        if os.path.isdir(d):
+            return d
+    return None
+
+def make_shortcuts(folder, refresh=False):
+    """바로가기 2개를 folder 에 둔다 (도면 폴더·바탕화면 등 어디든). 안에 시작.py 절대 경로가 들어 있어
+       「클로드가 저장하는 폴더」 밖에 두어도 된다. refresh=True 면 경로가 바뀐 경우 다시 쓴다.
+       ★KM_도면넣고_여기클릭.py = 36 오늘 한 방에 (번호 미리 들어 있음)
+       ★KM_번호입력.py          = 클로드가 알려준 번호 하나 넣고 실행"""
     made = []
+    if not folder:
+        return made
     try:
         os.makedirs(folder, exist_ok=True)
-        for name, what, args in (('★도면넣고_여기클릭.py', '「오늘 한 방에」 를 돌립니다', "['36']"),
-                                 ('★번호입력.py', '번호를 물어 그 도구를 돌립니다', "['--ask']")):
+        for name, what, args in (('★KM_도면넣고_여기클릭.py', '「오늘 한 방에」 36번', "['36']"),
+                                 ('★KM_번호입력.py', '번호 하나 넣고 그 도구 실행', "['--ask']")):
             pth = os.path.join(folder, name)
-            if not os.path.exists(pth):
-                with io.open(pth, 'w', encoding='utf-8') as fp:
-                    fp.write(_SHORTCUT % {'what': what, 'args': args})
-                made.append(pth)
+            body = _SHORTCUT % {'what': what, 'args': args, 'start': start_py()}
+            if os.path.exists(pth) and not refresh:
+                try:
+                    if start_py() in io.open(pth, encoding='utf-8').read():
+                        continue
+                except Exception:
+                    pass
+            with io.open(pth, 'w', encoding='utf-8') as fp:
+                fp.write(body)
+            made.append(pth)
+        # 옛 이름(★도면넣고_여기클릭.py 등)은 지우지 않고 둔다
     except Exception:
         pass
     return made

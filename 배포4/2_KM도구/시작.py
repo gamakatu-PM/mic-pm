@@ -66,6 +66,15 @@ def main():
         except EOFError:
             pass
         return
+    try:
+        import common as _c
+        _c.make_shortcuts(_c.desktop_dir())
+        try:
+            import t27_drawing as _d; _c.make_shortcuts(_d.dwg_root())
+        except Exception:
+            pass
+    except Exception:
+        pass
     import runpy
     try:
         runpy.run_path(os.path.join(TOOLS, 'menu.py'), run_name='__main__')

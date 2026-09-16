@@ -88,7 +88,7 @@ def dwg_root():
     root = cfg('drawing')
     try:
         os.makedirs(os.path.join(root, INBOX), exist_ok=True)
-        make_shortcuts(root)
+        make_shortcuts(root); make_shortcuts(desktop_dir())
         g = os.path.join(root, '_읽어보세요.txt')
         if not os.path.exists(g):
             for enc in ('cp949', 'utf-8-sig'):
