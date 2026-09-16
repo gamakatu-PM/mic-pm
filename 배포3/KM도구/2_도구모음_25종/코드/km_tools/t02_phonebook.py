@@ -20,7 +20,7 @@ def pretty(p):
 def build():
     """{번호: {이름들, 현장들, 마지막날짜}} - 파일명/폴더명/회의록 본문 전부에서 모은다."""
     book = {}
-    root = cfg('plaud')
+    root = sites_root()
     if not os.path.isdir(root):
         return book
 

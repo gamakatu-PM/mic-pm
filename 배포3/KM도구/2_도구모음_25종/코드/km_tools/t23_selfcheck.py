@@ -8,7 +8,8 @@ def run():
     ok, bad = [], []
     print('[1] 파이썬  %s' % sys.version.split()[0])
     for mod, why in (('openpyxl', '엑셀 도구(견적서/사진대지/서식검사/단가장검진)'),
-                     ('PIL', '사진대지 회전보정/축소')):
+                     ('PIL', '사진대지 회전보정/축소'),
+                     ('pptx', '이미지 모음 PPT(15번)')):
         try:
             importlib.import_module(mod); ok.append(mod)
             print('    %-10s 있음  (%s)' % (mod, why))
@@ -23,6 +24,8 @@ def run():
         print('    %-9s %-4s %s' % (k, mark, p))
         if mark == '없음' and k != 'out':
             bad.append('경로:' + k)
+    sr = sites_root()
+    print('    %-9s %-4s %s' % ('현장폴더', '있음' if os.path.isdir(sr) else '없음', sr))
     print('')
     print('[3] 원틀')
     for nm, keys in (('견적서', ('견적',)), ('작업의뢰서', ('작업의뢰',)),
@@ -33,7 +36,14 @@ def run():
     print('[4] 대장')
     import sitebook, t06_collect
     sb = sitebook.ensure(); cb = t06_collect.book_path()
-    print('    현장대장   %s  (현장 %s개)' % ('있음' if os.path.exists(sb) else '없음', won(len(sitebook.load()))))
+    added = sitebook.sync_from_folders()
+    if added:
+        print('    현장 폴더에서 %s개를 현장대장에 새로 넣었습니다.' % won(added))
+    nsite = len(sitebook.load())
+    print('    현장대장   %s  (현장 %s개)' % ('있음' if os.path.exists(sb) else '없음', won(nsite)))
+    if nsite == 0:
+        print('               [경고] 현장이 0개입니다. 현장 폴더 경로를 확인해 주십시오.')
+        bad.append('현장 0개')
     print('    수금대장   %s' % ('있음' if os.path.exists(cb) else '없음 - 6번을 한 번 돌리면 생깁니다'))
     print('')
     print('[5] 도구 점검')

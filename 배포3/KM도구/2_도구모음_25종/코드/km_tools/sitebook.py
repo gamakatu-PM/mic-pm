@@ -38,7 +38,7 @@ def load():
 
 def sync_from_folders():
     """plaud\\26년 폴더 이름으로 현장대장에 없는 현장을 추가만 한다(A등급)."""
-    root = cfg('plaud')
+    root = sites_root()
     if not os.path.isdir(root):
         return 0
     known = {d['site'] for d in load()}

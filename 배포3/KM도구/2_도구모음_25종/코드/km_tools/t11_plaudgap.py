@@ -24,7 +24,7 @@ def count_meetings(root):
 
 def run():
     title('25. PLAUD 미처리 감지')
-    biseo, plaud = cfg('biseo'), cfg('plaud')
+    biseo, plaud = cfg('biseo'), sites_root()
     inbox = os.path.join(biseo, '1.여기에_v10결과_넣기')
     done = os.path.join(biseo, '3.처리완료')
     rows = []
@@ -37,7 +37,7 @@ def run():
             print('%-24s [폴더 없음] %s' % (name, path))
             rows.append([name, 0, 0])
     made = count_meetings(plaud) if os.path.isdir(plaud) else 0
-    print('%-24s 회의록 폴더 %s개' % ('산출(plaud\\26년)', won(made)))
+    print('%-24s 회의록 폴더 %s개' % ('산출(1.현장)', won(made)))
     waiting = rows[0][2]
     print('-' * 56)
     if waiting:

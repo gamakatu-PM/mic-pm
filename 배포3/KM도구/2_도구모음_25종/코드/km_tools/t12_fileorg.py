@@ -28,7 +28,7 @@ def run():
     src = ask('정리할 폴더 경로 > ')
     if not os.path.isdir(src):
         print('폴더를 찾지 못했습니다.'); return
-    sites = sites_from(cfg('plaud'))
+    sites = sites_from(sites_root())
     print('아는 현장 %s개' % won(len(sites)))
     rows, dup = [], {}
     for p in walk_files(src):

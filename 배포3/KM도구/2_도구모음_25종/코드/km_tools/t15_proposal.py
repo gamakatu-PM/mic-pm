@@ -17,7 +17,7 @@ def kind_of(line):
     return '제안서'
 
 def scan(days=3):
-    root = cfg('plaud')
+    root = sites_root()
     cut = datetime.datetime.now().timestamp() - days * 86400
     out = []
     for p in walk_files(root, {'.txt', '.md'}):

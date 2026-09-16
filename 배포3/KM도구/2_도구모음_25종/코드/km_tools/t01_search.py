@@ -20,7 +20,7 @@ def load(path):
 
 def run(word=None):
     title('17. 회의록 검색기')
-    root = cfg('plaud')
+    root = sites_root()
     if not need(root, 'plaud\\26년 폴더 경로를 설정.ini 에 넣어주십시오'):
         return
     word = word or ask('찾을 말 (예: 방화문 타공) > ')

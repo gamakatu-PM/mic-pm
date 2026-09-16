@@ -34,6 +34,19 @@ def cfg(key):
                 return v
     return DEFAULTS[key]
 
+SITE_DIRS = ('1.현장', '1_현장', '현장')
+
+def sites_root():
+    """현장 폴더들이 실제로 들어 있는 곳.
+    프로님 구조는 plaud\26년\1.현장\{현장명} 이다 (26년 아래는 1.현장/2.사내회의/3.할일... 분류 폴더).
+    `1.현장` 이 있으면 그 아래를, 없으면 plaud 를 그대로 쓴다."""
+    base = cfg('plaud')
+    for d in SITE_DIRS:
+        p = os.path.join(base, d)
+        if os.path.isdir(p):
+            return p
+    return base
+
 def today():
     return datetime.date.today()
 

@@ -27,7 +27,7 @@ def dept_of(line):
 
 def run():
     title('15. 부서 전달 메일 초안')
-    root = cfg('plaud')
+    root = sites_root()
     if not need(root, 'plaud\\26년 폴더를 설정.ini 에 넣어주십시오'):
         return
     days = int(ask('최근 며칠분? (기본 7) > ', '7') or 7)

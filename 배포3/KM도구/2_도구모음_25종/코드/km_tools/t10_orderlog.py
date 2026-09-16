@@ -8,7 +8,7 @@ KEY = ('작업의뢰', 'MB-004', '의뢰서')
 
 def run():
     title('24. 작업의뢰서 발행대장')
-    root = cfg('plaud')
+    root = sites_root()
     if not need(root, 'plaud\\26년 폴더를 설정.ini 에 넣어주십시오'):
         return
     rows = []
