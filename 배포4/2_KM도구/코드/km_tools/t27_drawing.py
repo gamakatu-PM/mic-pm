@@ -277,6 +277,67 @@ def read_dxf(path):
                 continue
     return {'blocks': blocks, 'layers': layers, 'texts': texts}, ''
 
+XREF_PRE = ('xr_', 'xref', 'xr-')
+
+def is_xref(path):
+    """외부참조(xref) 도면은 본 도면이 아니라 부품이다. 세지 않는다."""
+    return os.path.basename(path).lower().startswith(XREF_PRE)
+
+NUMOK = re.compile(r'^[0-9][0-9,]{0,5}$')
+HANGUL = re.compile(r'[가-힣A-Za-z]{2,}')
+
+def read_pdf_table(path):
+    """PDF 안의 「기호 / 내용 / 수량」 표(NOTE·범례)를 좌표로 복원해 그대로 읽는다.
+    세는 것이 아니라 도면에 적힌 수량을 옮기는 것 - 이게 가장 정확하다."""
+    fitz = ensure_pkg('pymupdf', 'pymupdf') or ensure_pkg('fitz', 'pymupdf')
+    if not fitz:
+        return []
+    try:
+        d = fitz.open(path)
+    except Exception:
+        return []
+    out = []
+    for pno, pg in enumerate(d, start=1):
+        try:
+            words = pg.get_text('words')
+        except Exception:
+            continue
+        if not words:
+            continue
+        flat = ' '.join(w[4] for w in words)
+        # 도면은 「N O T E」 「수 량」 처럼 글자를 벌려 쓰는 일이 많다. 공백을 지우고 본다
+        flat_ns = re.sub(r'\s+', '', flat).upper()
+        if not any(k in flat_ns for k in ('NOTE', '수량', 'QTY', 'QUANTITY', '기호', 'SYMBOL', '범례', 'LEGEND')):
+            continue
+        lines = {}
+        for w in words:
+            lines.setdefault(round(w[1] / 3.0), []).append(w)
+        for key in sorted(lines):
+            ws = sorted(lines[key], key=lambda w: w[0])
+            toks = [w[4].strip() for w in ws if w[4].strip()]
+            if len(toks) < 2:
+                continue
+            last = toks[-1]
+            if not NUMOK.match(last):
+                continue
+            qty = int(last.replace(',', ''))
+            if qty <= 0 or qty > 99999:
+                continue
+            body = toks[:-1]
+            name = ' '.join(body[1:]) if len(body) > 1 else body[0]
+            if not HANGUL.search(name):
+                continue
+            out.append({'page': pno, 'sym': body[0], 'name': name.strip(), 'qty': qty})
+    d.close()
+    # 같은 줄이 두 번 잡히는 것 제거
+    seen, uniq = set(), []
+    for r in out:
+        k = (r['sym'], r['name'], r['qty'])
+        if k in seen:
+            continue
+        seen.add(k); uniq.append(r)
+    return uniq
+
 def read_pdf(path):
     fitz = ensure_pkg('pymupdf', 'pymupdf') or ensure_pkg('fitz', 'pymupdf')
     if not fitz:
@@ -362,8 +423,12 @@ def read_all(files):
     """도면을 먼저 다 읽는다. 질문은 하지 않는다."""
     blocks = collections.Counter()
     toks = collections.Counter()
-    per_file, scans, unread = [], [], []
+    per_file, scans, unread, table = [], [], [], []
     for f in files:
+        if is_xref(f):
+            per_file.append((os.path.basename(f), '외부참조(xref)', 0, 0, '본 도면이 아니라 건너뜀'))
+            print(' [건너뜀] %-36s 외부참조(xref) 파일' % os.path.basename(f)[:36])
+            continue
         e = os.path.splitext(f)[1].lower()
         nm = os.path.basename(f)
         if e in DXF_EXT:
@@ -395,8 +460,10 @@ def read_all(files):
         elif e in PDF_EXT:
             d, msg = read_pdf(f)
             nt = len(d['texts']) if d else 0
-            per_file.append((nm, 'PDF', 0, nt, msg))
-            print(' [PDF] %-38s 글자 %6s %s' % (nm[:38], won(nt), msg))
+            tb = read_pdf_table(f) if d and not d.get('scan') else []
+            per_file.append((nm, 'PDF', 0, nt, msg or ('NOTE표 %d줄' % len(tb) if tb else '')))
+            print(' [PDF] %-38s 글자 %6s  NOTE표 %s줄 %s'
+                  % (nm[:38], won(nt), won(len(tb)), msg))
             if d:
                 toks.update(tokens(d['texts']))
                 if d.get('scan'):
@@ -404,11 +471,14 @@ def read_all(files):
                     unread.append((nm, '스캔 PDF - 글자가 없습니다'))
             else:
                 unread.append((nm, msg))
+            for r in tb:
+                r['file'] = nm
+            table.extend(tb)
         else:
             per_file.append((nm, '사진/캡처', 0, 0, '파이썬으로는 못 셉니다'))
             print(' [사진] %-38s 파이썬으로는 못 셉니다' % nm[:38])
             unread.append((nm, '사진/캡처 - 클로드에게 주십시오'))
-    return blocks, toks, per_file, scans, unread
+    return blocks, toks, per_file, scans, unread, table
 
 def cant_read(unread, files):
     """한 장도 못 읽었을 때. 질문하지 않고 무엇을 해야 하는지만 알린다."""
@@ -470,12 +540,26 @@ def run():
     print('')
 
     # 1) 먼저 읽는다
-    blocks, toks, per_file, scans, unread = read_all(files)
+    blocks, toks, per_file, scans, unread, table = read_all(files)
 
     # 2) 한 장도 못 읽었으면 여기서 끝. 아무것도 묻지 않는다
-    if not blocks and not toks:
+    if not blocks and not toks and not table:
         cant_read(unread, files)
         return
+
+    # 2-1) 도면에 수량표(NOTE·범례)가 있으면 그게 정답이다. 세지 않고 그대로 옮긴다
+    if table:
+        print('')
+        print('=' * 70)
+        print(' 도면에 적힌 수량표를 찾았습니다. 세지 않고 그대로 옮깁니다. (가장 정확)')
+        print('=' * 70)
+        print('%-16s %-40s %8s  %s' % ('기호', '내용', '수량', '쪽'))
+        print('-' * 74)
+        for r in table:
+            print('%-16s %-40s %8s  %s쪽' % (str(r['sym'])[:16], str(r['name'])[:40],
+                                            won(r['qty']), r['page']))
+        print('')
+        print(' 합계 %s개 / 품목 %d줄' % (won(sum(r['qty'] for r in table)), len(table)))
 
     # 3) 센다
     by_item, unk_b, unk_t, split_log = tally(blocks, toks, dic, ign)
@@ -486,14 +570,23 @@ def run():
         print(' 아래 「사전에 없는 기호」를 저에게 보여주시면 사전에 넣어 드리겠습니다.')
 
     print('')
-    print('%-34s %10s %10s  %s' % ('품목', '블록기준', '글자기준', '채택'))
+    if table:
+        print('-- 아래는 참고입니다. 위의 도면 수량표가 정답입니다 --')
+    print('%-30s %10s %12s  %s' % ('품목', '블록으로센것', '글자나온횟수', '채택'))
     print('-' * 70)
     rows = []
     for it in sorted(by_item, key=lambda k: -max(by_item[k])):
         b, t = by_item[it]
-        take, why = (b, '블록') if b else ((t, '글자') if t else (0, '-'))
-        print('%-34s %10s %10s  %s' % (it[:34], won(b), won(t), why))
+        # 글자가 나온 횟수는 수량이 아니다. 절대 채택하지 않는다 (km 철칙: 수량을 도구가 정하지 않는다)
+        take, why = (b, '블록') if b else (0, '-')
+        print('%-30s %10s %12s  %s' % (it[:30], won(b), won(t), why))
         rows.append([it, b, t, take, why])
+    if not table and not blocks:
+        print('')
+        print('[주의] 블록이 없어 채택할 수량이 없습니다.')
+        print('  「글자 나온 횟수」는 도면 제목·범례·표제란에 그 낱말이 몇 번 나왔는지일 뿐,')
+        print('  기구물 수량이 아닙니다. 그래서 채택하지 않습니다.')
+        print('  -> DXF 로 주시거나, 도면의 NOTE(범례) 표 쪽을 보여주십시오.')
 
     if split_log:
         print('')
@@ -570,7 +663,13 @@ def run():
     f1 = write_csv(os.path.join(od, base + '.csv'),
                    [['[현장]', site, '', '', ''], ['[읽은 파일]', len(files), '', '', ''],
                     ['', '', '', '', '']] + body,
-                   ['품목', '블록기준', '글자기준', '채택수량', '채택근거'])
+                   ['품목', '블록으로센것', '글자나온횟수(수량아님)', '채택수량', '채택근거'])
+    if table:
+        f0 = write_csv(os.path.join(od, '%s_도면에적힌수량표_%s.csv' % (safe_name(site), ymd6())),
+                       [[r['sym'], r['name'], r['qty'], '%s쪽' % r['page'], r.get('file', '')]
+                        for r in table],
+                       ['기호', '내용', '수량', '쪽', '파일'])
+        made.insert(0, f0)
     f2 = write_csv(os.path.join(od, '%s_모르는기호_%s.csv' % (safe_name(site), ymd6())),
                    unk_rows, ['어디서', '기호', '횟수'])
     f3 = write_csv(os.path.join(od, '%s_읽은파일_%s.csv' % (safe_name(site), ymd6())),
@@ -579,18 +678,25 @@ def run():
         write_csv(os.path.join(od, '%s_쪼개서맞춘것_%s.csv' % (safe_name(site), ymd6())),
                   split_log, ['어디서', '도면기호', '맞춘품목', '횟수'])
 
-    hint = [('green' if w == '블록' else 'yellow', '%s : %s (%s기준)' % (it, won(tk), w))
-            for it, b, t, tk, w in rows]
+    hint = []
+    if table:
+        for r in table:
+            hint.append(('green', '%s  %s : %s개 (도면 %s쪽에 적힌 값)'
+                         % (r['sym'], r['name'], won(r['qty']), r['page'])))
+    for it, b, t, tk, w in rows:
+        if tk:
+            hint.append(('yellow', '%s : %s (블록으로 센 것)' % (it, won(tk))))
     need_ai = []
     if img:
         need_ai.append(('red', '사진/캡처 %d장 - 파이썬으로는 못 셉니다. 클로드에게 주십시오.' % len(img)))
     if scans:
         need_ai.append(('red', '스캔 PDF %d개 - 글자가 없어 못 셉니다. 클로드에게 주십시오.' % len(scans)))
-    if dwg and not oda_exe():
-        need_ai.append(('yellow', 'DWG %d개 - 캐드에서 「다른 이름으로 저장 -> DXF」로 주시면 정확히 셉니다.' % len(dwg)))
+    real_dwg = [f for f in dwg if not is_xref(f)]
+    if real_dwg and not oda_exe():
+        need_ai.append(('yellow', 'DWG %d개 - 캐드에서 「다른 이름으로 저장 -> DXF」로 주시면 정확히 셉니다.' % len(real_dwg)))
     made = [f1, f2, f3]
     f4 = write_html(os.path.join(od, base + '.html'), '%s 도면 수량' % site,
-                    [('뽑은 수량', hint),
+                    [('뽑은 수량 (도면에 적힌 값이 있으면 그것이 정답)', hint),
                      ('이름을 쪼개서 맞춘 것 (확인 필요)',
                       [('yellow', '%s %s -> %s : %s개' % (a, b, c, won(d2)))
                        for a, b, c, d2 in split_log[:20]]),
@@ -605,7 +711,10 @@ def run():
     for f in (f1, f2, f3, f4):
         print('  %s' % f)
     print('')
-    print('* 수량은 제가 정하지 않습니다. 블록기준/글자기준을 나란히 두었으니 확인하고 쓰십시오.')
+    if table:
+        print('* 위 수량은 도면에 적힌 값을 그대로 옮긴 것입니다. 제가 계산하지 않았습니다.')
+    else:
+        print('* 수량은 제가 정하지 않습니다. 「글자 나온 횟수」는 수량이 아니라 참고입니다.')
     print('* 사전(%s)을 고치시면 다음부터 그 기준으로 셉니다.' % DICT_NAME)
     log(TOOL, '%s 파일%d 품목%d 모르는기호%d' % (site, len(files), len(rows), len(unk_rows)))
     if not open_file(f4):

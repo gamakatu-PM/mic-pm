@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-VERSION = 'v12'
+VERSION = 'v13'
 VERSION_DATE = '2026-09-16'
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -352,7 +352,8 @@ def ensure_pkg(mod, pkg):
         pass
     print('[부품 받는 중] %s  (처음 한 번만, 1~2분)' % pkg)
     try:
-        subprocess.run([sys.executable, '-m', 'pip', 'install', '--quiet', pkg], check=False)
+        subprocess.run([sys.executable, '-m', 'pip', 'install', '--quiet',
+                        '--no-warn-script-location', pkg], check=False)
     except Exception as e:
         print('  실패 : %s' % e)
     try:
