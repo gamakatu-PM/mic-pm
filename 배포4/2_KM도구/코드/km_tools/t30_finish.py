@@ -21,7 +21,7 @@ import t28_cost as C
 TOOL = '완성품'
 ANS_DIR = '받은답'
 ANS_HEAD = ['종류', '이름', '값', '비고']
-ANS_KIND = ('단가', '별칭', '기호', '배수', 'CB구성')
+ANS_KIND = ('단가', '별칭', '기호', '배수', 'CB구성', '수량')
 
 # ---------------- 모아 읽기 ----------------
 
@@ -54,6 +54,18 @@ def gather_state(site=''):
             except Exception:
                 pass
         out[key] = rows
+    out['수량출처'] = 'NOTE' if (out['수량표'] and '도면에적힌수량표' in out['수량표']) else ('블록' if out['수량표'] else '')
+    out['채택수량'] = []
+    if out['수량출처'] == '블록':
+        for i, line in enumerate(read_text(out['수량표']).splitlines()):
+            if i == 0 or not line.strip() or line.startswith('['):
+                continue
+            try:
+                r = [c.strip() for c in next(csv.reader([line]))]
+                if len(r) >= 4 and r[0] and r[3]:
+                    out['채택수량'].append(r)
+            except Exception:
+                pass
     out['원틀'] = find_template('견적')
     return out
 
@@ -74,6 +86,19 @@ def make_request(site, st):
     a('- 견적서 원틀 : %s' % (os.path.basename(st['원틀']) if st['원틀'] else '없음 -> 원틀을 _원틀 폴더에 넣어야 완성품이 나옵니다'))
     a('')
     n = 0
+    if st.get('수량출처') == '블록':
+        n += 1
+        a('## %d. 수량표 확인 요청 (계통도에 수량이 없었습니다)' % n)
+        a('도면에 NOTE 수량표가 없어 파이썬이 블록·글자로 센 값입니다. **검토용이지 확정 수량이 아닙니다.**')
+        a('프로님이 가진 수량표(엑셀/사진)를 주시면 아래 값과 대조해 틀린 줄만 알려드립니다.')
+        a('')
+        a('| 품목 | 파이썬이 센 값 | 근거 |')
+        a('|---|---|---|')
+        for r in st['채택수량'][:60]:
+            a('| %s | %s | %s |' % (r[0], r[3], r[4] if len(r) > 4 else ''))
+        a('')
+        a('-> 답 서식 : `수량,<품목명>,<맞는 수량>,<근거>`  (틀린 줄만)')
+        a('')
     if st['단가없음']:
         n += 1
         a('## %d. 단가가 없어 금액을 비운 것' % n)
@@ -141,7 +166,7 @@ def make_request(site, st):
 
 # ---------------- 받은 답 반영 ----------------
 
-def apply_answers():
+def apply_answers(site=''):
     """받은답 폴더의 csv 를 단가장·별칭·기호사전·배수·CB구성에 반영한다.
     원본은 덮어쓰지 않는다 - 단가장은 새 버전, 나머지는 줄 추가."""
     ad = os.path.join(C.root(), ANS_DIR)
@@ -163,6 +188,15 @@ def apply_answers():
                 continue
             got[r[0]].append(r)
     log_lines = []
+
+    # 수량 (프로님 수량표 = 도면 NOTE 와 같은 정답 취급 -> 28번이 그것을 읽는다)
+    if got['수량']:
+        od = outdir('도면수량')
+        nm = safe_name(site or '현장')
+        rows = [[ '', r[1], r[2], '프로님 답', (r[3] if len(r) > 3 else '')] for r in got['수량'] if len(r) >= 3]
+        f = write_csv(os.path.join(od, '%s_도면에적힌수량표_%s_프로님답.csv' % (nm, ymd6())), rows,
+                      ['기호', '내용', '수량', '쪽', '파일'])
+        log_lines.append('수량표 %d줄 (프로님 답) -> %s' % (len(rows), os.path.basename(f)))
 
     # 배수
     if got['배수']:
@@ -332,7 +366,7 @@ def run(site_hint=None):
     C.root(); C.seed(C.MULT, C.MULT_DEFAULT); C.seed(C.CBC, C.CBC_DEFAULT)
     C.seed(C.ALIAS_F, C.ALIAS_DEFAULT)
     # 받은 답이 있으면 먼저 반영
-    n, lines, ad = apply_answers()
+    n, lines, ad = apply_answers(site_hint or '')
     if n:
         print('[받은 답 %d줄을 반영했습니다]' % n)
         for x in lines:

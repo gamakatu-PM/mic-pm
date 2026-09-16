@@ -689,6 +689,8 @@ def run(folder=None, site_hint=None):
         if tk:
             hint.append(('yellow', '%s : %s (블록으로 센 것)' % (it, won(tk))))
     need_ai = []
+    if not table:
+        need_ai.append(('red', '계통도(도면)에 수량표가 없습니다. 파이썬이 센 값은 검토용입니다 -> 프로님 수량표를 30번 부탁서로 요청합니다.'))
     if img:
         need_ai.append(('red', '사진/캡처 %d장 - 파이썬으로는 못 셉니다. 클로드에게 주십시오.' % len(img)))
     if scans:

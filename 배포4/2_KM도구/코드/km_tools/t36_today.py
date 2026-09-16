@@ -16,8 +16,8 @@ import t33_dashboard as DB
 
 TOOL = '오늘한방에'
 
-def auto_update():
-    z = U.newer_zip()
+def auto_update(quiet=False):
+    z = U.fetch_latest(quiet=quiet) or U.newer_zip()
     if not z:
         return False
     print('새 판 zip 을 찾았습니다 : %s' % os.path.basename(z))
@@ -29,21 +29,29 @@ def auto_update():
             print('[적용 실패] %s' % err); return False
         n, backup, extra = r
         print('도구 %d개를 갈아끼웠습니다. %s' % (n, ' / '.join(extra)))
+        log(TOOL, '자동 업데이트 %s' % os.path.basename(z))
+        if quiet:
+            # 스케줄러 모드 : 새 코드로 나 자신을 다시 띄운다 (손 0)
+            try:
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+            except Exception:
+                pass
+            return True
         print('')
         print('=' * 60)
         print(' 새 판이 들어갔습니다. 이 창을 닫고 시작.py 를 다시 눌러주십시오.')
         print('=' * 60)
-        log(TOOL, '자동 업데이트 %s' % os.path.basename(z))
         return True
     except Exception as e:
         print('[적용 실패] %s' % e)
         return False
 
-def run():
+def run(quiet=False):
+    """quiet=True : 작업 스케줄러가 부르는 모드. 묻지 않고, 새 판이 생긴 현장이 있을 때만 현황판을 띄운다."""
     title('오늘 한 방에   (엔터 한 번. 새 zip 적용 -> 도면 분류 -> 새 판 처리 -> 현황판)')
     common.AUTO = True
     try:
-        if auto_update():
+        if auto_update(quiet=quiet):
             return
         print('')
         print('-' * 74); print(' >> 31 도면 접수 (받은함 분류 + 전 현장 새 판 찾기)'); print('-' * 74)
@@ -80,8 +88,8 @@ def run():
         print('   현황판 : %s' % top)
     print('=' * 74)
     print(' 클로드에게 넘길 것은 현황판 ③ 에 있습니다. 부탁서 파일만 대화창에 던지십시오.')
-    log(TOOL, '현장%d' % len(summary))
-    if top:
+    log(TOOL, '현장%d%s' % (len(summary), ' 자동' if quiet else ''))
+    if top and (not quiet or summary):
         open_file(top)
 
 if __name__ == '__main__':

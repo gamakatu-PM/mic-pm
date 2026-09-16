@@ -4,6 +4,56 @@
 import os, sys, re, zipfile, shutil, datetime, glob
 from common import *
 
+RAW = 'https://raw.githubusercontent.com/gamakatu-PM/mic-pm/claude/cowork-suggestions-bohllt/'
+VER_FILE = '배포4/2_KM도구/코드/km_tools/common.py'
+LATEST = 'KM_latest.zip'
+
+def _raw_url(rel):
+    import urllib.parse
+    base = RAW
+    try:
+        import configparser
+        c = configparser.ConfigParser(); c.read(INI, encoding='utf-8')
+        if c.has_option('갱신', 'url') and c.get('갱신', 'url').strip():
+            base = c.get('갱신', 'url').strip().rstrip('/') + '/'
+    except Exception:
+        pass
+    return base + urllib.parse.quote(rel)
+
+def remote_version(timeout=8):
+    """GitHub 정본의 판 번호. 인터넷이 막히면 None"""
+    try:
+        import urllib.request
+        with urllib.request.urlopen(_raw_url(VER_FILE), timeout=timeout) as r:
+            t = r.read(4000).decode('utf-8', 'ignore')
+        m = re.search(r"VERSION\s*=\s*'v(\d+)'", t)
+        return int(m.group(1)) if m else None
+    except Exception:
+        return None
+
+def fetch_latest(quiet=True):
+    """정본이 지금 판보다 새면 KM_latest.zip 을 다운로드\KM 에 받아 그 경로를 준다. 아니면 None"""
+    cur = int(re.sub(r'\D', '', VERSION) or 0)
+    rv = remote_version()
+    if not rv or rv <= cur:
+        return None
+    try:
+        import urllib.request
+        home = os.path.expanduser('~')
+        d = os.path.join(home, 'Downloads', 'KM'); os.makedirs(d, exist_ok=True)
+        dst = os.path.join(d, 'KM_v%d_받아두고_98번.zip' % rv)
+        if os.path.exists(dst) and zip_version(dst) == rv:
+            return dst
+        if not quiet:
+            print('정본에 새 판 v%d 이 있습니다. 받는 중...' % rv)
+        urllib.request.urlretrieve(_raw_url(LATEST), dst)
+        with zipfile.ZipFile(dst) as z:
+            if not tools_in_zip(z):
+                os.remove(dst); return None
+        return dst
+    except Exception:
+        return None
+
 def search_dirs():
     """zip 을 찾아볼 곳들"""
     home = os.path.expanduser('~')

@@ -52,6 +52,9 @@ def main():
         return
     ensure()
     sys.path.insert(0, TOOLS)
+    if '--auto' in sys.argv:
+        import common; common.AUTO = True
+        import t36_today; t36_today.run(quiet=True); return
     import runpy
     try:
         runpy.run_path(os.path.join(TOOLS, 'menu.py'), run_name='__main__')
