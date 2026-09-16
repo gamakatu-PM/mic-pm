@@ -4,6 +4,7 @@
 import os, sys, importlib, traceback
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import title, pause, cfg, open_folder, VERSION, VERSION_DATE
+import importlib as _il
 
 GROUPS = [
  ('매일 아침', [
@@ -59,7 +60,7 @@ def main():
                 i += 1
                 print(' %2d. %s' % (i, name))
         print('')
-        print('  0. 닫기     99. 저장 폴더 열기')
+        print('  0. 닫기     98. 업데이트(받은 zip 적용)     99. 저장 폴더 열기')
         try:
             s = input('\n번호를 누르고 엔터 > ').strip()
         except EOFError:
@@ -68,6 +69,14 @@ def main():
             return
         if s == '99':
             open_folder(cfg('out')); continue
+        if s == '98':
+            os.system('cls' if os.name == 'nt' else 'clear')
+            try:
+                m = _il.import_module('t98_update'); _il.reload(m); m.run()
+            except Exception:
+                print('[오류] 아래 글자를 클로드에게 보여주십시오.')
+                traceback.print_exc()
+            pause(); continue
         if not s.isdigit() or not (1 <= int(s) <= len(items)):
             continue
         mod = items[int(s) - 1][1]
