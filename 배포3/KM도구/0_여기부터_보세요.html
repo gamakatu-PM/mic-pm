@@ -8,6 +8,8 @@ h2{font-size:16px;margin:24px 0 8px;border-bottom:2px solid #e5e5e5;padding-bott
 .set h3{margin:0 0 2px;font-size:17px}
 .set .why{color:#6b7280;font-size:12.5px;margin-bottom:10px}
 .row{display:flex;gap:10px;flex-wrap:wrap}
+div.btn{flex:1 1 220px;background:#f6f8fa;border:1px solid #dfe3e8;border-radius:6px;padding:10px 12px;font-size:13.5px}
+div.btn b{display:block;font-size:14px;margin-bottom:2px}div.btn span{color:#6b7280;font-size:12px}
 a.btn{flex:1 1 220px;display:block;background:#f6f8fa;border:1px solid #dfe3e8;border-radius:6px;
  padding:10px 12px;text-decoration:none;color:#111;font-size:13.5px}
 a.btn:hover{background:#eaf1f8}
@@ -31,9 +33,9 @@ code{background:#eef1f4;padding:1px 5px;border-radius:3px;font-size:12px}
   <h3>① 회의록 만들기</h3>
   <div class="why">PLAUD v10 결과를 메모장에 붙여 넣고 시작.bat 을 누르면 → 워드 회의록 + 업무판이 나옵니다</div>
   <div class="row">
-    <a class="btn run" href="_현장비서/1.여기에_v10결과_넣기/"><b>1. 여기에 넣고</b><span>_현장비서\1.여기에_v10결과_넣기</span></a>
-    <a class="btn run" href="_현장비서/시작.bat"><b>2. 이걸 누르면</b><span>_현장비서\시작.bat</span></a>
-    <a class="btn out" href="plaud/26년/"><b>3. 여기에 나옵니다</b><span>plaud\26년 (현장별 폴더)</span></a>
+    <div class="btn run"><b>1. 여기에 넣고</b><span>_현장비서\1.여기에_v10결과_넣기</span></div>
+    <div class="btn run"><b>2. 이걸 누르면</b><span>_현장비서\시작.bat</span></div>
+    <div class="btn out"><b>3. 여기에 나옵니다</b><span>plaud\26년 (현장별 폴더)</span></div>
   </div>
 </div>
 
@@ -41,8 +43,8 @@ code{background:#eef1f4;padding:1px 5px;border-radius:3px;font-size:12px}
   <h3>② 도구모음 — 나머지 전부 (25종)</h3>
   <div class="why">아침브리핑 · 납기역산 · 수금 · 견적서 · 사진대지 · 이미지PPT · 자가진단 …</div>
   <div class="row">
-    <a class="btn run" href="2_도구모음_25종/도구모음.bat"><b>1. 이걸 누르고 번호 선택</b><span>2_도구모음_25종\도구모음.bat</span></a>
-    <a class="btn out" href="_도구결과/"><b>2. 여기에 나옵니다</b><span>_도구결과\{도구}\{날짜}</span></a>
+    <a class="btn run" href="시작.py"><b>1. 시작.py 를 누르고 번호 선택</b><span>KM도구\시작.py — 이것 하나면 됩니다</span></a>
+    <div class="btn out"><b>2. 여기에 나옵니다</b><span>_도구결과\{도구}\{날짜}</span></div>
     <a class="btn" href="2_도구모음_25종/사용법.txt"><b>사용법</b><span>번호 25개 목록</span></a>
     <a class="btn" href="2_도구모음_25종/_실행이_막힐때.txt"><b>실행이 막히면</b><span>스마트 앱 컨트롤 차단 풀기 4단계</span></a>
   </div>
@@ -52,15 +54,19 @@ code{background:#eef1f4;padding:1px 5px;border-radius:3px;font-size:12px}
 <div class="row">
   <a class="btn talk" href="3_인수인계함/0_지금_봐야_할_것.html"><b>③ 인수인계함</b>
     <span>제가 여쭙는 것이 쌓입니다. 창이 바뀌어도 여기만</span></a>
-  <a class="btn mat" href="_원틀/"><b>④ 원틀</b><span>회사 표준 서식. 새로 그리지 않고 꺼내 씁니다</span></a>
-  <a class="btn old" href="./"><b>⑨ 정리대상</b><span>_삭제요망_* 로 이름 붙은 것들</span></a>
+  <div class="btn mat"><b>④ 원틀</b><span>_원틀 폴더 — 회사 표준 서식</span></div>
+  <div class="btn old"><b>⑨ 정리대상</b><span>_삭제요망_* 로 이름 붙은 것들</span></div>
 </div>
+
+<h2>쓰는 법 — 한 줄</h2>
+<div class="n"><b>KM도구 폴더의 「시작.py」 를 더블클릭하십시오.</b> 그게 전부입니다.
+처음 한 번은 부품을 알아서 받느라 1~2분 걸리고, 그 다음부터는 바로 메뉴가 뜹니다.</div>
 
 <h2>실행이 막히면 (스마트 앱 컨트롤)</h2>
 <div class="n">
 인터넷에서 받은 파일이라 윈도우가 딱지를 붙여 막는 것입니다. 파일이 잘못된 게 아닙니다.<br>
-<b>먼저 zip 을 우클릭 → 속성 → 「차단 해제」 체크 → 다시 압축 풀기</b> 를 해보십시오. 대개 이걸로 풀립니다.<br>
-그래도 막히면 bat 대신 <code>2_도구모음_25종\1_설치.py</code> · <code>2_시작.py</code> 를 더블클릭하십시오.<br>
+<b>먼저 zip 을 우클릭 → 속성 → 「차단 해제」 체크 → 다시 압축 풀기</b> 를 해보십시오.<br>
+그래도 막히면 폴더 주소창에 <code>cmd</code> 치고 엔터, <code>python 시작.py</code> 를 붙여넣으십시오.<br>
 <b>스마트 앱 컨트롤 자체는 끄지 마십시오</b> — 한 번 끄면 윈도우를 다시 깔기 전엔 못 켭니다.
 </div>
 
