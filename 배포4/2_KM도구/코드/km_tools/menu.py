@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""KM 현장비서 도구모음 - 번호 메뉴 (35종 + 엔터=오늘 한 방에).
+"""KM 현장비서 도구모음 - 번호 메뉴 (36종 + 엔터=오늘 한 방에).
 기존 시작.bat(PLAUD 회의록)은 건드리지 않습니다. 이것은 그 옆에 붙는 별도 런처입니다."""
 import os, sys, importlib, traceback
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -52,6 +52,8 @@ GROUPS = [
    ('현황판             모든 결과를 한 장으로 (클로드도 읽음)', 't33_dashboard'),
    ('캘린더 내보내기    납기·결정·도면접수를 .ics 로', 't34_calendar'),
    ('아침 메일          현황판을 05:00 에 내 메일로', 't35_morningmail')]),
+ ('검수', [
+   ('검수               만든 엑셀이 정답본대로 됐나 (간단→제대로→고칠까요?)', 't37_check')]),
 ]
 
 def flat():
