@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-VERSION = 'v11'
+VERSION = 'v12'
 VERSION_DATE = '2026-09-16'
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -300,8 +300,9 @@ def zip_replace(src, dst, mapping):
     os.replace(tmp, dst)
     return hit
 
-def write_html(path, title_text, blocks):
-    """블록 = [(제목, [(색, 줄)])]. 색 : red/yellow/green/gray"""
+def write_html(path, title_text, blocks, files=()):
+    """블록 = [(제목, [(색, 줄)])]. 색 : red/yellow/green/gray
+    files = 같이 만든 파일 경로들. 눌러서 바로 열 수 있게 링크로 붙는다."""
     C = {'red': '#C0392B', 'yellow': '#C77B2B', 'green': '#2E7D5B', 'gray': '#8E99A4',
          'blue': '#2A6099', 'purple': '#6B4FA8'}
     h = ['<!doctype html><meta charset="utf-8"><title>%s</title>' % title_text,
@@ -310,6 +311,15 @@ def write_html(path, title_text, blocks):
          '.r{display:flex;gap:8px;padding:7px 10px;border-left:5px solid #ccc;background:#fafafa;margin:4px 0;font-size:14px;line-height:1.45}',
          '.n{color:#8E99A4;font-size:12px;margin:2px 0 10px}</style>',
          '<h1>%s</h1><div class="n">%s 생성 · KM 현장비서</div>' % (title_text, today().isoformat())]
+    if files:
+        h.append('<h2>만든 파일 (누르면 열립니다)</h2>')
+        for f in files:
+            h.append('<div class="r" style="border-color:#2A6099">'
+                     '<a href="%s" style="color:#2A6099">%s</a></div>'
+                     % (file_url(f), os.path.basename(f)))
+        h.append('<div class="r" style="border-color:#8E99A4">'
+                 '<a href="%s" style="color:#8E99A4">폴더 열기</a></div>'
+                 % file_url(os.path.dirname(os.path.abspath(path))))
     for name, rows in blocks:
         h.append('<h2>%s</h2>' % name)
         if not rows:
@@ -317,6 +327,13 @@ def write_html(path, title_text, blocks):
         for color, line in rows:
             h.append('<div class="r" style="border-color:%s">%s</div>' % (C.get(color, '#ccc'), line))
     io.open(path, 'w', encoding='utf-8').write('\n'.join(h))
+    try:
+        import shutil
+        latest = os.path.join(cfg('out'), '_최신결과.html')
+        os.makedirs(os.path.dirname(latest), exist_ok=True)
+        shutil.copy(path, latest)
+    except Exception:
+        pass
     return path
 
 def log(tool, msg):
@@ -345,6 +362,22 @@ def ensure_pkg(mod, pkg):
         print('  [못 받음] 인터넷이 막혀 있을 수 있습니다.')
         print('  직접 받기 : 명령 프롬프트에서  python -m pip install %s' % pkg)
         return None
+
+def file_url(p):
+    """HTML 안에서 눌러 열 수 있는 주소"""
+    import urllib.parse
+    return 'file:///' + urllib.parse.quote(os.path.abspath(p).replace('\\', '/'), safe='/:')
+
+def open_file(p):
+    """만든 파일을 바로 띄운다. 폴더를 뒤지지 않게."""
+    try:
+        if os.name == 'nt':
+            os.startfile(p)
+        else:
+            os.system('xdg-open "%s" 2>/dev/null &' % p)
+        return True
+    except Exception:
+        return False
 
 def open_folder(p):
     try:

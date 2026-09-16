@@ -588,6 +588,7 @@ def run():
         need_ai.append(('red', '스캔 PDF %d개 - 글자가 없어 못 셉니다. 클로드에게 주십시오.' % len(scans)))
     if dwg and not oda_exe():
         need_ai.append(('yellow', 'DWG %d개 - 캐드에서 「다른 이름으로 저장 -> DXF」로 주시면 정확히 셉니다.' % len(dwg)))
+    made = [f1, f2, f3]
     f4 = write_html(os.path.join(od, base + '.html'), '%s 도면 수량' % site,
                     [('뽑은 수량', hint),
                      ('이름을 쪼개서 맞춘 것 (확인 필요)',
@@ -596,17 +597,19 @@ def run():
                      ('사전에 없는 기호(클로드에게 보여주실 것)',
                       [('yellow', '%s %s : %s개' % (a, b, won(c))) for a, b, c in unk_rows[:30]]),
                      ('사람/클로드가 봐야 하는 것', need_ai),
-                     ('읽은 파일', [('gray', '%s [%s] %s' % (a, b, e)) for a, b, c, d2, e in per_file])])
+                     ('읽은 파일', [('gray', '%s [%s] %s' % (a, b, e)) for a, b, c, d2, e in per_file])],
+                    files=made)
 
     print('')
-    print('파일을 만들었습니다.')
+    print('파일을 만들었습니다. 결과 화면을 지금 띄웁니다.')
     for f in (f1, f2, f3, f4):
         print('  %s' % f)
     print('')
     print('* 수량은 제가 정하지 않습니다. 블록기준/글자기준을 나란히 두었으니 확인하고 쓰십시오.')
     print('* 사전(%s)을 고치시면 다음부터 그 기준으로 셉니다.' % DICT_NAME)
     log(TOOL, '%s 파일%d 품목%d 모르는기호%d' % (site, len(files), len(rows), len(unk_rows)))
-    open_folder(od)
+    if not open_file(f4):
+        open_folder(od)
 
 if __name__ == '__main__':
     run(); pause()

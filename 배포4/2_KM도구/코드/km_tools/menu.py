@@ -3,7 +3,7 @@
 기존 시작.bat(PLAUD 회의록)은 건드리지 않습니다. 이것은 그 옆에 붙는 별도 런처입니다."""
 import os, sys, importlib, traceback
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import title, pause, cfg, open_folder, VERSION, VERSION_DATE
+from common import title, pause, cfg, open_folder, open_file, VERSION, VERSION_DATE
 import importlib as _il
 
 GROUPS = [
@@ -62,7 +62,7 @@ def main():
                 i += 1
                 print(' %2d. %s' % (i, name))
         print('')
-        print('  0. 닫기     98. 업데이트(받은 zip 적용)     99. 저장 폴더 열기')
+        print('  0. 닫기   97. 방금 만든 결과 열기   98. 업데이트(받은 zip)   99. 저장 폴더 열기')
         try:
             s = input('\n번호를 누르고 엔터 > ').strip()
         except EOFError:
@@ -71,6 +71,15 @@ def main():
             return
         if s == '99':
             open_folder(cfg('out')); continue
+        if s == '97':
+            import os.path as _p
+            latest = _p.join(cfg('out'), '_최신결과.html')
+            if _p.exists(latest) and open_file(latest):
+                continue
+            print('')
+            print('[아직 없습니다] 도구를 한 번 돌리시면 여기서 바로 열 수 있습니다.')
+            print('  자리 : %s' % latest)
+            pause(); continue
         if s == '98':
             os.system('cls' if os.name == 'nt' else 'clear')
             try:
