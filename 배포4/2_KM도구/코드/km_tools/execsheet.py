@@ -105,17 +105,17 @@ def build(site, out_path, qty, cb_qty, cb_rows, mult, unknown, meta):
     put(ws, r, 3, 'CB 대수 합. 기구물 수량과 일치해야 함', sC); R['rooms'] = r; r += 2
     put(ws, r, 1, '■ 미확인 실행단가 — 숫자를 넣으면 전 시트가 자동으로 바뀝니다', sH, fill=None if sH else '2A6099', bold=True, white=True); ws.merge_cells('A%d:C%d' % (r, r)); r += 1
     R['unk'] = {}
-    unknown = [tuple(u) + ('',) * (4 - len(u)) for u in unknown]
-    for what, why, cand, grp in [u for u in unknown if u[3] != '도어락']:
-        put(ws, r, 1, what, sI); put(ws, r, 2, None, sB, fill=YEL, num='#,##0'); put(ws, r, 3, '%s %s' % (why, ('— 후보: ' + cand) if cand else ''), sC); R['unk'][what] = r; r += 1
+    unknown = [tuple(list(u)[:4] + [''] * (4 - len(u)) + [u[4] if len(u) > 4 else None]) for u in unknown]
+    for what, why, cand, grp, pre in [u for u in unknown if u[3] != '도어락']:
+        put(ws, r, 1, what, sI); put(ws, r, 2, pre, sB, fill=YEL, num='#,##0'); put(ws, r, 3, '%s %s' % (why, ('— ' + cand) if cand else ''), sC); R['unk'][what] = r; r += 1
     R['unk_first'] = min(R['unk'].values()) if R['unk'] else r; R['unk_last'] = max(R['unk'].values()) if R['unk'] else r
     doors = [u for u in unknown if u[3] == '도어락']
     R['door_first'] = R['door_last'] = None
     if doors:
         r += 1
         put(ws, r, 1, '■ 도어락 파트 — 직접단가 품목. 실행가(원가)가 전 현장 공통으로 미확인', sH, fill=None if sH else '2A6099', bold=True, white=True); ws.merge_cells('A%d:C%d' % (r, r)); r += 1
-        for what, why, cand, grp in doors:
-            put(ws, r, 1, what, sI); put(ws, r, 2, None, sB, fill=YEL, num='#,##0'); put(ws, r, 3, '%s %s' % (why, ('— 후보: ' + cand) if cand else ''), sC); R['unk'][what] = r
+        for what, why, cand, grp, pre in doors:
+            put(ws, r, 1, what, sI); put(ws, r, 2, pre, sB, fill=YEL, num='#,##0'); put(ws, r, 3, '%s %s' % (why, ('— 후보: ' + cand) if cand else ''), sC); R['unk'][what] = r
             R['door_first'] = R['door_first'] or r; R['door_last'] = r; r += 1
     for col, w in (('A', 46), ('B', 14), ('C', 95)): ws.column_dimensions[col].width = w
 

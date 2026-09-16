@@ -257,6 +257,8 @@ def find_price(name, pb, alias, series=''):
     if len(hits) == 1:
         return hits[0][0], hits[0][1], '이름일치', []
 
+    def same(h):
+        return len({c for m, c in h if c not in ('', None)}) == 1 and all(c not in ('', None) for m, c in h)
     # 2) 별칭표
     hits = []
     for a, b in alias:
@@ -267,6 +269,7 @@ def find_price(name, pb, alias, series=''):
     if len(hits) == 1:
         return hits[0][0], hits[0][1], '별칭', []
     if len(hits) > 1:
+        if same(hits): return hits[0][0], hits[0][1], '별칭(후보 %d개 값 동일)' % len(hits), []
         return None, None, '애매(후보 %d)' % len(hits), hits
 
     # 3) 한쪽이 다른 쪽에 들어 있다
@@ -275,6 +278,7 @@ def find_price(name, pb, alias, series=''):
     if len(hits) == 1:
         return hits[0][0], hits[0][1], '이름포함', []
     if len(hits) > 1:
+        if same(hits): return hits[0][0], hits[0][1], '이름포함(후보 %d개 값 동일)' % len(hits), []
         return None, None, '애매(후보 %d)' % len(hits), hits
 
     # 4) 형번 코드가 같다 (SA0201B, TL-30SP5P 같은 것)
@@ -284,7 +288,14 @@ def find_price(name, pb, alias, series=''):
         if len(hits) == 1:
             return hits[0][0], hits[0][1], '형번일치', []
         if len(hits) > 1:
+            if same(hits): return hits[0][0], hits[0][1], '형번(후보 %d개 값 동일)' % len(hits), []
             return None, None, '애매(후보 %d)' % len(hits), hits
+    # 5) 같은 계열(첫 낱말이 같음)의 값이 전부 같으면 그 값 (퓨즈 1A = 퓨즈 0.5A/5A/10A 전부 50 같은 경우)
+    tok = re.split(r'[\s(\-/]', str(name).strip())[0]
+    if len(norm(tok)) >= 2:
+        hits = _uniq([(m, c) for g, m, c in pb if norm(m).startswith(norm(tok))])
+        if len(hits) >= 2 and same(hits):      # 1개뿐이면 계열이 아니라 그냥 앞글자 같은 것 (BSP 온도형에 전등형 단가 붙던 사고 방지)
+            return hits[0][0], hits[0][1], '같은 계열 %d개 값 동일' % len(hits), []
 
     return None, None, '단가없음', []
 
@@ -338,8 +349,38 @@ def read_qty(path):
 CENTRAL = ('OPERATION', 'PC', 'FIP', 'FLOOR INDICATOR', 'DCU', 'DATA CONV', 'HDU', 'HAND DATA', 'SOFTWARE', 'MONITOR', 'CARD READER', 'DTC', 'DATA TRANSMIT', 'MAIN SYSTEM', 'C.I.P', 'CIP')
 LABOR = (('약전 결선 (선로 체크 + CB내 통신/UTP)', ('약전',)), ('CB 속판 취부, 뺵커버 / 기구물 설치', ('취부', '설치비')), ('시운전비 MK-TSET', ('시운전',)))
 
+def precedent():
+    """선례 값 : 정답본 실행산출(연합기숙사 v5)에 적힌 숫자. 단가장에 없을 때 「선례」 로 채우고 노란칸은 유지한다(확정은 프로님).
+    -> (dict 이름->값, 정답본 파일명)"""
+    out = {}
+    try:
+        import t37_check, openpyxl
+        e = next((x for x in t37_check.registry() if x['kind'] == '실행산출'), None)
+        g = t37_check.find_golden(e) if e else None
+        if not g:
+            return out, ''
+        wb = openpyxl.load_workbook(g, data_only=True)
+        for sname, kc, vc in (('1.입력판', 1, 2), ('3.견적↔실행 대조', 2, 6), ('2.CB 실행', 1, 5)):
+            ws = next((w for w in wb.worksheets if re.sub(r'\s', '', w.title) == re.sub(r'\s', '', sname)), None)
+            if not ws: continue
+            for r in ws.iter_rows(values_only=True):
+                k, v = (r[kc - 1] if len(r) >= kc else None), (r[vc - 1] if len(r) >= vc else None)
+                if isinstance(k, str) and isinstance(v, (int, float)) and v >= 1 and k.strip() not in out:   # 비율(0.3 등)은 선례가 아니다
+                    out[k.strip()] = v
+        return out, os.path.basename(g)
+    except Exception:
+        return out, ''
+
+def _prec(pre, keys):
+    """선례 사전에서 keys 낱말이 든 줄. 「비율」「배수」 줄은 값이 아니므로 건너뛴다."""
+    for k, v in pre.items():
+        if any(x in k for x in keys) and not any(x in k for x in ('비율', '배수')):
+            return k, v
+    return None
+
 def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, cbq, qty_name):
     import execsheet
+    pre, pre_name = precedent()
     # 수량표 -> 구역 나누기
     q_rows, cb_types = [], []
     for (nm, q), r in zip(qty, rows):
@@ -360,8 +401,12 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
         if hit:
             q_rows.append((lab, hit[0], 'EA', rooms, int(hit[1]), '단가장 %s' % hit[0], '노무'))
         else:
-            q_rows.append((lab, '', 'EA', rooms, None, '[확인] 노무 3종 실행가 미확인 — 1.입력판', '노무'))
-            unknown.append((lab, '노무 3종 실행가 미확인 (단가장 직접단가 시트에 없음)', '%s × 단가 — 견적 스킬 표준 약전 12만 / 취부 13만 / 시운전 5만' % rooms))
+            pr = _prec(pre, keys)
+            q_rows.append((lab, '', 'EA', rooms, None, '[확인] 노무 3종 실행가 — 1.입력판 (선례 %s)' % (pre_name or '없음'), '노무'))
+            if pr:
+                unknown.append((lab, '단가장 직접단가 시트에 없음 → 선례 %s 「%s」 %s 를 넣어 둠 (확정하시면 그대로)' % (pre_name, pr[0][:24], won(pr[1])), '%s × 단가' % rooms, '', pr[1]))
+            else:
+                unknown.append((lab, '노무 3종 실행가 미확인 (단가장·선례 모두 없음)', '%s × 단가 — 견적 스킬 표준 약전 12만 / 취부 13만 / 시운전 5만' % rooms))
     # CB 내부
     cbr = []
     for g, mod, per, cost, amt, why in cb_rows_priced:
@@ -370,7 +415,12 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
             unknown.append((mod, '단가장에 없는 모듈', ''))
     # 외함
     enc = next(((m, c) for g, m, c in pb if '외함' in m and '노출' in m), None)
-    unknown.insert(0, ('CB 외함 세트 실행가 (1대당)', '규격 미정', ('%s대 × 외함가 — 후보: ' % rooms) + ' / '.join('%s %s' % (m, won(c)) for g, m, c in pb if '외함' in m)[:120]))
+    pr = _prec(pre, ('CB 외함',))
+    if pr:
+        unknown.insert(0, ('CB 외함 세트 실행가 (1대당)', '규격 미정 → 선례 %s 「%s」 %s 를 넣어 둠 (앵커 규격 확정 시 교체)' % (pre_name, pr[0][:24], won(pr[1])),
+                           ('%s대 × 외함가 — 단가장 후보: ' % rooms) + ' / '.join('%s %s' % (m, won(c)) for g, m, c in pb if '외함' in m)[:120], '', pr[1]))
+    else:
+        unknown.insert(0, ('CB 외함 세트 실행가 (1대당)', '규격 미정', ('%s대 × 외함가 — 후보: ' % rooms) + ' / '.join('%s %s' % (m, won(c)) for g, m, c in pb if '외함' in m)[:120]))
     # 단가 없는 기구물
     for m in miss:
         if str(m[0]).startswith('CB내부)') or 'CONTROL BOX' in str(m[0]).upper() or str(m[0]).upper().startswith('CB'):
@@ -382,7 +432,7 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
                         'CB 내부 구성은 CB구성.csv 기준입니다. 현장 배선도로 확정될 때까지 잠정치입니다.',
                         '견적서가 없으면 견적단가 = 실행 × 견적배수 잠정입니다. 발행 후 3.대조 H열을 발행단가로 바꾸십시오.',
                         '3.대조 L~O(두 번째 견적 블록)의 뜻을 확인 못 해 첫 블록(H)과 같은 값으로 두었습니다. 정답본 v5 는 CB 480,000 / 450,000 두 값입니다.',
-                        '노란칸(1.입력판)은 단가장에 없어 비운 것입니다. 추정치를 넣지 않았습니다.']}
+                        '노란칸(1.입력판) : 단가장에 없는 것은 선례(%s) 값을 넣어 두었고, 선례에도 없는 것만 비웠습니다. 추정치는 넣지 않았습니다.' % (pre_name or '없음')]}
     out = os.path.join(od, '%s_실행산출_v1.xlsx' % tag)
     execsheet.build(site, out, q_rows, cb_types, cbr, mult, unknown, meta)
     print('')
