@@ -141,5 +141,10 @@ def build(site, out_path, qty, cb_types, cb_rows, mult, meta):
     g['F14'] = "='내역서 '!F%d" % TOT; g['G14'] = "='내역서 '!H%d" % TOT; g['H14'] = "='내역서 '!K%d" % TOT; g['H17'] = '=H14'
     g['B14'] = '객실관리 시스템'; g['D14'] = '식'; g['E14'] = 1; g['A14'] = 1
     wb.active = 0
+    try:
+        from openpyxl.workbook.properties import CalcProperties
+        wb.calculation = CalcProperties(fullCalcOnLoad=True)
+    except Exception:
+        pass
     wb.save(out_path)
     return out_path, TOT

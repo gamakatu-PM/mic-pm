@@ -404,13 +404,14 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
             pr = _prec(pre, keys)
             q_rows.append((lab, '', 'EA', rooms, None, '[확인] 노무 3종 실행가 — 1.입력판 (선례 %s)' % (pre_name or '없음'), '노무'))
             if pr:
+                q_rows[-1] = (lab, '', 'EA', rooms, None, '[확인] 선례 %s %s — 1.입력판' % (pre_name[:20], won(pr[1])), '노무')
                 unknown.append((lab, '단가장 직접단가 시트에 없음 → 선례 %s 「%s」 %s 를 넣어 둠 (확정하시면 그대로)' % (pre_name, pr[0][:24], won(pr[1])), '%s × 단가' % rooms, '', pr[1]))
             else:
                 unknown.append((lab, '노무 3종 실행가 미확인 (단가장·선례 모두 없음)', '%s × 단가 — 견적 스킬 표준 약전 12만 / 취부 13만 / 시운전 5만' % rooms))
     # CB 내부
     cbr = []
     for g, mod, per, cost, amt, why in cb_rows_priced:
-        cbr.append((mod, g, [per] * len(cb_types), int(cost) if cost != '' else None, ('단가장 %s' % why) if cost != '' else '[확인] 단가장에 없음 — 1.입력판'))
+        cbr.append((mod, g, [per] * len(cb_types), int(cost) if cost != '' else None, (why if str(why).startswith('선례') else '단가장 %s' % why) if cost != '' else '[확인] 단가장에 없음 — 1.입력판'))
         if cost == '':
             unknown.append((mod, '단가장에 없는 모듈', ''))
     # 외함
@@ -427,9 +428,12 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
             continue           # CB 본체는 2.CB 실행 시트가 계산한다
         nm0 = str(m[0]); grp = '도어락' if ('DOOR' in nm0.upper() or '도어락' in nm0) else ''
         unknown.append((nm0, m[2] if len(m) > 2 else '단가없음', m[3] if len(m) > 3 else '', grp))
+    prefill = {u[0]: u[4] for u in unknown if len(u) > 4 and u[4]}
     meta = {'도면': qty_name, '견적서': None, '단가장': os.path.basename(_find_pb_file() or ''), 'CB출처': C_CBC_NOTE(), '객실수': rooms,
+            '외함실행가': prefill.get('CB 외함 세트 실행가 (1대당)'), '외함규격': '[규격확인] 선례 연합기숙사 400*800*90 매입',
+            '노무선례': {u[0]: u[4] for u in unknown if len(u) > 4 and u[4] and u[0] in [l for l, k in LABOR]},
             '자가신고': ['이 파일은 28번 코드가 정답본 틀에 값만 채운 것입니다. 사람 손으로 만든 칸이 없습니다.',
-                        'CB 내부 구성은 CB구성.csv 기준입니다. 현장 배선도로 확정될 때까지 잠정치입니다.',
+                        'CB 내부 구성은 정답본(연합기숙사 v5) 2.CB 실행 그대로입니다(CB구성.csv). 이 현장 배선도로 확정될 때까지 잠정치입니다.',
                         '견적서가 없으면 견적단가 = 실행 × 견적배수 잠정입니다. 발행 후 3.대조 H열을 발행단가로 바꾸십시오.',
                         '3.대조 L~O(두 번째 견적 블록)의 뜻을 확인 못 해 첫 블록(H)과 같은 값으로 두었습니다. 정답본 v5 는 CB 480,000 / 450,000 두 값입니다.',
                         '노란칸(1.입력판) : 단가장에 없는 것은 선례(%s) 값을 넣어 두었고, 선례에도 없는 것만 비웠습니다. 추정치는 넣지 않았습니다.' % (pre_name or '없음')]}
@@ -443,7 +447,8 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
         mat = sum((c or 0) * p for m, t, per, c, memo in cbr for p in [per[0]])
         body = int(round(mat * (1 + float(mult.get('조립비율') or 0.3)))) if mat else None
         qout = os.path.join(od, '%s_견적서_v1.xlsx' % tag)
-        quotesheet.build(site, qout, q_rows, cb_types, cbr, mult,
+        q_rows2 = [(nm, sp, un, q, (meta['노무선례'].get(nm) if (c is None and g == '노무') else c), mm, g) for nm, sp, un, q, c, mm, g in q_rows]
+        quotesheet.build(site, qout, q_rows2, cb_types, cbr, mult,
                          dict(meta, 공사명='%s 객실관리 시스템' % site, cb_body=[body] * len(cb_types)))
         print('견적서(고객용)   : %s' % qout)
         try:
@@ -465,8 +470,58 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
         print('  (37번 검수 못 돌림: %s)' % e)
     return out
 
+def cb_from_golden():
+    """정답본 실행산출(연합기숙사 v5) 「2.CB 실행」 의 CB 1대당 내부 구성 -> [[구분, 모듈명, 1대당수량, 선례실행가, 비고], ...]
+    실행단가 칸이 '1.입력판'!B{n} 참조면 그 칸 값을 읽는다. 「▣」 소계 줄에서 멈춘다."""
+    out = []
+    try:
+        import t37_check, openpyxl
+        e = next((x for x in t37_check.registry() if x['kind'] == '실행산출'), None)
+        g = t37_check.find_golden(e) if e else None
+        if not g:
+            return out, ''
+        wb = openpyxl.load_workbook(g)
+        ws = next((w for w in wb.worksheets if re.sub(r'\s', '', w.title) == '2.CB실행'), None)
+        wi = next((w for w in wb.worksheets if re.sub(r'\s', '', w.title) == '1.입력판'), None)
+        if not ws:
+            return out, ''
+        hr = next((r for r in range(1, 8) if str(ws.cell(r, 1).value or '').startswith('품목명')), 3)
+        for r in range(hr + 1, (ws.max_row or 0) + 1):
+            a = ws.cell(r, 1).value
+            if a is None: continue
+            if str(a).strip().startswith(('▣', '■', '◆', '▷')): break
+            per = ws.cell(r, 3).value
+            cost = ws.cell(r, 5).value
+            if isinstance(cost, str) and cost.startswith('=') and wi is not None:
+                m = re.search(r"입력판'?!\$?([A-Z]+)\$?(\d+)", cost)
+                cost = wi['%s%s' % (m.group(1), m.group(2))].value if m else None
+            if not isinstance(cost, (int, float)): cost = None
+            out.append([str(ws.cell(r, 2).value or '')[:40], str(a).strip(), int(per) if isinstance(per, (int, float)) else 1,
+                        int(cost) if cost else '', str(ws.cell(r, 8).value or '')[:80]])
+        return out, os.path.basename(g)
+    except Exception:
+        return out, ''
+
+def seed_cbc():
+    """CB구성.csv 가 없으면 정답본(연합기숙사 v5)의 CB 구성으로 만든다. 정답본도 없으면 옛 기본값."""
+    p = os.path.join(root(), CBC)
+    if os.path.exists(p):
+        return p
+    rows, g = cb_from_golden()
+    if rows:
+        return seed(CBC, [['# CB 1대당 내부 모듈. 현장 배선도가 다르면 수량만 고치십시오.', '', '', '', ''],
+                          ['# 출처 : 정답본 %s 「2.CB 실행」 (프로님 기준). 선례실행가는 단가장에 없을 때만 쓴다' % g, '', '', '', ''],
+                          ['구분', '모듈명(형번)', 'CB1대당수량', '선례실행가', '비고']] + rows)
+    return seed(CBC, CBC_DEFAULT)
+
 def C_CBC_NOTE():
-    return 'CB구성.csv (광희동1가 배선도 판독분 기본)'
+    try:
+        for line in read_text(os.path.join(root(), CBC)).splitlines():
+            if line.startswith('# 출처'):
+                return 'CB구성.csv (%s)' % line.split(':', 1)[1].strip().split('.')[0][:60]
+    except Exception:
+        pass
+    return 'CB구성.csv'
 
 # ---------------- 실행 ----------------
 
@@ -484,7 +539,7 @@ def rooms_of(site):
 def run(site_hint=None):
     title('28. 단가 붙이기   (수량표 + 단가장 -> 금액. 토큰 0)')
     rt = root()
-    seed(MULT, MULT_DEFAULT); seed(CBC, CBC_DEFAULT); seed(ALIAS_F, ALIAS_DEFAULT)
+    seed(MULT, MULT_DEFAULT); seed_cbc(); seed(ALIAS_F, ALIAS_DEFAULT)
     pb = load_pricebook()
     print('단가장 폴더 : %s' % rt)
     if not pb:
@@ -544,6 +599,8 @@ def run(site_hint=None):
             continue
         g, mod, per = r[0], r[1], int(num(r[2]))
         m2, cost, why, cands = find_price(mod, pb, alias, series)
+        if not cost and len(r) > 3 and num(r[3]):
+            cost, why = num(r[3]), '선례(정답본 CB 구성) %s' % (r[4][:30] if len(r) > 4 and r[4] else '')
         if cost:
             amt = int(round(per * cost)); cb_mat += amt
             cb_rows.append([g, mod, per, int(cost), amt, why])

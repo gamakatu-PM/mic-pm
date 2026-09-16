@@ -272,6 +272,16 @@ def quick(tp, gp):
                     continue
                 if cell.value in (None, '') and not is_yellow(cell) and any(isinstance(ws.cell(r, k).value, (int, float, str)) for k in (4, 5)):
                     finds.append(('이상', '노란칸', '%s!%s 단가 빈칸인데 노랑 아님 (%s)' % (ws.title, cell.coordinate, lab[:18])))
+    # 5-2 노란 빈칸(단가 미입력) 개수 — 남아 있으면 통과가 아니다
+    blanks = []
+    for ws in tw.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                if cell.value in (None, '') and is_yellow(cell):
+                    lab = str(ws.cell(cell.row, 1).value or ws.cell(cell.row, 2).value or '')[:24]
+                    blanks.append('%s!%s %s' % (ws.title, cell.coordinate, lab))
+    if blanks:
+        finds.append(('이상', '빈칸', '단가 미입력 노란칸 %d개 : %s' % (len(blanks), ' / '.join(blanks[:6]))))
     # 6 검산 셀
     has_chk = any(any('검산' in str(ws.cell(r, c).value or '') for c in (1, 2)) for ws in tw.worksheets for r in range(1, (ws.max_row or 0) + 1))
     g_chk = any(any('검산' in str(ws.cell(r, c).value or '') for c in (1, 2)) for ws in gw.worksheets for r in range(1, (ws.max_row or 0) + 1))

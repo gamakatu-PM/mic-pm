@@ -260,6 +260,11 @@ def build(site, out_path, qty, cb_qty, cb_rows, mult, unknown, meta):
         put(ws, r, 1, '· ' + t, S.get('note')); r += 1
     for i, w in enumerate([44, 18, 10, 14, 80], 1): ws.column_dimensions[L(i)].width = w
     wb.active = 0
+    try:
+        from openpyxl.workbook.properties import CalcProperties
+        wb.calculation = CalcProperties(fullCalcOnLoad=True)
+    except Exception:
+        pass
     wb.save(out_path)
     return out_path
 
