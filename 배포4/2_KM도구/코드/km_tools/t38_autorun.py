@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """38. 자동 실행 등록 - 프로님 손 0. 윈도우 작업 스케줄러에 「오늘 한 방에」 를 걸어 둔다.
-  · 로그온할 때 1번 + 2시간마다 1번, 조용히 돈다 (묻지 않음)
+  · 로그온할 때 1번 + 30분마다 1번, 조용히 돈다 (묻지 않음). 급하면 2_KM도구\KM_자동.py 더블클릭 = 그 자리에서 즉시
   · 정본(GitHub)에 새 판이 있으면 스스로 받아 갈아끼우고 다시 돈다  -> zip 받기·98번 손 없음
   · 받은함/현장 폴더에 새 도면이 있으면 27~30 을 돌리고 현황판을 띄운다 -> 시작.py·번호 누르는 손 없음
   · 새 도면이 없으면 아무것도 띄우지 않는다
@@ -10,7 +10,8 @@ from common import *
 
 TOOL = '자동실행'
 TASKS = (('KM_자동_로그온', ['/SC', 'ONLOGON', '/DELAY', '0002:00']),
-         ('KM_자동_2시간', ['/SC', 'HOURLY', '/MO', '2']))
+         ('KM_자동_30분', ['/SC', 'MINUTE', '/MO', '30']))
+OLD_TASKS = ('KM_자동_2시간',)
 
 def launcher_path():
     return os.path.join(os.path.dirname(os.path.dirname(HERE)), 'KM_자동.py')
@@ -49,6 +50,8 @@ def register():
     if not os.path.exists(py):
         py = sys.executable
     tr = '"%s" "%s"' % (py, lp)
+    for name in OLD_TASKS:
+        subprocess.run(['schtasks', '/Delete', '/F', '/TN', name], capture_output=True, text=True)
     ok = True
     for name, sched in TASKS:
         cmd = ['schtasks', '/Create', '/F', '/TN', name, '/TR', tr] + sched
@@ -68,12 +71,12 @@ def register():
 def unregister():
     if os.name != 'nt':
         return
-    for name, _ in TASKS:
+    for name in [n for n, _ in TASKS] + list(OLD_TASKS):
         subprocess.run(['schtasks', '/Delete', '/F', '/TN', name], capture_output=True, text=True)
     print('해제했습니다.'); log(TOOL, '해제')
 
 def run():
-    title('38. 자동 실행 등록   (로그온 때 + 2시간마다 「오늘 한 방에」 조용히. 손 0)')
+    title('38. 자동 실행 등록   (로그온 때 + 30분마다 「오늘 한 방에」 조용히. 손 0 / 급하면 KM_자동.py 더블클릭)')
     st = status()
     if st:
         for k, v in st.items():
