@@ -15,6 +15,7 @@ import os, re, csv, io as _io, collections
 from common import *
 
 TOOL = '단가붙이기'
+_QOUT = None
 PB = 'CB모듈_단가장.csv'
 MULT = '배수.csv'
 CBC = 'CB구성.csv'
@@ -384,6 +385,25 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
     execsheet.build(site, out, q_rows, cb_types, cbr, mult, unknown, meta)
     print('')
     print('실행산출 6시트 : %s' % out)
+    # 견적서(고객용) — 원가 없이, 견적단가 = 실행 × 견적배수
+    try:
+        import quotesheet
+        mat = sum((c or 0) * p for m, t, per, c, memo in cbr for p in [per[0]])
+        body = int(round(mat * (1 + float(mult.get('조립비율') or 0.3)))) if mat else None
+        qout = os.path.join(od, '%s_견적서_v1.xlsx' % tag)
+        quotesheet.build(site, qout, q_rows, cb_types, cbr, mult,
+                         dict(meta, 공사명='%s 객실관리 시스템' % site, cb_body=[body] * len(cb_types)))
+        print('견적서(고객용)   : %s' % qout)
+        try:
+            import t37_check
+            v2, f2, _ = t37_check.inspect(qout, ask_fix=False, quiet=True)
+            print('  37번 검수 : %s' % v2)
+        except Exception as e:
+            print('  (37번 검수 못 돌림: %s)' % e)
+        global _QOUT; _QOUT = qout
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        print('[견적서 못 만듦] %s' % e)
     # 곧바로 검수
     try:
         import t37_check
@@ -570,6 +590,8 @@ def run(site_hint=None):
                 ('gray', '수량표 : %s' % os.path.basename(qf))])]
     if xls:
         made.insert(0, xls)
+        if globals().get('_QOUT'):
+            made.insert(1, _QOUT)
     f9 = write_html(os.path.join(od, '%s_실행견적.html' % tag),
                     '%s 실행 / 견적' % site, blocks, files=made)
     print('')
