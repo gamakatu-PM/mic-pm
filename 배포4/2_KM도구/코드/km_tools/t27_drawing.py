@@ -348,17 +348,100 @@ def tally(blocks, toks, dic, ign=()):
 
 # ---------------- 실행 ----------------
 
+def guess_site(files, inbox):
+    """도면이 든 폴더 이름 또는 파일 이름에서 현장명을 짐작한다."""
+    for f in files:
+        d = os.path.basename(os.path.dirname(f))
+        if d and d not in (INBOX, '도면', '_도면') and not d.startswith('_'):
+            return d
+    b = os.path.splitext(os.path.basename(files[0]))[0] if files else ''
+    b = re.split(r'[_\-]', b)[0]
+    return b or '현장미정'
+
+def read_all(files):
+    """도면을 먼저 다 읽는다. 질문은 하지 않는다."""
+    blocks = collections.Counter()
+    toks = collections.Counter()
+    per_file, scans, unread = [], [], []
+    for f in files:
+        e = os.path.splitext(f)[1].lower()
+        nm = os.path.basename(f)
+        if e in DXF_EXT:
+            d, msg = read_dxf(f)
+            nb = sum(d['blocks'].values()) if d else 0
+            nt = len(d['texts']) if d else 0
+            per_file.append((nm, 'DXF', nb, nt, msg))
+            print(' [DXF] %-38s 블록 %6s / 글자 %5s %s' % (nm[:38], won(nb), won(nt), msg))
+            if d:
+                blocks.update(d['blocks']); toks.update(tokens(d['texts']))
+            else:
+                unread.append((nm, msg))
+        elif e in DWG_EXT:
+            conv = dwg_to_dxf(f)
+            if conv:
+                d, msg = read_dxf(conv)
+                nb = sum(d['blocks'].values()) if d else 0
+                nt = len(d['texts']) if d else 0
+                per_file.append((nm, 'DWG(자동변환)', nb, nt, msg))
+                print(' [DWG] %-38s 블록 %6s / 글자 %5s (자동변환)' % (nm[:38], won(nb), won(nt)))
+                if d:
+                    blocks.update(d['blocks']); toks.update(tokens(d['texts']))
+                else:
+                    unread.append((nm, msg))
+            else:
+                per_file.append((nm, 'DWG', 0, 0, 'DWG는 그대로 못 읽습니다'))
+                print(' [DWG] %-38s 못 읽었습니다 (DXF로 저장해 주십시오)' % nm[:38])
+                unread.append((nm, 'DWG - 캐드에서 「다른 이름으로 저장 -> DXF」'))
+        elif e in PDF_EXT:
+            d, msg = read_pdf(f)
+            nt = len(d['texts']) if d else 0
+            per_file.append((nm, 'PDF', 0, nt, msg))
+            print(' [PDF] %-38s 글자 %6s %s' % (nm[:38], won(nt), msg))
+            if d:
+                toks.update(tokens(d['texts']))
+                if d.get('scan'):
+                    scans.append(nm)
+                    unread.append((nm, '스캔 PDF - 글자가 없습니다'))
+            else:
+                unread.append((nm, msg))
+        else:
+            per_file.append((nm, '사진/캡처', 0, 0, '파이썬으로는 못 셉니다'))
+            print(' [사진] %-38s 파이썬으로는 못 셉니다' % nm[:38])
+            unread.append((nm, '사진/캡처 - 클로드에게 주십시오'))
+    return blocks, toks, per_file, scans, unread
+
+def cant_read(unread, files):
+    """한 장도 못 읽었을 때. 질문하지 않고 무엇을 해야 하는지만 알린다."""
+    print('')
+    print('=' * 70)
+    print(' 읽을 수 있는 도면이 한 장도 없습니다. 현장명은 여쭙지 않겠습니다.')
+    print('=' * 70)
+    for nm, why in unread[:20]:
+        print('  %-40s %s' % (nm[:40], why))
+    print('')
+    print(' 이렇게 주시면 셉니다')
+    print('   1) DXF  - 캐드에서 「다른 이름으로 저장 -> DXF」. 가장 정확합니다.')
+    print('   2) PDF  - 캐드에서 PDF로 인쇄(이미지로 인쇄 아님). 글자가 살아 있어야 합니다.')
+    print('   3) 사진/캡처/스캔 - 파이썬으로는 못 셉니다. 저(클로드)에게 그 파일을 주십시오.')
+    print('')
+    od = outdir(TOOL)
+    f = write_csv(os.path.join(od, '_클로드에게_주실파일_%s.csv' % ymd6()),
+                  [[nm, why] for nm, why in unread], ['파일', '왜 못 셌나'])
+    print(' 목록을 만들어 뒀습니다 : %s' % f)
+    log(TOOL, '못읽음 %d개' % len(unread))
+
 def run():
     title('27. 도면 수량 뽑기   (토큰 0 - 내 PC 안에서만 돕니다)')
     root = dwg_root()
     inbox = os.path.join(root, INBOX)
-    print('도면 넣는 곳 : %s' % inbox)
     files = gather(inbox)
+    where = inbox
     if not files:
-        files = gather(root)
+        files = gather(root); where = root
     if not files:
+        print('도면 넣는 곳 : %s' % inbox)
         print('')
-        print('[비어 있습니다] 위 폴더에 도면을 넣고 다시 27번을 누르시면 됩니다.')
+        print('[비어 있습니다] 이 폴더에 도면을 넣고 다시 27번을 누르시면 됩니다.')
         p = ask('\n또는 지금 도면이 있는 폴더/파일 경로를 붙여넣으십시오 (엔터=그만) > ').strip('"')
         if not p:
             print('')
@@ -368,68 +451,39 @@ def run():
         if not os.path.exists(p):
             print('[없는 경로] %s' % p)
             return
-        files = gather(p)
+        files = gather(p); where = p
         if not files:
             print('[도면 파일이 없습니다] dxf / dwg / pdf / 사진 만 봅니다.')
             return
 
     dic, ign, dpath = load_dict()
-    site = ask('현장명 > ', '현장미정')
-
     dxf = [f for f in files if os.path.splitext(f)[1].lower() in DXF_EXT]
     dwg = [f for f in files if os.path.splitext(f)[1].lower() in DWG_EXT]
     pdf = [f for f in files if os.path.splitext(f)[1].lower() in PDF_EXT]
     img = [f for f in files if os.path.splitext(f)[1].lower() in IMG_EXT]
-    print('')
-    print('찾은 파일 : DXF %d / DWG %d / PDF %d / 사진 %d' %
-          (len(dxf), len(dwg), len(pdf), len(img)))
-    print('기호 사전 : %s  (품목 %d줄 / 무시 %d줄)' % (dpath, len(dic), len(ign)))
+
+    print('본 곳   : %s' % where)
+    print('찾은 것 : DXF %d / DWG %d / PDF %d / 사진 %d' % (len(dxf), len(dwg), len(pdf), len(img)))
+    print('사전    : %s  (품목 %d줄 / 무시 %d줄)' % (os.path.basename(dpath), len(dic), len(ign)))
     print('-' * 70)
+    print('먼저 도면을 읽습니다. (질문은 다 읽은 뒤에만 합니다)')
+    print('')
 
-    blocks = collections.Counter()
-    toks = collections.Counter()
-    per_file = []
-    scans = []
+    # 1) 먼저 읽는다
+    blocks, toks, per_file, scans, unread = read_all(files)
 
-    for f in dxf:
-        d, msg = read_dxf(f)
-        nb = sum(d['blocks'].values()) if d else 0
-        nt = len(d['texts']) if d else 0
-        per_file.append((os.path.basename(f), 'DXF', nb, nt, msg))
-        print(' [DXF] %-40s 블록 %5s / 글자 %5s %s'
-              % (os.path.basename(f)[:40], won(nb), won(nt), msg))
-        if d:
-            blocks.update(d['blocks']); toks.update(tokens(d['texts']))
+    # 2) 한 장도 못 읽었으면 여기서 끝. 아무것도 묻지 않는다
+    if not blocks and not toks:
+        cant_read(unread, files)
+        return
 
-    for f in dwg:
-        conv = dwg_to_dxf(f)
-        if conv:
-            d, msg = read_dxf(conv)
-            nb = sum(d['blocks'].values()) if d else 0
-            nt = len(d['texts']) if d else 0
-            per_file.append((os.path.basename(f), 'DWG(자동변환)', nb, nt, msg))
-            print(' [DWG] %-40s 블록 %5s / 글자 %5s (ODA로 자동변환)'
-                  % (os.path.basename(f)[:40], won(nb), won(nt)))
-            if d:
-                blocks.update(d['blocks']); toks.update(tokens(d['texts']))
-        else:
-            per_file.append((os.path.basename(f), 'DWG', 0, 0, 'DWG는 그대로 못 읽습니다'))
-            print(' [DWG] %-40s 못 읽었습니다' % os.path.basename(f)[:40])
-
-    for f in pdf:
-        d, msg = read_pdf(f)
-        nt = len(d['texts']) if d else 0
-        per_file.append((os.path.basename(f), 'PDF', 0, nt, msg))
-        print(' [PDF] %-40s 글자 %5s %s' % (os.path.basename(f)[:40], won(nt), msg))
-        if d:
-            toks.update(tokens(d['texts']))
-            if d.get('scan'):
-                scans.append(f)
-
-    for f in img:
-        per_file.append((os.path.basename(f), '사진/캡처', 0, 0, '파이썬으로는 못 셉니다'))
-
+    # 3) 센다
     by_item, unk_b, unk_t, split_log = tally(blocks, toks, dic, ign)
+    if not by_item:
+        print('')
+        print('[읽기는 했는데 우리 품목이 하나도 없습니다]')
+        print(' 이 도면은 객실관리 도면이 아닐 수도 있고, 기호가 우리 사전과 다를 수도 있습니다.')
+        print(' 아래 「사전에 없는 기호」를 저에게 보여주시면 사전에 넣어 드리겠습니다.')
 
     print('')
     print('%-34s %10s %10s  %s' % ('품목', '블록기준', '글자기준', '채택'))
@@ -440,14 +494,12 @@ def run():
         take, why = (b, '블록') if b else ((t, '글자') if t else (0, '-'))
         print('%-34s %10s %10s  %s' % (it[:34], won(b), won(t), why))
         rows.append([it, b, t, take, why])
-    if not rows:
-        print('(사전에 맞는 기호를 하나도 못 찾았습니다. 아래 「모르는 기호」를 보십시오.)')
 
     if split_log:
         print('')
         print('-- 이름을 쪼개서 맞춘 것 (맞는지 봐 주십시오) --')
-        for where, sym, items, n in split_log[:20]:
-            print('  %s  %-24s -> %-28s %6s' % (where, str(sym)[:24], items[:28], won(n)))
+        for w, sym, items, n in split_log[:20]:
+            print('  %s  %-24s -> %-28s %6s' % (w, str(sym)[:24], items[:28], won(n)))
 
     print('')
     print('-- 사전에 없는 기호 (여기가 클로드에게 보여주실 부분입니다) --')
@@ -461,14 +513,37 @@ def run():
     if not unk_rows:
         print('  없음')
 
-    # 성급 규칙과 대조 (알고 계시면)
+    # 4) 현장명 - 폴더/파일 이름에서 짐작해 기본값으로 내민다 (엔터만 누르시면 됩니다)
+    g = guess_site(files, inbox)
+    print('')
+    site = ask('현장명 [%s] (엔터=그대로) > ' % g, g) or g
+
+    # 5) 규칙 대조 - 현장대장에 있으면 묻지 않는다
     cmp_rows = []
-    s = ask('\n성급(1~5)을 아시면 넣으십시오. 규칙 계산값과 대조해 드립니다 (엔터=건너뜀) > ').strip()
-    if s.isdigit():
-        star = int(s)
-        rooms = int(ask('총 객실 수 > ', '0') or 0)
-        floors = int(ask('객실 층 수 (모르시면 0) > ', '0') or 0)
-        resort = ask('리조트입니까? (y/n) > ', 'n').lower().startswith('y')
+    star = rooms = floors = 0
+    resort = False
+    got = None
+    try:
+        import sitebook
+        for d in sitebook.load():
+            if norm(d['site']) == norm(site) or norm(site) in norm(d['site']):
+                got = d
+                break
+    except Exception:
+        got = None
+    if got and str(got.get('star', '')).strip().isdigit():
+        star = int(got['star']); rooms = int(got.get('rooms') or 0)
+        floors = int(got.get('floors') or 0)
+        resort = str(got.get('resort', '')).lower().startswith('y')
+        print('현장대장에서 가져왔습니다 : %d성급 / %s실 / %s층%s'
+              % (star, won(rooms), won(floors), ' / 리조트' if resort else ''))
+    else:
+        v = ask('성급(1~5)을 아시면 한 글자만. 규칙값과 대조해 드립니다 (엔터=건너뜀) > ').strip()
+        if v.isdigit():
+            star = int(v)
+            rooms = int(ask('총 객실 수 (모르시면 엔터) > ', '0') or 0)
+            floors = int(ask('객실 층 수 (모르시면 엔터) > ', '0') or 0)
+    if star:
         import t03_roomqty
         rule = t03_roomqty.calc(star, rooms, resort, 0, 0, 0, floors)
         rule_sum = collections.Counter()
@@ -478,22 +553,23 @@ def run():
         print('')
         print('%-34s %10s %10s %10s' % ('품목', '도면', '규칙', '차이'))
         print('-' * 70)
-        keys = set(rule_sum) | set(by_item)
-        for it in sorted(keys):
+        for it in sorted(set(rule_sum) | set(by_item)):
             b, t = by_item.get(it, [0, 0])
-            dwgn = b or t
+            dn = b or t
             rl = rule_sum.get(it, 0)
-            print('%-34s %10s %10s %10s' % (it[:34], won(dwgn), won(rl), won(dwgn - rl)))
-            cmp_rows.append([it, dwgn, rl, dwgn - rl])
+            print('%-34s %10s %10s %10s' % (it[:34], won(dn), won(rl), won(dn - rl)))
+            cmp_rows.append([it, dn, rl, dn - rl])
 
+    # 6) 파일로 낸다
     od = outdir(TOOL)
     base = '%s_도면수량_%s' % (safe_name(site), ymd6())
+    body = [[r[0], r[1], r[2], r[3], r[4]] for r in rows]
+    if cmp_rows:
+        body += [['', '', '', '', ''], ['[규칙 대조]', '도면', '규칙', '차이', '']]
+        body += [[c[0], c[1], c[2], c[3], ''] for c in cmp_rows]
     f1 = write_csv(os.path.join(od, base + '.csv'),
-                   [['[현장]', site, '', '', ''],
-                    ['[읽은 파일]', len(files), '', '', ''], ['', '', '', '', '']] +
-                   [[r[0], r[1], r[2], r[3], r[4]] for r in rows] +
-                   ([['', '', '', '', ''], ['[규칙 대조]', '도면', '규칙', '차이', '']] +
-                    [[c[0], c[1], c[2], c[3], ''] for c in cmp_rows] if cmp_rows else []),
+                   [['[현장]', site, '', '', ''], ['[읽은 파일]', len(files), '', '', ''],
+                    ['', '', '', '', '']] + body,
                    ['품목', '블록기준', '글자기준', '채택수량', '채택근거'])
     f2 = write_csv(os.path.join(od, '%s_모르는기호_%s.csv' % (safe_name(site), ymd6())),
                    unk_rows, ['어디서', '기호', '횟수'])
@@ -503,18 +579,17 @@ def run():
         write_csv(os.path.join(od, '%s_쪼개서맞춘것_%s.csv' % (safe_name(site), ymd6())),
                   split_log, ['어디서', '도면기호', '맞춘품목', '횟수'])
 
-    blocks_hint = []
-    for it, b, t, take, why in rows:
-        blocks_hint.append(('green' if why == '블록' else 'yellow',
-                            '%s : %s (%s기준)' % (it, won(take), why)))
-    need_ai = [('red', '사진/캡처 %d장 - 파이썬으로는 못 셉니다. 클로드에게 주십시오.' % len(img))] if img else []
+    hint = [('green' if w == '블록' else 'yellow', '%s : %s (%s기준)' % (it, won(tk), w))
+            for it, b, t, tk, w in rows]
+    need_ai = []
+    if img:
+        need_ai.append(('red', '사진/캡처 %d장 - 파이썬으로는 못 셉니다. 클로드에게 주십시오.' % len(img)))
     if scans:
         need_ai.append(('red', '스캔 PDF %d개 - 글자가 없어 못 셉니다. 클로드에게 주십시오.' % len(scans)))
     if dwg and not oda_exe():
-        need_ai.append(('yellow', 'DWG %d개 - 캐드에서 「다른 이름으로 저장 → DXF」로 주시면 정확히 셉니다.' % len(dwg)))
-    f4 = write_html(os.path.join(od, base + '.html'),
-                    '%s 도면 수량' % site,
-                    [('뽑은 수량', blocks_hint),
+        need_ai.append(('yellow', 'DWG %d개 - 캐드에서 「다른 이름으로 저장 -> DXF」로 주시면 정확히 셉니다.' % len(dwg)))
+    f4 = write_html(os.path.join(od, base + '.html'), '%s 도면 수량' % site,
+                    [('뽑은 수량', hint),
                      ('이름을 쪼개서 맞춘 것 (확인 필요)',
                       [('yellow', '%s %s -> %s : %s개' % (a, b, c, won(d2)))
                        for a, b, c, d2 in split_log[:20]]),
@@ -524,7 +599,7 @@ def run():
                      ('읽은 파일', [('gray', '%s [%s] %s' % (a, b, e)) for a, b, c, d2, e in per_file])])
 
     print('')
-    print('파일 4개를 만들었습니다.')
+    print('파일을 만들었습니다.')
     for f in (f1, f2, f3, f4):
         print('  %s' % f)
     print('')
