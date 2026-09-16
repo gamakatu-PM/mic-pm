@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-VERSION = 'v17'
+VERSION = 'v18'
 VERSION_DATE = '2026-09-16'
 
 HERE = os.path.dirname(os.path.abspath(__file__))

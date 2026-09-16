@@ -286,19 +286,7 @@ def fill_prices_xlsx(src, rows, mult):
     wb = openpyxl.load_workbook(dst)
     names = sorted(wb.sheetnames, key=lambda n: ('총괄' not in n, n))
     ws = wb[names[0]]
-    hrow, ci = None, {}
-    for r in range(1, min(ws.max_row, 30) + 1):
-        cells = [('' if ws.cell(r, c).value is None else str(ws.cell(r, c).value).strip())
-                 for c in range(1, min(ws.max_column, 12) + 1)]
-        j = ' '.join(cells)
-        if '실행' in j and any(k in j for k in ('모듈', '형번', '품명', '품목')):
-            for i, v in enumerate(cells, start=1):
-                if '구분' in v and 'grp' not in ci: ci['grp'] = i
-                if any(k in v for k in ('모듈', '형번', '품명', '품목')) and 'mod' not in ci: ci['mod'] = i
-                if '실행' in v and 'cost' not in ci: ci['cost'] = i
-                if '견적' in v and 'q' not in ci: ci['q'] = i
-                if '예산' in v and 'b' not in ci: ci['b'] = i
-            hrow = r; break
+    hrow, ci = C.find_header(ws)
     if not hrow:
         return None
     green = PatternFill('solid', fgColor='D9EAD3')

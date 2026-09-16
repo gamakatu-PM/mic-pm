@@ -130,6 +130,24 @@ def _find_pb_file():
                               -os.path.getmtime(x)))
     return cands[0] if cands else None
 
+def find_header(ws, maxrow=40):
+    """총괄 시트의 머리글 줄과 칸 번호. (1부터) 실행가·모듈명 칸이 서로 달라야 머리글이다."""
+    for r in range(1, min(ws.max_row or 1, maxrow) + 1):
+        cells = [('' if ws.cell(r, c).value is None else str(ws.cell(r, c).value).strip())
+                 for c in range(1, min(ws.max_column or 1, 16) + 1)]
+        ci = {}
+        for i, v in enumerate(cells, start=1):
+            if len(v) > 24:
+                continue                      # 긴 설명 글은 머리글이 아니다
+            if '구분' in v and 'grp' not in ci: ci['grp'] = i
+            if any(k in v for k in ('모듈', '형번', '품명', '품목')) and 'mod' not in ci: ci['mod'] = i
+            if '실행' in v and 'cost' not in ci: ci['cost'] = i
+            if '견적' in v and 'q' not in ci: ci['q'] = i
+            if '예산' in v and 'b' not in ci: ci['b'] = i
+        if 'mod' in ci and 'cost' in ci and ci['mod'] != ci['cost']:
+            return r, ci
+    return None, {}
+
 def _pb_from_xlsx(path):
     """엑셀 단가장. 「총괄」 이 든 시트를 먼저 보고, 머리글에서 실행 칸을 찾는다.
     드라이브에서 내려받은 xlsx 를 그대로 넣으셔도 됩니다."""
@@ -139,7 +157,7 @@ def _pb_from_xlsx(path):
         print('[부품 없음] openpyxl 이 없어 엑셀을 못 읽었습니다. csv 로 주십시오.')
         return []
     try:
-        wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
+        wb = openpyxl.load_workbook(path, data_only=True)
     except Exception as e:
         print('[엑셀 열기 실패] %s' % e)
         return []
@@ -147,27 +165,15 @@ def _pb_from_xlsx(path):
     out = []
     for sn in names:
         ws = wb[sn]
-        head, ci = None, {}
-        for row in ws.iter_rows(values_only=True):
-            cells = ['' if c is None else str(c).strip() for c in row]
-            if head is None:
-                joined = ' '.join(cells)
-                if ('실행' in joined) and any(k in joined for k in ('모듈', '형번', '품명', '품목')):
-                    for i, c in enumerate(cells):
-                        if '실행' in c and 'cost' not in ci:
-                            ci['cost'] = i
-                        if any(k in c for k in ('모듈', '형번', '품명', '품목')) and 'mod' not in ci:
-                            ci['mod'] = i
-                        if '구분' in c and 'grp' not in ci:
-                            ci['grp'] = i
-                    if 'cost' in ci and 'mod' in ci:
-                        head = True
-                continue
-            mod = cells[ci['mod']] if ci['mod'] < len(cells) else ''
-            cost = num(cells[ci['cost']]) if ci['cost'] < len(cells) else None
-            grp = cells[ci.get('grp', 0)] if ci.get('grp', 0) < len(cells) else ''
+        hrow, ci = find_header(ws)
+        if not hrow:
+            continue
+        for r in range(hrow + 1, (ws.max_row or hrow) + 1):
+            mod = ws.cell(r, ci['mod']).value
+            cost = num(ws.cell(r, ci['cost']).value)
+            grp = ws.cell(r, ci['grp']).value if 'grp' in ci else ''
             if mod and cost:
-                out.append((grp, mod, cost))
+                out.append((str(grp or '').strip(), str(mod).strip(), cost))
         if out:
             print('  엑셀 시트 「%s」 에서 %d줄 읽었습니다.' % (sn, len(out)))
             break

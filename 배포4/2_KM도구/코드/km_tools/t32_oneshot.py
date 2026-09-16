@@ -12,6 +12,7 @@ import t27_drawing as D
 import t28_cost as C
 import t29_pricebook as P
 import t30_finish as F
+import t33_dashboard as DB
 
 TOOL = '한방에'
 
@@ -37,7 +38,8 @@ def run():
              ('27 도면 수량', lambda: D.run(folder=sdir, site_hint=site)),
              ('28 단가 붙이기', lambda: C.run(site_hint=site)),
              ('29 단가장 채우기', lambda: P.run(folder=sdir, site_hint=site)),
-             ('30 완성품 점검·부탁서', lambda: F.run(site_hint=site))]
+             ('30 완성품 점검·부탁서', lambda: F.run(site_hint=site)),
+             ('33 현황판', lambda: DB.run(quiet=True))]
     done = []
     try:
         for name, fn in steps:

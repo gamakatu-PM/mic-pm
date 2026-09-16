@@ -134,6 +134,7 @@ def next_version(path):
     """CB모듈_단가장_v70.xlsx -> CB모듈_단가장_v71_260916.xlsx (덮어쓰지 않는다)"""
     d, b = os.path.split(path)
     stem, ext = os.path.splitext(b)
+    stem = re.sub(r'(_\d{6})+$', '', stem)      # 이미 붙은 날짜 꼬리는 뗀다
     m = re.search(r'v(\d+)', stem, re.I)
     if m:
         stem = stem[:m.start()] + 'v%d' % (int(m.group(1)) + 1) + stem[m.end():]
@@ -157,20 +158,7 @@ def add_rows_xlsx(src, rows, mult):
     names = sorted(wb.sheetnames, key=lambda n: ('총괄' not in n, n))
     ws = wb[names[0]]
     # 머리글 찾기
-    hrow, ci = None, {}
-    for r in range(1, min(ws.max_row, 30) + 1):
-        cells = [('' if ws.cell(r, c).value is None else str(ws.cell(r, c).value).strip())
-                 for c in range(1, min(ws.max_column, 12) + 1)]
-        joined = ' '.join(cells)
-        if '실행' in joined and any(k in joined for k in ('모듈', '형번', '품명', '품목')):
-            for i, v in enumerate(cells, start=1):
-                if '구분' in v and 'grp' not in ci: ci['grp'] = i
-                if any(k in v for k in ('모듈', '형번', '품명', '품목')) and 'mod' not in ci: ci['mod'] = i
-                if '실행' in v and 'cost' not in ci: ci['cost'] = i
-                if '견적' in v and 'q' not in ci: ci['q'] = i
-                if '예산' in v and 'b' not in ci: ci['b'] = i
-            hrow = r
-            break
+    hrow, ci = C.find_header(ws)
     if not hrow or 'mod' not in ci or 'cost' not in ci:
         print('[머리글을 못 찾았습니다] 총괄 시트에 구분/모듈명/실행가 머리글이 있어야 합니다.')
         return None
