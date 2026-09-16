@@ -23,6 +23,37 @@ DEFAULTS = {
     'handover':r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\KM_인수인계함',
 }
 
+# 폴더 이름이 바뀌어도 찾아내기 위한 후보들 (번호를 붙이셔도 됩니다)
+ALIAS = {
+    'plaud':    ('plaud', '5_산출물', '5_plaud', '산출물'),
+    'biseo':    ('_현장비서', '1_현장비서', '현장비서'),
+    'template': ('_원틀', '4_원틀', '원틀'),
+    'out':      ('_도구결과', '5_도구결과', '도구결과'),
+    'handover': ('KM_인수인계함', '3_인수인계함', '인수인계함'),
+}
+
+def _find_by_alias(key):
+    """base 폴더 아래에서 이름 후보를 훑어 실제 폴더를 찾는다."""
+    base = cfg('base')
+    if not os.path.isdir(base):
+        return None
+    for name in ALIAS.get(key, ()):
+        p = os.path.join(base, name)
+        if os.path.isdir(p):
+            return p
+    # 번호만 붙인 경우(1_현장비서 처럼)도 잡아낸다
+    try:
+        for d in os.listdir(base):
+            if not os.path.isdir(os.path.join(base, d)):
+                continue
+            plain = d.lstrip('0123456789_ ').strip()
+            for name in ALIAS.get(key, ()):
+                if plain == name.lstrip('0123456789_ ').strip():
+                    return os.path.join(base, d)
+    except Exception:
+        pass
+    return None
+
 def cfg(key):
     """설정.ini 에서 경로를 읽는다. 없으면 기본값."""
     c = configparser.ConfigParser()
@@ -32,9 +63,15 @@ def cfg(key):
             v = c.get('경로', key).strip()
             if v:
                 return v
-    return DEFAULTS[key]
+    d = DEFAULTS[key]
+    if key == 'base' or os.path.isdir(d):
+        return d
+    # 기본값에 없으면 이름이 바뀐 것일 수 있다 - 후보로 찾아본다
+    found = _find_by_alias(key)
+    return found or d
 
 SITE_DIRS = ('1.현장', '1_현장', '현장')
+YEAR_DIRS = ('26년', '2026', '26')
 
 def sites_root():
     """현장 폴더들이 실제로 들어 있는 곳.
@@ -45,6 +82,12 @@ def sites_root():
         p = os.path.join(base, d)
         if os.path.isdir(p):
             return p
+    # plaud 를 한 단계 위(26년 폴더가 그 아래)로 잡으신 경우도 찾아본다
+    for y in YEAR_DIRS:
+        for d in SITE_DIRS:
+            p = os.path.join(base, y, d)
+            if os.path.isdir(p):
+                return p
     return base
 
 def today():
