@@ -88,12 +88,13 @@ def apply(zip_path):
                 if k:
                     extra.append('인수인계함 %d개' % k)
         # 4) 지도와 안내문
-        for fname, where in (('0_여기부터_보세요.html', cfg('base')),):
+        for fname, where in (('0_여기부터_보세요.html', cfg('base')),
+                             ('사용법.txt', os.path.dirname(parent))):
             for name in z.namelist():
                 if name.replace('\\', '/').endswith(fname) and os.path.isdir(where):
                     with z.open(name) as src, open(os.path.join(where, fname), 'wb') as fp:
                         shutil.copyfileobj(src, fp)
-                    extra.append('지도')
+                    extra.append(fname)
                     break
     return (n, backup, extra), None
 

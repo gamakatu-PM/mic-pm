@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-VERSION = 'v9'
+VERSION = 'v10'
 VERSION_DATE = '2026-09-16'
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -24,6 +24,7 @@ DEFAULTS = {
     'template':r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\_원틀',
     'out':     r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\_도구결과',
     'handover':r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\KM_인수인계함',
+    'drawing': r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\3_공통사용\도면',
 }
 
 # 폴더 이름이 바뀌어도 찾아내기 위한 후보들 (번호를 붙이셔도 됩니다)
@@ -33,6 +34,7 @@ ALIAS = {
     'template': ('_원틀', '4_원틀', '원틀'),
     'out':      ('_도구결과', '도구결과'),
     'handover': ('KM_인수인계함', '3_인수인계함', '인수인계함'),
+    'drawing':  ('도면', '_도면', '도면검토'),
 }
 # 공통 폴더 아래에 한 겹 더 들어가는 경우도 훑는다 (3_공통사용\산출물\회의록 등)
 NEST = ('3_공통사용', '공통사용', '3_공통', '산출물', '5_산출물')
@@ -322,6 +324,27 @@ def log(tool, msg):
     os.makedirs(os.path.dirname(p), exist_ok=True)
     with io.open(p, 'a', encoding='utf-8') as fp:
         fp.write('%s\t%s\t%s\n' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), tool, msg))
+
+def ensure_pkg(mod, pkg):
+    """무거운 부품(도면 읽기 등)은 그 도구를 누르실 때만 받는다.
+    받아지면 True. 인터넷이 막혀 있으면 False 를 돌려주고 도구가 스스로 안내한다."""
+    import importlib, subprocess
+    try:
+        return importlib.import_module(mod)
+    except ImportError:
+        pass
+    print('[부품 받는 중] %s  (처음 한 번만, 1~2분)' % pkg)
+    try:
+        subprocess.run([sys.executable, '-m', 'pip', 'install', '--quiet', pkg], check=False)
+    except Exception as e:
+        print('  실패 : %s' % e)
+    try:
+        importlib.invalidate_caches()
+        return importlib.import_module(mod)
+    except ImportError:
+        print('  [못 받음] 인터넷이 막혀 있을 수 있습니다.')
+        print('  직접 받기 : 명령 프롬프트에서  python -m pip install %s' % pkg)
+        return None
 
 def open_folder(p):
     try:
