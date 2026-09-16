@@ -275,8 +275,12 @@ def quick(tp, gp):
     # 5-2 노란 빈칸(단가 미입력) 개수 — 남아 있으면 통과가 아니다
     blanks = []
     for ws in tw.worksheets:
+        gr, gh = headers(ws)
+        ans_cols = {i + 1 for i, h in enumerate(gh or []) if '답' in str(h)}   # 「차장님 답」 칸은 단가가 아니다
         for row in ws.iter_rows():
             for cell in row:
+                if cell.column in ans_cols:
+                    continue
                 if cell.value in (None, '') and is_yellow(cell):
                     lab = str(ws.cell(cell.row, 1).value or ws.cell(cell.row, 2).value or '')[:24]
                     blanks.append('%s!%s %s' % (ws.title, cell.coordinate, lab))
