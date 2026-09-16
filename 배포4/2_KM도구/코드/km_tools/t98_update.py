@@ -30,14 +30,37 @@ def find_zips():
     found.sort(reverse=True)
     return [p for _, p in found]
 
-def tools_in_zip(z):
-    """zip 안에서 km_tools 폴더의 위치(접두어)를 찾는다"""
+def find_prefix(z, folder):
+    """zip 안에서 어떤 폴더의 위치(접두어)를 찾는다"""
+    key = folder + '/'
     for n in z.namelist():
         n2 = n.replace('\\', '/')
-        i = n2.find('km_tools/')
+        i = n2.find(key)
         if i >= 0:
-            return n2[:i + len('km_tools/')]
+            return n2[:i + len(key)]
     return None
+
+def tools_in_zip(z):
+    return find_prefix(z, 'km_tools')
+
+def extract_to(z, pref, dest, skip=()):
+    """zip 의 pref 아래를 dest 에 덮어쓴다. skip 에 든 폴더는 건너뛴다."""
+    n = 0
+    for name in z.namelist():
+        n2 = name.replace('\\', '/')
+        if not n2.startswith(pref) or n2.endswith('/'):
+            continue
+        rel = n2[len(pref):]
+        if not rel or rel.startswith('__pycache__'):
+            continue
+        if any(rel.startswith(s2 + '/') for s2 in skip):
+            continue
+        target = os.path.join(dest, *rel.split('/'))
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with z.open(name) as src, open(target, 'wb') as fp:
+            shutil.copyfileobj(src, fp)
+        n += 1
+    return n
 
 def apply(zip_path):
     dest = HERE                      # 지금 돌고 있는 km_tools 폴더
@@ -46,26 +69,33 @@ def apply(zip_path):
         pref = tools_in_zip(z)
         if not pref:
             return None, 'zip 안에 km_tools 폴더가 없습니다. 도구 갱신본이 아닌 것 같습니다.'
-        names = [n for n in z.namelist()
-                 if n.replace('\\', '/').startswith(pref) and not n.endswith('/')]
-        if not names:
+        if not any(n.replace('\\', '/').startswith(pref) and not n.endswith('/')
+                   for n in z.namelist()):
             return None, 'zip 안이 비어 있습니다.'
         # 1) 지금 것을 백업
         stamp = datetime.datetime.now().strftime('%y%m%d_%H%M')
         backup = os.path.join(parent, '_이전판_%s' % stamp)
         shutil.copytree(dest, backup)
-        # 2) 새 파일 덮어쓰기
-        n = 0
-        for name in names:
-            rel = name.replace('\\', '/')[len(pref):]
-            if not rel or rel.startswith('__pycache__'):
-                continue
-            target = os.path.join(dest, *rel.split('/'))
-            os.makedirs(os.path.dirname(target), exist_ok=True)
-            with z.open(name) as src, open(target, 'wb') as fp:
-                shutil.copyfileobj(src, fp)
-            n += 1
-    return (n, backup), None
+        # 2) 코드 덮어쓰기
+        n = extract_to(z, pref, dest)
+        extra = []
+        # 3) 인수인계함(결정대기 엑셀 등)도 있으면 제자리에 갱신. 프로님의 「버전」 폴더는 손대지 않는다
+        hp = find_prefix(z, '인수인계함')
+        if hp:
+            hd = cfg('handover')
+            if os.path.isdir(hd):
+                k = extract_to(z, hp, hd, skip=('버전',))
+                if k:
+                    extra.append('인수인계함 %d개' % k)
+        # 4) 지도와 안내문
+        for fname, where in (('0_여기부터_보세요.html', cfg('base')),):
+            for name in z.namelist():
+                if name.replace('\\', '/').endswith(fname) and os.path.isdir(where):
+                    with z.open(name) as src, open(os.path.join(where, fname), 'wb') as fp:
+                        shutil.copyfileobj(src, fp)
+                    extra.append('지도')
+                    break
+    return (n, backup, extra), None
 
 def run():
     title('98. 업데이트 (받으신 zip 을 그대로 적용)')
@@ -96,9 +126,11 @@ def run():
     res, err = apply(pick)
     if err:
         print('[실패] %s' % err); return
-    n, backup = res
+    n, backup, extra = res
     print('')
-    print('파일 %s개를 갈아끼웠습니다.' % won(n))
+    print('도구 %s개를 갈아끼웠습니다.' % won(n))
+    for e in extra:
+        print('  + %s 도 갱신했습니다.' % e)
     print('이전 판은 여기에 보관했습니다 : %s' % backup)
     print('')
     print('=' * 56)
