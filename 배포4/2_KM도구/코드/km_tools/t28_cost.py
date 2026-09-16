@@ -449,7 +449,7 @@ def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, c
         qout = os.path.join(od, '%s_견적서_v1.xlsx' % tag)
         q_rows2 = [(nm, sp, un, q, (meta['노무선례'].get(nm) if (c is None and g == '노무') else c), mm, g) for nm, sp, un, q, c, mm, g in q_rows]
         quotesheet.build(site, qout, q_rows2, cb_types, cbr, mult,
-                         dict(meta, 공사명='%s 객실관리 시스템' % site, cb_body=[body] * len(cb_types)))
+                         dict(meta, 공사명='%s 신축공사 (견적가)' % site, 외함규격='커버/속판 [규격확인] — 선례 연합기숙사 400*800*90 매입', cb_body=[body] * len(cb_types)))
         print('견적서(고객용)   : %s' % qout)
         try:
             import t37_check

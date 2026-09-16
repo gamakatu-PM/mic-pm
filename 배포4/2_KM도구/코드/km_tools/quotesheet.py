@@ -30,6 +30,74 @@ def hangul(n):
         i += 1
     return ''.join(out)
 
+
+CODE_RE = re.compile(r'([A-Z]{2,4}-\d{3,5}[A-Z]*(?:\s*\(통신\))?)')
+def _code(spec):
+    m = CODE_RE.search(str(spec or '').upper())
+    return m.group(1) if m else ''
+def _paren(name):
+    m = re.search(r'\(([^)]*)\)', str(name or ''))
+    return m.group(1).strip() if m else ''
+
+def quote_name(name, spec):
+    """수량표 이름 + 단가장 이름 -> (광희동 견적서식 명칭, 짧은 규격). 규격 = 형번 — 설명"""
+    up = str(name or '').upper(); code = _code(spec) or _code(name); par = _paren(name)
+    def sp(*xs):
+        return ' — '.join(x for x in xs if x)
+    if 'OPERATION' in up or up.strip() == 'PC':            return 'OPERATION PC', sp(code or 'OP', par)
+    if 'FLOOR INDICATOR' in up or 'FIP' in up:              return 'FLOOR INDICATOR PANEL', sp(code or 'FIP', par or '층당 1대')
+    if 'DATA CONV' in up or 'DCU' in up:                    return 'DATA CONVERSION UNIT', sp(code or 'DCU', par)
+    if 'INDICATOR' in up:                                   return '입구 INDICATOR', sp(code, par)
+    if 'KEY SENSOR' in up:
+        return ('KEY SENSOR & D/M PLATE' if ('DM' in up or 'D/M' in up) else 'KEY SENSOR'), sp(code, par)
+    if 'BED SIDE' in up or 'BSP' in up:                     return 'BED SIDE PANEL', sp(code, par)
+    if 'LIGHT SWITCH' in up and '온도' in name:              return '온도조절기 + LIGHT SWITCH', sp(code, par)
+    if 'LIGHT SWITCH' in up:
+        m = re.search(r'(\d)\s*버튼', str(name)); n = m.group(1) if m else ''
+        loc = re.sub(r'\d\s*버튼', '', par).strip(' -,') if par else ''
+        return ('LIGHT SWITCH %s버튼' % n).strip(), sp(code, loc)
+    if '비상' in name:                                       return '비상호출 BUTTON', sp(code, par)
+    if '방문' in name:                                       return '방문자 알림램프', sp(code, par)
+    if 'DOOR LOCK' in up or '도어락' in name:                return 'RF DOOR LOCK', sp(code, par)
+    if '온도' in name:                                       return '온도조절기', sp(code, par)
+    return re.sub(r'\s*\([^)]*\)', '', str(name)).strip(), sp(code, par)
+
+LABOR_NAME = (('약전', '약전 결선(객실CB약전,객실디바이스,약전외)', ''),
+              ('취부', '객실 C/B 배전판 취부,객실 디바이스 백커버/기구물 설치', ''),
+              ('시운전', '시운전비(약전접속,현지조정)', 'MK-TSET'))
+def labor_name(name):
+    for k, nm, sp in LABOR_NAME:
+        if k in str(name): return nm, sp
+    return name, ''
+
+def cb_sublines(cb_rows, i):
+    """CB 내부 구성을 광희동 견적서 식 줄로 : 퓨즈는 부모 줄에 붙이고, RCBO 는 MCB 다음 들여쓰기 줄"""
+    mods = [(m, (per[i] if i < len(per) else per[0])) for m, t, per, c, memo in cb_rows if (per[i] if i < len(per) else per[0])]
+    fuses = [(m, k) for m, k in mods if '퓨즈' in m]
+    rest = [(m, k) for m, k in mods if '퓨즈' not in m]
+    def fuse_for(m):
+        u = m.upper()
+        for f, k in fuses:
+            a = f.replace('퓨즈', '').strip()
+            if ('TRANS' in u and a.startswith('0.5')) or (('전등' in m or 'TL-' in u or 'RL-' in u) and a == '5A') or ('SA0201' in u and a == '1A'):
+                fuses.remove((f, k)); return ' + 퓨즈 %s' % a
+        return ''
+    lines = []
+    mcb_at = None
+    for m, k in rest:
+        if 'RCBO' in m.upper():
+            continue
+        t = '-%s%s%s' % (m, (' × %d' % k) if k > 1 else '', fuse_for(m))
+        lines.append(t)
+        if 'MCB' in m.upper(): mcb_at = len(lines)
+    for m, k in rest:
+        if 'RCBO' in m.upper():
+            t = '       %s%s' % (m, (' × %d' % k) if k > 1 else '')
+            if mcb_at: lines.insert(mcb_at, t); mcb_at += 1
+            else: lines.append('-' + t.strip())
+    for f, k in fuses: lines.append('-%s' % f)
+    return lines
+
 def _fill(c):
     from openpyxl.styles import PatternFill
     return PatternFill('solid', fgColor=c)
@@ -69,8 +137,11 @@ def build(site, out_path, qty, cb_types, cb_rows, mult, meta):
         if st is not None: cell._style = copy.copy(st)
         if num: cell.number_format = num
         return cell
+    tot = {'mat': 0, 'lab': 0}
     def item(r, name, spec, unit, q, uprice, memo, labor=False):
         st = S['item'] if S else [None] * 12
+        if uprice is not None and not memo: memo = '견적가 기준 (실행×%s)' % qm
+        if uprice is not None and isinstance(q, (int, float)): tot['lab' if labor else 'mat'] += int(q) * int(uprice)
         put(r, 1, name, st[0]); put(r, 2, spec, st[1]); put(r, 3, unit, st[2]); put(r, 4, q, st[3], '#,##0')
         col = 7 if labor else 5
         put(r, col, uprice, st[col - 1], '#,##0'); put(r, col + 1, '=D%d*%s%d' % (r, L(col), r) if uprice is not None else None, st[col], '#,##0')
@@ -93,7 +164,8 @@ def build(site, out_path, qty, cb_types, cb_rows, mult, meta):
     def qprice(cost):
         return int(round(cost * qm)) if cost not in (None, '') else None
     for name, spec, unit, q, cost, memo, gk in [x for x in qty if x[6] == '중앙']:
-        item(r, name, spec, unit, q, qprice(cost), '' if cost not in (None, '') else '[단가확인]'); r += 1
+        nm, sp = quote_name(name, spec)
+        item(r, nm, sp, unit, q, qprice(cost), '' if cost not in (None, '') else '[단가확인]'); r += 1
     subtotal(r, a, r - 1); SUB1 = r; r += 1
     put(r, 1, '2. 객실관리 시스템', S['sec'] if S else None); r += 1
     a = r
@@ -105,16 +177,22 @@ def build(site, out_path, qty, cb_types, cb_rows, mult, meta):
              qprice(body) if body else None, '' if body else '[단가확인] 내부 구성 확정 후'); r += 1
         for line in ('-제조사 : 한국마이크로닉㈜', '-제  질 : SPC-1 냉간압연강판', '-기  능 : 객실제어 및 FIP간 통신중계'):
             sub(r, line); r += 1
-        for mod, txt, per, cost, memo in cb_rows:
-            k = per[i] if i < len(per) else per[0]
-            if not k: continue
-            sub(r, '-%s%s' % (mod, (' × %d' % k) if k > 1 else '')); r += 1
+        comp = [(m, per[i] if i < len(per) else per[0]) for m, t, per, c, memo in cb_rows]
+        comp0 = [(m, per[0]) for m, t, per, c, memo in cb_rows]
+        if i > 0 and comp == comp0:
+            sub(r, '-CB1과 내부 구성 동일'); r += 1
+        else:
+            for line in cb_sublines(cb_rows, i):
+                sub(r, line); r += 1
     enc_cost = meta.get('외함실행가')
-    item(r, 'CONTROL BOX 외함', meta.get('외함규격', '[규격확인]'), 'EA', sum(t[1] for t in cb_types), qprice(enc_cost) if enc_cost else None, '' if enc_cost else '[단가확인]'); r += 1
+    item(r, 'CONTROL BOX 외함 %s' % meta.get('외함크기', '[규격확인]'), meta.get('외함규격', '커버/속판 [규격확인]'), 'EA', sum(t[1] for t in cb_types),
+         qprice(enc_cost) if enc_cost else None, ('[규격확인] 선례 단가' if enc_cost else '[단가확인]')); r += 1
     for name, spec, unit, q, cost, memo, gk in [x for x in qty if x[6] in ('객실', '도어락')]:
-        item(r, name, spec, unit, q, qprice(cost), '' if cost not in (None, '') else '[단가확인]'); r += 1
+        nm, sp = quote_name(name, spec)
+        item(r, nm, sp, unit, q, qprice(cost), '' if cost not in (None, '') else '[단가확인]'); r += 1
     for name, spec, unit, q, cost, memo, gk in [x for x in qty if x[6] == '노무']:
-        item(r, name, spec, unit, q, qprice(cost), '' if cost not in (None, '') else '[단가확인] 노무단가 미확정', labor=True); r += 1
+        nm, sp = labor_name(name)
+        item(r, nm, sp, unit, q, qprice(cost), ('[선례단가] 확정 전' if cost not in (None, '') else '[단가확인] 노무단가 미확정'), labor=True); r += 1
     subtotal(r, a, r - 1); SUB2 = r; r += 1
     st_note = S['note'] if S else None
     for t in ['  * V A T 별도',
@@ -137,7 +215,8 @@ def build(site, out_path, qty, cb_types, cb_rows, mult, meta):
     g['A6'] = '공 사 명 : %s' % meta.get('공사명', site)
     g['A7'] = '공 종 명 : 객실관리 시스템'
     g['A8'] = '수    신 : %s' % meta.get('수신', '[수신처 확인]')
-    g['A12'] = "=CONCATENATE(\"一金 \",\"[한글금액은 총액 확정 후]\",\"(\\\",TEXT('내역서 '!K%d,\"#,##0\"),\"원)VAT별도 — 견적가(실행×%s) 초안(Rev.1)\")" % (TOT, qm)
+    total = tot['mat'] + tot['lab']
+    g['A12'] = '一金 %s원정(\\%s원)VAT별도 — 견적가(실행×%s) 초안(Rev.1)' % (hangul(total), format(total, ','), qm)
     g['F14'] = "='내역서 '!F%d" % TOT; g['G14'] = "='내역서 '!H%d" % TOT; g['H14'] = "='내역서 '!K%d" % TOT; g['H17'] = '=H14'
     g['B14'] = '객실관리 시스템'; g['D14'] = '식'; g['E14'] = 1; g['A14'] = 1
     wb.active = 0
