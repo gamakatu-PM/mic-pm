@@ -1,0 +1,27 @@
+기호,내용,수량,비고/근거
+OP,OPERATION PC,2,방재실
+FIP,FLOOR INDICATOR PANEL(LAN통신),15,층당 1 = 15개 층
+CB,CONTROL BOX1(스텐다드-1~4),270,
+CB,CONTROL BOX2(슈페리어-1 장애인실),11,
+CB,CONTROL BOX3(슈페리어-2),10,
+CB,CONTROL BOX4(스위트-1~7),9,
+C,입구 INDICATOR,300,실당 1
+KD,KEY SENSOR+DM PLATE,300,실당 1
+L3+USB+유니버셜,BED SIDE PANEL(전등+USB+유니버셜),300,실당 1
+T+USB+유니버셜,BED SIDE PANEL(온도+USB+유니버셜),300,실당 1
+L3T,LIGHT SWITCH + 온도 조절기,300,실당 1
+L1,LIGHT SWITCH(옷장 1버튼),10,
+L5,LIGHT SWITCH(욕실 5버튼),281,
+L6,LIGHT SWITCH(욕실 6버튼),28,
+E,비상호출 BUTTON,22,
+R,방문자 알림램프,22,
+,합계(품목 16종),2180,
+
+[검산],값,근거,판정
+객실 수 (CB 합계),300,270+11+10+9,OK
+실당 1개 품목 (C·KD·BED SIDE 2종·L3T),300,CB 합계와 같아야 함,OK
+욕실 스위치 L5+L6,309,객실 300실 대비 +9,확인
+L1 옷장 1버튼,10,CB3 슈페리어-2 10실과 같음,OK
+비상호출 E / 알림램프 R,22,장애인실 11실 × 2,확인
+FIP,15,층당 1개 -> 15개 층,확인
+OPERATION PC,2,방재실 2대 (통상 1대),확인
