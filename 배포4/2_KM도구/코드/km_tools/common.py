@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-VERSION = 'v8'
+VERSION = 'v9'
 VERSION_DATE = '2026-09-16'
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -91,8 +91,28 @@ def _find_by_alias(key, depth=3):
                 pass
     return None
 
+def auto_base():
+    """내 위치에서 base 폴더를 스스로 계산한다.
+    ...\\{base}\\2_KM도구\\코드\\km_tools  이므로 3단계 위가 base.
+    PC 가 바뀌어도(사용자 이름이 달라도) 그대로 돈다."""
+    p = HERE
+    for _ in range(4):
+        p = os.path.dirname(p)
+        if not p or len(p) < 4:
+            break
+        # base 로 보이는 표시 : 현장비서/원틀/plaud/공통사용 중 하나라도 있으면 base
+        try:
+            names = {_plain(d) for d in os.listdir(p)
+                     if os.path.isdir(os.path.join(p, d))}
+        except Exception:
+            continue
+        if names & {'현장비서', '원틀', 'plaud', '공통사용', '산출물'}:
+            return p
+    # 못 찾으면 코드\km_tools 의 두 단계 위(=도구 폴더의 부모)
+    return os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
+
 def cfg(key):
-    """설정.ini 에서 경로를 읽는다. 없으면 기본값."""
+    """설정.ini 에서 경로를 읽는다. 없으면 스스로 찾는다."""
     c = configparser.ConfigParser()
     if os.path.exists(INI):
         c.read(INI, encoding='utf-8')
@@ -101,11 +121,21 @@ def cfg(key):
             if v:
                 return v
     d = DEFAULTS[key]
-    if key == 'base' or os.path.isdir(d):
+    if key == 'base':
+        # 기본 경로가 이 PC 에 없으면(노트북 등) 내 위치에서 계산한다
+        return d if os.path.isdir(d) else auto_base()
+    if os.path.isdir(d):
         return d
-    # 기본값에 없으면 이름이 바뀐 것일 수 있다 - 후보로 찾아본다
+    # 기본값에 없으면 이름이 바뀌었거나 다른 PC 다 - 후보로 찾아본다
     found = _find_by_alias(key)
-    return found or d
+    if found:
+        return found
+    # 그래도 없으면 지금 PC 의 base 아래 기본 이름으로 (없으면 만들어 쓰는 폴더)
+    b = cfg('base')
+    if os.path.isdir(b) and not d.startswith(b):
+        names = ALIAS.get(key) or (os.path.basename(d),)
+        return os.path.join(b, names[0])
+    return d
 
 SITE_DIRS = ('1.현장', '1_현장', '현장')
 YEAR_DIRS = ('26년', '2026', '26')

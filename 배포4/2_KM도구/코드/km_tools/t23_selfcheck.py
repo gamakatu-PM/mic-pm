@@ -6,7 +6,9 @@ from common import *
 def run():
     title('자가진단')
     ok, bad = [], []
-    print('[1] 파이썬  %s' % sys.version.split()[0])
+    import platform, getpass
+    print('[1] 파이썬  %s   (%s / %s)' % (sys.version.split()[0],
+          platform.node(), getpass.getuser()))
     for mod, why in (('openpyxl', '엑셀 도구(견적서/사진대지/서식검사/단가장검진)'),
                      ('PIL', '사진대지 회전보정/축소'),
                      ('pptx', '이미지 모음 PPT(15번)')):
