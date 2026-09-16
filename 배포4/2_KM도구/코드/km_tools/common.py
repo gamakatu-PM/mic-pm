@@ -28,33 +28,67 @@ DEFAULTS = {
 
 # 폴더 이름이 바뀌어도 찾아내기 위한 후보들 (번호를 붙이셔도 됩니다)
 ALIAS = {
-    'plaud':    ('plaud', '5_산출물', '5_plaud', '산출물'),
+    'plaud':    ('plaud', '회의록', '회의록결과'),
     'biseo':    ('_현장비서', '1_현장비서', '현장비서'),
     'template': ('_원틀', '4_원틀', '원틀'),
-    'out':      ('_도구결과', '5_도구결과', '도구결과'),
+    'out':      ('_도구결과', '도구결과'),
     'handover': ('KM_인수인계함', '3_인수인계함', '인수인계함'),
 }
+# 공통 폴더 아래에 한 겹 더 들어가는 경우도 훑는다 (3_공통사용\산출물\회의록 등)
+NEST = ('3_공통사용', '공통사용', '3_공통', '산출물', '5_산출물')
 
-def _find_by_alias(key):
-    """base 폴더 아래에서 이름 후보를 훑어 실제 폴더를 찾는다."""
-    base = cfg('base')
-    if not os.path.isdir(base):
+def _plain(s):
+    return str(s).lstrip('0123456789_ .').strip()
+
+def _look_in(folder, names):
+    """folder 바로 아래에서 이름 후보와 맞는 폴더를 찾는다(번호 접두어 무시)."""
+    if not os.path.isdir(folder):
         return None
-    for name in ALIAS.get(key, ()):
-        p = os.path.join(base, name)
+    try:
+        entries = os.listdir(folder)
+    except Exception:
+        return None
+    for name in names:
+        p = os.path.join(folder, name)
         if os.path.isdir(p):
             return p
-    # 번호만 붙인 경우(1_현장비서 처럼)도 잡아낸다
+    want = {_plain(n) for n in names}
+    for d in entries:
+        if os.path.isdir(os.path.join(folder, d)) and _plain(d) in want:
+            return os.path.join(folder, d)
+    return None
+
+def _find_by_alias(key, depth=3):
+    """base 아래 1~3단계를 훑어 실제 폴더를 찾는다.
+    3_공통사용\\산출물\\회의록 처럼 깊어져도 잡아낸다."""
+    base = cfg('base')
+    names = ALIAS.get(key, ())
+    if not names or not os.path.isdir(base):
+        return None
+    hit = _look_in(base, names)
+    if hit:
+        return hit
+    # 공통 폴더로 한 겹 들어간 경우
     try:
-        for d in os.listdir(base):
-            if not os.path.isdir(os.path.join(base, d)):
-                continue
-            plain = d.lstrip('0123456789_ ').strip()
-            for name in ALIAS.get(key, ()):
-                if plain == name.lstrip('0123456789_ ').strip():
-                    return os.path.join(base, d)
+        mids = [os.path.join(base, d) for d in os.listdir(base)
+                if os.path.isdir(os.path.join(base, d))
+                and (_plain(d) in {_plain(n) for n in NEST} or d in NEST)]
     except Exception:
-        pass
+        mids = []
+    for m in mids:
+        hit = _look_in(m, names)
+        if hit:
+            return hit
+        if depth > 2:
+            try:
+                for d2 in os.listdir(m):
+                    p2 = os.path.join(m, d2)
+                    if os.path.isdir(p2):
+                        hit = _look_in(p2, names)
+                        if hit:
+                            return hit
+            except Exception:
+                pass
     return None
 
 def cfg(key):

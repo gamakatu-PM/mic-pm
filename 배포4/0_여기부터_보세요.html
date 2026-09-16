@@ -79,26 +79,18 @@ code{background:#eef1f4;padding:1px 5px;border-radius:3px;font-size:12px}
 폴더를 옮기면 회의록 자동화가 경로를 못 찾을 위험만 생깁니다.
 </div>
 
-<h2>지금 폴더 상태 (2026-09-16 실제)</h2>
+<h2>폴더는 3개 (+ 새 프로그램이 생기면 4_, 5_ ...)</h2>
 <table>
-<tr><th>이름</th><th>무엇</th><th>번호를 붙인다면</th></tr>
-<tr><td><code>_현장비서</code></td><td><b>프로그램 ① 회의록</b> (시작.bat)</td><td><b>1_현장비서</b> ← 지금 바꿔도 안전</td></tr>
-<tr><td><code>KM도구_260916_수정</code></td><td><b>프로그램 ② 도구 25종</b></td><td><b>2_KM도구</b> ← 지금 바꿔도 안전</td></tr>
-<tr><td><code>plaud</code></td><td>①의 결과물 (26년\1.현장\현장별)</td><td>5_산출물 (나중에)</td></tr>
-<tr><td><code>_도구결과</code></td><td>②의 결과물</td><td>그대로 (자동 생성)</td></tr>
-<tr><td><code>_원틀</code></td><td>회사 서식 (작업의뢰서 MB-004 있음)</td><td>4_원틀 (나중에)</td></tr>
-<tr><td><code>_코드</code></td><td>회의록 프로그램 <b>소스 버전 보관소</b><br>km_run · km_meeting · km_worklog · km_schedule · km_mail · km_photo · km_change · km_todos · km_paths</td><td>6_코드보관 (나중에)</td></tr>
-<tr><td><code>Claude outputs</code></td><td>Claude가 만든 폴더</td><td>그대로</td></tr>
-<tr><td><code>_삭제요망_*</code> 2개</td><td>지울 것</td><td>9_정리대상 (모아두기)</td></tr>
-<tr><td><code>00_새창에붙여넣는_인수인계</code></td><td>옛 인수인계 메모 — <b>3_인수인계함과 역할이 겹칩니다</b></td><td>_삭제요망 검토</td></tr>
+<tr><th>폴더</th><th>무엇</th><th>안에 무엇이</th></tr>
+<tr><td><b>1_현장비서</b></td><td>프로그램 ① 회의록</td><td>시작.bat · 코드 · 1.여기에_v10결과_넣기 · _코드보관</td></tr>
+<tr><td><b>2_KM도구</b></td><td>프로그램 ② 도구 26종</td><td>시작.py · 코드 · 사용법</td></tr>
+<tr><td><b>3_공통사용</b></td><td>둘 다 쓰는 것</td><td>원틀 · 산출물(회의록/도구결과) · 인수인계함 · _삭제요망</td></tr>
+<tr><td>Claude outputs</td><td>정체 불명</td><td>건드리지 않습니다</td></tr>
 </table>
 
-<h2>이름을 바꿔도 제 도구는 안 깨집니다</h2>
+<h2>폴더를 옮기셔도 도구는 찾아냅니다</h2>
 <div class="n">
-폴더 이름 앞에 번호를 붙이셔도 도구가 <b>알아서 찾습니다</b>
-(<code>_현장비서</code> → <code>1_현장비서</code>, <code>_원틀</code> → <code>4_원틀</code> 모두 인식).<br>
-<b>이름 바꾸기는 되돌리기 쉽습니다</b> — 문제가 생기면 F2 로 원래 이름으로 돌리면 그만입니다.
-삭제와 다릅니다.<br><br>
-<b>다만 회의록 프로그램(시작.bat)은 제가 만든 게 아니라</b> <code>plaud</code>·<code>_원틀</code>·<code>_코드</code> 를
-어떻게 참조하는지 확인이 안 됐습니다. 그 3개는 확인 뒤에 바꾸시는 것이 안전합니다.
+이름을 바꾸거나 <code>3_공통사용</code> 안으로 옮기셔도 도구가 <b>3단계까지 훑어서 찾습니다</b>.<br>
+다만 <b>회의록 프로그램(1_현장비서)은 제가 만든 것이 아니라</b> <code>plaud</code>·<code>_원틀</code> 을
+어떻게 부르는지 확인이 필요합니다 → <b>2_KM도구 의 26번 「경로 검사」</b>를 돌려보십시오.
 </div>
