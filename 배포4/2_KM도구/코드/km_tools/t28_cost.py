@@ -55,8 +55,11 @@ ALIAS_DEFAULT = [
  ['KEY SENSOR', 'KD-2000M'],
  ['BED SIDE PANEL(전등', 'BSP-2000M'],
  ['옷장 1버튼', 'LIGHT SWITCH 1버튼'],
- ['욕실 5버튼', 'LS-2005'],
- ['욕실 6버튼', 'LS-2006'],
+ ['# 4~6버튼은 통신가, 1~3버튼은 접점가 (km-fixture-cost 확정 규칙)', ''],
+ ['욕실 5버튼', 'LS-2005 (통신)'],
+ ['욕실 6버튼', 'LS-2006 (통신)'],
+ ['5버튼', 'LS-2005 (통신)'],
+ ['6버튼', 'LS-2006 (통신)'],
  ['FLOOR INDICATOR', 'FLOOR INDICATOR PANEL'],
  ['OPERATION PC', 'OPERATION PC'],
  ['비상호출', 'EM-2000'],
@@ -162,21 +165,26 @@ def _pb_from_xlsx(path):
         print('[엑셀 열기 실패] %s' % e)
         return []
     names = sorted(wb.sheetnames, key=lambda n: ('총괄' not in n, n))
-    out = []
+    out, seen, per = [], set(), []
     for sn in names:
         ws = wb[sn]
         hrow, ci = find_header(ws)
         if not hrow:
             continue
+        k = 0
         for r in range(hrow + 1, (ws.max_row or hrow) + 1):
             mod = ws.cell(r, ci['mod']).value
             cost = num(ws.cell(r, ci['cost']).value)
             grp = ws.cell(r, ci['grp']).value if 'grp' in ci else ''
             if mod and cost:
-                out.append((str(grp or '').strip(), str(mod).strip(), cost))
-        if out:
-            print('  엑셀 시트 「%s」 에서 %d줄 읽었습니다.' % (sn, len(out)))
-            break
+                key = norm(mod)
+                if key in seen:
+                    continue           # 총괄이 먼저라 같은 형번은 총괄 값이 남는다
+                seen.add(key); out.append((str(grp or '').strip(), str(mod).strip(), cost)); k += 1
+        if k:
+            per.append('「%s」 %d줄' % (sn, k))
+    if out:
+        print('  엑셀 %s 에서 %d줄 읽었습니다 (%s)' % (os.path.basename(path), len(out), ' / '.join(per)))
     try:
         wb.close()
     except Exception:
@@ -324,6 +332,70 @@ def read_qty(path):
             out.append((nm, qty))
     return out
 
+# ---------------- 실행산출 6시트 ----------------
+
+CENTRAL = ('OPERATION', 'PC', 'FIP', 'FLOOR INDICATOR', 'DCU', 'DATA CONV', 'HDU', 'HAND DATA', 'SOFTWARE', 'MONITOR', 'CARD READER', 'DTC', 'DATA TRANSMIT', 'MAIN SYSTEM', 'C.I.P', 'CIP')
+LABOR = (('약전 결선 (선로 체크 + CB내 통신/UTP)', ('약전',)), ('CB 속판 취부, 뺵커버 / 기구물 설치', ('취부', '설치비')), ('시운전비 MK-TSET', ('시운전',)))
+
+def emit_exec(site, od, tag, qty, rows, cb_rows_priced, mult, miss, pb, alias, cbq, qty_name):
+    import execsheet
+    # 수량표 -> 구역 나누기
+    q_rows, cb_types = [], []
+    for (nm, q), r in zip(qty, rows):
+        up = nm.upper()
+        if 'CONTROL BOX' in up or up.startswith('CB'):
+            desc = re.sub(r'(?i)control\s*box\s*\d*', '', nm).strip(' -:()')
+            cb_types.append(('CB%d' % (len(cb_types) + 1), q, desc)); continue
+        g = '중앙' if any(k in up for k in CENTRAL) else ('도어락' if 'DOOR' in up or '도어락' in nm else '객실')
+        cost = r[3] if r[3] != '' else None
+        q_rows.append((nm, r[1] or '', 'EA', q, cost, r[5] + ((' — ' + r[1]) if r[1] else ''), g))
+    if not cb_types:
+        cb_types = [('CB1', cbq or 0)]
+    rooms = sum(t[1] for t in cb_types) or cbq or 0
+    # 노무 3종 (실당) — 단가장에 있으면 채우고 없으면 노란칸
+    unknown = []
+    for lab, keys in LABOR:
+        hit = next(((m, c) for g, m, c in pb if any(k in m for k in keys) and ('실당' in m or '노무' in g or '직접' in g)), None)
+        if hit:
+            q_rows.append((lab, hit[0], 'EA', rooms, int(hit[1]), '단가장 %s' % hit[0], '노무'))
+        else:
+            q_rows.append((lab, '', 'EA', rooms, None, '[확인] 노무 3종 실행가 미확인 — 1.입력판', '노무'))
+            unknown.append((lab, '노무 3종 실행가 미확인 (단가장 직접단가 시트에 없음)', '견적 스킬 표준 약전 12만 / 취부 13만 / 시운전 5만'))
+    # CB 내부
+    cbr = []
+    for g, mod, per, cost, amt, why in cb_rows_priced:
+        cbr.append((mod, g, [per] * len(cb_types), int(cost) if cost != '' else None, ('단가장 %s' % why) if cost != '' else '[확인] 단가장에 없음 — 1.입력판'))
+        if cost == '':
+            unknown.append((mod, '단가장에 없는 모듈', ''))
+    # 외함
+    enc = next(((m, c) for g, m, c in pb if '외함' in m and '노출' in m), None)
+    unknown.insert(0, ('CB 외함 세트 실행가 (1대당)', '규격 미정', ' / '.join('%s %s' % (m, won(c)) for g, m, c in pb if '외함' in m)[:120]))
+    # 단가 없는 기구물
+    for m in miss:
+        if str(m[0]).startswith('CB내부)') or 'CONTROL BOX' in str(m[0]).upper() or str(m[0]).upper().startswith('CB'):
+            continue           # CB 본체는 2.CB 실행 시트가 계산한다
+        unknown.append((m[0], m[2] if len(m) > 2 else '단가없음', m[3] if len(m) > 3 else ''))
+    meta = {'도면': qty_name, '견적서': None, '단가장': os.path.basename(_find_pb_file() or ''), 'CB출처': C_CBC_NOTE(), '객실수': rooms,
+            '자가신고': ['이 파일은 28번 코드가 정답본 틀에 값만 채운 것입니다. 사람 손으로 만든 칸이 없습니다.',
+                        'CB 내부 구성은 CB구성.csv 기준입니다. 현장 배선도로 확정될 때까지 잠정치입니다.',
+                        '견적서가 없으면 견적단가 = 실행 × 견적배수 잠정입니다. 발행 후 3.대조 F열을 발행단가로 바꾸십시오.',
+                        '노란칸(1.입력판)은 단가장에 없어 비운 것입니다. 추정치를 넣지 않았습니다.']}
+    out = os.path.join(od, '%s_실행산출_v1.xlsx' % tag)
+    execsheet.build(site, out, q_rows, cb_types, cbr, mult, unknown, meta)
+    print('')
+    print('실행산출 6시트 : %s' % out)
+    # 곧바로 검수
+    try:
+        import t37_check
+        v, finds, fixed = t37_check.inspect(out, ask_fix=False, quiet=True)
+        print('  37번 검수 : %s' % v)
+    except Exception as e:
+        print('  (37번 검수 못 돌림: %s)' % e)
+    return out
+
+def C_CBC_NOTE():
+    return 'CB구성.csv (광희동1가 배선도 판독분 기본)'
+
 # ---------------- 실행 ----------------
 
 def rooms_of(site):
@@ -379,6 +451,9 @@ def run(site_hint=None):
     rows, miss = [], []
     ex_sum = 0
     for nm, q in qty:
+        if 'CONTROL BOX' in nm.upper() or nm.upper().startswith('CB'):
+            print('%-34s %7s %11s %13s  2.CB 실행 시트에서 계산' % (nm[:34], won(q), '', ''))
+            rows.append([nm, '', q, '', '', 'CB 시트']); continue
         mod, cost, why, cands = find_price(nm, pb, alias, series)
         if cost:
             amt = int(round(q * cost)); ex_sum += amt
@@ -452,9 +527,15 @@ def run(site_hint=None):
             print('  %-40s %7s  %s  %s' % (str(m[0])[:40], won(m[1]), m[2], m[3][:40]))
         print('  -> 단가장에 줄을 추가하시거나, 별칭.csv 에 이름 연결을 한 줄 넣으십시오.')
 
-    # --- 파일 ---
+    # --- 실행산출 6시트 (정답본 틀, 코드가 채움) ---
     od = outdir(TOOL)
     tag = '%s_%s' % (safe_name(site), ymd6())
+    xls = None
+    try:
+        xls = emit_exec(site, od, tag, qty, rows, cb_rows, mult, miss, pb, alias, cbq, os.path.basename(qf))
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        print('[실행산출 엑셀 못 만듦] %s' % e)
     f1 = write_csv(os.path.join(od, '%s_실행견적_기구물.csv' % tag), rows,
                    ['품목', '맞춘형번', '수량', '실행단가', '실행금액', '근거'])
     made = [f1]
@@ -487,6 +568,8 @@ def run(site_hint=None):
                  % (won(len(pb)), mult.get('계약배수'), mult.get('견적배수'),
                     mult.get('예산배수'), mult.get('조립비율'))),
                 ('gray', '수량표 : %s' % os.path.basename(qf))])]
+    if xls:
+        made.insert(0, xls)
     f9 = write_html(os.path.join(od, '%s_실행견적.html' % tag),
                     '%s 실행 / 견적' % site, blocks, files=made)
     print('')
