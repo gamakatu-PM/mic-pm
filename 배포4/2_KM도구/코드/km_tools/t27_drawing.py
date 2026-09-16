@@ -417,6 +417,41 @@ def guess_site(files, inbox):
     b = re.split(r'[_\-]', b)[0]
     return b or '현장미정'
 
+DRAW_NO = re.compile(r'[A-Z]{1,3}-\d{3,5}')
+
+def _rev_key(f):
+    """판 순서 : Rev/R 숫자 > 앞머리 날짜(YYMMDD) > 수정시각"""
+    b = os.path.basename(f)
+    m = re.search(r'(?i)rev\.?\s*(\d+)', b) or re.search(r'(?i)\bR(\d+)\b', b)
+    rev = int(m.group(1)) if m else -1
+    m2 = re.match(r'(\d{6,8})', b)
+    dt = int(m2.group(1)) if m2 else 0
+    try:
+        mt = os.path.getmtime(f)
+    except Exception:
+        mt = 0
+    return (rev, dt, mt)
+
+def latest_per_drawing(files):
+    """같은 도면번호(T-1101 등)의 파일이 여러 판이면 최신 판 하나만 남긴다.
+    -> (읽을 파일들, 건너뛴 이전 판들)  ※ 도면번호가 없는 파일은 이름에서 날짜·Rev 를 뗀 것으로 묶는다"""
+    groups = {}
+    for f in files:
+        b = os.path.basename(f)
+        m = DRAW_NO.search(b.upper())
+        if m:
+            key = (m.group(0), os.path.splitext(b)[1].lower())
+        else:
+            stem = re.sub(r'(?i)rev\.?\s*\d+|\bR\d+\b|^\d{6,8}[_\- ]*|\[[^\]]*\]', '', os.path.splitext(b)[0]).strip(' _-')
+            key = (stem.upper(), os.path.splitext(b)[1].lower())
+        groups.setdefault(key, []).append(f)
+    keep, skipped = [], []
+    for key, fs in groups.items():
+        fs = sorted(fs, key=_rev_key)
+        keep.append(fs[-1]); skipped.extend(fs[:-1])
+    keep.sort(); skipped.sort()
+    return keep, skipped
+
 def read_all(files):
     """도면을 먼저 다 읽는다. 질문은 하지 않는다."""
     blocks = collections.Counter()
@@ -541,6 +576,11 @@ def run(folder=None, site_hint=None):
     print('')
 
     # 1) 먼저 읽는다
+    files, older = latest_per_drawing(files)
+    if older:
+        print('이전 판이라 읽지 않은 파일 %d개 (같은 도면번호의 최신 판만 읽습니다) :' % len(older))
+        for f in older:
+            print('   (이전 판) %s' % os.path.basename(f))
     blocks, toks, per_file, scans, unread, table = read_all(files)
 
     # 2) 한 장도 못 읽었으면 여기서 끝. 아무것도 묻지 않는다

@@ -241,7 +241,8 @@ def process_site(site, site_dir, force=False):
     if not new:
         return None
     rev = cur_rev + 1
-    q, src, per_file, unread = extract([f for f, h in new])
+    keep, older = D.latest_per_drawing(files)          # 새 파일이 CB 배선도 하나여도 판은 현장 전체(최신 판 묶음)로 만든다
+    q, src, per_file, unread = extract(keep)
     # 설계사 수량표가 있으면 같이 (도면에서 못 뽑았을 때 대신 쓴다)
     qf = qty_files(site_dir)
     q2 = collections.OrderedDict()

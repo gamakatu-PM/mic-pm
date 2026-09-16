@@ -64,7 +64,15 @@ ALIAS_DEFAULT = [
  ['FLOOR INDICATOR', 'FLOOR INDICATOR PANEL'],
  ['OPERATION PC', 'OPERATION PC'],
  ['비상호출', 'EM-2000'],
+ ['EMERGENCY', 'EM-2000'],
  ['방문자', 'VL-2000'],
+ ['VISITOR', 'VL-2000'],
+ ['ENTRANCE INDICATOR', 'CI-2000M'],
+ ['CHIME', 'CI-2000M'],
+ ['bath 5', 'LS-2005 (통신)'],
+ ['bath 6', 'LS-2006 (통신)'],
+ ['BATH 5', 'LS-2005 (통신)'],
+ ['BATH 6', 'LS-2006 (통신)'],
  ['# 아래는 일부러 비워 둡니다 - 단가장에 해당 품목이 없습니다', ''],
  ['# BED SIDE PANEL(온도  ->  2000M 에 온도형이 없습니다. 단가를 정하시면 여기에 한 줄', ''],
  ['# LIGHT SWITCH + 온도  ->  버튼 수가 정해지면 여기에 한 줄', ''],
@@ -76,6 +84,30 @@ def root():
     p = cfg('price')
     try:
         os.makedirs(p, exist_ok=True)
+    except Exception:
+        pass
+    return p
+
+def seed_merge(name, rows):
+    """파일이 있으면 기본 줄 중 왼쪽 키가 없는 것만 뒤에 붙인다 (프로님이 고친 줄은 그대로)."""
+    p = seed(name, rows)
+    try:
+        cur = read_text(p)
+        keys = set()
+        for line in cur.splitlines():
+            if line.strip() and not line.startswith('#'):
+                try: keys.add(next(csv.reader([line]))[0].strip())
+                except Exception: pass
+        add = [r for r in rows if r and r[0] and not r[0].startswith('#') and r[0] not in keys and r[0] not in ('도면품목(포함되면)',)]
+        if add:
+            for enc in ('cp949', 'utf-8-sig'):
+                try:
+                    with _io.open(p, 'a', encoding=enc, errors='strict') as fp:
+                        fp.write('\n# 기본 줄 추가 (%s %s)\n' % (VERSION, today().isoformat()))
+                        for r in add: fp.write(','.join(r) + '\n')
+                    break
+                except Exception:
+                    continue
     except Exception:
         pass
     return p
@@ -322,8 +354,10 @@ def pick_qty_file():
     return p if p and os.path.exists(p) else None
 
 def read_qty(path):
-    """[(품목, 수량)] - 숫자가 든 칸을 수량으로 본다"""
+    """[(품목, 수량)] - 머리글에 「내용/품목/품명」 「수량/채택수량」 이 있으면 그 열을 쓴다.
+    머리글이 없으면 숫자 칸 = 수량, 가장 긴 글자 칸 = 품목(옛 방식)."""
     out = []
+    ni = qi = None
     for r in [x for x in read_text(path).splitlines() if x.strip()]:
         try:
             cells = next(csv.reader([r]))
@@ -331,6 +365,16 @@ def read_qty(path):
             continue
         cells = [c.strip() for c in cells]
         if not cells or cells[0].startswith('#'):
+            continue
+        if ni is None and qi is None and any(h in cells for h in ('내용', '품목', '품명', '품목명')):
+            ni = next(i for i, c in enumerate(cells) if c in ('내용', '품목', '품명', '품목명'))
+            qi = next((i for i, c in enumerate(cells) if c in ('채택수량', '수량')), None)
+            continue
+        if ni is not None:
+            nm = cells[ni] if ni < len(cells) else ''
+            q = num(cells[qi]) if (qi is not None and qi < len(cells)) else None
+            if nm and q and q > 0:
+                out.append((nm, int(q)))
             continue
         qty = None
         nm = ''
@@ -343,6 +387,15 @@ def read_qty(path):
         if nm and qty:
             out.append((nm, qty))
     return out
+
+PER_ROOM = ('INDICATOR', 'KEY SENSOR', '키센서', '챠임벨', 'CHIME', '입구')
+def guess_rooms(qty):
+    """CB 대수 기본값 : 현장대장 객실수 > 실당 1개 품목(입구 INDICATOR·KEY SENSOR)의 수량. 0 이면 None"""
+    best = 0
+    for nm, q in qty:
+        if any(k in str(nm).upper() for k in PER_ROOM):
+            best = max(best, int(q or 0))
+    return best or None
 
 # ---------------- 실행산출 6시트 ----------------
 
@@ -540,7 +593,7 @@ def rooms_of(site):
 def run(site_hint=None):
     title('28. 단가 붙이기   (수량표 + 단가장 -> 금액. 토큰 0)')
     rt = root()
-    seed(MULT, MULT_DEFAULT); seed_cbc(); seed(ALIAS_F, ALIAS_DEFAULT)
+    seed(MULT, MULT_DEFAULT); seed_cbc(); seed_merge(ALIAS_F, ALIAS_DEFAULT)
     pb = load_pricebook()
     print('단가장 폴더 : %s' % rt)
     if not pb:
@@ -624,7 +677,8 @@ def run(site_hint=None):
             print('  %-44s 조립비 %12s  (자재 x %s)'
                   % ('', won(cb_one - cb_mat), asm_rate))
             print('  %-44s 1대당 %12s' % ('', won(cb_one)))
-    cbq = int(num(ask('\nCB 대수 (엔터=%s) > ' % rooms_of(site), rooms_of(site))) or 0)
+    _default_cb = int(num(rooms_of(site)) or 0) or guess_rooms(qty) or 0   # rooms_of 는 '0' 문자열을 준다(참으로 평가되던 사고)
+    cbq = int(num(ask('\nCB 대수 (엔터=%s, 현장대장 객실수 > 실당 품목 수량) > ' % _default_cb, _default_cb)) or 0)
     cb_tot = cb_one * cbq if (cb_one and cbq) else 0
 
     # --- 총괄 ---

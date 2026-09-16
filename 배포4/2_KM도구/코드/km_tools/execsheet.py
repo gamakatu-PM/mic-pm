@@ -96,7 +96,7 @@ def build(site, out_path, qty, cb_qty, cb_rows, mult, unknown, meta):
                            ('예산배수', '설계 예산가 배수', '표준 2.1')):
         put(ws, r, 1, lab, sI); put(ws, r, 2, mult.get(key), sB, fill=YEL, num='0.00'); put(ws, r, 3, note, sC); R[key] = r; r += 1
     r += 1
-    put(ws, r, 1, '■ 수량 (견적서/수량표에서 읽음)', sH, fill=None if sH else '2A6099', bold=True, white=True); ws.merge_cells('A%d:C%d' % (r, r)); r += 1
+    put(ws, r, 1, '■ 수량 (견적서에서 읽음)', sH, fill=None if sH else '2A6099', bold=True, white=True); ws.merge_cells('A%d:C%d' % (r, r)); r += 1
     R['cb'] = []
     for t in cb_qty:
         name, n = t[0], t[1]; desc = t[2] if len(t) > 2 else ''
@@ -111,9 +111,11 @@ def build(site, out_path, qty, cb_qty, cb_rows, mult, unknown, meta):
     R['unk_first'] = min(R['unk'].values()) if R['unk'] else r; R['unk_last'] = max(R['unk'].values()) if R['unk'] else r
     doors = [u for u in unknown if u[3] == '도어락']
     R['door_first'] = R['door_last'] = None
+    r += 1
+    put(ws, r, 1, '■ 도어락 파트 — 직접단가 품목. 실행가(원가)가 전 현장 공통으로 미확인', sH, fill=None if sH else '2A6099', bold=True, white=True); ws.merge_cells('A%d:C%d' % (r, r)); r += 1
+    if not doors:
+        put(ws, r, 1, '(이 현장은 도어락 없음)', sI); put(ws, r, 3, '수량표에 RF DOOR LOCK 이 없어 비움', sC); r += 1
     if doors:
-        r += 1
-        put(ws, r, 1, '■ 도어락 파트 — 직접단가 품목. 실행가(원가)가 전 현장 공통으로 미확인', sH, fill=None if sH else '2A6099', bold=True, white=True); ws.merge_cells('A%d:C%d' % (r, r)); r += 1
         for what, why, cand, grp, pre in doors:
             put(ws, r, 1, what, sI); put(ws, r, 2, pre, sB, fill=YEL, num='#,##0'); put(ws, r, 3, '%s %s' % (why, ('— 후보: ' + cand) if cand else ''), sC); R['unk'][what] = r
             R['door_first'] = R['door_first'] or r; R['door_last'] = r; r += 1

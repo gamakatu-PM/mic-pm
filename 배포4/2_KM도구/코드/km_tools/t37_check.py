@@ -232,7 +232,7 @@ def quick(tp, gp):
             gset = [x for x in gh if x]; tset = [x for x in th if x]
             def has(h):
                 return any(t.startswith(h[:6]) or h.startswith(t[:6]) for t in tset)
-            miss = [h for h in gset if not has(h)]
+            miss = [h for h in gset if not has(h) and not re.match(r'CB\d', h)]   # CB2수량·CB2금액 같은 타입별 열은 현장마다 다르다
             if len(miss) > max(0, len(gset) // 5):
                 finds.append(('잘못', '머리글', '「%s」 정답본 머리글 중 대상에 없는 것 %s' % (gname, miss[:6])))
             elif miss:
@@ -268,7 +268,7 @@ def quick(tp, gp):
             for c in price_cols:
                 cell = ws.cell(r, c)
                 lab = str(ws.cell(r, 1).value or ws.cell(r, 2).value or '')
-                if not lab or any(k in lab for k in ('소계', '합계', 'TOTAL', '검산', '대수', '참고')):
+                if not lab or lab.strip()[:1] in '▣■◆▷*' or any(k in lab for k in ('소계', '합계', 'TOTAL', '검산', '대수', '참고', '조립비', '실행가', '견적가', '견적단가', '배수', '자재비')):
                     continue
                 if cell.value in (None, '') and not is_yellow(cell) and any(isinstance(ws.cell(r, k).value, (int, float, str)) for k in (4, 5)):
                     finds.append(('이상', '노란칸', '%s!%s 단가 빈칸인데 노랑 아님 (%s)' % (ws.title, cell.coordinate, lab[:18])))
