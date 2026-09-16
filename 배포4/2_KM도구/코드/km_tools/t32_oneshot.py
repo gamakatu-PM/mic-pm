@@ -16,8 +16,37 @@ import t33_dashboard as DB
 
 TOOL = '한방에'
 
+def run_site(site, sdir, with_intake=True, with_dash=True):
+    """현장 하나를 묻지 않고 끝까지. 돌아온 값 : [(단계, 결과)]"""
+    common.AUTO = True
+    steps = []
+    if with_intake:
+        steps.append(('31 도면 접수·판 비교', lambda: I.run(site_hint=site)))
+    steps += [('27 도면 수량', lambda: D.run(folder=sdir, site_hint=site)),
+              ('28 단가 붙이기', lambda: C.run(site_hint=site)),
+              ('29 단가장 채우기', lambda: P.run(folder=sdir, site_hint=site)),
+              ('30 완성품 점검·부탁서', lambda: F.run(site_hint=site))]
+    if with_dash:
+        steps.append(('33 현황판', lambda: DB.run(quiet=True)))
+    done = []
+    try:
+        for name, fn in steps:
+            print('')
+            print('-' * 74)
+            print(' >> %s' % name)
+            print('-' * 74)
+            try:
+                fn(); done.append((name, '완료'))
+            except Exception as e:
+                done.append((name, '오류 : %s' % e))
+                print('[오류] %s 에서 멈췄지만 다음 단계로 갑니다.' % name)
+                traceback.print_exc()
+    finally:
+        common.AUTO = False
+    return done
+
 def run():
-    title('32. 현장 한 방에   (31 -> 27 -> 28 -> 29 -> 30 연달아. 토큰 0)')
+    title('32. 현장 한 방에   (31 -> 27 -> 28 -> 29 -> 30 -> 33 연달아. 토큰 0)')
     ss = I.sites()
     if not ss:
         print('[현장 폴더가 없습니다] 3_공통사용\\도면\\{현장명}\\ 을 만들고 도면을 넣어주십시오.')
@@ -33,29 +62,7 @@ def run():
     print('=' * 74)
     print(' [%s]  묻지 않고 연달아 돌립니다. 기본값은 화면에 [자동] 으로 찍힙니다.' % site)
     print('=' * 74)
-    common.AUTO = True
-    steps = [('31 도면 접수·판 비교', lambda: I.run(site_hint=site)),
-             ('27 도면 수량', lambda: D.run(folder=sdir, site_hint=site)),
-             ('28 단가 붙이기', lambda: C.run(site_hint=site)),
-             ('29 단가장 채우기', lambda: P.run(folder=sdir, site_hint=site)),
-             ('30 완성품 점검·부탁서', lambda: F.run(site_hint=site)),
-             ('33 현황판', lambda: DB.run(quiet=True))]
-    done = []
-    try:
-        for name, fn in steps:
-            print('')
-            print('-' * 74)
-            print(' >> %s' % name)
-            print('-' * 74)
-            try:
-                fn()
-                done.append((name, '완료'))
-            except Exception as e:
-                done.append((name, '오류 : %s' % e))
-                print('[오류] %s 에서 멈췄지만 다음 단계로 갑니다.' % name)
-                traceback.print_exc()
-    finally:
-        common.AUTO = False
+    done = run_site(site, sdir)
     print('')
     print('=' * 74)
     print(' [%s] 한 방에 끝' % site)

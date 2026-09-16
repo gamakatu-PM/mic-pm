@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """98. 업데이트 - 받으신 zip 을 도구가 스스로 적용한다.
 프로님은 zip 을 받기만 하시면 됩니다. 압축 풀기·복사·덮어쓰기는 이 도구가 합니다."""
-import os, sys, zipfile, shutil, datetime, glob
+import os, sys, re, zipfile, shutil, datetime, glob
 from common import *
 
 def search_dirs():
@@ -29,6 +29,20 @@ def find_zips():
                 found.append((os.path.getmtime(p), p))
     found.sort(reverse=True)
     return [p for _, p in found]
+
+def zip_version(path):
+    m = re.search(r'_v(\d+)_', os.path.basename(path))
+    return int(m.group(1)) if m else 0
+
+def newer_zip():
+    """지금 판보다 번호가 큰 zip 이 다운로드/바탕화면에 있으면 그 경로"""
+    cur = int(re.sub(r'\D', '', VERSION) or 0)
+    best = None
+    for z in find_zips():
+        v = zip_version(z)
+        if v > cur and (best is None or v > zip_version(best)):
+            best = z
+    return best
 
 def find_prefix(z, folder):
     """zip 안에서 어떤 폴더의 위치(접두어)를 찾는다"""

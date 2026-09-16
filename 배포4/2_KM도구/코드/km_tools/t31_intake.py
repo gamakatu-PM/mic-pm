@@ -161,6 +161,65 @@ def load_rev(path):
             pass
     return q
 
+# ---------------- 받은함 자동 분류 ----------------
+
+SITE_PAT = re.compile(r'\[(.{2,20}?)\]')
+
+def guess_site_from_name(name):
+    """파일명의 [현장명] 을 읽는다. 없으면 현장대장 이름이 파일명에 들어 있는지 본다."""
+    m = SITE_PAT.search(name)
+    if m:
+        return m.group(1).strip()
+    try:
+        import sitebook
+        for d in sitebook.load():
+            if d['site'] and norm_(d['site']) in norm_(name):
+                return d['site']
+    except Exception:
+        pass
+    return None
+
+def sort_inbox():
+    """_여기에_넣으십시오 의 도면을 현장 폴더로 옮긴다. 현장을 못 알아보면 그대로 둔다.
+    옮기는 것은 C등급이라 묻는다 (32번 자동 모드에서는 알리고 옮긴다)."""
+    root = D.dwg_root()
+    inbox = os.path.join(root, D.INBOX)
+    files = D.gather(inbox)
+    if not files:
+        return []
+    plan, unknown = [], []
+    for f in files:
+        site = guess_site_from_name(os.path.basename(f))
+        (plan if site else unknown).append((f, site))
+    if unknown:
+        print('받은함에 현장을 못 알아본 도면 %d개 (파일명에 [현장명] 을 넣어 주십시오)' % len(unknown))
+        for f, _ in unknown[:8]:
+            print('   %s' % os.path.basename(f))
+    if not plan:
+        return []
+    print('받은함 -> 현장 폴더로 옮길 도면 %d개' % len(plan))
+    for f, site in plan:
+        print('   %-44s -> %s\\' % (os.path.basename(f)[:44], site))
+    if not ask('옮길까요? (y=엔터 / n) > ', 'y').lower().startswith('y'):
+        return []
+    import shutil
+    moved = []
+    for f, site in plan:
+        dst_dir = os.path.join(root, safe_name(site))
+        os.makedirs(dst_dir, exist_ok=True)
+        dst = os.path.join(dst_dir, os.path.basename(f))
+        if os.path.exists(dst):
+            stem, ext = os.path.splitext(os.path.basename(f))
+            dst = os.path.join(dst_dir, '%s_%s%s' % (stem, ymd6(), ext))
+        try:
+            shutil.move(f, dst)
+            moved.append((site, dst))
+        except Exception as e:
+            print('   [못 옮김] %s : %s' % (os.path.basename(f), e))
+    if moved:
+        log(TOOL, '받은함 분류 %d개' % len(moved))
+    return moved
+
 # ---------------- 현장 하나 ----------------
 
 def process_site(site, site_dir, force=False):
@@ -229,6 +288,7 @@ def process_site(site, site_dir, force=False):
 def run(site_hint=None):
     title('31. 도면 접수 · 판 비교   (현장 폴더에 새 도면이 오면 읽고 증감. 토큰 0)')
     root = D.dwg_root()
+    sort_inbox()
     ss = sites()
     print('도면 폴더 : %s' % root)
     if not ss:

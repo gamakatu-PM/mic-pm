@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""KM 현장비서 도구모음 - 번호 메뉴 (35종).
+"""KM 현장비서 도구모음 - 번호 메뉴 (35종 + 엔터=오늘 한 방에).
 기존 시작.bat(PLAUD 회의록)은 건드리지 않습니다. 이것은 그 옆에 붙는 별도 런처입니다."""
 import os, sys, importlib, traceback
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -74,10 +74,20 @@ def main():
                 print(' %2d. %s' % (i, name))
         print('')
         print('  0. 닫기   97. 방금 만든 결과 열기   98. 업데이트(받은 zip)   99. 저장 폴더 열기')
+        print('')
+        print('  >> 번호 없이 엔터만 누르면 「오늘 한 방에」 : 새 zip 적용 -> 도면 분류 -> 새 판 처리 -> 현황판')
         try:
-            s = input('\n번호를 누르고 엔터 > ').strip()
+            s = input('\n번호 (엔터 = 오늘 한 방에) > ').strip()
         except EOFError:
             return
+        if s == '':
+            os.system('cls' if os.name == 'nt' else 'clear')
+            try:
+                m = _il.import_module('t36_today'); _il.reload(m); m.run()
+            except Exception:
+                print('[오류] 아래 글자를 클로드에게 보여주십시오.')
+                traceback.print_exc()
+            pause(); continue
         if s == '0':
             return
         if s == '99':
