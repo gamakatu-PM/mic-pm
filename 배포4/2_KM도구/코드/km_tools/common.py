@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-VERSION = 'v13'
+VERSION = 'v14'
 VERSION_DATE = '2026-09-16'
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -25,6 +25,7 @@ DEFAULTS = {
     'out':     r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\_도구결과',
     'handover':r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\KM_인수인계함',
     'drawing': r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\3_공통사용\도면',
+    'price':   r'C:\Users\gamak\OneDrive\26년도 현장\!!클로드가 저장하는 폴더\3_공통사용\단가장',
 }
 
 # 폴더 이름이 바뀌어도 찾아내기 위한 후보들 (번호를 붙이셔도 됩니다)
@@ -35,6 +36,7 @@ ALIAS = {
     'out':      ('_도구결과', '도구결과'),
     'handover': ('KM_인수인계함', '3_인수인계함', '인수인계함'),
     'drawing':  ('도면', '_도면', '도면검토'),
+    'price':    ('단가장', '_단가장', '단가'),
 }
 # 공통 폴더 아래에 한 겹 더 들어가는 경우도 훑는다 (3_공통사용\산출물\회의록 등)
 NEST = ('3_공통사용', '공통사용', '3_공통', '산출물', '5_산출물')

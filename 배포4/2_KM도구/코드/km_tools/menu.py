@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""KM 현장비서 도구모음 - 번호 메뉴 (27종).
+"""KM 현장비서 도구모음 - 번호 메뉴 (28종).
 기존 시작.bat(PLAUD 회의록)은 건드리지 않습니다. 이것은 그 옆에 붙는 별도 런처입니다."""
 import os, sys, importlib, traceback
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -41,6 +41,8 @@ GROUPS = [
    ('경로 검사          폴더 이름 바꿔도 되나 확인', 't26_pathcheck')]),
  ('도면', [
    ('도면 수량 뽑기     DXF/PDF 넣으면 기구물 수량', 't27_drawing')]),
+ ('돈 붙이기', [
+   ('단가 붙이기        수량표+단가장 -> 실행/계약/견적/예산', 't28_cost')]),
 ]
 
 def flat():
