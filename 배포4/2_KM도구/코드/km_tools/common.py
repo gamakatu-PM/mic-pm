@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-VERSION = 'v25'
+VERSION = 'v26'
 VERSION_DATE = '2026-09-16'
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -393,3 +393,60 @@ def open_folder(p):
         os.system(('start "" "%s"' if os.name == 'nt' else 'xdg-open "%s" 2>/dev/null &') % p)
     except Exception:
         pass
+
+
+# ---------------- 엑셀 수식 결과를 파일에 미리 넣기 ----------------
+def finish_xlsx(path):
+    """openpyxl 로 만든 xlsx 는 수식만 있고 계산값이 없어, 인터넷에서 받은 파일(보호된 보기)이나 미리보기에서는
+    금액 칸이 비어 보인다. 1) 윈도우+엑셀이 있으면 엑셀로 한 번 계산해 저장, 2) 아니면 파이썬이 계산한 값을 파일 안에 넣는다.
+    -> '엑셀' / '파이썬 n칸' / '' """
+    if os.name == 'nt':
+        try:
+            import win32com.client
+            xl = win32com.client.DispatchEx('Excel.Application'); xl.Visible = False; xl.DisplayAlerts = False
+            wb = xl.Workbooks.Open(os.path.abspath(path)); xl.CalculateFull(); wb.Save(); wb.Close(False); xl.Quit()
+            return '엑셀'
+        except Exception:
+            pass
+    try:
+        import openpyxl, zipfile, re, shutil
+        sys.path.insert(0, HERE)
+        from t37_check import Calc
+        wb = openpyxl.load_workbook(path)
+        calc = Calc(wb)
+        vals = {}
+        for i, ws in enumerate(wb.worksheets, 1):
+            d = {}
+            for row in ws.iter_rows():
+                for c in row:
+                    if isinstance(c.value, str) and c.value.startswith('='):
+                        try:
+                            v = calc.val(ws, c.coordinate)
+                        except Exception:
+                            v = None
+                        if isinstance(v, (int, float)) and not isinstance(v, bool):
+                            d[c.coordinate] = v
+            vals['xl/worksheets/sheet%d.xml' % i] = d
+        tmp = path + '.tmp'
+        n = 0
+        with zipfile.ZipFile(path) as zin, zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                data = zin.read(item.filename)
+                d = vals.get(item.filename)
+                if d:
+                    x = data.decode('utf-8')
+                    def rep(m):
+                        nonlocal n
+                        ref = m.group(1)
+                        if ref in d:
+                            n += 1
+                            v = d[ref]
+                            return '<c r="%s"%s><f>%s</f><v>%s</v></c>' % (ref, m.group(2), m.group(3), repr(float(v)) if v != int(v) else int(v))
+                        return m.group(0)
+                    x = re.sub(r'<c r="([A-Z]+\d+)"([^>]*)><f>(.*?)</f><v></v></c>', rep, x)
+                    data = x.encode('utf-8')
+                zout.writestr(item, data)
+        shutil.move(tmp, path)
+        return '파이썬 %d칸' % n
+    except Exception:
+        return ''

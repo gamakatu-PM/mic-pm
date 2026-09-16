@@ -147,4 +147,8 @@ def build(site, out_path, qty, cb_types, cb_rows, mult, meta):
     except Exception:
         pass
     wb.save(out_path)
+    try:
+        finish_xlsx(out_path)   # 수식 결과를 파일에 넣어 미리보기·보호된 보기에서도 금액이 보이게
+    except Exception:
+        pass
     return out_path, TOT
