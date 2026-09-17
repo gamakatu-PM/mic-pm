@@ -13,6 +13,7 @@ DATA = os.path.join(os.path.dirname(os.path.dirname(HERE)), '시험자료')
 EXPECT = {
     '앵커_품목수': 7, '앵커_ENTRANCE': 320, '앵커_L6': 39, '앵커_이전판건너뜀': 2,
     '쏠비치_품목수': 2,
+    '회의변경_앵커': 2, '받는함_옮김': 1,
 }
 
 def _worker(base):
@@ -20,7 +21,8 @@ def _worker(base):
     import common
     common.DEFAULTS.update({'base': base, 'template': os.path.join(base, '_원틀'), 'out': os.path.join(base, '_도구결과'),
                             'price': os.path.join(base, '3_공통사용', '단가장'), 'drawing': os.path.join(base, '3_공통사용', '도면'),
-                            'handover': os.path.join(base, '인수인계함'), 'plaud': os.path.join(base, 'plaud')})
+                            'handover': os.path.join(base, '인수인계함'), 'plaud': os.path.join(base, 'plaud'),
+                            'biseo': os.path.join(base, '_현장비서'), 'meeting_inbox': os.path.join(base, '받는함')})
     common.AUTO = True
     common.open_file = lambda *a, **k: False
     common.open_folder = lambda *a, **k: False
@@ -35,6 +37,10 @@ def prepare():
     base = tempfile.mkdtemp(prefix='km_selftest_')
     for d in ('3_공통사용', '_원틀', '인수인계함', 'plaud'):
         os.makedirs(os.path.join(base, d), exist_ok=True)
+    for d in ('plaud', '_현장비서', '받는함'):
+        if os.path.isdir(os.path.join(DATA, d)):
+            shutil.rmtree(os.path.join(base, d), ignore_errors=True)
+            shutil.copytree(os.path.join(DATA, d), os.path.join(base, d))
     shutil.copytree(os.path.join(DATA, '도면'), os.path.join(base, '3_공통사용', '도면'))
     shutil.copytree(os.path.join(DATA, '단가장'), os.path.join(base, '3_공통사용', '단가장'))
     g = os.path.join(cfg('template'), '정답본')
@@ -67,6 +73,19 @@ def check(base, log):
     ok('이전 판 %d개 건너뜀 표시' % EXPECT['앵커_이전판건너뜀'], ('이전 판이라 읽지 않은 파일 %d개' % EXPECT['앵커_이전판건너뜀']) in log)
     q2 = glob.glob(os.path.join(o, '도면수량', '*', '쏠비치양양_도면에적힌수량표_*.csv'))
     ok('쏠비치 수량표 %d품목' % EXPECT['쏠비치_품목수'], bool(q2) and len(_csv_rows(q2[-1])) == EXPECT['쏠비치_품목수'])
+    # v33 회의 연결 (40)
+    ch = glob.glob(os.path.join(o, '회의연결', '*', '앵커호텔_회의변경수량_*.csv'))
+    ok('회의록 수량·규격 변경 앵커 %d줄' % EXPECT['회의변경_앵커'], bool(ch) and len(_csv_rows(ch[-1])) == EXPECT['회의변경_앵커'],
+       '실제 %s' % (len(_csv_rows(ch[-1])) if ch else '파일 없음'))
+    req = glob.glob(os.path.join(o, '완성품', '*', '_클로드부탁서_앵커호텔_*.md'))
+    rq = read_text(req[-1]) if req else ''
+    ok('부탁서에 「회의에서 바뀐 수량·규격」 절 + 330', ('회의에서 바뀐 수량' in rq) and ('330' in rq))
+    mv = glob.glob(os.path.join(base, '_현장비서', '1.여기에_v10결과_넣기', '*.txt'))
+    ok('받는함 txt %d개 -> _현장비서 대기함' % EXPECT['받는함_옮김'], len(mv) == EXPECT['받는함_옮김'], '실제 %d' % len(mv))
+    bk = glob.glob(os.path.join(base, '인수인계함', '회의록코드_백업', '*', '코드', 'km_run.py'))
+    ok('회의록 코드 백업 생성', bool(bk))
+    dash = glob.glob(os.path.join(base, '인수인계함', '_현황판.md'))
+    ok('현황판 ⑦ 회의 변경 블록', bool(dash) and '⑦ 회의에서 바뀐 수량' in read_text(dash[-1]) and '330' in read_text(dash[-1]))
     x = glob.glob(os.path.join(o, '단가붙이기', '*', '앵커호텔_*_실행산출_v1.xlsx'))
     ok('앵커 실행산출 xlsx 생성', bool(x))
     if x:
@@ -87,7 +106,7 @@ def check(base, log):
     ok('앵커 견적서 xlsx 생성', bool(glob.glob(os.path.join(o, '단가붙이기', '*', '앵커호텔_*_견적서_v1.xlsx'))))
     ok('부탁서 생성', bool(glob.glob(os.path.join(o, '완성품', '*', '_클로드부탁서_앵커호텔_*.md'))))
     ok('현황판 생성', os.path.exists(os.path.join(base, '_현황판.html')))
-    if os.path.isdir(os.path.join(base, '_원틀', '정답본')):
+    if glob.glob(os.path.join(base, '_원틀', '정답본', '*.xlsx')):
         v = re.findall(r'대상\s*:\s*앵커호텔_\d+_실행산출_v1\.xlsx.*?검수 판정\s*:\s*(\S+)', log, re.S)
         ok('37 검수(실행산출) 「잘못」 아님', bool(v) and v[-1] != '잘못', '판정 %s' % (v[-1] if v else '없음'))
         v2 = re.findall(r'대상\s*:\s*앵커호텔_\d+_견적서_v1\.xlsx.*?검수 판정\s*:\s*(\S+)', log, re.S)

@@ -67,6 +67,11 @@ def gather_state(site=''):
             except Exception:
                 pass
     out['원틀'] = find_template('견적')
+    try:
+        import t40_meeting
+        out['회의변경'] = t40_meeting.changes_for(site)
+    except Exception:
+        out['회의변경'] = []
     return out
 
 # ---------------- 부탁서 ----------------
@@ -98,6 +103,18 @@ def make_request(site, st):
             a('| %s | %s | %s |' % (r[0], r[3], r[4] if len(r) > 4 else ''))
         a('')
         a('-> 답 서식 : `수량,<품목명>,<맞는 수량>,<근거>`  (틀린 줄만)')
+        a('')
+    if st.get('회의변경'):
+        n += 1
+        a('## %d. 회의에서 바뀐 수량·규격 (PLAUD 회의록에서 자동 수집)' % n)
+        a('회의록 「■ 수량·규격 변경」에 적힌 줄입니다. 수량표·도면에 반영됐는지 프로님이 확인해 주십시오. 도구는 수량을 바꾸지 않았습니다.')
+        a('')
+        a('| 회의일 | 협의자 | 내용 |')
+        a('|---|---|---|')
+        for r in st['회의변경'][:40]:
+            a('| %s | %s | %s |' % (r[1], r[2], r[4].replace('|', '/')))
+        a('')
+        a('-> 반영할 줄만 답 서식 : `수량,<품목명>,<맞는 수량>,회의 YYMMDD`')
         a('')
     if st['단가없음']:
         n += 1

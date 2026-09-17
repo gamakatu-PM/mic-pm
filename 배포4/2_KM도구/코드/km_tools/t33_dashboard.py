@@ -143,13 +143,23 @@ def build(quiet=False):
     else:
         B5 = [('red', '단가장이 PC에 없습니다 - 3_공통사용\\단가장\\ 에 드라이브 CB모듈_단가장 xlsx 를 넣으십시오')]
     B6 = [('gray', l) for l in logs]
+    B7 = []
+    try:
+        import t40_meeting
+        for r in t40_meeting.changes_for('', days=30)[:15]:
+            B7.append(('yellow', '%s · %s · %s : %s' % (r[0], r[1], r[2], r[4][:80])))
+    except Exception:
+        pass
+    if not B7:
+        B7 = [('green', '최근 30일 회의록에 수량·규격 변경 없음')]
 
     blocks = [('① 오늘 결정할 것 (결정대기)', B1),
               ('② 현장별 도면 (판 · 증감)', B2),
               ('③ 클로드에게 넘길 것', B3),
               ('④ 납기 경보 · 수금', B4),
               ('⑤ 단가장', B5),
-              ('⑥ 최근 도구 실행', B6)]
+              ('⑥ 최근 도구 실행', B6),
+              ('⑦ 회의에서 바뀐 수량·규격 (최근 30일, PLAUD 회의록)', B7)]
     links = [x for x in [xfile] + [p for s, n, p, d in reqs] + [d for *_, d in srows if d] + [pbf] if x]
     od = outdir(TOOL)
     f_out = write_html(os.path.join(od, '현황판_%s.html' % ymd6()), 'KM 현황판', blocks, files=links)

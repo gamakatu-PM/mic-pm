@@ -4,6 +4,7 @@
   1) 다운로드/바탕화면에 지금보다 새 KM zip 이 있으면 스스로 적용한다 (98번 손 제거)
   2) 받은함(_여기에_넣으십시오)의 도면을 [현장명] 으로 현장 폴더에 나눠 넣는다 (폴더 만드는 손 제거)
   3) 모든 현장의 새 도면을 읽고(31), 새 판이 생긴 현장만 27->28->29->30 을 돌린다
+  3-1) 회의 연결(40) : 받는함의 PLAUD txt 를 _현장비서로, 회의록의 수량·규격 변경을 부탁서·현황판으로
   4) 현황판(33)을 만들어 띄운다. 클로드에게 넘길 것은 30번 부탁서에 모여 있다
 """
 import os, sys, traceback
@@ -13,6 +14,7 @@ import t98_update as U
 import t31_intake as I
 import t32_oneshot as O
 import t33_dashboard as DB
+import t40_meeting as M
 
 TOOL = '오늘한방에'
 
@@ -55,6 +57,12 @@ def run(quiet=False):
             print('바로가기 만듦 : %s' % sc)
         if auto_update(quiet=quiet):
             return
+        print('')
+        print('-' * 74); print(' >> 40 회의 연결 (받는함 -> _현장비서 / 회의록 수량·규격 변경 / 코드 백업)'); print('-' * 74)
+        try:
+            M.run(quiet=True)
+        except Exception:
+            traceback.print_exc()
         print('')
         print('-' * 74); print(' >> 31 도면 접수 (받은함 분류 + 전 현장 새 판 찾기)'); print('-' * 74)
         results = []

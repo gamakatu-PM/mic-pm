@@ -11,8 +11,8 @@ try:
 except Exception:
     pass
 
-VERSION = 'v32'
-VERSION_DATE = '2026-09-16'
+VERSION = 'v33'
+VERSION_DATE = '2026-09-17'
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 INI = os.path.join(HERE, '설정.ini')
