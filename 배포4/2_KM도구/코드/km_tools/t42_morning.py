@@ -155,7 +155,9 @@ def section(text, name):
     m = SEC(name).search(text)
     if not m:
         return []
-    rest = text[m.end():]
+    # 머리글 줄의 남은 글자(「■ 수량·규격 변경」 의 '변경' 같은 것)를 내용으로 잡지 않는다
+    nl = text.find('\n', m.end())
+    rest = text[(nl + 1) if nl >= 0 else m.end():]
     n = SEC_ANY.search(rest)
     body = rest[:n.start()] if n else rest
     out = []
@@ -372,8 +374,9 @@ def build(quiet=True):
     try:
         import t44_meetingcheck as MC
         unread_mt = MC.unchecked()
+        mt_xlsx, mt_csv = MC.build_xlsx(unread_mt, quiet=True)
     except Exception:
-        unread_mt = []
+        unread_mt, mt_xlsx, mt_csv = [], None, None
     fx = facts.load()
     book = {d['site']: d for d in sitebook.load()}
     # 현장 목록 = 현장대장 ∪ 회의록 현장 ∪ 도면 현장 ∪ 확정 대장
@@ -416,8 +419,16 @@ def build(quiet=True):
             bits.append('<b>수량·규격 변경 %d줄</b>' % len(m['changes']))
         if m['secret']:
             bits.append('★대외금지 %d' % len(m['secret']))
-        L0.append((lv, m['site'], '%s · %s · %s %s' % (esc(m['day'] or '날짜?'), esc(m['site'] or '?'), esc(m['who'] or ''),
-                   link(m['docx'], '회의록 열기')), tag, ' · '.join(bits) or '내용 없음'))
+        detail = ''
+        for nm, key in (('결정사항', 'decisions'), ('조치사항', 'actions'), ('할 일', 'todos'),
+                        ('수량·규격 변경', 'changes'), ('★ 대외 언급 금지', 'secret'), ('리스크', 'risk'), ('타부서 전달(의뢰서)', 'dept')):
+            v = m.get(key) or []
+            if v:
+                detail += '<b>%s</b><ul style="margin:2px 0 6px 18px">%s</ul>' % (nm, ''.join('<li>%s</li>' % esc(x) for x in v))
+        body = '%s · %s · %s %s' % (esc(m['day'] or '날짜?'), esc(m['site'] or '?'), esc(m['who'] or ''), link(m['docx'], '회의록 열기'))
+        if detail:
+            body += det('내용 펼치기 (빠진 것 없이 전부)', detail)
+        L0.append((lv, m['site'], body, tag, ' · '.join(bits) or '내용 없음'))
 
     # ---- 2층 ----
     cards = ''
@@ -554,6 +565,8 @@ def build(quiet=True):
     H.append('<div id="l0"></div>' + h2('0층 · <span style="color:#C0392B">미확인 회의록 %d건</span> (저장만 되어 있습니다. 읽고 44번으로 확인)' % len(L0),
              '읽으시면 사라집니다 · ★KM_번호입력 → 44'))
     H.append(''.join(r(c, t, tag, s, src) for c, s, t, tag, src in L0) if L0 else r('grn', '미확인 회의록 없음 (전부 확인하셨습니다)', '없음'))
+    if L0 and mt_xlsx:
+        H.append(r('blu', '요약 엑셀로 보기 : %s  (1.요약 · 2.할 일 · 3.수량변경 · 4.대외금지 · 5.리스크 · 6.타부서 · 7.전체 내용)' % link(mt_xlsx), '엑셀'))
     H.append('<div id="l1"></div>' + h2('1층 · 지금 할 것 (급한 순 · 한 줄 = 한 행동)', '회의 할 일 + 결정대기 + 부탁서 + 수금'))
     H.append(''.join(r(c, t, tag, s, src) for c, s, t, tag, src in L1) if L1 else r('grn', '오늘 급한 것 없음', '없음'))
     H.append('<div id="l2"></div>' + h2('2층 · 현장 카드', '확정 > 역산 추정 > 미확정 · 펼치면 표') + (cards or '<div class="src">현장이 없습니다</div>'))
@@ -577,9 +590,20 @@ def build(quiet=True):
           '## 확정 (프로님이 정한 값 · 최신 위)', '| 일자 | 현장 | 항목 | 값 | 근거 |', '|---|---|---|---|---|']
     md += ['| %s | %s | %s | **%s** | %s |' % (d['일자'], d['현장'], d['항목'], d['값'], d['근거']) for d in fx] or ['| - | - | - | (없음) | 43번으로 넣는다 |']
     md += ['', '## 미확인 회의록 (저장만 하고 아직 못 읽으신 것 — 매일 말씀드린다)']
-    md += ['- %s · %s · %s%s%s' % (m['day'] or '날짜?', m['site'] or '?', m['who'] or '',
-           ('  [%d일 지남]' % m['gap']) if m.get('gap') else '',
-           ('  할일 %d · 변경 %d' % (len(m['todos']), len(m['changes']))) if (m['todos'] or m['changes']) else '') for m in unread_mt] or ['- (없음. 전부 확인하셨습니다)']
+    if unread_mt:
+        for m in unread_mt:
+            md.append('- **%s · %s · %s**%s' % (m['day'] or '날짜?', m['site'] or '?', m['who'] or '',
+                      ('  [%d일 지남]' % m['gap']) if m.get('gap') else ''))
+            if m['agenda']:
+                md.append('  - 안건 : %s' % m['agenda'])
+            for nm, key in (('결정', 'decisions'), ('조치', 'actions'), ('할 일', 'todos'), ('수량·규격 변경', 'changes'), ('★대외금지', 'secret')):
+                for x in (m.get(key) or []):
+                    md.append('  - %s : %s' % (nm, x))
+        if mt_xlsx:
+            md.append('')
+            md.append('요약 엑셀 : %s' % mt_xlsx)
+    else:
+        md.append('- (없음. 전부 확인하셨습니다)')
     md += ['', '## 1층 지금 할 것'] + ['- [%s] %s' % (tag, re.sub(r'<[^>]+>', '', t)) for c, s, t, tag, src in L1]
     md += ['', '## 조용한 현장'] + ['- %s : %s' % (s, ('%d일째 회의 없음' % g) if g is not None else '회의록 없음') for s, g in quiet_sites]
     md += ['', '## 현장 공정 (확정/추정/미확정)']

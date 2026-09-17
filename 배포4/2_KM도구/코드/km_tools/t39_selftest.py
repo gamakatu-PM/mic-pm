@@ -110,6 +110,20 @@ def check(base, log):
     ok('아침 한 장 0층 「미확인 회의록 2건」', '미확인 회의록 2건' in amt, '실제 : %s' % (re.search(r'미확인 회의록 \d+건', amt).group(0) if re.search(r'미확인 회의록 \d+건', amt) else '없음'))
     ok('미확인 회의록 경보 줄 + 44번 안내', '44' in amt and '저장만 되어 있습니다' in amt)
     ok('클로드용 md 에 미확인 회의록 절', bool(amd) and '## 미확인 회의록' in read_text(amd[-1]) if amd else False)
+    mx = glob.glob(os.path.join(o, '회의록확인', '*', '미확인회의록_요약_*.xlsx'))
+    mc = glob.glob(os.path.join(o, '회의록확인', '*', '미확인회의록_요약_*.csv'))
+    ok('미확인 회의록 요약 엑셀 생성 (7시트)', bool(mx), '실제 %s' % (os.path.basename(mx[-1]) if mx else '없음'))
+    ok('미확인 회의록 요약 csv 생성', bool(mc))
+    ok('머리글 글자를 내용으로 잡지 않음 (「변경」·「언급 금지 사항」 단독 줄 없음)',
+       bool(amd) and ('- 수량·규격 변경 : 변경\n' not in read_text(amd[-1])) and ('★대외금지 : 언급 금지 사항' not in read_text(amd[-1])))
+    ok('md 상세에 결정·할 일·변경이 줄로 들어감', bool(amd) and ('  - 할 일 :' in read_text(amd[-1]) or '  - 수량·규격 변경 :' in read_text(amd[-1])))
+    if mx:
+        try:
+            import openpyxl
+            _wb = openpyxl.load_workbook(mx[-1]); _sh = _wb.sheetnames; _wb.close()
+            ok('요약 엑셀 시트 7장 (요약·할일·변경·대외금지·리스크·타부서·전체내용)', len(_sh) == 7, '실제 %s' % _sh)
+        except Exception as e:
+            ok('요약 엑셀 시트 7장', False, str(e)[:40])
     ok('아침 한 장 : 연합기숙사 공정단계 「확정 · 외함」 (추정 아님)', '확정 · 외함' in amt)
     ok('아침 한 장 : 업무판 할 일·의뢰서 읽음 (부분납품 / 제작)', '부분납품' in amt and '선제작' in amt)
     ok('아침 한 장 : 회의 이력에 삼우MEP 김과장', '삼우MEP' in amt)

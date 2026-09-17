@@ -43,7 +43,9 @@ def run():
     if not xs:
         print('미확인 회의록이 없습니다. 전부 확인하셨습니다.')
         return True
+    xlsx, csvp = build_xlsx(xs, quiet=True)
     print('미확인 회의록 %d건 (오래된 것부터)' % len(xs))
+    print('요약 엑셀 : %s' % (xlsx or csvp))
     print('-' * 88)
     for i, m in enumerate(xs, 1):
         print(line(i, m))
@@ -83,6 +85,7 @@ def run():
         print('%d건 확인 처리했습니다. (대장 : %s)' % (n, facts.chk_path()))
         left = unchecked()
         print('남은 미확인 %d건' % len(left))
+        build_xlsx(left, quiet=True)
         try:
             if not common.AUTO:
                 import t42_morning as MO
@@ -91,6 +94,102 @@ def run():
         except Exception:
             pass
         return True
+
+# ---------------- 요약 엑셀 (내용을 빠뜨리지 않는다) ----------------
+
+SUM_HEAD = ['번호', '회의일', '며칠 지남', '현장', '협의자', '안건', '결정사항', '조치사항',
+            '할 일', '수량·규격 변경', '★대외 언급 금지', '리스크', '타부서 전달', '회의록 파일']
+
+def summary_rows(xs=None):
+    xs = xs if xs is not None else unchecked()
+    rows = []
+    J = lambda v: '\n'.join(v) if v else ''
+    for i, m in enumerate(xs, 1):
+        rows.append([i, (m['day'].isoformat() if m['day'] else ''), (m.get('gap') if m.get('gap') is not None else ''),
+                     m['site'], m['who'], m['agenda'], J(m['decisions']), J(m['actions']), J(m['todos']),
+                     J(m['changes']), J(m['secret']), J(m['risk']), J(m['dept']), m['docx']])
+    return rows
+
+def build_xlsx(xs=None, quiet=True):
+    """미확인 회의록 요약 엑셀. 요약 1장 + 할일·변경·대외금지 따로 + 전체내용 1장"""
+    xs = xs if xs is not None else unchecked()
+    od = outdir(TOOL)
+    rows = summary_rows(xs)
+    csvp = write_csv(os.path.join(od, '미확인회의록_요약_%s.csv' % ymd6()),
+                     [[str(c).replace('\n', ' / ') for c in r] for r in rows], SUM_HEAD)
+    xlsx = None
+    try:
+        ensure_pkg('openpyxl', 'openpyxl')
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.utils import get_column_letter
+        wb = openpyxl.Workbook()
+        HEADF = Font(bold=True, color='FFFFFF'); HEADB = PatternFill('solid', fgColor='2A6099')
+        RED = PatternFill('solid', fgColor='FADBD8'); WRAP = Alignment(wrap_text=True, vertical='top')
+        ws = wb.active; ws.title = '1.요약'
+        ws.append(SUM_HEAD)
+        for c in ws[1]:
+            c.font = HEADF; c.fill = HEADB; c.alignment = WRAP
+        for r in rows:
+            ws.append(r)
+            if isinstance(r[2], int) and r[2] >= 3:
+                for c in ws[ws.max_row]:
+                    c.fill = RED
+        for i, w in enumerate([5, 11, 8, 14, 18, 30, 40, 34, 40, 34, 28, 30, 26, 46], 1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+        for row in ws.iter_rows(min_row=2):
+            for c in row:
+                c.alignment = WRAP
+        ws.freeze_panes = 'A2'
+        for name, key, head in (('2.할 일', 'todos', ['회의일', '현장', '협의자', '할 일']),
+                                ('3.수량·규격 변경', 'changes', ['회의일', '현장', '협의자', '변경 내용']),
+                                ('4.대외 언급 금지', 'secret', ['회의일', '현장', '협의자', '★대외 언급 금지']),
+                                ('5.리스크·타부서', 'risk', ['회의일', '현장', '협의자', '리스크']),
+                                ('6.타부서 전달', 'dept', ['회의일', '현장', '협의자', '타부서 전달 (작업의뢰서)'])):
+            w2 = wb.create_sheet(name)
+            w2.append(head)
+            for c in w2[1]:
+                c.font = HEADF; c.fill = HEADB
+            for m in xs:
+                for x in m.get(key) or []:
+                    w2.append([(m['day'].isoformat() if m['day'] else ''), m['site'], m['who'], x])
+            for i, wd in enumerate([11, 14, 18, 90], 1):
+                w2.column_dimensions[get_column_letter(i)].width = wd
+            for row in w2.iter_rows(min_row=2):
+                for c in row:
+                    c.alignment = WRAP
+            w2.freeze_panes = 'A2'
+        w3 = wb.create_sheet('7.전체 내용')
+        w3.append(['회의', '절', '내용'])
+        for c in w3[1]:
+            c.font = HEADF; c.fill = HEADB
+        for m in xs:
+            tag = '%s %s %s' % ((m['day'].isoformat() if m['day'] else ''), m['site'], m['who'])
+            w3.append([tag, '안건', m['agenda']])
+            for nm, key in (('결정사항', 'decisions'), ('조치사항', 'actions'), ('할 일', 'todos'),
+                            ('수량·규격 변경', 'changes'), ('★대외 언급 금지', 'secret'), ('리스크', 'risk'), ('타부서 전달', 'dept')):
+                for x in m.get(key) or []:
+                    w3.append([tag, nm, x])
+            w3.append([tag, '회의록 파일', m['docx']])
+        for i, wd in enumerate([34, 16, 100], 1):
+            w3.column_dimensions[get_column_letter(i)].width = wd
+        for row in w3.iter_rows(min_row=2):
+            for c in row:
+                c.alignment = WRAP
+        w3.freeze_panes = 'A2'
+        xlsx = os.path.join(od, '미확인회의록_요약_%s.xlsx' % ymd6())
+        wb.save(xlsx)
+        try:
+            finish_xlsx(xlsx)
+        except Exception:
+            pass
+    except Exception as e:
+        if not quiet:
+            print('[엑셀 실패] %s (csv 는 나왔습니다)' % e)
+    if not quiet:
+        print('요약 엑셀 : %s' % (xlsx or '실패'))
+        print('요약 csv  : %s' % csvp)
+    return xlsx, csvp
 
 if __name__ == '__main__':
     run(); pause()

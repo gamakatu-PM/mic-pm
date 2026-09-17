@@ -13,6 +13,8 @@
 import os, sys, ssl, smtplib, subprocess, configparser, datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 from common import *
 import t33_dashboard as DB
 
@@ -46,29 +48,59 @@ def setup():
     save(c)
     print('저장했습니다 : %s' % INI)
 
+ATTACH = []       # 이번 발송에 붙일 파일 (미확인 회의록 요약 엑셀 등)
+SUBJ = ['']       # 제목 꼬리 (미확인 n건)
+
 def _morning_or(top):
-    """아침 한 장(42)이 만들어지면 현황판 대신 그것을 보낸다"""
+    """아침 한 장(42)이 만들어지면 현황판 대신 그것을 보낸다. 미확인 회의록 요약 엑셀도 첨부한다."""
+    del ATTACH[:]; SUBJ[0] = ''
     try:
         import t42_morning as MO
         am, _ = MO.build(quiet=True)
+        try:
+            import t44_meetingcheck as MC
+            xs = MC.unchecked()
+            if xs:
+                x, c = MC.build_xlsx(xs, quiet=True)
+                if x:
+                    ATTACH.append(x)
+                old = len([m for m in xs if m.get('gap') and m['gap'] >= 3])
+                SUBJ[0] = ' · 미확인 회의 %d건%s' % (len(xs), ('(3일↑ %d)' % old) if old else '')
+        except Exception:
+            pass
         if am and os.path.exists(am):
             return am
     except Exception:
         pass
     return top
 
-def send(html_path, subject=None):
+def send(html_path, subject=None, files=()):
     c = conf()
     g = lambda k, d='': c.get('메일', k, fallback=d)
     if not (g('user') and g('password') and g('to')):
         print('[설정 없음] 35번에서 먼저 설정을 하십시오.')
         return False
     body = read_text(html_path)
-    msg = MIMEMultipart('alternative')
+    msg = MIMEMultipart('mixed')
     msg['Subject'] = subject or '[KM] 아침 한 장 %s' % today().isoformat()
     msg['From'] = g('user'); msg['To'] = g('to')
-    msg.attach(MIMEText('HTML 을 볼 수 없는 메일앱입니다. 첨부/PC 의 _현황판.html 을 여십시오.', 'plain', 'utf-8'))
-    msg.attach(MIMEText(body, 'html', 'utf-8'))
+    alt = MIMEMultipart('alternative')
+    alt.attach(MIMEText('HTML 을 볼 수 없는 메일앱입니다. 첨부 엑셀이나 PC 의 _아침한장.html 을 여십시오.', 'plain', 'utf-8'))
+    alt.attach(MIMEText(body, 'html', 'utf-8'))
+    msg.attach(alt)
+    for f in files or ():
+        try:
+            if not (f and os.path.exists(f)):
+                continue
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(open(f, 'rb').read())
+            encoders.encode_base64(part)
+            import email.header
+            nm = email.header.Header(os.path.basename(f), 'utf-8').encode()
+            part.add_header('Content-Disposition', 'attachment', filename=nm)
+            msg.attach(part)
+        except Exception as e:
+            print('[첨부 실패] %s : %s' % (os.path.basename(f), e))
     try:
         ctx = ssl.create_default_context()
         with smtplib.SMTP(g('smtp') or 'smtp.gmail.com', int(g('port') or 587), timeout=30) as s:
@@ -132,7 +164,7 @@ def auto():
     """스케줄러가 부르는 것 : 현황판 만들고 보내기"""
     top, mdp, blocks = DB.build(quiet=True)
     top = _morning_or(top)
-    ok = send(top)
+    ok = send(top, subject='[KM] 아침 한 장 %s%s' % (today().isoformat(), SUBJ[0]), files=ATTACH)
     log(TOOL, '자동 %s' % ('성공' if ok else '실패'))
 
 def run():
@@ -151,7 +183,7 @@ def run():
     elif s == '2':
         top, mdp, blocks = DB.build(quiet=True)
         top = _morning_or(top)
-        send(top)
+        send(top, subject='[KM] 아침 한 장 %s%s' % (today().isoformat(), SUBJ[0]), files=ATTACH)
     elif s == '3':
         register()
     elif s == '4':
