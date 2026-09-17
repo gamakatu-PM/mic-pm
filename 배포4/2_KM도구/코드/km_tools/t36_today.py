@@ -5,7 +5,7 @@
   2) 받은함(_여기에_넣으십시오)의 도면을 [현장명] 으로 현장 폴더에 나눠 넣는다 (폴더 만드는 손 제거)
   3) 모든 현장의 새 도면을 읽고(31), 새 판이 생긴 현장만 27->28->29->30 을 돌린다
   3-1) 회의 연결(40) : 받는함의 PLAUD txt 를 _현장비서로, 회의록의 수량·규격 변경을 부탁서·현황판으로
-  4) 현황판(33)을 만들어 띄운다. 클로드에게 넘길 것은 30번 부탁서에 모여 있다
+  4) 현황판(33)을 만들어 띄우고, 빠른 총괄 점검(41)으로 _총괄점검.md 를 갱신한다. 클로드에게 넘길 것은 30번 부탁서에 모여 있다
 """
 import os, sys, traceback
 import common
@@ -85,6 +85,11 @@ def run(quiet=False):
         top = None
         try:
             top, mdp, blocks = DB.build(quiet=True)
+        except Exception:
+            traceback.print_exc()
+        try:
+            import t41_totalcheck as TC
+            TC.build(quick=True, quiet=True)   # 인수인계함\_총괄점검.md 를 항상 최신으로 (39·GitHub 는 건너뜀)
         except Exception:
             traceback.print_exc()
     finally:

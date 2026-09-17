@@ -85,6 +85,8 @@ def check(base, log):
     bk = glob.glob(os.path.join(base, '인수인계함', '회의록코드_백업', '*', '코드', 'km_run.py'))
     ok('회의록 코드 백업 생성', bool(bk))
     dash = glob.glob(os.path.join(base, '인수인계함', '_현황판.md'))
+    tc = glob.glob(os.path.join(base, '인수인계함', '_총괄점검.md'))
+    ok('총괄 점검 md 생성 (41, 빠른 점검)', bool(tc) and '| 통과 |' in read_text(tc[-1]) and 'D 도면→돈' in read_text(tc[-1]))
     ok('현황판 ⑦ 회의 변경 블록', bool(dash) and '⑦ 회의에서 바뀐 수량' in read_text(dash[-1]) and '330' in read_text(dash[-1]))
     x = glob.glob(os.path.join(o, '단가붙이기', '*', '앵커호텔_*_실행산출_v1.xlsx'))
     ok('앵커 실행산출 xlsx 생성', bool(x))
