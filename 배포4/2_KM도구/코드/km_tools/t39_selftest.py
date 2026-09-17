@@ -75,6 +75,11 @@ def check(base, log):
         ok('앵커 품목 수 = %d (최신 판만)' % EXPECT['앵커_품목수'], len(rows) == EXPECT['앵커_품목수'], '실제 %d' % len(rows))
         ok('ENTRANCE INDICATOR = %d (Rev2 값)' % EXPECT['앵커_ENTRANCE'], d.get('ENTRANCE INDICATOR') == EXPECT['앵커_ENTRANCE'], '실제 %s' % d.get('ENTRANCE INDICATOR'))
         ok('LIGHT SWITCH bath 6 = %d' % EXPECT['앵커_L6'], d.get('LIGHT SWITCH bath 6') == EXPECT['앵커_L6'], '실제 %s' % d.get('LIGHT SWITCH bath 6'))
+    # v35 연도 폴더 (시험자료 : 도면\26년\앵커호텔 / 도면\쏠비치양양 - 두 구조가 같이 돌아야 한다)
+    ok('연도 폴더(26년) 안의 앵커호텔을 현장으로 찾음', '앵커호텔' in log and '26년' in log)
+    ok('연도 폴더 밖의 쏠비치양양도 같이 찾음', '쏠비치양양' in log)
+    ok('26년 폴더 자체를 현장으로 잡지 않음', '현장 2개' in log and not os.path.exists(os.path.join(base, '3_공통사용', '도면', '26년', '_도면대장.csv')),
+       '현장 줄 : %s' % ([l for l in log.splitlines() if l.startswith('현장 ')] or ['없음'])[0][:60])
     ok('이전 판 %d개 건너뜀 표시' % EXPECT['앵커_이전판건너뜀'], ('이전 판이라 읽지 않은 파일 %d개' % EXPECT['앵커_이전판건너뜀']) in log)
     q2 = glob.glob(os.path.join(o, '도면수량', '*', '쏠비치양양_도면에적힌수량표_*.csv'))
     ok('쏠비치 수량표 %d품목' % EXPECT['쏠비치_품목수'], bool(q2) and len(_csv_rows(q2[-1])) == EXPECT['쏠비치_품목수'])

@@ -70,7 +70,7 @@ def run(quiet=False):
             results = I.run() or []
         except Exception:
             traceback.print_exc()
-        todo = [(r['site'], os.path.join(I.D.dwg_root(), safe_name(r['site']))) for r in results if r.get('items')]
+        todo = [(r['site'], r.get('dir') or os.path.join(I.D.dwg_root(), safe_name(r['site']))) for r in results if r.get('items')]
         summary = []
         for site, sdir in todo:
             print('')

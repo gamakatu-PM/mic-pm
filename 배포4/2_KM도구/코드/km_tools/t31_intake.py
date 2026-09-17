@@ -23,17 +23,63 @@ LEDGER = '_도면대장.csv'
 LHEAD = ['파일', '크기', '해시', '받은날', '판', '읽은날', '비고']
 SKIP_DIRS = (D.INBOX, '_처리완료', '_삭제요망', '_이전판')
 
-def sites():
-    root = D.dwg_root()
+YEAR_PAT = re.compile(r'^(20)?(\d{2})\s*년?$')
+
+def year_key(name):
+    """'26년' '2026' '26' -> 2026 / 연도 폴더가 아니면 None"""
+    m = YEAR_PAT.match(str(name).strip())
+    if not m:
+        return None
+    n = int(m.group(2))
+    return 2000 + n if n < 90 else 1900 + n
+
+def year_dirs(root=None):
+    """도면 폴더 아래의 연도 폴더 [(연, 이름, 경로)] 최신 연도가 앞"""
+    root = root or D.dwg_root()
     out = []
     try:
         for d in sorted(os.listdir(root)):
             p = os.path.join(root, d)
-            if os.path.isdir(p) and d not in SKIP_DIRS and not d.startswith(('_', '.')):
-                out.append((d, p))
+            y = year_key(d)
+            if y and os.path.isdir(p):
+                out.append((y, d, p))
     except Exception:
         pass
+    out.sort(reverse=True)
     return out
+
+def newest_site_root():
+    """새 현장 폴더를 만들 자리. 연도 폴더가 있으면 가장 최신 연도 폴더, 없으면 도면 폴더"""
+    ys = year_dirs()
+    return ys[0][2] if ys else D.dwg_root()
+
+def _scan(root, out, seen, year=''):
+    try:
+        names = sorted(os.listdir(root))
+    except Exception:
+        return
+    for d in names:
+        p = os.path.join(root, d)
+        if not os.path.isdir(p) or d in SKIP_DIRS or d.startswith(('_', '.')):
+            continue
+        if year_key(d):
+            continue                            # 연도 폴더(26년·2026)는 현장이 아니다 - 그 안을 따로 본다
+        k = norm_(d)
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append((d, p, year))
+
+def sites(with_year=False):
+    """현장 폴더 목록. 도면 폴더 바로 아래 + 연도 폴더(26년·2026) 안까지 본다 (연도 최신 우선).
+    같은 현장 이름이 여러 곳에 있으면 최신 연도 것 하나만 쓴다."""
+    root = D.dwg_root()
+    out, seen = [], set()
+    for y, name, p in year_dirs(root):          # 26년 -> 25년 ... 최신 연도가 먼저
+        _scan(p, out, seen, name)
+    _scan(root, out, seen, '')                  # 연도 폴더 밖에 그냥 둔 현장도 (옛 구조)
+    out.sort(key=lambda x: x[0])
+    return out if with_year else [(n, p) for n, p, y in out]
 
 def md5(p):
     h = hashlib.md5()
@@ -199,13 +245,18 @@ def sort_inbox():
         return []
     print('받은함 -> 현장 폴더로 옮길 도면 %d개' % len(plan))
     for f, site in plan:
-        print('   %-44s -> %s\\' % (os.path.basename(f)[:44], site))
+        print('   %-44s -> %s\\' % (os.path.basename(f)[:44], os.path.relpath(os.path.join(newest_site_root(), safe_name(site)), root)))
     if not ask('옮길까요? (y=엔터 / n) > ', 'y').lower().startswith('y'):
         return []
     import shutil
     moved = []
     for f, site in plan:
-        dst_dir = os.path.join(root, safe_name(site))
+        dst_dir = None
+        for n, p, y in sites(with_year=True):        # 이미 있는 현장 폴더면 그 자리에 (연도 폴더 안이어도)
+            if norm_(n) == norm_(site):
+                dst_dir = p; break
+        if not dst_dir:
+            dst_dir = os.path.join(newest_site_root(), safe_name(site))
         os.makedirs(dst_dir, exist_ok=True)
         dst = os.path.join(dst_dir, os.path.basename(f))
         if os.path.exists(dst):
@@ -281,7 +332,7 @@ def process_site(site, site_dir, force=False):
         print('   -> r%d 대비 바뀐 품목 %d개' % (pr, len(d)))
         for k, a, b, c, g in d[:12]:
             print('      %-36s %6s -> %6s  (%+d) %s' % (k[:36], won(a), won(b), c, g))
-    return {'site': site, 'rev': rev, 'prev': pr, 'src': src, 'items': len(q),
+    return {'site': site, 'rev': rev, 'prev': pr, 'src': src, 'items': len(q), 'dir': site_dir,
             'diff': d, 'made': made, 'unread': unread, 'q': q}
 
 # ---------------- 실행 ----------------
@@ -295,13 +346,20 @@ def run(site_hint=None):
     if not ss:
         print('')
         print('[현장 폴더가 없습니다] 도면 폴더 안에 현장 이름으로 폴더를 만들고 도면을 넣어주십시오.')
-        print('   예)  %s' % os.path.join(root, '앵커호텔'))
+        ys0 = year_dirs(root)
+        print('   예)  %s' % os.path.join(ys0[0][2] if ys0 else root, '앵커호텔'))
+        if ys0:
+            print('   연도 폴더(%s) 안에 현장 폴더를 만드셔도 됩니다. 도구가 연도 폴더를 알아서 들여다봅니다.' % ys0[0][1])
         print('   그 안에 캐드·PDF·수량표를 그냥 넣어 두시면, 31번이 새 파일을 알아서 찾습니다.')
         open_folder(root)
         return
     if site_hint:
         ss = [(n, p) for n, p in ss if norm_(n) == norm_(site_hint)] or ss
-    print('현장 %d개 : %s' % (len(ss), ', '.join(n for n, p in ss)))
+    ys = year_dirs(root)
+    if ys:
+        print('연도 폴더 %d개 : %s   (새 도면은 %s\\ 로 들어갑니다)' % (len(ys), ', '.join(n for y, n, p in ys), ys[0][1]))
+    sw = sites(with_year=True)
+    print('현장 %d개 : %s' % (len(ss), ', '.join(('%s(%s)' % (n, y) if y else n) for n, p, y in sw)))
     results = []
     for name, p in ss:
         r = process_site(name, p)
