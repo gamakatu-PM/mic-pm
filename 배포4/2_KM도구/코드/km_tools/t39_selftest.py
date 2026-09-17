@@ -46,6 +46,11 @@ def prepare():
     if os.path.exists(fx):
         os.makedirs(os.path.join(base, '_도구결과', '_대장'), exist_ok=True)
         shutil.copy(fx, os.path.join(base, '_도구결과', '_대장', '확정사항.csv'))
+    # 앞으로 해야 될 것 대장 (46 · 「제가 만들까요?」 검사용)
+    pl = os.path.join(DATA, '앞으로할것_시험.csv')
+    if os.path.exists(pl):
+        os.makedirs(os.path.join(base, '_도구결과', '_대장'), exist_ok=True)
+        shutil.copy(pl, os.path.join(base, '_도구결과', '_대장', '앞으로할것.csv'))
     # 현장대장 (도면 없는 현장 1곳 포함 - 45 도면 요청 메일 검사용)
     sb = os.path.join(DATA, '현장대장_시험.csv')
     if os.path.exists(sb):
@@ -142,12 +147,30 @@ def check(base, log):
            '길이 %d' % len(_m))
         ok('45 메일이 금액·수량을 스스로 정하지 않음 (빈칸 남김)', '[   ]' in _m or '[        ]' in _m)
     ok('45 요청 분기 판 생성', bool(glob.glob(os.path.join(o, '요청분기', '*', '_요청분기.html'))))
+    # v40 46 앞으로 해야 될 것 + 「제가 만들까요?」 (프로님 : 만들라고 시키지 말고 네가 만들까요 하고 물어봐)
+    ok('아침 한 장 1층에 앞으로 해야 될 것 (CB 박스 22일)', 'CB 박스 22일 오전' in amt)
+    ok('아침 한 장에 「제가 … 만들까요?」', '만들까요?' in amt and '제작팀 작업의뢰서 초안' in amt)
+    ok('클로드용 md 에 「## 제가 만들까요?」 절 + 대조표', bool(amd) and '## 제가 만들까요?' in read_text(amd[-1]) and '대조표 만들까요' in read_text(amd[-1]))
+    ok('md 앞으로 해야 될 것 현장별 절', bool(amd) and '## 앞으로 해야 될 것' in read_text(amd[-1]) and '### 앵커호텔' in read_text(amd[-1]))
+    ok('완료된 줄은 아침 한 장에 안 뜸', '완료 표시 검사용' not in amt)
+    px = glob.glob(os.path.join(o, '앞으로할것', '*', '앞으로할것_*.xlsx'))
+    ok('46 요약 엑셀 생성', bool(px))
+    if px:
+        try:
+            import openpyxl
+            _wb = openpyxl.load_workbook(px[-1]); _sh = _wb.sheetnames; _wb.close()
+            ok('46 엑셀 시트 3장 (앞으로·제가 만들까요·현장별)', len(_sh) == 3, '실제 %s' % _sh)
+        except Exception as e:
+            ok('46 엑셀 시트 3장', False, str(e)[:40])
     ok('아침 한 장 1층에 「도면이 없어 견적을 못 만듭니다」', '도면이 없어 견적을 못 만듭니다' in amt)
     ok('45 : 도면 있는 현장은 도면 요청 메일을 만들지 않음 (앵커호텔)',
        not glob.glob(os.path.join(o, '요청분기', '*', '보낼메일_도면요청_앵커호텔.txt')))
     import facts as _F, common
     common.DEFAULTS['out'] = os.path.join(base, '_도구결과')
     fx = _F.load()
+    _pl = _F.plan_load(active_only=False)
+    ok('받은답 「앞으로,조선호텔,…」 → 앞으로할것 대장', any(d['현장'] == '조선호텔' and '중도금' in d['할일'] and d['만들기'] == '중도금 신청서 초안' for d in _pl), '실제 %d줄' % len(_pl))
+    ok('받은답 「앞으로완료,앵커호텔,PLAUD 파일명」 → 상태=완료', any(d['현장'] == '앵커호텔' and 'PLAUD' in d['할일'] and d['상태'] == '완료' for d in _pl))
     ok('받은답 「확정,앵커호텔,객실수,330」 → 확정 대장', any(d['현장'] == '앵커호텔' and d['항목'] == '객실수' and d['값'] == '330' for d in fx), '실제 %s' % [(d['현장'], d['항목'], d['값']) for d in fx])
     ok('클로드용 _아침한장.md 에 확정 표 맨 위', bool(amd) and '## 확정' in read_text(amd[-1]) and '**외함**' in read_text(amd[-1]))
     ok('현황판 ⑦ 회의 변경 블록', bool(dash) and '⑦ 회의에서 바뀐 수량' in read_text(dash[-1]) and '330' in read_text(dash[-1]))

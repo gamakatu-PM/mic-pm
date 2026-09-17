@@ -400,6 +400,20 @@ def build(quiet=True):
         L1.append(('red', s, '%s · 계산서 미발행 %s · %s원 (납품 %d일 경과) → 발행' % (esc(s), esc(k), won(a), g), '수금', '출처 수금대장'))
     for s, k, a, g in wait:
         L1.append(('yel' if g <= 3 else 'blu', s, '%s · 입금 대기 %s · %s원 (D%+d)' % (esc(s), esc(k), won(a), g), '입금', '출처 수금대장'))
+    # 46 앞으로 해야 될 것 (클로드가 회의록을 읽고 대장에 넣은 것) : 오늘·지남·3일 내는 1층에. 「만들기」 가 차 있으면 「제가 만들까요?」
+    try:
+        import t46_plan as PL
+        plan_rows = PL.rows()
+        plan_x, plan_c = PL.build_xlsx(plan_rows, quiet=True)
+    except Exception:
+        plan_rows, plan_x, plan_c = [], None, None
+    for d in plan_rows:
+        if d['level'] not in ('red', 'yel'):
+            continue
+        L1.append((d['level'], d['현장'], '%s · %s%s%s' % (esc(d['현장']), esc(d['할일']),
+                   (' → ' + esc(d['누가'])) if d['누가'] else '',
+                   (' <b style="color:#6B4FA8">· 제가 %s 만들까요?</b>' % esc(d['만들기'])) if d['만들기'] else ''),
+                   PL.tag(d) + ' · ' + d['등급'], ('왜 : ' + esc(d['왜'])) if d['왜'] else '출처 앞으로할것.csv'))
     # 45 요청 분기 : 도면이 없어 견적을 못 만드는 현장은 「도면 요청 메일」 이 이미 만들어져 있다
     try:
         import t45_askgate as AG
@@ -496,6 +510,11 @@ def build(quiet=True):
             if m['who'] and m['who'] not in [w for w, d in who_list]:
                 who_list.append((m['who'], m['day']))
         body += det('협의자 %d명 (마지막 회의일)' % len(who_list), tbl(['협의자', '마지막'], [[esc(w), esc(d)] for w, d in who_list[:12]]))
+        my_plan = [d for d in plan_rows if same_site(d['현장'], site)]
+        if my_plan:
+            body += det('앞으로 해야 될 것 %d건%s' % (len(my_plan), (' · 제가 만들까요? %d' % len([d for d in my_plan if d['만들기']])) if any(d['만들기'] for d in my_plan) else ''),
+                        tbl(['때', '등급', '할 일', '누가', '왜', '제가 만들까요?'],
+                            [[esc(d['때']), esc(d['등급']), esc(d['할일']), esc(d['누가']), esc(d['왜']), esc(d['만들기'])] for d in my_plan]), open_=True)
         risks = [x for m in ms[:5] for x in m['risk']]
         secrets = [(m['day'], x) for m in ms for x in m['secret']]
         body += det('리스크 %d (2부)' % len(risks), '<ul style="margin:4px 0 4px 18px;font-size:12.5px">' + ''.join('<li>%s</li>' % esc(x) for x in risks[:10]) + '</ul>' if risks else '<div class="src">없음</div>')
@@ -564,7 +583,7 @@ def build(quiet=True):
          '<h1>KM 아침 한 장 <small style="font-size:12px;color:#8E99A4">%s · 도구 %s</small></h1>' % (t0.isoformat(), VERSION),
          '<div class="sub">회의록(업무판)·도면·돈·점검을 한 장에. 굵은 <span class="sure-tag">확정</span> 은 프로님이 정한 값이고, 빗금 공정바는 역산 추정입니다. 찾기칸은 이 파일 안에서만 돕니다(토큰 0).</div>',
          '<div class="lvl"><a href="#l0" style="border-color:#C0392B;color:#C0392B">0층 미확인 회의록</a><a href="#l1">1층 오늘</a><a href="#l2">2층 현장</a><a href="#l3">3층 부서·의뢰서</a><a href="#l4">4층 회의 이력</a><a href="#l5">5층 돈</a><a href="#l6">6층 점검</a><a href="#l7">7층 표·확정</a></div>',
-         '<div class="tiles">', tile('red', len(L0), '미확인 회의록', 'l0'), tile('red', n_red, '지남·미발행·결정', 'l1'), tile('yel', n_yel, '오늘·3일내·부탁서', 'l1'), tile('yel', n_wo, '의뢰서 미발행', 'l3'),
+         '<div class="tiles">', tile('red', len(L0), '미확인 회의록', 'l0'), tile('red', n_red, '지남·미발행·결정', 'l1'), tile('yel', len([d for d in plan_rows if d['만들기']]), '제가 만들까요?', 'l1'), tile('yel', n_yel, '오늘·3일내·부탁서', 'l1'), tile('yel', n_wo, '의뢰서 미발행', 'l3'),
          tile('red', len(quiet_sites), '조용한 현장', 'l6'), tile('pur', n_secret, '대외 금지 누적', 'l2'), tile('blu', len(recent), '회의 14일', 'l4'),
          tile('grn', len(fx), '확정 대장', 'l7'), '</div>']
     if kakao:
@@ -579,7 +598,9 @@ def build(quiet=True):
     H.append(''.join(r(c, t, tag, s, src) for c, s, t, tag, src in L0) if L0 else r('grn', '미확인 회의록 없음 (전부 확인하셨습니다)', '없음'))
     if L0 and mt_xlsx:
         H.append(r('blu', '요약 엑셀로 보기 : %s  (1.요약 · 2.할 일 · 3.수량변경 · 4.대외금지 · 5.리스크 · 6.타부서 · 7.전체 내용)' % link(mt_xlsx), '엑셀'))
-    H.append('<div id="l1"></div>' + h2('1층 · 지금 할 것 (급한 순 · 한 줄 = 한 행동)', '회의 할 일 + 결정대기 + 부탁서 + 수금'))
+    H.append('<div id="l1"></div>' + h2('1층 · 지금 할 것 (급한 순 · 한 줄 = 한 행동)', '회의 할 일 + 앞으로 해야 될 것(46) + 결정대기 + 부탁서 + 수금 · 보라 글씨 = 클로드가 만들 수 있는 서류'))
+    if plan_x:
+        H.append('<div class="src">앞으로 해야 될 것 전체 %d건 · <a href="%s">요약 엑셀</a> · 끝난 것은 46번으로 완료 표시</div>' % (len(plan_rows), file_url(plan_x)))
     H.append(''.join(r(c, t, tag, s, src) for c, s, t, tag, src in L1) if L1 else r('grn', '오늘 급한 것 없음', '없음'))
     H.append('<div id="l2"></div>' + h2('2층 · 현장 카드', '확정 > 역산 추정 > 미확정 · 펼치면 표') + (cards or '<div class="src">현장이 없습니다</div>'))
     H.append('<div id="l3"></div>' + h2('3층 · 부서별 작업의뢰서 (의뢰서 없으면 아무도 안 움직임)', '업무판 ↔ 10번 발행대장') + L3)
@@ -616,6 +637,19 @@ def build(quiet=True):
             md.append('요약 엑셀 : %s' % mt_xlsx)
     else:
         md.append('- (없음. 전부 확인하셨습니다)')
+    md += ['', '## 제가 만들까요? (클로드가 먼저 물어야 할 것 — 프로님께 「만드세요」 라고 하지 않는다)']
+    offers = [d for d in plan_rows if d['만들기']]
+    md += ['- **%s** · %s · 「제가 %s 만들까요?」 (할 일 : %s)' % (d['현장'], d['때'], d['만들기'], d['할일']) for d in offers] or ['- (없음)']
+    md += ['', '## 앞으로 해야 될 것 (현장별 · 클로드가 넣고 프로님이 46번으로 완료 표시)']
+    for site in names:
+        ps = [d for d in plan_rows if same_site(d['현장'], site)]
+        if not ps:
+            continue
+        md.append('### %s' % site)
+        md += ['- %s [%s] %s%s%s%s' % (d['때'], d['등급'], d['할일'], (' → ' + d['누가']) if d['누가'] else '',
+                                        (' — ' + d['왜']) if d['왜'] else '', (' 【제가 %s 만들까요?】' % d['만들기']) if d['만들기'] else '') for d in ps]
+    if plan_x:
+        md.append(''); md.append('요약 엑셀 : %s' % plan_x)
     md += ['', '## 1층 지금 할 것'] + ['- [%s] %s' % (tag, re.sub(r'<[^>]+>', '', t)) for c, s, t, tag, src in L1]
     md += ['', '## 조용한 현장'] + ['- %s : %s' % (s, ('%d일째 회의 없음' % g) if g is not None else '회의록 없음') for s, g in quiet_sites]
     md += ['', '## 현장 공정 (확정/추정/미확정)']

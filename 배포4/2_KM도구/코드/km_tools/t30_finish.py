@@ -21,7 +21,7 @@ import t28_cost as C
 TOOL = '완성품'
 ANS_DIR = '받은답'
 ANS_HEAD = ['종류', '이름', '값', '비고']
-ANS_KIND = ('단가', '별칭', '기호', '배수', 'CB구성', '수량', '확정', '회의확인')
+ANS_KIND = ('단가', '별칭', '기호', '배수', 'CB구성', '수량', '확정', '회의확인', '앞으로', '앞으로완료')
 
 # ---------------- 모아 읽기 ----------------
 
@@ -174,6 +174,8 @@ def make_request(site, st):
     a('CB구성,SMPS FLS30-12,1,CB1대당')
     a('확정,연합기숙사,공정단계,외함,외함만 납품 중')
     a('회의확인,260910_일능_홍승조부장_부분납품,확인,읽었음')
+    a('앞으로,조선호텔,9/17,확정,중도금 신청서+세금계산서+사진대지 묶어 제출,배성윤 → 진현창 대리,이번 달 넘기면 잔금과 같이 밀린다,중도금 신청서 초안')
+    a('앞으로완료,조선호텔,중도금 신청서')
     a('```')
     a('')
     a('넣는 곳 : `3_공통사용\\단가장\\%s\\` 에 아무 이름으로 저장 -> 30번 다시 누르기' % ANS_DIR)
@@ -236,6 +238,23 @@ def apply_answers(site=''):
             if r[1] and facts.check_meeting(r[1], '', r[3] or '받은답'):
                 n_ok += 1
         log_lines.append('회의록 확인 %d건 표시' % n_ok)
+
+    # 앞으로 (클로드가 회의록을 읽고 쓴 「앞으로 해야 될 것」 -> 대장 -> 42 아침 한 장·35 메일에 매일)
+    if got['앞으로']:
+        import facts
+        n_ok = 0
+        for r in got['앞으로']:
+            r = (r + [''] * 8)[:8]
+            if r[1] and r[4] and facts.plan_add(r[1], r[2], r[3], r[4], r[5], r[6], r[7]):
+                n_ok += 1
+        log_lines.append('앞으로 해야 될 것 %d줄 추가 (%s)' % (n_ok, os.path.basename(facts.plan_path())))
+    if got['앞으로완료']:
+        import facts
+        n_ok = 0
+        for r in got['앞으로완료']:
+            r = (r + ['', ''])[:3]
+            n_ok += facts.plan_done(r[1], r[2])
+        log_lines.append('앞으로 해야 될 것 %d줄 완료' % n_ok)
 
     # 배수
     if got['배수']:

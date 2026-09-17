@@ -124,3 +124,110 @@ def check_meeting(folder, site='', memo='', who='프로님'):
     write_csv(p, [new] + body, CHK_HEAD)
     log('회의확인', folder[:40])
     return new
+
+# ---------------- 앞으로 해야 될 것 대장 (v40) ----------------
+# 프로님 : "매일 아침 이걸로 보내. 서류 만들 게 있으면 나한테 만들라고 하지 말고 네가 만들까요 하고 물어봐.
+#           내가 생각 못 해서 얘기를 못 할 수도 있는데 네가 챙겨서 이렇게 할까요 하고 물어봐야지. 체계를 바꾸라고."
+# 판단(무엇을 해야 하는지)은 클로드가 회의록을 읽고 쓴다 -> 받은답 `앞으로,현장,때,등급,할일,누가,왜,만들기`
+# 배달·표시·완료는 파이썬이 한다 -> 42 아침 한 장 1층·2층·md, 35 아침 메일, 46번 완료 표시.
+# 「만들기」 칸 = 클로드가 만들 수 있는 서류 이름. 이 칸이 차 있으면 아침 한 장·md 에 「제가 만들까요?」 로 뜬다.
+#   프로님께 「만드세요」 라고 하지 않는다. 클로드가 「제가 ○○ 만들까요?」 로 먼저 묻는다.
+
+PLAN = '앞으로할것.csv'
+PLAN_HEAD = ['일자', '현장', '때', '등급', '할일', '누가', '왜', '만들기', '상태', '완료일']
+
+def plan_path():
+    p = os.path.join(cfg('out'), '_대장')
+    os.makedirs(p, exist_ok=True)
+    return os.path.join(p, PLAN)
+
+def _plan_rows():
+    p = plan_path()
+    if not os.path.exists(p):
+        write_csv(p, [['예) 2026-09-17', '조선호텔', '9/17', '확정', '중도금 신청서 + 세금계산서 + 사진대지 묶어 제출', '배성윤 → 진현창 대리',
+                       '이번 달을 넘기면 잔금과 같이 밀린다', '중도금 신청서 초안', '대기', '']], PLAN_HEAD)
+        return []
+    out = []
+    for r in _read(p)[1:]:
+        r = (r + [''] * 10)[:10]
+        if not r[1].strip() or r[0].startswith('예)') or not r[4].strip():
+            continue
+        out.append(dict(zip(['일자', '현장', '때', '등급', '할일', '누가', '왜', '만들기', '상태', '완료일'], [c.strip() for c in r])))
+    return out
+
+def _when_key(when):
+    """'9/17 오전' -> (0, 9, 17, 0) / '미정' -> (2,...) / 그 외 글자 -> (1,...)"""
+    m = re.search(r'(\d{1,2})/(\d{1,2})', when or '')
+    if m:
+        return (0, int(m.group(1)), int(m.group(2)), 0 if ('오전' in when or '아침' in when) else 1)
+    if '미정' in (when or ''):
+        return (2, 99, 99, 0)
+    return (1, 99, 99, 0)
+
+def plan_load(site=None, active_only=True):
+    """앞으로 해야 될 것 [dict]. 때(날짜) 순. site 를 주면 그 현장만 (포함관계)"""
+    out = []
+    for d in _plan_rows():
+        if active_only and d['상태'] in ('완료', '취소'):
+            continue
+        if site and not (_norm(d['현장']) == _norm(site) or _norm(site) in _norm(d['현장']) or _norm(d['현장']) in _norm(site)):
+            continue
+        out.append(d)
+    out.sort(key=lambda d: _when_key(d['때']))
+    return out
+
+def plan_due(d, day=None):
+    """이 줄이 며칠 남았는지 (0=오늘, 음수=지남, None=날짜 없음)"""
+    import datetime
+    day = day or today()
+    m = re.search(r'(\d{1,2})/(\d{1,2})', d.get('때') or '')
+    if not m:
+        return None
+    try:
+        y = day.year
+        t = datetime.date(y, int(m.group(1)), int(m.group(2)))
+        if (t - day).days < -180:      # 해가 바뀐 뒤 적은 날짜
+            t = datetime.date(y + 1, int(m.group(1)), int(m.group(2)))
+        return (t - day).days
+    except Exception:
+        return None
+
+def plan_add(site, when, grade, todo, who='', why='', make='', day=None):
+    """새 줄 (같은 현장·같은 할 일이 대기 중이면 넣지 않는다 - 매일 다시 넣어도 안 쌓인다)"""
+    p = plan_path()
+    rows = _read(p)
+    if not rows:
+        rows = [PLAN_HEAD]
+    body = [r for r in rows[1:] if r and not r[0].startswith('예)')]
+    for r in body:
+        r += [''] * (10 - len(r))
+        if r[1].strip() == site and _norm(r[4]) == _norm(todo) and r[8].strip() not in ('완료', '취소'):
+            return None
+    grade = grade if grade in ('확정', '제안') else '제안'
+    new = [(day or today().isoformat()), site, when, grade, todo, who, why, make, '대기', '']
+    write_csv(p, [new] + body, PLAN_HEAD)
+    log('앞으로', '%s %s %s' % (site, when, todo[:30]))
+    return new
+
+def plan_done(site, todo_part, day=None):
+    """완료 표시 (할 일 글자 일부만 맞아도 된다). 지운 게 아니라 상태=완료 로 남긴다"""
+    p = plan_path()
+    rows = _read(p)
+    if not rows:
+        return 0
+    body = rows[1:]
+    n = 0
+    for r in body:
+        r += [''] * (10 - len(r))
+        if r[8].strip() in ('완료', '취소'):
+            continue
+        if (not site or _norm(site) in _norm(r[1]) or _norm(r[1]) in _norm(site)) and _norm(todo_part) and _norm(todo_part) in _norm(r[4]):
+            r[8] = '완료'; r[9] = (day or today().isoformat()); n += 1
+    if n:
+        write_csv(p, body, PLAN_HEAD)
+        log('앞으로완료', '%s %s x%d' % (site, todo_part[:30], n))
+    return n
+
+def plan_offers():
+    """「제가 만들까요?」 로 물어야 할 것 = 만들기 칸이 찬 대기 줄"""
+    return [d for d in plan_load() if d['만들기']]

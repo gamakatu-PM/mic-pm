@@ -68,6 +68,19 @@ def _morning_or(top):
                 SUBJ[0] = ' · 미확인 회의 %d건%s' % (len(xs), ('(3일↑ %d)' % old) if old else '')
         except Exception:
             pass
+        try:
+            import t46_plan as PL
+            ps = PL.rows()
+            if ps:
+                x, c = PL.build_xlsx(ps, quiet=True)
+                if x:
+                    ATTACH.append(x)
+                SUBJ[0] += ' · 오늘 할 것 %d건' % len([d for d in ps if d['level'] == 'red'])
+                n_off = len([d for d in ps if d['만들기']])
+                if n_off:
+                    SUBJ[0] += ' · 제가 만들까요 %d' % n_off
+        except Exception:
+            pass
         if am and os.path.exists(am):
             return am
     except Exception:
