@@ -21,7 +21,7 @@ import t28_cost as C
 TOOL = '완성품'
 ANS_DIR = '받은답'
 ANS_HEAD = ['종류', '이름', '값', '비고']
-ANS_KIND = ('단가', '별칭', '기호', '배수', 'CB구성', '수량')
+ANS_KIND = ('단가', '별칭', '기호', '배수', 'CB구성', '수량', '확정')
 
 # ---------------- 모아 읽기 ----------------
 
@@ -172,6 +172,7 @@ def make_request(site, st):
     a('별칭,BED SIDE PANEL(온도,BSP-2000M-T,')
     a('배수,예산배수,2.1,확정')
     a('CB구성,SMPS FLS30-12,1,CB1대당')
+    a('확정,연합기숙사,공정단계,외함,외함만 납품 중')
     a('```')
     a('')
     a('넣는 곳 : `3_공통사용\\단가장\\%s\\` 에 아무 이름으로 저장 -> 30번 다시 누르기' % ANS_DIR)
@@ -214,6 +215,16 @@ def apply_answers(site=''):
         f = write_csv(os.path.join(od, '%s_도면에적힌수량표_%s_프로님답.csv' % (nm, ymd6())), rows,
                       ['기호', '내용', '수량', '쪽', '파일'])
         log_lines.append('수량표 %d줄 (프로님 답) -> %s' % (len(rows), os.path.basename(f)))
+
+    # 확정 (프로님이 정한 값 -> 확정 대장. 추정보다 항상 우선)
+    if got['확정']:
+        import facts
+        n_ok = 0
+        for r in got['확정']:
+            r = (r + ['', '', ''])[:5]
+            if r[1] and r[2] and r[3]:
+                facts.add(r[1], r[2], r[3], r[4] or '받은답'); n_ok += 1
+        log_lines.append('확정 대장 %d줄 추가 (%s)' % (n_ok, os.path.basename(facts.path())))
 
     # 배수
     if got['배수']:

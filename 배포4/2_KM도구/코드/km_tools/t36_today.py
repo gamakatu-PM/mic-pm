@@ -88,6 +88,11 @@ def run(quiet=False):
         except Exception:
             traceback.print_exc()
         try:
+            import t42_morning as MO
+            MO.build(quiet=True)   # 아침 한 장 (7층). 41 빠른 점검도 이 안에서 돈다
+        except Exception:
+            traceback.print_exc()
+        try:
             import t41_totalcheck as TC
             TC.build(quick=True, quiet=True)   # 인수인계함\_총괄점검.md 를 항상 최신으로 (39·GitHub 는 건너뜀)
         except Exception:
@@ -104,6 +109,10 @@ def run(quiet=False):
     print('=' * 74)
     print(' 클로드에게 넘길 것은 현황판 ③ 에 있습니다. 부탁서 파일만 대화창에 던지십시오.')
     log(TOOL, '현장%d%s' % (len(summary), ' 자동' if quiet else ''))
+    am = os.path.join(cfg('base'), '_아침한장.html')
+    if os.path.exists(am):
+        print('   아침 한 장 : %s' % am)
+        top = am
     if top and (not quiet or summary):
         open_file(top)
 

@@ -41,6 +41,11 @@ def prepare():
         if os.path.isdir(os.path.join(DATA, d)):
             shutil.rmtree(os.path.join(base, d), ignore_errors=True)
             shutil.copytree(os.path.join(DATA, d), os.path.join(base, d))
+    # 확정 대장 사전 값 (연합기숙사 공정단계=외함)
+    fx = os.path.join(DATA, '확정사항_시험.csv')
+    if os.path.exists(fx):
+        os.makedirs(os.path.join(base, '_도구결과', '_대장'), exist_ok=True)
+        shutil.copy(fx, os.path.join(base, '_도구결과', '_대장', '확정사항.csv'))
     shutil.copytree(os.path.join(DATA, '도면'), os.path.join(base, '3_공통사용', '도면'))
     shutil.copytree(os.path.join(DATA, '단가장'), os.path.join(base, '3_공통사용', '단가장'))
     g = os.path.join(cfg('template'), '정답본')
@@ -87,6 +92,19 @@ def check(base, log):
     dash = glob.glob(os.path.join(base, '인수인계함', '_현황판.md'))
     tc = glob.glob(os.path.join(base, '인수인계함', '_총괄점검.md'))
     ok('총괄 점검 md 생성 (41, 빠른 점검)', bool(tc) and '| 통과 |' in read_text(tc[-1]) and 'D 도면→돈' in read_text(tc[-1]))
+    # v34 아침 한 장 · 확정 대장
+    am = glob.glob(os.path.join(base, '_아침한장.html'))
+    amt = read_text(am[-1]) if am else ''
+    ok('아침 한 장 html 생성 (7층)', bool(am) and '7층' in amt and '1층' in amt)
+    ok('아침 한 장 : 연합기숙사 공정단계 「확정 · 외함」 (추정 아님)', '확정 · 외함' in amt)
+    ok('아침 한 장 : 업무판 할 일·의뢰서 읽음 (부분납품 / 제작)', '부분납품' in amt and '선제작' in amt)
+    ok('아침 한 장 : 회의 이력에 삼우MEP 김과장', '삼우MEP' in amt)
+    import facts as _F, common
+    common.DEFAULTS['out'] = os.path.join(base, '_도구결과')
+    fx = _F.load()
+    ok('받은답 「확정,앵커호텔,객실수,330」 → 확정 대장', any(d['현장'] == '앵커호텔' and d['항목'] == '객실수' and d['값'] == '330' for d in fx), '실제 %s' % [(d['현장'], d['항목'], d['값']) for d in fx])
+    amd = glob.glob(os.path.join(base, '인수인계함', '_아침한장.md'))
+    ok('클로드용 _아침한장.md 에 확정 표 맨 위', bool(amd) and '## 확정' in read_text(amd[-1]) and '**외함**' in read_text(amd[-1]))
     ok('현황판 ⑦ 회의 변경 블록', bool(dash) and '⑦ 회의에서 바뀐 수량' in read_text(dash[-1]) and '330' in read_text(dash[-1]))
     x = glob.glob(os.path.join(o, '단가붙이기', '*', '앵커호텔_*_실행산출_v1.xlsx'))
     ok('앵커 실행산출 xlsx 생성', bool(x))

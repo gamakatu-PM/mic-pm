@@ -46,6 +46,17 @@ def setup():
     save(c)
     print('저장했습니다 : %s' % INI)
 
+def _morning_or(top):
+    """아침 한 장(42)이 만들어지면 현황판 대신 그것을 보낸다"""
+    try:
+        import t42_morning as MO
+        am, _ = MO.build(quiet=True)
+        if am and os.path.exists(am):
+            return am
+    except Exception:
+        pass
+    return top
+
 def send(html_path, subject=None):
     c = conf()
     g = lambda k, d='': c.get('메일', k, fallback=d)
@@ -54,7 +65,7 @@ def send(html_path, subject=None):
         return False
     body = read_text(html_path)
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject or '[KM] 아침 현황판 %s' % today().isoformat()
+    msg['Subject'] = subject or '[KM] 아침 한 장 %s' % today().isoformat()
     msg['From'] = g('user'); msg['To'] = g('to')
     msg.attach(MIMEText('HTML 을 볼 수 없는 메일앱입니다. 첨부/PC 의 _현황판.html 을 여십시오.', 'plain', 'utf-8'))
     msg.attach(MIMEText(body, 'html', 'utf-8'))
@@ -120,6 +131,7 @@ def unregister():
 def auto():
     """스케줄러가 부르는 것 : 현황판 만들고 보내기"""
     top, mdp, blocks = DB.build(quiet=True)
+    top = _morning_or(top)
     ok = send(top)
     log(TOOL, '자동 %s' % ('성공' if ok else '실패'))
 
@@ -138,6 +150,7 @@ def run():
         setup()
     elif s == '2':
         top, mdp, blocks = DB.build(quiet=True)
+        top = _morning_or(top)
         send(top)
     elif s == '3':
         register()
