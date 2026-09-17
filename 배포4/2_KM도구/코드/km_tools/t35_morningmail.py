@@ -42,7 +42,7 @@ def setup():
     port = ask('포트 [%s] > ' % (g('port') or '587'), g('port') or '587')
     user = ask('보내는 메일 주소 [%s] > ' % g('user'), g('user'))
     pw = ask('앱 비밀번호 (지메일 16자리) [%s] > ' % ('*' * 8 if g('password') else ''), g('password'))
-    to = ask('받는 메일 주소 [%s] > ' % (g('to') or user), g('to') or user)
+    to = ask('받는 메일 주소 [%s] > ' % (g('to') or 'bsy@micronic.co.kr'), g('to') or 'bsy@micronic.co.kr')   # 프로님 지정 2026-09-17
     for k, v in (('smtp', smtp), ('port', port), ('user', user), ('password', pw), ('to', to)):
         c.set('메일', k, v)
     save(c)
