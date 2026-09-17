@@ -65,3 +65,4 @@
 
 ## v36
 `도면\{현장명}\26년\`(현장 안 연도 폴더)도 읽는다 — **최신 연도만**, 옛 연도는 보관용으로 건너뛴다(`site_year_dirs/_old_year/skipped_years`). 41 총괄 점검 B 구역에 도면 폴더 구조·현장별 읽는 위치·건너뛴 연도가 찍힌다.
+| 회의록 확인 | t44_meetingcheck.py | 저장만 해 둔 PLAUD 회의록을 읽었다고 표시(`facts.checked/check_meeting`, 회의확인.csv). 미확인은 42 아침 한 장 **0층**·41 C 구역에 매일 |

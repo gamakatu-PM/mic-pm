@@ -184,6 +184,14 @@ def sec_c():
         rows = M.changes_for('', days=30)
         add('green', S, '회의 수량·규격 변경 (30일)', '%d줄' % len(rows), '' if not rows else '부탁서·현황판 ⑦ 에서 수량표 반영 여부 확인')
     _try(S, '마지막 회의', f2)
+    def f3():
+        import t44_meetingcheck as MC
+        xs = MC.unchecked()
+        old = [m for m in xs if m.get('gap') and m['gap'] >= 3]
+        add('red' if old else ('yellow' if xs else 'green'), S, '미확인 회의록',
+            '%d건%s' % (len(xs), (' (3일 넘은 것 %d건)' % len(old)) if old else ''),
+            '★KM_번호입력 → 44 로 읽고 확인하십시오 (아침 한 장 0층에도 매일 뜹니다)' if xs else '')
+    _try(S, '미확인 회의록', f3)
     bk = glob.glob(os.path.join(cfg('handover'), '회의록코드_백업', '*'))
     if bk:
         b = max(bk, key=os.path.getmtime)

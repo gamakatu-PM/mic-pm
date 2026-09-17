@@ -86,3 +86,41 @@ def step_index(value):
         if _norm(s) in v:
             best = i
     return best
+
+# ---------------- 회의록 확인 대장 (v37) ----------------
+# 프로님이 PLAUD 회의록을 저장만 하고 못 읽고 넘어가는 것을 막는다.
+# 읽으신 회의는 44번(또는 받은답 `회의확인,<회의폴더>,확인`)으로 표시하고,
+# 표시 안 된 회의는 42 아침 한 장 맨 위에 「미확인 회의록」 으로 매일 뜬다.
+
+CHK = '회의확인.csv'
+CHK_HEAD = ['확인일', '회의폴더', '현장', '메모', '누가']
+
+def chk_path():
+    p = os.path.join(cfg('out'), '_대장')
+    os.makedirs(p, exist_ok=True)
+    return os.path.join(p, CHK)
+
+def checked(folder=None):
+    """확인 처리된 회의폴더 이름 집합 (folder 를 주면 그것만 True/False)"""
+    p = chk_path()
+    if not os.path.exists(p):
+        write_csv(p, [], CHK_HEAD)
+        return set() if folder is None else False
+    s = set()
+    for r in _read(p)[1:]:
+        r = (r + [''] * 5)[:5]
+        if r[1].strip():
+            s.add(_norm(r[1]))
+    return s if folder is None else (_norm(folder) in s)
+
+def check_meeting(folder, site='', memo='', who='프로님'):
+    """이 회의를 읽었다고 표시 (같은 폴더는 한 번만)"""
+    p = chk_path()
+    rows = _read(p)
+    body = [r for r in rows[1:] if r and len(r) > 1]
+    if _norm(folder) in {_norm(r[1]) for r in body if len(r) > 1}:
+        return None
+    new = [today().isoformat(), folder, site, memo, who]
+    write_csv(p, [new] + body, CHK_HEAD)
+    log('회의확인', folder[:40])
+    return new

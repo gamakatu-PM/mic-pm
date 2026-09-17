@@ -104,7 +104,12 @@ def check(base, log):
     # v34 아침 한 장 · 확정 대장
     am = glob.glob(os.path.join(base, '_아침한장.html'))
     amt = read_text(am[-1]) if am else ''
+    amd = glob.glob(os.path.join(base, '인수인계함', '_아침한장.md'))
     ok('아침 한 장 html 생성 (7층)', bool(am) and '7층' in amt and '1층' in amt)
+    # v37 미확인 회의록 (저장만 하고 못 읽은 것) — 시험자료 회의 2건이 다 미확인이어야 한다
+    ok('아침 한 장 0층 「미확인 회의록 2건」', '미확인 회의록 2건' in amt, '실제 : %s' % (re.search(r'미확인 회의록 \d+건', amt).group(0) if re.search(r'미확인 회의록 \d+건', amt) else '없음'))
+    ok('미확인 회의록 경보 줄 + 44번 안내', '44' in amt and '저장만 되어 있습니다' in amt)
+    ok('클로드용 md 에 미확인 회의록 절', bool(amd) and '## 미확인 회의록' in read_text(amd[-1]) if amd else False)
     ok('아침 한 장 : 연합기숙사 공정단계 「확정 · 외함」 (추정 아님)', '확정 · 외함' in amt)
     ok('아침 한 장 : 업무판 할 일·의뢰서 읽음 (부분납품 / 제작)', '부분납품' in amt and '선제작' in amt)
     ok('아침 한 장 : 회의 이력에 삼우MEP 김과장', '삼우MEP' in amt)
@@ -112,7 +117,6 @@ def check(base, log):
     common.DEFAULTS['out'] = os.path.join(base, '_도구결과')
     fx = _F.load()
     ok('받은답 「확정,앵커호텔,객실수,330」 → 확정 대장', any(d['현장'] == '앵커호텔' and d['항목'] == '객실수' and d['값'] == '330' for d in fx), '실제 %s' % [(d['현장'], d['항목'], d['값']) for d in fx])
-    amd = glob.glob(os.path.join(base, '인수인계함', '_아침한장.md'))
     ok('클로드용 _아침한장.md 에 확정 표 맨 위', bool(amd) and '## 확정' in read_text(amd[-1]) and '**외함**' in read_text(amd[-1]))
     ok('현황판 ⑦ 회의 변경 블록', bool(dash) and '⑦ 회의에서 바뀐 수량' in read_text(dash[-1]) and '330' in read_text(dash[-1]))
     x = glob.glob(os.path.join(o, '단가붙이기', '*', '앵커호텔_*_실행산출_v1.xlsx'))

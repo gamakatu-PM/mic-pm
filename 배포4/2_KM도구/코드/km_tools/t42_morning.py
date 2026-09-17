@@ -368,6 +368,12 @@ def build(quiet=True):
     srows, reqs, pending = drawing_state()
     urg, xfile = decisions_waiting()
     chk = totalcheck_rows()
+    # ★ 미확인 회의록 (저장만 하고 못 읽은 것) — 매일 맨 위에 뜬다
+    try:
+        import t44_meetingcheck as MC
+        unread_mt = MC.unchecked()
+    except Exception:
+        unread_mt = []
     fx = facts.load()
     book = {d['site']: d for d in sitebook.load()}
     # 현장 목록 = 현장대장 ∪ 회의록 현장 ∪ 도면 현장 ∪ 확정 대장
@@ -393,6 +399,26 @@ def build(quiet=True):
         L1.append(('yel' if g <= 3 else 'blu', s, '%s · 입금 대기 %s · %s원 (D%+d)' % (esc(s), esc(k), won(a), g), '입금', '출처 수금대장'))
     order = {'red': 0, 'yel': 1, 'blu': 2, 'gry': 3}
     L1.sort(key=lambda x: order.get(x[0], 9))
+    # ---- 미확인 회의록 ----
+    L0 = []
+    for m in unread_mt:
+        gap = m.get('gap')
+        lv = 'red' if (gap is None or gap >= 3) else 'yel'
+        tag = ('%d일 지남' % gap) if gap else ('오늘' if gap == 0 else '날짜?')
+        bits = []
+        if m['agenda']:
+            bits.append('안건 ' + esc(m['agenda'][:60]))
+        if m['decisions']:
+            bits.append('결정 ' + esc(m['decisions'][0][:60]))
+        if m['todos']:
+            bits.append('할 일 %d건 (%s)' % (len(m['todos']), esc(m['todos'][0][:40])))
+        if m['changes']:
+            bits.append('<b>수량·규격 변경 %d줄</b>' % len(m['changes']))
+        if m['secret']:
+            bits.append('★대외금지 %d' % len(m['secret']))
+        L0.append((lv, m['site'], '%s · %s · %s %s' % (esc(m['day'] or '날짜?'), esc(m['site'] or '?'), esc(m['who'] or ''),
+                   link(m['docx'], '회의록 열기')), tag, ' · '.join(bits) or '내용 없음'))
+
     # ---- 2층 ----
     cards = ''
     quiet_sites = []
@@ -514,14 +540,20 @@ def build(quiet=True):
     H = ['<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KM 아침 한 장</title>', CSS,
          '<h1>KM 아침 한 장 <small style="font-size:12px;color:#8E99A4">%s · 도구 %s</small></h1>' % (t0.isoformat(), VERSION),
          '<div class="sub">회의록(업무판)·도면·돈·점검을 한 장에. 굵은 <span class="sure-tag">확정</span> 은 프로님이 정한 값이고, 빗금 공정바는 역산 추정입니다. 찾기칸은 이 파일 안에서만 돕니다(토큰 0).</div>',
-         '<div class="lvl"><a href="#l1">1층 오늘</a><a href="#l2">2층 현장</a><a href="#l3">3층 부서·의뢰서</a><a href="#l4">4층 회의 이력</a><a href="#l5">5층 돈</a><a href="#l6">6층 점검</a><a href="#l7">7층 표·확정</a></div>',
-         '<div class="tiles">', tile('red', n_red, '지남·미발행·결정', 'l1'), tile('yel', n_yel, '오늘·3일내·부탁서', 'l1'), tile('yel', n_wo, '의뢰서 미발행', 'l3'),
+         '<div class="lvl"><a href="#l0" style="border-color:#C0392B;color:#C0392B">0층 미확인 회의록</a><a href="#l1">1층 오늘</a><a href="#l2">2층 현장</a><a href="#l3">3층 부서·의뢰서</a><a href="#l4">4층 회의 이력</a><a href="#l5">5층 돈</a><a href="#l6">6층 점검</a><a href="#l7">7층 표·확정</a></div>',
+         '<div class="tiles">', tile('red', len(L0), '미확인 회의록', 'l0'), tile('red', n_red, '지남·미발행·결정', 'l1'), tile('yel', n_yel, '오늘·3일내·부탁서', 'l1'), tile('yel', n_wo, '의뢰서 미발행', 'l3'),
          tile('red', len(quiet_sites), '조용한 현장', 'l6'), tile('pur', n_secret, '대외 금지 누적', 'l2'), tile('blu', len(recent), '회의 14일', 'l4'),
          tile('grn', len(fx), '확정 대장', 'l7'), '</div>']
     if kakao:
         H.append(h2('카톡 문구 (길게 눌러 복사)', esc(os.path.basename(files.get('카톡', '')))) + '<div class="k">' + esc(kakao) + '</div>')
+    if L0:
+        H.append('<div class="k" style="border-color:#C0392B;background:#fdecea">미확인 회의록 %d건 — 가장 오래된 것 %s. ★KM_번호입력 → 44 로 읽고 확인하십시오.</div>'
+                 % (len(L0), esc(unread_mt[0]['day'] or '날짜?')))
     H.append('<div class="bar"><button class="on" onclick="f(\'all\',this)">전체</button>' + ''.join('<button onclick="f(\'%s\',this)">%s</button>' % (esc(s), esc(s)) for s in names)
              + '<input placeholder="찾기 : 이름·품목·금액·날짜·확정" oninput="q(this.value)"><span id="qn" class="src"></span><button onclick="openAll(true)">모두 펼침</button><button onclick="openAll(false)">모두 접기</button></div>')
+    H.append('<div id="l0"></div>' + h2('0층 · <span style="color:#C0392B">미확인 회의록 %d건</span> (저장만 되어 있습니다. 읽고 44번으로 확인)' % len(L0),
+             '읽으시면 사라집니다 · ★KM_번호입력 → 44'))
+    H.append(''.join(r(c, t, tag, s, src) for c, s, t, tag, src in L0) if L0 else r('grn', '미확인 회의록 없음 (전부 확인하셨습니다)', '없음'))
     H.append('<div id="l1"></div>' + h2('1층 · 지금 할 것 (급한 순 · 한 줄 = 한 행동)', '회의 할 일 + 결정대기 + 부탁서 + 수금'))
     H.append(''.join(r(c, t, tag, s, src) for c, s, t, tag, src in L1) if L1 else r('grn', '오늘 급한 것 없음', '없음'))
     H.append('<div id="l2"></div>' + h2('2층 · 현장 카드', '확정 > 역산 추정 > 미확정 · 펼치면 표') + (cards or '<div class="src">현장이 없습니다</div>'))
@@ -544,6 +576,10 @@ def build(quiet=True):
           '새 창의 클로드는 이 파일을 현황판·총괄점검 md 와 함께 먼저 읽는다. **「확정」 절의 값은 프로님이 정한 것이라 어떤 추정보다 우선한다.**', '',
           '## 확정 (프로님이 정한 값 · 최신 위)', '| 일자 | 현장 | 항목 | 값 | 근거 |', '|---|---|---|---|---|']
     md += ['| %s | %s | %s | **%s** | %s |' % (d['일자'], d['현장'], d['항목'], d['값'], d['근거']) for d in fx] or ['| - | - | - | (없음) | 43번으로 넣는다 |']
+    md += ['', '## 미확인 회의록 (저장만 하고 아직 못 읽으신 것 — 매일 말씀드린다)']
+    md += ['- %s · %s · %s%s%s' % (m['day'] or '날짜?', m['site'] or '?', m['who'] or '',
+           ('  [%d일 지남]' % m['gap']) if m.get('gap') else '',
+           ('  할일 %d · 변경 %d' % (len(m['todos']), len(m['changes']))) if (m['todos'] or m['changes']) else '') for m in unread_mt] or ['- (없음. 전부 확인하셨습니다)']
     md += ['', '## 1층 지금 할 것'] + ['- [%s] %s' % (tag, re.sub(r'<[^>]+>', '', t)) for c, s, t, tag, src in L1]
     md += ['', '## 조용한 현장'] + ['- %s : %s' % (s, ('%d일째 회의 없음' % g) if g is not None else '회의록 없음') for s, g in quiet_sites]
     md += ['', '## 현장 공정 (확정/추정/미확정)']
