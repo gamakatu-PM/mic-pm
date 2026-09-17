@@ -129,6 +129,26 @@ def sec_b():
             add('gray', S, '바로가기 (%s)' % name, '폴더를 못 찾음'); continue
         sc = [f for f in ('★KM_도면넣고_여기클릭.py', '★KM_번호입력.py') if os.path.exists(os.path.join(where, f))]
         add('green' if len(sc) == 2 else 'yellow', S, '바로가기 (%s)' % name, '%d/2' % len(sc), '' if len(sc) == 2 else '시작.py 를 한 번 열면 다시 만듭니다')
+    def f3():
+        import t31_intake as I
+        root = I.D.dwg_root()
+        yr = I.year_dirs(root)
+        add('green', S, '도면 폴더 구조', '%s%s' % (root, ('  ·  연도 폴더 %d개 : %s (새 도면은 %s\\ 로)' % (len(yr), ', '.join(n for y, n, p in yr), yr[0][1])) if yr else '  ·  연도 폴더 없음 (현장 폴더가 바로 아래)'))
+        sw = I.sites(with_year=True)
+        if not sw:
+            add('red', S, '도면 현장 폴더', '없음', '3_공통사용\\도면\\{현장명}\\ 또는 3_공통사용\\도면\\26년\\{현장명}\\ 에 도면을 넣으십시오')
+            return
+        for n, p, y in sw:
+            nf = len(I.drawing_files(p))
+            sk = I.skipped_years(p)
+            inner = I.site_year_dirs(p)
+            where = ('%s\\%s\\' % (y, n)) if y else ('%s\\' % n)
+            if inner:
+                where += '%s\\ (안쪽 연도 폴더, 최신만 읽음)' % inner[0][1]
+            add('green' if nf else 'yellow', S, '도면 [%s]' % n,
+                '%s · 읽는 도면 %d개%s' % (where, nf, ('  ·  보관용으로 건너뜀 : ' + ', '.join(sk)) if sk else ''),
+                '' if nf else '이 폴더에 도면(dxf·pdf)이 없습니다')
+    _try(S, '도면 폴더 구조', f3)
     def f2():
         import t40_meeting as M
         p = M.inbox_dir()
@@ -177,7 +197,7 @@ def sec_d(quiet):
     S = 'D 도면→돈'
     try:
         import t31_intake as I
-        sites = I.sites()
+        sites = I.sites(with_year=True)
     except Exception as e:
         add('gray', S, '현장 목록', '못 읽음 %s' % e); return
     if not sites:
@@ -189,7 +209,7 @@ def sec_d(quiet):
         ins = K
     except Exception:
         pass
-    for name, p in sites:
+    for name, p, yr in sites:
         nf = len(I.drawing_files(p))
         led = I.load_ledger(p)
         revs = [int(r['판']) for r in led if str(r['판']).isdigit()]
@@ -199,7 +219,11 @@ def sec_d(quiet):
         ex = _latest(os.path.join(o, '단가붙이기', '*', '%s_*_실행산출_v*.xlsx' % safe_name(name)))
         qu = _latest(os.path.join(o, '단가붙이기', '*', '%s_*_견적서_v*.xlsx' % safe_name(name)))
         rq = _latest(os.path.join(o, '완성품', '*', '_클로드부탁서_%s_*.md' % safe_name(name)))
-        parts = ['도면 %d개' % nf, 'r%d' % rev, '수량표 %s' % ('있음' if q else '없음'),
+        inner = I.site_year_dirs(p)
+        where = ('%s\\' % yr) if yr else ''
+        if inner:
+            where += '%s\\' % inner[0][1]
+        parts = [('%s 도면 %d개' % (where, nf)) if where else ('도면 %d개' % nf), 'r%d' % rev, '수량표 %s' % ('있음' if q else '없음'),
                  '실행산출 %s' % (_ver(ex) if ex else '없음'), '견적서 %s' % (_ver(qu) if qu else '없음')]
         lv = 'green' if (nf and q and ex and qu) else ('yellow' if nf else 'gray')
         fix = '' if lv == 'green' else ('★KM_도면넣고_여기클릭 (36번) 을 누르십시오' if nf else '도면이 없습니다')

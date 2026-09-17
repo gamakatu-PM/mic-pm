@@ -78,6 +78,10 @@ def check(base, log):
     # v35 연도 폴더 (시험자료 : 도면\26년\앵커호텔 / 도면\쏠비치양양 - 두 구조가 같이 돌아야 한다)
     ok('연도 폴더(26년) 안의 앵커호텔을 현장으로 찾음', '앵커호텔' in log and '26년' in log)
     ok('연도 폴더 밖의 쏠비치양양도 같이 찾음', '쏠비치양양' in log)
+    # v36 현장 폴더 **안**의 연도 폴더 (쏠비치양양\26년 · 25년) - 최신만 읽어야 한다
+    ok('현장 폴더 안 연도 : 쏠비치양양 26년만 읽음 (25년 건너뜀)', '26년\\ 만 읽음' in log and '보관용으로 건너뜀' in log and '25년' in log)
+    _s2 = glob.glob(os.path.join(o, '도면수량', '*', '쏠비치양양_도면*.csv'))
+    ok('옛 연도 도면(999)이 수량에 안 섞임', bool(_s2) and '999' not in read_text(_s2[-1]), '파일 %s' % (os.path.basename(_s2[-1]) if _s2 else '없음'))
     ok('26년 폴더 자체를 현장으로 잡지 않음', '현장 2개' in log and not os.path.exists(os.path.join(base, '3_공통사용', '도면', '26년', '_도면대장.csv')),
        '현장 줄 : %s' % ([l for l in log.splitlines() if l.startswith('현장 ')] or ['없음'])[0][:60])
     ok('이전 판 %d개 건너뜀 표시' % EXPECT['앵커_이전판건너뜀'], ('이전 판이라 읽지 않은 파일 %d개' % EXPECT['앵커_이전판건너뜀']) in log)

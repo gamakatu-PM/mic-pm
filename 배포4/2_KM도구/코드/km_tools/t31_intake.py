@@ -106,16 +106,50 @@ def save_ledger(site_dir, rows):
     p = os.path.join(site_dir, LEDGER)
     write_csv(p, [[r.get(k, '') for k in LHEAD] for r in rows], LHEAD)
 
+def site_year_dirs(site_dir):
+    """현장 폴더 **안**의 연도 폴더 [(연, 이름, 경로)] 최신 앞.  예) 도면\\앵커호텔\\26년\\"""
+    out = []
+    try:
+        for d in sorted(os.listdir(site_dir)):
+            p = os.path.join(site_dir, d)
+            y = year_key(d)
+            if y and os.path.isdir(p):
+                out.append((y, d, p))
+    except Exception:
+        pass
+    out.sort(reverse=True)
+    return out
+
+def _old_year(site_dir, f, ys):
+    """이 파일이 「옛 연도 폴더」 안에 있나 (최신 연도 폴더·연도 폴더 밖은 아니다)"""
+    if not ys:
+        return False
+    try:
+        head = os.path.relpath(f, site_dir).split(os.sep)[0]
+    except Exception:
+        return False
+    y = year_key(head)
+    return bool(y) and y != ys[0][0]
+
 def drawing_files(site_dir):
+    """현장 폴더의 도면. 안에 연도 폴더가 있으면 **최신 연도 폴더 + 연도 폴더 밖**만 읽는다
+    (옛 연도 도면을 같이 세어 수량이 부풀던 것을 막는다. 옛 연도는 보관용)"""
+    ys = site_year_dirs(site_dir)
     return [f for f in D.gather(site_dir)
-            if not os.path.basename(f).startswith('_')]
+            if not os.path.basename(f).startswith('_') and not _old_year(site_dir, f, ys)]
+
+def skipped_years(site_dir):
+    """안 읽은 옛 연도 폴더 이름들"""
+    ys = site_year_dirs(site_dir)
+    return [n for y, n, p in ys[1:]] if len(ys) > 1 else []
 
 def qty_files(site_dir):
-    """설계사가 준 수량표(xlsx/csv)가 있으면 같이 읽는다"""
+    """설계사가 준 수량표(xlsx/csv)가 있으면 같이 읽는다 (옛 연도 폴더는 제외)"""
     out = []
+    ys = site_year_dirs(site_dir)
     for f in walk_files(site_dir, {'.xlsx', '.csv'}):
         b = os.path.basename(f)
-        if b.startswith(('_', '~$')):
+        if b.startswith(('_', '~$')) or _old_year(site_dir, f, ys):
             continue
         if any(k in b for k in ('수량', 'BOM', 'bom', '물량')):
             out.append(f)
@@ -288,6 +322,11 @@ def process_site(site, site_dir, force=False):
     revs = [int(r['판']) for r in led if str(r['판']).isdigit()]
     cur_rev = max(revs) if revs else 0
     print('')
+    ys_in = site_year_dirs(site_dir)
+    if ys_in:
+        sk = skipped_years(site_dir)
+        print('[%s]  폴더 안 연도 %s%s' % (site, ys_in[0][1] + '\\ 만 읽음',
+              (' / 보관용으로 건너뜀 : ' + ', '.join(sk)) if sk else ''))
     print('[%s]  도면 %d개 / 지금까지 %d판 / 새 파일 %d개' % (site, len(files), cur_rev, len(new)))
     if not new:
         return None
