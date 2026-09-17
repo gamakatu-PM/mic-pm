@@ -100,6 +100,74 @@ def find_sources():
     return sorted(cands)
 
 
+# ---------- 27번(도면수량) 결과를 그대로 제안서에 꽂는다 ----------
+def find_qty_csv(site):
+    """_도구결과\\도면수량\\ 에서 그 현장의 가장 최근 도면수량 csv 를 찾는다."""
+    import glob
+    try:
+        root = os.path.join(cfg('out'), '도면수량')
+    except Exception:
+        return None
+    if not os.path.isdir(root):
+        return None
+    pat = os.path.join(root, '*', '*도면수량*.csv')
+    cands = [p for p in glob.glob(pat)
+             if (not site) or safe_name(site) in os.path.basename(p)]
+    if not cands:
+        return None
+    cands.sort(key=lambda p: os.path.getmtime(p))
+    return cands[-1]
+
+
+def read_qty(path):
+    """품목 / 채택수량 / 채택근거 만 뽑는다. 수량 0 이거나 비어 있으면 버린다."""
+    import csv
+    rows = []
+    site = ''
+    for enc in ('utf-8-sig', 'cp949', 'utf-8'):
+        try:
+            with io.open(path, encoding=enc) as fp:
+                for r in csv.reader(fp):
+                    if not r:
+                        continue
+                    if r[0] == '[현장]' and len(r) > 1:
+                        site = r[1]
+                    if r[0] in ('품목', '[현장]', '[읽은 파일]', '[규칙 대조]', ''):
+                        continue
+                    qty = (r[3] if len(r) > 3 else '').strip()
+                    if not qty or qty in ('0', '-'):
+                        continue
+                    rows.append([r[0].strip(), qty, (r[4] if len(r) > 4 else '').strip()])
+            break
+        except Exception:
+            continue
+    return site, rows
+
+
+def qty_slides(site, rows, src_name=''):
+    """도면에서 읽은 물량으로 「그 현장 이야기」 2장을 만든다."""
+    head = ['품목', '수량', '근거']
+    body = [[a, b, c or '도면 판독'] for a, b, c in rows[:9]]
+    t = {'type': 'table', 'title': '%s 물량 (도면에서 읽은 값)' % (site or '본 현장'),
+         'eyebrow': '그 현장 이야기', 'pill': '도면 기준',
+         'headers': head, 'colW': [3.6, 1.8, 3.6], 'rows': body,
+         'note': '이 표는 도면을 기계로 읽어 센 값입니다. 발주처 수량표와 대조해 확정합니다.'
+                 + (('  (읽은 도면: %s)' % src_name) if src_name else '')}
+    it = {'type': 'items', 'title': '%s 적용 범위' % (site or '본 현장'),
+          'eyebrow': '그 현장 이야기',
+          'lead': '위 물량을 기준으로 당사가 공급·시공하는 범위입니다.',
+          'items': [
+              {'text': 'CB 외함 제작 · 현장 납품', 'desc': '선납품'},
+              {'text': '제어 분전함(속판) 설치 · 약전 결선', 'desc': '객실관리'},
+              {'text': '객실 기구물 제작 · 설치', 'desc': '벽지·페인트 완료 후'},
+              {'text': '시운전 및 운영자 인계 교육', 'desc': '전원 공급 후'}],
+          'box': {'title': '확인 · 협의 사항', 'lines': [
+              '조명 스위치 구수는 전등 설계가 나와야 확정됩니다. 도면에는 L 로만 표기합니다.',
+              '도면에서 읽지 못한 기호는 별도 목록으로 정리해 두었습니다. 함께 확인 부탁드립니다.',
+              '강전 결선과 외함 취부는 전기공사 범위입니다.']}}
+    return [t, it]
+
+
 # ---------- 조립 ----------
 def build_merged(spec, src_path, fixed_nos, out_path, mapping):
     prs = Presentation()
@@ -185,6 +253,25 @@ def run():
     pick = [specs[int(sel) - 1]] if sel.isdigit() and 1 <= int(sel) <= len(specs) else specs
     site = ask('현장명 (엔터 = 현장명 없는 범용 표준본) > ').strip()
 
+    # 27번 도면수량 결과가 있으면 「그 현장 이야기」 2장을 자동으로 끼운다
+    qrows = []
+    qcsv = find_qty_csv(site)
+    if qcsv:
+        qsite, qrows = read_qty(qcsv)
+        if qrows:
+            print('')
+            print('도면수량 결과를 찾았습니다 : %s' % os.path.basename(qcsv))
+            print('  품목 %s개를 제안서에 그대로 넣습니다.' % won(len(qrows)))
+            for a, b, c in qrows[:6]:
+                print('   - %s : %s (%s)' % (a, b, c or '도면 판독'))
+        else:
+            print('')
+            print('도면수량 파일은 있으나 채택수량이 비어 있습니다. 물량 장은 넣지 않습니다.')
+    elif site:
+        print('')
+        print('27번 도면수량 결과가 없습니다. 도면을 넣고 27번을 먼저 누르시면')
+        print('그 현장 물량이 제안서에 자동으로 들어갑니다.')
+
     od = outdir('제안서PPT')
     mapping = {'{{현장}}': site if site else '귀사',
                '{{현장_제목}}': (site + ' ') if site else '',
@@ -192,6 +279,11 @@ def run():
     print('')
     for p, d in pick:
         d2 = deck.fill(d, mapping)
+        if qrows:
+            sl = d2.setdefault('slides', [])
+            at = 1 if sl and sl[0].get('type') == 'cover' else 0
+            for k, extra in enumerate(qty_slides(site, qrows, os.path.basename(qcsv))):
+                sl.insert(at + k, extra)
         base = '%s_%s_%s_r1.pptx' % (safe_name(site or '표준'),
                                      safe_name(d2.get('파일명', d2.get('title', '제안서'))[:30]),
                                      ymd6())
