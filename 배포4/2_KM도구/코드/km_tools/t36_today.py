@@ -88,6 +88,11 @@ def run(quiet=False):
         except Exception:
             traceback.print_exc()
         try:
+            import t45_askgate as AG
+            AG.run(quiet=True)     # 45 요청 분기 : 도면 없는 현장의 「도면 요청 메일」 본문을 미리 만들어 둔다
+        except Exception:
+            traceback.print_exc()
+        try:
             import t42_morning as MO
             MO.build(quiet=True)   # 아침 한 장 (7층). 41 빠른 점검도 이 안에서 돈다
         except Exception:

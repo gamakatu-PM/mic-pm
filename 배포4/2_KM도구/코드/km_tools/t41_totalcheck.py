@@ -265,6 +265,29 @@ def sec_d(quiet):
     except Exception:
         pass
 
+# ---------------- G 요청 분기 (45) ----------------
+
+def sec_g():
+    S = 'G 견적·제안 요청'
+    def f():
+        import t45_askgate as AG
+        gs = AG.gate_all()
+        need = [g for g in gs if g['state'] == '도면필요']
+        add('green' if not need else 'red', S, '도면이 없어 견적을 못 만드는 현장',
+            '%d곳 / 전체 %d곳' % (len(need), len(gs)),
+            '' if not need else '45번 : %s → 도면 요청 메일 본문이 만들어져 있습니다 (그대로 보내십시오)'
+            % ', '.join(g['site'] for g in need[:4]))
+        for g in need[:6]:
+            mp = AG.mail_path(g['site'])
+            add('yellow' if mp else 'red', S, '[%s] 도면 요청 메일' % g['site'],
+                os.path.basename(mp) if mp else '아직 안 만듦',
+                '보내시고 도면 받으면 32번' if mp else '45번을 누르십시오')
+        miss = [g['site'] for g in need if not g['pic'] or not g['rooms']]
+        if miss:
+            add('yellow', S, '메일에 넣을 담당자·객실수가 없는 현장', '%d곳 (%s)' % (len(miss), ', '.join(miss[:4])),
+                '43번으로 담당자·객실수를 확정해 두시면 다음부터 메일에 저절로 들어갑니다')
+    _try(S, '45 요청 분기', f)
+
 # ---------------- E 자가 시험 / F 자동 실행 ----------------
 
 def sec_e(quick):
@@ -298,7 +321,7 @@ def sec_f():
 
 def build(quick=False, quiet=False):
     del R[:]
-    sec_a(quick); sec_b(); sec_c(); sec_d(quiet); sec_e(quick); sec_f()
+    sec_a(quick); sec_b(); sec_c(); sec_d(quiet); sec_g(); sec_e(quick); sec_f()
     cnt = {'green': 0, 'yellow': 0, 'red': 0, 'gray': 0}
     for lv, *_ in R:
         cnt[lv] = cnt.get(lv, 0) + 1
@@ -307,7 +330,7 @@ def build(quick=False, quiet=False):
     todo.sort(key=lambda x: 0 if x[0] == 'red' else 1)
     # HTML
     blocks = [('지금 할 것 (실패 → 주의 순)', [(lv, '%s · %s → %s' % (sec, item, fix)) for lv, sec, item, fix in todo] or [('green', '할 것 없음')])]
-    for sec in ('A 판·갱신', 'B 폴더·경로', 'C 회의록', 'D 도면→돈', 'E 자가 시험', 'F 자동 실행 (참고)'):
+    for sec in ('A 판·갱신', 'B 폴더·경로', 'C 회의록', 'D 도면→돈', 'G 견적·제안 요청', 'E 자가 시험', 'F 자동 실행 (참고)'):
         rows = [(lv, '%s : %s%s' % (item, st, (' → ' + fix) if fix and lv != 'green' else '')) for lv, s, item, st, fix in R if s == sec]
         blocks.append((sec, rows))
     od = outdir(TOOL)

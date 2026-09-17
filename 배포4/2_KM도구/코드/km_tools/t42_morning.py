@@ -400,6 +400,18 @@ def build(quiet=True):
         L1.append(('red', s, '%s · 계산서 미발행 %s · %s원 (납품 %d일 경과) → 발행' % (esc(s), esc(k), won(a), g), '수금', '출처 수금대장'))
     for s, k, a, g in wait:
         L1.append(('yel' if g <= 3 else 'blu', s, '%s · 입금 대기 %s · %s원 (D%+d)' % (esc(s), esc(k), won(a), g), '입금', '출처 수금대장'))
+    # 45 요청 분기 : 도면이 없어 견적을 못 만드는 현장은 「도면 요청 메일」 이 이미 만들어져 있다
+    try:
+        import t45_askgate as AG
+        for g in AG.gate_all():
+            if g['state'] != '도면필요':
+                continue
+            mp = AG.mail_path(g['site'])
+            L1.append(('red', g['site'], '%s · 도면이 없어 견적을 못 만듭니다 → 도면 요청 메일 본문 준비됨'
+                       % esc(g['site']), '도면요청',
+                       link(mp, '보낼메일_도면요청_%s.txt' % g['site']) if mp else '45번을 누르시면 메일 본문이 만들어집니다'))
+    except Exception:
+        pass
     order = {'red': 0, 'yel': 1, 'blu': 2, 'gry': 3}
     L1.sort(key=lambda x: order.get(x[0], 9))
     # ---- 미확인 회의록 ----

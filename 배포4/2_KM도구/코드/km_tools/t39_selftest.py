@@ -46,6 +46,11 @@ def prepare():
     if os.path.exists(fx):
         os.makedirs(os.path.join(base, '_도구결과', '_대장'), exist_ok=True)
         shutil.copy(fx, os.path.join(base, '_도구결과', '_대장', '확정사항.csv'))
+    # 현장대장 (도면 없는 현장 1곳 포함 - 45 도면 요청 메일 검사용)
+    sb = os.path.join(DATA, '현장대장_시험.csv')
+    if os.path.exists(sb):
+        os.makedirs(os.path.join(base, '_도구결과', '_대장'), exist_ok=True)
+        shutil.copy(sb, os.path.join(base, '_도구결과', '_대장', '현장대장.csv'))
     shutil.copytree(os.path.join(DATA, '도면'), os.path.join(base, '3_공통사용', '도면'))
     shutil.copytree(os.path.join(DATA, '단가장'), os.path.join(base, '3_공통사용', '단가장'))
     g = os.path.join(cfg('template'), '정답본')
@@ -127,6 +132,19 @@ def check(base, log):
     ok('아침 한 장 : 연합기숙사 공정단계 「확정 · 외함」 (추정 아님)', '확정 · 외함' in amt)
     ok('아침 한 장 : 업무판 할 일·의뢰서 읽음 (부분납품 / 제작)', '부분납품' in amt and '선제작' in amt)
     ok('아침 한 장 : 회의 이력에 삼우MEP 김과장', '삼우MEP' in amt)
+    # v39 45 요청 분기 : 도면 없는 현장(변산수련원)은 견적을 만들지 않고 「도면 요청 메일」 을 만들어 둔다
+    ag = glob.glob(os.path.join(o, '요청분기', '*', '보낼메일_도면요청_*.txt'))
+    ok('45 도면 요청 메일 본문 생성 (도면 없는 현장)', bool(ag), '실제 %s' % (os.path.basename(ag[-1]) if ag else '없음'))
+    if ag:
+        _m = read_text(ag[-1])
+        ok('45 메일에 필수 항목 (도면 종류·캐드+PDF·기한·회신 약속)',
+           all(x in _m for x in ('객실 평면도', '전기 계통도', '캐드 + PDF', '준공 예정일', '도면 받은 날부터')),
+           '길이 %d' % len(_m))
+        ok('45 메일이 금액·수량을 스스로 정하지 않음 (빈칸 남김)', '[   ]' in _m or '[        ]' in _m)
+    ok('45 요청 분기 판 생성', bool(glob.glob(os.path.join(o, '요청분기', '*', '_요청분기.html'))))
+    ok('아침 한 장 1층에 「도면이 없어 견적을 못 만듭니다」', '도면이 없어 견적을 못 만듭니다' in amt)
+    ok('45 : 도면 있는 현장은 도면 요청 메일을 만들지 않음 (앵커호텔)',
+       not glob.glob(os.path.join(o, '요청분기', '*', '보낼메일_도면요청_앵커호텔.txt')))
     import facts as _F, common
     common.DEFAULTS['out'] = os.path.join(base, '_도구결과')
     fx = _F.load()
