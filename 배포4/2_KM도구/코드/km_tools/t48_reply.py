@@ -34,6 +34,9 @@ MAKE = ('만들어', '만들까', '작성해', '써줘', '초안')
 KILL = ('취소', '빼', '필요없', '안해', '없앰', '삭제')
 HOLD = ('미뤄', '연기', '나중', '다음주', '보류', '뒤로')
 ASK = ('물어봐', '확인해봐', '알아봐', '체크해')
+# v46 프로님 : "진행중 을 넣어줘" - 손 댔지만 아직 안 끝난 것.
+# OKAY 의 '진행' 보다 먼저 걸러야 하므로 parse_line 에서 순서가 앞선다.
+WIP = ('진행중', '진행 중', '하는중', '하는 중', '하고있', '하고 있', '착수', '시작했', '보냈어', '보냄', '접수', '넣었어')
 
 def parse_line(line):
     """한 줄 -> (코드, 명령, 값, 원문). 코드가 없으면 (None, ...)"""
@@ -56,12 +59,20 @@ def parse_line(line):
         val = re.sub(r'^.*?(?:%s)\s*' % '|'.join(NOPE), '', r, flags=re.I).lstrip('→ ').strip()
         return (code, '수정', val, s)
     if has(HOLD):
-        val = re.sub(r'^.*?(?:%s)\s*' % '|'.join(HOLD), '', r, flags=re.I).strip()
-        return (code, '미룸', val, s)
+        # v46 고침 : 「다음주로 미뤄」 가 '로 미뤄' 로 잘리던 것.
+        #            미룸 낱말을 전부 빼고 남은 조사(로/으로/까지/에)도 턴다.
+        # 「미뤄·연기·보류」 는 시키는 말이라 빼고, 「다음주·나중」 은 때 그 자체라 남긴다
+        val = re.sub(r'(?:미뤄|미룸|미루|연기|보류|뒤로)', ' ', r, flags=re.I)
+        val = re.sub(r'\s+', ' ', val).strip()
+        val = re.sub(r'^(?:로|으로|까지|에|은|는|을|를)\s*', '', val).strip()
+        val = re.sub(r'\s*(?:로|으로|에)$', '', val).strip()
+        return (code, '미룸', val or '미정', s)
     if has(MAKE):
         return (code, '만들기', r, s)
     if has(ASK):
         return (code, '물어봄', r, s)
+    if has(WIP):
+        return (code, '진행중', r, s)
     if has(DONE):
         return (code, '완료', r, s)
     if has(OKAY):
@@ -81,8 +92,14 @@ def apply_one(route, code, cmd, val, said):
         facts.plan_done(site, todo)
         out = '완료 표시 (내일부터 안 뜹니다)'
     elif cmd == '확인':
+        # v46 : 이미 확정인 줄에 「맞아」 를 하시면 대장은 안 변한다.
+        #       그 사실을 그대로 적어야 프로님이 나중에 헷갈리지 않는다.
+        was = (d.get('등급') or '').strip()
         facts.plan_set(code, 등급='확정')
-        out = '확정으로 올림 (제안 → 확정)'
+        if was == '확정':
+            out = '이미 확정이라 대장은 그대로입니다. 확인하셨다는 것만 소통이력에 남겼습니다'
+        else:
+            out = '확정으로 올림 (제안 → 확정)'
     elif cmd == '수정':
         if not val:
             facts.talk_add(route, code, site, said, '무엇으로 고칠지 안 적혀 있음', '', '못알아들음')
@@ -98,10 +115,22 @@ def apply_one(route, code, cmd, val, said):
     elif cmd == '미룸':
         facts.plan_set(code, 때=val or '미정')
         out = '때를 「%s」 로 미룸' % (val or '미정')
+    elif cmd == '진행중':
+        # 이미 완료·취소로 닫힌 줄은 다시 열지 않는다
+        if (d.get('상태') or '').strip() in ('완료', '취소'):
+            out = '이미 %s 된 줄이라 그대로 두었습니다' % (d.get('상태') or '').strip()
+        else:
+            facts.plan_set(code, 상태='진행중', 등급='확정')
+            out = '진행중으로 표시 (목록에 남되 「진행중」 으로 뜹니다)'
     elif cmd == '만들기':
-        facts.plan_set(code, 등급='확정')
-        facts.talk_add(route, code, site, said, '제가 만들 것 : %s' % ((d.get('만들기') or todo)[:40]), '만들기 대기', '반영')
-        return ('제가 만들겠습니다 : %s' % ((d.get('만들기') or todo)[:40]), '반영')
+        # v46 : 바로 만들지 않는다. 「이렇게 만들겠습니다」 를 먼저 아침 한 장에 띄우고
+        #       프로님이 「맞아」 하시면 그때 만든다. (프로님 : "어떻게 만들지 나하고 상의 하는 거야?")
+        if (d.get('상태') or '').strip() in ('완료', '취소'):
+            facts.talk_add(route, code, site, said, '제가 만들 것 : %s' % ((d.get('만들기') or todo)[:40]), '이미 닫힌 줄', '반영')
+            return ('이미 %s 된 줄이라 다시 열지 않았습니다' % (d.get('상태') or '').strip(), '반영')
+        facts.plan_set(code, 등급='확정', 상태='만들기대기')
+        facts.talk_add(route, code, site, said, '제가 만들 것 : %s' % ((d.get('만들기') or todo)[:40]), '만들기대기', '반영')
+        return ('만들 것으로 적었습니다. 내일 아침 「이렇게 만들겠습니다」 를 먼저 보여 드리고, 맞다고 하시면 만듭니다', '반영')
     elif cmd == '물어봄':
         facts.plan_set(code, 왜=(d.get('왜', '') + ' / 프로님 : ' + val)[:200])
         out = '물어볼 것으로 적어 둠'

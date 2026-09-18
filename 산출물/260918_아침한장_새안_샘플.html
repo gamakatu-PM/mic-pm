@@ -38,13 +38,15 @@ h1{font-size:19px;margin:0 0 3px}
 .pill.red{background:#fae5e6;color:var(--red)} .pill.yel{background:#fbf2dc;color:var(--yel)}
 .pill.blu{background:#e5eef9;color:var(--blu)} .pill.gry{background:#eceef1;color:#777}
 .pill.ask{background:#e8f5ec;color:var(--grn)}
+.pill.wip{background:#eae7fa;color:#5a4bc4}
 .tt{font-size:15px;font-weight:600;margin:5px 0 2px}
 .wy{font-size:13px;color:var(--mut)}
 .btns{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-.btns button{flex:1;min-width:70px;padding:9px 4px;font-size:13.5px;font-family:inherit;
+.btns button{flex:1;min-width:58px;padding:9px 3px;font-size:13px;font-family:inherit;
  border:1px solid var(--line);background:var(--pg);color:#444;border-radius:8px;cursor:pointer}
 .btns button:active{transform:scale(.97)}
 .btns button.on{color:#fff;border-color:transparent;font-weight:700}
+.btns button.on[data-c="진행중"]{background:#6b5bd2}
 .btns button.on[data-c="완료"]{background:var(--grn)}
 .btns button.on[data-c="맞아"]{background:var(--blu)}
 .btns button.on[data-c="아니야"]{background:var(--red)}
@@ -55,6 +57,11 @@ h1{font-size:19px;margin:0 0 3px}
  border-radius:8px;background:var(--pg);color:var(--fg)}
 .fix .h{font-size:12px;color:var(--mut);margin-bottom:5px}
 
+table.rec{width:100%;border-collapse:collapse;font-size:13px;margin:0}
+table.rec th,table.rec td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+table.rec th{background:var(--chip);font-weight:600;white-space:nowrap}
+table.rec tr:last-child td{border-bottom:none}
+.c1{color:var(--grn)}.c2{color:var(--blu)}.c3{color:var(--red)}.c4{color:var(--yel)}.c5{color:#6b5bd2}
 h2{font-size:14px;color:var(--mut);margin:22px 0 8px;font-weight:600}
 
 .bar{position:fixed;left:0;right:0;bottom:0;background:var(--pg);border-top:1px solid var(--line);
@@ -72,6 +79,7 @@ footer{color:var(--mut);font-size:12px;margin-top:26px;padding-top:12px;border-t
 :root:not([data-theme="light"]) .mock .t{color:#d9b84a}
 :root:not([data-theme="light"]) .pill.red{background:#3d2325} :root:not([data-theme="light"]) .pill.yel{background:#3a3117}
 :root:not([data-theme="light"]) .pill.blu{background:#1e2c40} :root:not([data-theme="light"]) .pill.ask{background:#1c3226}
+:root:not([data-theme="light"]) .pill.wip{background:#282344;color:#a99ef0}
 :root:not([data-theme="light"]) .bar a.off{background:#3a3f45}}
 </style></head><body>
 
@@ -89,7 +97,7 @@ footer{color:var(--mut);font-size:12px;margin-top:26px;padding-top:12px;border-t
 
 <div class="mock">
 <div class="t">▸ 아침에 가는 메일은 이 세 줄이 전부입니다 (하루 1통)</div>
-<pre>제목: [KM] 9/18 금 · 오늘까지 3건 · 답할 것 4건
+<pre>제목: [KM] 9/18 금 · 오늘까지 3건 · 답할 것 4건 · 진행중 1건
 
 연합기숙사 9건 · 양양쏠비치 1건
 오늘까지 : 타공도 재송부 / 도어락 파일 / CB외함 회신
@@ -107,7 +115,7 @@ footer{color:var(--mut);font-size:12px;margin-top:26px;padding-top:12px;border-t
    <div class="tt">연합기숙사 타공도 정식 재송부</div>
    <div class="wy">9/8에 보냈고 읽음 표시까지 떴는데 상대는 못 받았다고 합니다. 9/17에 "내일 보내겠다"고 하셨습니다. 메일 문안 만들어 뒀습니다.</div>
    <div class="btns">
-    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="진행중">진행중</button><button data-c="완료">완료</button><button data-c="맞아">맞아</button>
     <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
    <div class="fix"><div class="h">한 줄만 고쳐 주십시오 (비워 두셔도 됩니다)</div><input placeholder="예) 팀장 말고 소장한테 보내"></div>
   </div>
@@ -117,7 +125,7 @@ footer{color:var(--mut);font-size:12px;margin-top:26px;padding-top:12px;border-t
    <div class="tt">도어락 자재승인원 작업 파일 송부</div>
    <div class="wy">우리 직원이 도어락이 삭제된 줄 알고 자사분만 준비 중입니다. 갑지 목차에 도어락을 넣어야 합니다.</div>
    <div class="btns">
-    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="진행중">진행중</button><button data-c="완료">완료</button><button data-c="맞아">맞아</button>
     <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
    <div class="fix"><div class="h">한 줄만 고쳐 주십시오</div><input placeholder=""></div>
   </div>
@@ -127,17 +135,17 @@ footer{color:var(--mut);font-size:12px;margin-top:26px;padding-top:12px;border-t
    <div class="tt">CB외함 최단 9/23 — 석고 9/18 착수 건 회신</div>
    <div class="wy">9/15에 회신 약속을 하셨는데 아직 안 나갔고, 상대가 말한 석고 착수일이 <b>오늘</b>입니다. 최단은 23일(수)이라 못 맞춥니다.</div>
    <div class="btns">
-    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="진행중">진행중</button><button data-c="완료">완료</button><button data-c="맞아">맞아</button>
     <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
    <div class="fix"><div class="h">한 줄만 고쳐 주십시오</div><input placeholder=""></div>
   </div>
 
   <div class="item" data-code="KM-004">
-   <div class="l1"><span class="cd">KM-004</span><span class="pill yel">명절 전</span><span class="pill gry">일능 홍승조 부장</span></div>
+   <div class="l1"><span class="cd">KM-004</span><span class="pill yel">명절 전</span><span class="pill wip">진행중</span><span class="pill gry">일능 홍승조 부장</span></div>
    <div class="tt">견적서 송부 독촉 → 명절 전 계약 완료</div>
    <div class="wy">계약이 되어야 CB외함이 출고됩니다. 상대가 "다 해놨는데 깜빡했다"를 반복하고 있습니다.</div>
    <div class="btns">
-    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="진행중">진행중</button><button data-c="완료">완료</button><button data-c="맞아">맞아</button>
     <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
    <div class="fix"><div class="h">한 줄만 고쳐 주십시오</div><input placeholder="예) 명절 전은 9/24까지야"></div>
   </div>
@@ -147,7 +155,7 @@ footer{color:var(--mut);font-size:12px;margin-top:26px;padding-top:12px;border-t
    <div class="tt">전력계량기 299개 — 작업 범위 확인서</div>
    <div class="wy">설치비가 견적에서 빠진 채 진행 중입니다. 서면으로 못 박아 두지 않으면 소판 반입 시점에 "그건 당연히 마이크로닉이" 소리가 납니다. <b>답 주시기 전에는 만들지 않습니다.</b></div>
    <div class="btns">
-    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="진행중">진행중</button><button data-c="완료">완료</button><button data-c="맞아">맞아</button>
     <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
    <div class="fix"><div class="h">한 줄만 고쳐 주십시오</div><input placeholder=""></div>
   </div>
@@ -163,7 +171,7 @@ footer{color:var(--mut);font-size:12px;margin-top:26px;padding-top:12px;border-t
    <div class="tt">별동 68실 온도조절기 삭제 — 감액 내역 + 삼호MEP 서면 회신</div>
    <div class="wy"><b>결론이 뒤집힌 건입니다.</b> 9/15 10:27 통화에서는 "32실을 뺀다"였는데, 13:56 통화에서 "68실짜리 맞대요"로 반대가 됐습니다. 저는 나중 통화를 확정으로 잡았습니다. 이게 맞으면 감액 대상은 68실 온도조절기 68EA입니다.</div>
    <div class="btns">
-    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="진행중">진행중</button><button data-c="완료">완료</button><button data-c="맞아">맞아</button>
     <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
    <div class="fix"><div class="h">한 줄만 고쳐 주십시오</div><input placeholder="예) 아니야 32실이 맞아"></div>
   </div>
@@ -199,12 +207,26 @@ footer{color:var(--mut);font-size:12px;margin-top:26px;padding-top:12px;border-t
   <div class="tt">견적 보낸 뒤 아직 안 가보셨습니다</div>
   <div class="wy">9/14 발송 · 목업 2세대 · 2000 시리즈 지정 · 10월 공사(입찰)</div>
   <div class="btns">
-    <button data-c="완료">다녀옴</button><button data-c="맞아">맞아</button>
+    <button data-c="진행중">진행중</button><button data-c="완료">다녀옴</button><button data-c="맞아">맞아</button>
     <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
   <div class="fix"><div class="h">한 줄만</div><input placeholder=""></div>
  </div></div>
 </div>
 
+
+<h2>단추를 누르면 어디에 남습니까</h2>
+<div class="site"><div class="bd">
+<table class="rec">
+<tr><th>단추</th><th>대장에 벌어지는 일</th><th>나중에 보시는 곳</th></tr>
+<tr><td><b class="c5">진행중</b></td><td>앞으로할것.csv 의 <b>상태 = 진행중</b>. 줄은 안 닫히고 계속 뜹니다</td><td>아침 한 장 <b>「진행중」</b> 절</td></tr>
+<tr><td><b class="c1">완료</b></td><td>상태 = <b>완료</b> + <b>완료일</b>. <b>줄을 지우지 않습니다</b></td><td>앞으로할것.csv (완료 줄이 그대로 남음) · 46번</td></tr>
+<tr><td><b class="c2">맞아</b></td><td>제안 → <b>확정</b>. 이미 확정이면 대장은 그대로이고 <b>확인하셨다는 사실만</b> 남습니다</td><td>소통이력.csv</td></tr>
+<tr><td><b class="c3">아니야</b></td><td>할 일이 <b>「원래 → 고치신 것」</b> 으로 바뀌고(원래 글이 안 지워짐), <b>확정 대장에도 한 줄</b> 들어갑니다</td><td>확정사항 대장 · 아침 한 장 <b>「프로님이 고치신 것」</b> 절(7일)</td></tr>
+<tr><td><b class="c4">만들어줘</b></td><td>바로 안 만듭니다. <b>「이렇게 만들겠습니다」</b> 를 다음 아침에 먼저 보여 드립니다</td><td>아침 한 장 <b>「제가 이렇게 만들겠습니다」</b> 절</td></tr>
+</table>
+<div class="wy" style="padding:0 15px 14px">모든 회신은 위와 별개로 <b>소통이력.csv</b> 에 「날짜 · 어디로 오셨는지 · 번호 · 프로님 말씀 그대로 · 제가 이해한 것 · 제가 한 일」 여섯 칸으로 통째로 남습니다.
+제가 잘못 알아들으면 <b>「제가 못 알아들은 답」</b> 절에 떠서 다음 아침에 되묻습니다.</div>
+</div></div>
 <footer>
 누르신 것은 이 한 장 안에만 쌓입니다. 아래 <b>「골라서 보내기」</b>를 한 번 누르셔야 저에게 옵니다.<br>
 잘못 누르셨으면 같은 단추를 한 번 더 눌러 끄시면 됩니다. · 한국마이크로닉(주) 배성윤 차장
