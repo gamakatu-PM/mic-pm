@@ -116,6 +116,12 @@ def board_todos(files):
             lv = 'red' if dd < 0 else ('yel' if dd <= 3 else 'blu')
         out.append({'site': cell(r, ci['site']), 'due': due_s or '미정', 'dd': dd, 'text': text, 'who': cell(r, ci['who']),
                     'src': cell(r, ci['src']), 'level': lv})
+    try:
+        for x in facts.talk_load(days=7, state='못알아들음'):
+            L1.append(('red', x['현장'], '<b style="color:#C0392B">제가 못 알아들었습니다</b> · %s 「%s」 — 다시 한 줄만 주십시오'
+                       % (esc(x['코드']), esc(x['프로님 말'])), '되물음', esc(x['내가 이해한 것'])))
+    except Exception:
+        pass
     order = {'red': 0, 'yel': 1, 'blu': 2, 'gry': 3}
     out.sort(key=lambda x: (order[x['level']], x['dd'] if x['dd'] is not None else 999))
     return out
@@ -340,6 +346,33 @@ def tbl(head, rows):
     return '<table><tr>' + ''.join('<th>%s</th>' % esc(h) for h in head) + '</tr>' + ''.join(
         '<tr>' + ''.join('<td>%s</td>' % c for c in row) + '</tr>' for row in rows) + '</table>'
 
+def mail_to():
+    """회신 받을 주소 (설정.ini [메일] to → user). 없으면 빈칸"""
+    try:
+        import configparser
+        c = configparser.ConfigParser()
+        if os.path.exists(INI):
+            c.read(INI, encoding='utf-8')
+        return c.get('메일', 'to', fallback='') or c.get('메일', 'user', fallback='')
+    except Exception:
+        return ''
+
+def reply_links(code, to=None):
+    """손가락 한 번이면 회신이 미리 써진 메일이 열린다 (모바일에서 타이핑 없이)"""
+    to = mail_to() if to is None else to
+    if not to or not code:
+        return ''
+    try:
+        from urllib.parse import quote
+    except Exception:
+        from urllib import quote
+    def a(word, label, color):
+        return ('<a href="mailto:%s?subject=%s&body=%s" style="display:inline-block;margin-right:4px;padding:1px 7px;'
+                'border:1px solid %s;border-radius:99px;color:%s;text-decoration:none;font-size:11px">%s</a>'
+                % (to, quote('KM 회신'), quote('%s %s' % (code, word)), color, color, label))
+    return (a('완료', '완료', '#2E7D5B') + a('확인', '맞아', '#2A6099')
+            + a('아니야 ', '아니야', '#C0392B') + a('만들어줘', '만들어줘', '#6B4FA8'))
+
 def link(p, label=None):
     if not p:
         return ''
@@ -411,10 +444,15 @@ def build(quiet=True):
     for d in plan_rows:
         if d['level'] not in ('red', 'yel'):
             continue
-        L1.append((d['level'], d['현장'], '%s · %s%s%s' % (esc(d['현장']), esc(d['할일']),
+        _c = (d.get('코드') or '').replace('KM-', '')
+        L1.append((d['level'], d['현장'], '%s%s · %s%s%s' % (
+                   ('<b style="color:#2A6099">%s</b> ' % esc(_c)) if _c else '',
+                   esc(d['현장']), esc(d['할일']),
                    (' → ' + esc(d['누가'])) if d['누가'] else '',
                    (' <b style="color:#6B4FA8">· 제가 %s 만들까요?</b>' % esc(d['만들기'])) if d['만들기'] else ''),
-                   PL.tag(d) + ' · ' + d['등급'], ('왜 : ' + esc(d['왜'])) if d['왜'] else '출처 앞으로할것.csv'))
+                   PL.tag(d) + ' · ' + d['등급'],
+                   (('왜 : ' + esc(d['왜'])) if d['왜'] else '출처 앞으로할것.csv')
+                   + (('<br>' + reply_links(_c)) if _c else '')))
     # 47 견적 보낸 곳 : 보내 놓고 안 가보시면 그대로 식는다. 「찾아가실 곳」 을 1층에 매일
     try:
         import t47_visit as VS
@@ -616,6 +654,10 @@ def build(quiet=True):
     H.append('<div id="l1"></div>' + h2('1층 · 지금 할 것 (급한 순 · 한 줄 = 한 행동)', '회의 할 일 + 앞으로 해야 될 것(46) + 결정대기 + 부탁서 + 수금 · 보라 글씨 = 클로드가 만들 수 있는 서류'))
     if plan_x:
         H.append('<div class="src">앞으로 해야 될 것 전체 %d건 · <a href="%s">요약 엑셀</a> · 끝난 것은 46번으로 완료 표시</div>' % (len(plan_rows), file_url(plan_x)))
+    H.append('<div class="src" style="background:#f4f8f5;border:1px dashed #b8d8c6;border-radius:8px;padding:9px 12px;margin:6px 0">'
+             '<b>제가 틀렸으면 이 메일에 그대로 회신해 주십시오.</b> 줄 앞 <b style="color:#2A6099">번호</b>만 맞으면 됩니다 (번호는 끝날 때까지 안 바뀝니다)<br>'
+             '<span style="font-family:monospace">3 완료 · 3 맞아 · 3 아니야 1개 층 선납으로 · 3 만들어줘 · 3 취소 · 3 미뤄 22일</span><br>'
+             '단추를 누르시면 회신이 미리 써진 메일이 열립니다. 제가 못 알아들으면 다음 메일에 되묻습니다.</div>')
     H.append(''.join(r(c, t, tag, s, src) for c, s, t, tag, src in L1) if L1 else r('grn', '오늘 급한 것 없음', '없음'))
     H.append('<div id="l2"></div>' + h2('2층 · 현장 카드', '확정 > 역산 추정 > 미확정 · 펼치면 표') + (cards or '<div class="src">현장이 없습니다</div>'))
     H.append('<div id="l3"></div>' + h2('3층 · 부서별 작업의뢰서 (의뢰서 없으면 아무도 안 움직임)', '업무판 ↔ 10번 발행대장') + L3)
@@ -662,6 +704,17 @@ def build(quiet=True):
     md += ['', '## 찾아갈 곳 (견적을 보내 놓고 아직 안 가보신 곳 — 매일 말씀드린다)']
     _vn = [d for d in visit_rows if d['need']]
     md += ['- **%s** · %s %s · %s (보낸날 %s)' % (d['현장'], d['받는곳'], d['담당자'], d['why'], d['보낸날']) for d in _vn] or ['- (없음)']
+    # 프로님이 고치신 것 / 제가 못 알아들은 답 (새 창이 이 두 절을 먼저 읽는다)
+    try:
+        _talk = facts.talk_load(days=7)
+    except Exception:
+        _talk = []
+    md += ['', '## 프로님이 고치신 것 (최근 7일 · 이 값이 내 추정보다 우선한다)']
+    _ok = [x for x in _talk if x['상태'] == '반영']
+    md += ['- %s [%s] **%s** %s → %s' % (x['일자'], x['경로'], x['코드'], x['프로님 말'], x['반영']) for x in _ok] or ['- (없음)']
+    md += ['', '## 제가 못 알아들은 답 (다음 메일에 되묻는다)']
+    _bad = [x for x in _talk if x['상태'] == '못알아들음']
+    md += ['- %s [%s] %s : 「%s」 → %s' % (x['일자'], x['경로'], x['코드'], x['프로님 말'], x['내가 이해한 것']) for x in _bad] or ['- (없음)']
     md += ['', '## 제가 만들까요? (클로드가 먼저 물어야 할 것 — 프로님께 「만드세요」 라고 하지 않는다)']
     offers = [d for d in plan_rows if d['만들기']]
     md += ['- **%s** · %s · 「제가 %s 만들까요?」 (할 일 : %s)' % (d['현장'], d['때'], d['만들기'], d['할일']) for d in offers] or ['- (없음)']

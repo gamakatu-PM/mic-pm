@@ -88,6 +88,13 @@ def run(quiet=False):
         except Exception:
             traceback.print_exc()
         try:
+            import t48_reply as RP
+            _r = RP.run(quiet=True)          # 프로님 회신(메일·받는함)을 먼저 읽어 반영하고 판을 만든다
+            if _r:
+                print('   프로님 회신 %d줄 반영' % len(_r))
+        except Exception:
+            traceback.print_exc()
+        try:
             import t45_askgate as AG
             AG.run(quiet=True)     # 45 요청 분기 : 도면 없는 현장의 「도면 요청 메일」 본문을 미리 만들어 둔다
         except Exception:

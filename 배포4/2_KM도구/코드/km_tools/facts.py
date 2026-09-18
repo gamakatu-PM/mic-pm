@@ -134,7 +134,7 @@ def check_meeting(folder, site='', memo='', who='프로님'):
 #   프로님께 「만드세요」 라고 하지 않는다. 클로드가 「제가 ○○ 만들까요?」 로 먼저 묻는다.
 
 PLAN = '앞으로할것.csv'
-PLAN_HEAD = ['일자', '현장', '때', '등급', '할일', '누가', '왜', '만들기', '상태', '완료일']
+PLAN_HEAD = ['일자', '현장', '때', '등급', '할일', '누가', '왜', '만들기', '상태', '완료일', '코드']
 
 def plan_path():
     p = os.path.join(cfg('out'), '_대장')
@@ -145,14 +145,14 @@ def _plan_rows():
     p = plan_path()
     if not os.path.exists(p):
         write_csv(p, [['예) 2026-09-17', '조선호텔', '9/17', '확정', '중도금 신청서 + 세금계산서 + 사진대지 묶어 제출', '배성윤 → 진현창 대리',
-                       '이번 달을 넘기면 잔금과 같이 밀린다', '중도금 신청서 초안', '대기', '']], PLAN_HEAD)
+                       '이번 달을 넘기면 잔금과 같이 밀린다', '중도금 신청서 초안', '대기', '', 'KM-001']], PLAN_HEAD)
         return []
     out = []
     for r in _read(p)[1:]:
-        r = (r + [''] * 10)[:10]
+        r = (r + [''] * 11)[:11]
         if not r[1].strip() or r[0].startswith('예)') or not r[4].strip():
             continue
-        out.append(dict(zip(['일자', '현장', '때', '등급', '할일', '누가', '왜', '만들기', '상태', '완료일'], [c.strip() for c in r])))
+        out.append(dict(zip(PLAN_HEAD, [c.strip() for c in r])))
     return out
 
 def _when_key(when):
@@ -200,11 +200,11 @@ def plan_add(site, when, grade, todo, who='', why='', make='', day=None):
         rows = [PLAN_HEAD]
     body = [r for r in rows[1:] if r and not r[0].startswith('예)')]
     for r in body:
-        r += [''] * (10 - len(r))
+        r += [''] * (11 - len(r))
         if r[1].strip() == site and _norm(r[4]) == _norm(todo) and r[8].strip() not in ('완료', '취소'):
             return None
     grade = grade if grade in ('확정', '제안') else '제안'
-    new = [(day or today().isoformat()), site, when, grade, todo, who, why, make, '대기', '']
+    new = [(day or today().isoformat()), site, when, grade, todo, who, why, make, '대기', '', next_code(body)]
     write_csv(p, [new] + body, PLAN_HEAD)
     log('앞으로', '%s %s %s' % (site, when, todo[:30]))
     return new
@@ -218,7 +218,7 @@ def plan_done(site, todo_part, day=None):
     body = rows[1:]
     n = 0
     for r in body:
-        r += [''] * (10 - len(r))
+        r += [''] * (11 - len(r))
         if r[8].strip() in ('완료', '취소'):
             continue
         if (not site or _norm(site) in _norm(r[1]) or _norm(r[1]) in _norm(site)) and _norm(todo_part) and _norm(todo_part) in _norm(r[4]):
@@ -340,4 +340,110 @@ def quote_visit(site, memo='', day=None, to=''):
     if n:
         write_csv(p, body, QUOTE_HEAD)
         log('방문', '%s x%d' % (site, n))
+    return n
+
+
+def next_code(body=None):
+    """고정 번호 KM-001 … 한 번 준 번호는 다시 쓰지 않는다 (매일 번호가 바뀌면 프로님이 헷갈린다)"""
+    if body is None:
+        body = [r for r in _read(plan_path())[1:] if r and not r[0].startswith('예)')]
+    mx = 0
+    for r in body:
+        c = (r + [''] * 11)[10] if isinstance(r, list) else (r.get('코드') or '')
+        m = re.search(r'KM-(\d+)', str(c))
+        if m:
+            mx = max(mx, int(m.group(1)))
+    return 'KM-%03d' % (mx + 1)
+
+def plan_by_code(code):
+    """고정 번호로 한 줄 찾기 (KM-003 / 003 / 3 전부 됨)"""
+    c = re.sub(r'[^0-9]', '', str(code or ''))
+    if not c:
+        return None
+    for d in plan_load(active_only=False):
+        if re.sub(r'[^0-9]', '', d.get('코드') or '') == c.zfill(3).lstrip('0').zfill(3) or \
+           re.sub(r'[^0-9]', '', d.get('코드') or '').lstrip('0') == c.lstrip('0'):
+            return d
+    return None
+
+def plan_set(code, **kw):
+    """고정 번호로 한 줄을 고친다 (등급·때·할일·만들기·상태). 옛 값은 소통 이력에 남긴다"""
+    p = plan_path()
+    rows = _read(p)
+    if not rows:
+        return None
+    body = rows[1:]
+    c = re.sub(r'[^0-9]', '', str(code or '')).lstrip('0')
+    hit = None
+    for r in body:
+        r += [''] * (11 - len(r))
+        if re.sub(r'[^0-9]', '', r[10]).lstrip('0') == c and c:
+            old = dict(zip(PLAN_HEAD, r))
+            for k, v in kw.items():
+                if k in PLAN_HEAD and v is not None:
+                    r[PLAN_HEAD.index(k)] = str(v)
+            hit = (old, dict(zip(PLAN_HEAD, r)))
+            break
+    if hit:
+        write_csv(p, body, PLAN_HEAD)
+        log('앞으로수정', '%s %s' % (code, kw))
+    return hit
+
+# ---------------- 소통 이력 (프로님이 고치신 것 · v44) ----------------
+# 프로님 : "니가 메일로 보낸 것이 틀릴 수 있어. 그걸 내가 바로잡아서 너와 소통을 해야 하는데 방법을 만들어."
+#   · 메일 회신(A안) · 대화(C안) 어느 쪽으로 오든 여기 한 곳에 쌓인다
+#   · 42 아침 한 장 md 「## 프로님이 고치신 것」 절에 들어가 **새 창도 읽는다**
+#   · 못 알아들은 답은 버리지 않고 「## 제가 못 알아들은 답」 으로 되묻는다
+
+TALK = '소통이력.csv'
+TALK_HEAD = ['일자', '경로', '코드', '현장', '프로님 말', '내가 이해한 것', '반영', '상태']
+
+def talk_path():
+    p = os.path.join(cfg('out'), '_대장')
+    os.makedirs(p, exist_ok=True)
+    return os.path.join(p, TALK)
+
+def talk_add(route, code, site, said, understood, applied, state='반영'):
+    """state : 반영 / 못알아들음 / 되물음 / 무시"""
+    p = talk_path()
+    rows = _read(p)
+    body = [r for r in rows[1:] if r and len(r) > 1]
+    new = [today().isoformat(), route, str(code or ''), site or '', said or '', understood or '', applied or '', state]
+    write_csv(p, [new] + body, TALK_HEAD)
+    log('소통', '%s %s %s' % (route, code, state))
+    return new
+
+def talk_load(days=7, state=None):
+    import datetime as _dt
+    cut = today() - _dt.timedelta(days=days) if days else None
+    out = []
+    for r in _read(talk_path())[1:]:
+        r = (r + [''] * 8)[:8]
+        if not r[0].strip():
+            continue
+        d = dict(zip(TALK_HEAD, [c.strip() for c in r]))
+        if cut:
+            try:
+                y, m, dd = [int(x) for x in d['일자'].split('-')]
+                if _dt.date(y, m, dd) < cut:
+                    continue
+            except Exception:
+                pass
+        if state and d['상태'] != state:
+            continue
+        out.append(d)
+    return out
+
+def talk_close(code, said):
+    """되물어 해결된 것을 닫는다 (못알아들음 -> 반영)"""
+    p = talk_path()
+    rows = _read(p)
+    body = rows[1:]
+    n = 0
+    for r in body:
+        r += [''] * (8 - len(r))
+        if r[7] == '못알아들음' and (not code or _norm(code) in _norm(r[2])) and (not said or _norm(said)[:8] in _norm(r[4])):
+            r[7] = '반영'; n += 1
+    if n:
+        write_csv(p, body, TALK_HEAD)
     return n

@@ -164,6 +164,23 @@ def check(base, log):
     ok('완료된 줄은 아침 한 장에 안 뜸', '완료 표시 검사용' not in amt)
     px = glob.glob(os.path.join(o, '앞으로할것', '*', '앞으로할것_*.xlsx'))
     ok('46 요약 엑셀 생성', bool(px))
+    # v44 회신 읽기 (A안 메일 회신 · C안 대화) + 고정 번호
+    import t48_reply as _RP
+    _p = _RP.parse_line('3 아니야 1개 층 선납으로')
+    ok('48 한 줄 해석 : 3 아니야 … → 수정', _p and _p[1] == '수정' and '선납' in _p[2], '실제 %s' % (str(_p)[:60]))
+    ok('48 한 줄 해석 : KM-003 완료 → 완료', (_RP.parse_line('KM-003 완료') or ['', ''])[1] == '완료')
+    ok('48 한 줄 해석 : 3 만들어줘 → 만들기', (_RP.parse_line('3 만들어줘') or ['', ''])[1] == '만들기')
+    ok('48 한 줄 해석 : 모르는 말 → ? (못 알아들음)', (_RP.parse_line('3 음 글쎄') or ['', ''])[1] == '?')
+    ok('48 : 번호 없는 줄은 건너뜀', _RP.parse_line('안녕하세요 배성윤입니다') is None)
+    import facts as _FF
+    import common as _CM
+    _CM.DEFAULTS['out'] = os.path.join(base, '_도구결과')
+    _tk = _FF.talk_load(days=7)
+    ok('받은답 「회신,KM-002,아니야 …」 → 소통 이력 반영', any(x['코드'].endswith('002') and x['상태'] == '반영' for x in _tk), '실제 %s' % [(x['코드'], x['상태']) for x in _tk][:4])
+    ok('회신으로 고친 값이 앞으로할것에 반영', any('네고 기준' in (d.get('할일') or '') for d in _FF.plan_load(active_only=False)))
+    ok('아침 한 장 1층에 고정 번호 + 회신 단추', ('mailto:' in amt) or ('회신' in amt))
+    ok('클로드용 md 에 「## 프로님이 고치신 것」 절', bool(amd) and '## 프로님이 고치신 것' in read_text(amd[-1]))
+    ok('클로드용 md 에 「## 제가 못 알아들은 답」 절', bool(amd) and '## 제가 못 알아들은 답' in read_text(amd[-1]))
     # v43 아침 메일 두 번 (07:00 + 회의록 들어온 뒤)
     import t35_morningmail as _ML
     # 판단(언제 보낼지)만 본다 — 실제 발송·판 만들기는 막는다
