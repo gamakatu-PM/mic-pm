@@ -642,12 +642,18 @@ def build(quiet=True):
         for m in unread_mt:
             md.append('- **%s · %s · %s**%s' % (m['day'] or '날짜?', m['site'] or '?', m['who'] or '',
                       ('  [%d일 지남]' % m['gap']) if m.get('gap') else ''))
+            _d = m['day'].strftime('%m-%d') if m['day'] else '날짜?'
             if m['agenda']:
                 md.append('  - 안건 : %s' % m['agenda'])
+            # 라벨은 한 번만 쓰고 내용을 그 아래에 날짜와 함께 나열한다 (프로님 2026-09-18 : 같은 말이 앞에 반복되면 혼동된다)
             for nm, key in (('결정', 'decisions'), ('조치', 'actions'), ('할 일', 'todos'), ('수량·규격 변경', 'changes'),
                             ('리스크', 'risk'), ('타부서', 'dept'), ('상대 요청', 'advice'), ('확인 필요', 'unclear'), ('★대외금지', 'secret')):
-                for x in (m.get(key) or []):
-                    md.append('  - %s : %s' % (nm, x))
+                xs = [x for x in (m.get(key) or []) if x]
+                if not xs:
+                    continue
+                md.append('  - %s %d건' % (nm, len(xs)))
+                for x in xs:
+                    md.append('    · %s  %s' % (_d, x))
         if mt_xlsx:
             md.append('')
             md.append('요약 엑셀 : %s' % mt_xlsx)

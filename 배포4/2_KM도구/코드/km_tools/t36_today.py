@@ -102,6 +102,12 @@ def run(quiet=False):
             TC.build(quick=True, quiet=True)   # 인수인계함\_총괄점검.md 를 항상 최신으로 (39·GitHub 는 건너뜀)
         except Exception:
             traceback.print_exc()
+        try:
+            import t35_morningmail as ML
+            if ML.after_meeting(quiet=False):   # 07:00 뒤에 회의록이 들어왔으면 그때 한 번 더 메일
+                print('   어제 회의록을 포함해 메일을 다시 보냈습니다.')
+        except Exception:
+            traceback.print_exc()
     finally:
         common.AUTO = False
     print('')

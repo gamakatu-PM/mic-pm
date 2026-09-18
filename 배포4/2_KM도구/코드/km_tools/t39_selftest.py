@@ -131,7 +131,11 @@ def check(base, log):
     ok('미확인 회의록 요약 csv 생성', bool(mc))
     ok('머리글 글자를 내용으로 잡지 않음 (「변경」·「언급 금지 사항」 단독 줄 없음)',
        bool(amd) and ('- 수량·규격 변경 : 변경\n' not in read_text(amd[-1])) and ('★대외금지 : 언급 금지 사항' not in read_text(amd[-1])))
-    ok('md 상세에 결정·할 일·변경이 줄로 들어감', bool(amd) and ('  - 할 일 :' in read_text(amd[-1]) or '  - 수량·규격 변경 :' in read_text(amd[-1])))
+    # v43 : 라벨은 한 번만 쓰고 내용은 날짜와 함께 아래에 나열 (프로님 2026-09-18)
+    _md = read_text(amd[-1]) if amd else ''
+    ok('md 상세 : 라벨 한 번 + 건수 (「- 할 일 n건」)', bool(re.search(r'  - (할 일|결정|조치) \d+건', _md)))
+    ok('md 상세 : 내용 줄마다 날짜 (「· 09-12  …」)', bool(re.search(r'    · \d{2}-\d{2}  \S', _md)))
+    ok('md 상세 : 같은 라벨을 반복해서 쓰지 않음', '  - 할 일 :' not in _md and '  - 결정 :' not in _md)
     if mx:
         try:
             import openpyxl
@@ -160,6 +164,22 @@ def check(base, log):
     ok('완료된 줄은 아침 한 장에 안 뜸', '완료 표시 검사용' not in amt)
     px = glob.glob(os.path.join(o, '앞으로할것', '*', '앞으로할것_*.xlsx'))
     ok('46 요약 엑셀 생성', bool(px))
+    # v43 아침 메일 두 번 (07:00 + 회의록 들어온 뒤)
+    import t35_morningmail as _ML
+    # 판단(언제 보낼지)만 본다 — 실제 발송·판 만들기는 막는다
+    _ML.send = lambda *a, **k: True
+    _ML.meeting_count = lambda: 2
+    _ML._send_now = lambda kind, head='': bool(_ML.mark_sent(kind, _ML.meeting_count(), '[KM] 시험' + head))
+    try:
+        os.remove(_ML.maillog_path())        # 36번이 이미 한 번 불렀을 수 있으니 기록을 비우고 본다
+    except Exception:
+        pass
+    ok('35 : 07:00 편 기록 없으면 sent_today 가 None', _ML.sent_today('아침') is None)
+    _ML.mark_sent('아침', 0, '[KM] 시험 · 어제 회의록 아직 안 들어옴')
+    ok('35 : 07:00 편 기록됨 (회의 0건)', (_ML.sent_today('아침') or {}).get('회의건수') == '0')
+    ok('35 : 회의록이 들어오면 한 번 더 보냄', _ML.after_meeting(quiet=True) is True)
+    ok('35 : 같은 날 두 번은 안 보냄', _ML.after_meeting(quiet=True) is False)
+    ok('35 : 발송 기록 파일 생성 (메일발송.csv)', os.path.exists(os.path.join(o, '_대장', '메일발송.csv')))
     # v41 47 견적 보낸 곳 → 찾아갈 곳 (프로님 : 견적 보낸 곳을 찾아가야 된다고 메일에 적게 해)
     ok('아침 한 장 1층에 「찾아가실 곳」 (앵커호텔 · 7일 지남)', '찾아가실 곳' in amt and '더힐이앤씨' in amt)
     ok('어제 다녀온 곳은 안 뜸 (쏠비치양양)', amt.count('찾아가실 곳') == 1, '실제 %d줄' % amt.count('찾아가실 곳'))

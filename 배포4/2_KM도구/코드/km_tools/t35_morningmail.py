@@ -1,5 +1,16 @@
 # -*- coding: utf-8 -*-
-"""35. 아침 메일 - 현황판을 매일 아침 내 메일로 보낸다 (PC가 켜져 있으면 5시에 저절로). 토큰 0.
+"""35. 아침 메일 - 아침 한 장을 매일 내 메일로 보낸다. 하루 두 번. 토큰 0.
+
+프로님 (2026-09-18) : "매일 파이썬이 아침 7시에 보내고, 내가 7시 전에 어제 PLAUD 회의록을 못 넣었으면
+7시 것은 회의록 빼고 할 수 있는 것만 보내. 그 후 9시에 출근해서 회의록 넣고 시작을 누르면
+그때 어제 회의록을 포함해서 다시 보내."
+
+  ① 07:00 (작업 스케줄러)  : 회의록이 없어도 나머지(오늘 할 것·찾아갈 곳·수금·도면·점검)를 전부 보낸다
+                             어제 회의록이 아직 안 들어왔으면 제목에 「어제 회의록 아직 안 들어옴」
+  ② 회의록을 넣고 36번을 누르면 : 7시 이후 새로 들어온 회의가 있으면 **그때 한 번 더** 보낸다
+                             제목에 「어제 회의록 포함 · 새 회의 n건」
+  같은 날 같은 편은 두 번 가지 않는다 (_도구결과\\_대장\\메일발송.csv 로 기록)
+
 
 처음 한 번
   설정.ini 의 [메일] 에 보내는 계정·앱 비밀번호·받는 주소를 넣는다 (35번이 물어봅니다)
@@ -19,7 +30,9 @@ from common import *
 import t33_dashboard as DB
 
 TOOL = '아침메일'
-TASK = 'KM_아침메일_0500'
+TASK = 'KM_아침메일_0700'
+SEND_AT = '07:00'      # 프로님 지정 2026-09-18
+MAIL_HEAD = ['날짜', '구분', '회의건수', '보낸시각', '제목', '결과']
 
 def conf():
     c = configparser.ConfigParser()
@@ -47,6 +60,53 @@ def setup():
         c.set('메일', k, v)
     save(c)
     print('저장했습니다 : %s' % INI)
+
+def maillog_path():
+    p = os.path.join(cfg('out'), '_대장')
+    os.makedirs(p, exist_ok=True)
+    return os.path.join(p, '메일발송.csv')
+
+def _mail_rows():
+    import io as _io, csv as _csv
+    p = maillog_path()
+    if not os.path.exists(p):
+        return []
+    for enc in ('cp949', 'utf-8-sig', 'utf-8'):
+        try:
+            with _io.open(p, 'r', encoding=enc, newline='') as fp:
+                rows = list(_csv.reader(fp))
+            break
+        except Exception:
+            rows = []
+    out = []
+    for r in rows[1:]:
+        r = (r + [''] * 6)[:6]
+        if r[0].strip():
+            out.append(dict(zip(MAIL_HEAD, [c.strip() for c in r])))
+    return out
+
+def sent_today(kind=None, day=None):
+    """오늘 보낸 기록 (kind 를 주면 그 편만). 없으면 None"""
+    d = (day or today()).isoformat()
+    for r in _mail_rows():
+        if r['날짜'] == d and (kind is None or r['구분'] == kind) and r['결과'] == '성공':
+            return r
+    return None
+
+def mark_sent(kind, n_meeting, subject, ok=True):
+    import datetime as _dt
+    rows = _mail_rows()
+    new = [today().isoformat(), kind, str(n_meeting), _dt.datetime.now().strftime('%H:%M'), subject, '성공' if ok else '실패']
+    write_csv(maillog_path(), [new] + [[r[k] for k in MAIL_HEAD] for r in rows], MAIL_HEAD)
+    return new
+
+def meeting_count():
+    """지금 회의록 폴더에 들어와 있는 회의 건수 (7시 이후 늘었는지 세는 기준)"""
+    try:
+        import t42_morning as MO
+        return len(MO.meetings())
+    except Exception:
+        return 0
 
 ATTACH = []       # 이번 발송에 붙일 파일 (미확인 회의록 요약 엑셀 등)
 SUBJ = ['']       # 제목 꼬리 (미확인 n건)
@@ -164,11 +224,11 @@ def register():
     lp = write_launcher()
     py = sys.executable.replace('pythonw.exe', 'python.exe')
     tr = '"%s" "%s"' % (py, lp)
-    cmd = ['schtasks', '/Create', '/F', '/SC', 'DAILY', '/ST', '05:00', '/TN', TASK, '/TR', tr]
+    cmd = ['schtasks', '/Create', '/F', '/SC', 'DAILY', '/ST', SEND_AT, '/TN', TASK, '/TR', tr]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode == 0:
-            print('등록했습니다 : 매일 05:00  「%s」' % TASK)
+            print('등록했습니다 : 매일 %s  「%s」' % (SEND_AT, TASK))
             print('  실행 파일 : %s' % lp)
             print('  PC 가 꺼져 있으면 그날은 안 갑니다.')
             return True
@@ -183,30 +243,78 @@ def unregister():
     subprocess.run(['schtasks', '/Delete', '/F', '/TN', TASK], capture_output=True, text=True)
     print('해제했습니다.')
 
-def auto():
-    """스케줄러가 부르는 것 : 현황판 만들고 보내기"""
+def _send_now(kind, head=''):
+    """아침 한 장을 만들어 지금 보낸다. kind = '아침'(07:00) / '회의록'(회의록 들어온 뒤)"""
+    n = meeting_count()
     top, mdp, blocks = DB.build(quiet=True)
     top = _morning_or(top)
-    ok = send(top, subject='[KM] 아침 한 장 %s%s' % (today().isoformat(), SUBJ[0]), files=ATTACH)
-    log(TOOL, '자동 %s' % ('성공' if ok else '실패'))
+    subj = '[KM] 아침 한 장 %s%s%s' % (today().isoformat(), head, SUBJ[0])
+    ok = send(top, subject=subj, files=ATTACH)
+    mark_sent(kind, n, subj, ok)
+    log(TOOL, '%s %s (회의 %d건)' % (kind, '성공' if ok else '실패', n))
+    return ok
+
+def auto():
+    """작업 스케줄러가 07:00 에 부르는 것.
+    회의록이 아직 안 들어왔어도 나머지는 전부 보낸다 (프로님 지시 2026-09-18)."""
+    import datetime as _dt
+    n_new = 0
+    try:
+        import t44_meetingcheck as MC
+        y = today() - _dt.timedelta(days=1)
+        n_new = len([m for m in MC.unchecked() if m.get('day') and m['day'] >= y])
+    except Exception:
+        pass
+    head = '' if n_new else ' · 어제 회의록 아직 안 들어옴'
+    return _send_now('아침', head)
+
+def after_meeting(quiet=True):
+    """36번(오늘 한 방에) 끝에서 부른다.
+    07:00 발송 뒤에 회의록이 새로 들어왔으면 **그때 한 번 더** 보낸다. 같은 날 두 번은 안 보낸다."""
+    try:
+        if sent_today('회의록'):
+            return False                      # 오늘 이미 회의록 편을 보냈다
+        first = sent_today('아침')
+        n = meeting_count()
+        if first:
+            try:
+                n0 = int(first['회의건수'] or 0)
+            except Exception:
+                n0 = 0
+            if n <= n0:
+                return False                  # 7시 이후 새로 들어온 회의가 없다
+            add = n - n0
+        else:
+            if not n:
+                return False                  # 7시 메일도 안 갔고 회의록도 없다
+            add = n
+        ok = _send_now('회의록', ' · 어제 회의록 포함(새 회의 %d건)' % add)
+        if not quiet:
+            print('회의록이 %d건 새로 들어와 메일을 다시 보냈습니다.' % add)
+        return ok
+    except Exception as e:
+        if not quiet:
+            print('[회의록 메일 실패] %s' % e)
+        return False
 
 def run():
-    title('35. 아침 메일   (현황판을 05:00 에 내 메일로. 토큰 0)')
+    title('35. 아침 메일   (07:00 에 한 번 + 회의록 들어오면 한 번 더. 토큰 0)')
     c = conf()
     has = bool(c.get('메일', 'user', fallback=''))
     print('설정 : %s' % ('있음 (%s -> %s)' % (c.get('메일', 'user'), c.get('메일', 'to', fallback='')) if has else '없음'))
     print('')
     print(' 1. 설정 (계정·앱 비밀번호·받는 주소)')
     print(' 2. 지금 한 번 보내기 (시험)')
-    print(' 3. 매일 05:00 등록 (윈도우 작업 스케줄러)')
+    print(' 3. 매일 %s 등록 (윈도우 작업 스케줄러)' % SEND_AT)
     print(' 4. 등록 해제')
+    r = sent_today('아침'); r2 = sent_today('회의록')
+    print(' 오늘 발송 : 아침 %s / 회의록 %s' % (('%s 보냄(회의 %s건)' % (r['보낸시각'], r['회의건수'])) if r else '아직',
+                                             ('%s 보냄' % r2['보낸시각']) if r2 else '아직'))
     s = ask('번호 > ', '2' if has else '1')
     if s == '1':
         setup()
     elif s == '2':
-        top, mdp, blocks = DB.build(quiet=True)
-        top = _morning_or(top)
-        send(top, subject='[KM] 아침 한 장 %s%s' % (today().isoformat(), SUBJ[0]), files=ATTACH)
+        _send_now('시험', ' · 시험 발송')
     elif s == '3':
         register()
     elif s == '4':
