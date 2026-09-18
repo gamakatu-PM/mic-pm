@@ -1,0 +1,254 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>아침 한 장</title>
+<style>
+:root{--bg:#f5f6f8;--pg:#fff;--fg:#1a1a1a;--mut:#6b7280;--line:#e3e5e9;--red:#c0272d;--yel:#b07d0a;--blu:#1f5fa9;--grn:#1d7a4d;--chip:#eef1f5}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;padding:0 0 96px;background:var(--bg);color:var(--fg);
+ font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px}
+header{background:var(--pg);border-bottom:1px solid var(--line);padding:16px 0 14px;margin-bottom:14px}
+h1{font-size:19px;margin:0 0 3px}
+.date{color:var(--mut);font-size:13px}
+.sum{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.sum div{flex:1;min-width:92px;background:var(--chip);border-radius:8px;padding:9px 10px;text-align:center}
+.sum b{display:block;font-size:20px;line-height:1.2}
+.sum span{font-size:11.5px;color:var(--mut)}
+.sum .a b{color:var(--red)} .sum .b b{color:var(--blu)} .sum .c b{color:var(--grn)}
+
+.mock{background:#fffbea;border:1px solid #efe0a8;border-radius:10px;padding:12px 14px;margin:0 0 20px}
+.mock .t{font-size:12px;color:#8a6d0b;font-weight:700;margin-bottom:7px}
+.mock pre{margin:0;background:var(--pg);border:1px solid var(--line);border-radius:7px;padding:11px 12px;
+ white-space:pre-wrap;font:13.5px/1.7 inherit}
+
+.site{background:var(--pg);border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden}
+.site>.hd{padding:13px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
+.site>.hd .nm{font-size:16.5px;font-weight:700;flex:1}
+.site>.hd .ct{font-size:12px;color:var(--mut)}
+.site>.hd .ar{color:var(--mut);font-size:13px;transition:transform .18s}
+.site.closed>.hd .ar{transform:rotate(-90deg)}
+.site.closed>.bd{display:none}
+.bd{padding:4px 0}
+
+.item{padding:13px 15px;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:none}
+.item .l1{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.cd{font-weight:700;color:var(--blu);font-size:13px}
+.pill{font-size:11px;padding:2px 7px;border-radius:9px;background:var(--chip);color:#555}
+.pill.red{background:#fae5e6;color:var(--red)} .pill.yel{background:#fbf2dc;color:var(--yel)}
+.pill.blu{background:#e5eef9;color:var(--blu)} .pill.gry{background:#eceef1;color:#777}
+.pill.ask{background:#e8f5ec;color:var(--grn)}
+.tt{font-size:15px;font-weight:600;margin:5px 0 2px}
+.wy{font-size:13px;color:var(--mut)}
+.btns{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.btns button{flex:1;min-width:70px;padding:9px 4px;font-size:13.5px;font-family:inherit;
+ border:1px solid var(--line);background:var(--pg);color:#444;border-radius:8px;cursor:pointer}
+.btns button:active{transform:scale(.97)}
+.btns button.on{color:#fff;border-color:transparent;font-weight:700}
+.btns button.on[data-c="완료"]{background:var(--grn)}
+.btns button.on[data-c="맞아"]{background:var(--blu)}
+.btns button.on[data-c="아니야"]{background:var(--red)}
+.btns button.on[data-c="만들어줘"]{background:var(--yel)}
+.fix{display:none;margin-top:9px}
+.fix.on{display:block}
+.fix input{width:100%;padding:10px 11px;font-size:14.5px;font-family:inherit;border:1px solid var(--red);
+ border-radius:8px;background:var(--pg);color:var(--fg)}
+.fix .h{font-size:12px;color:var(--mut);margin-bottom:5px}
+
+h2{font-size:14px;color:var(--mut);margin:22px 0 8px;font-weight:600}
+
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--pg);border-top:1px solid var(--line);
+ padding:11px 16px calc(11px + env(safe-area-inset-bottom));box-shadow:0 -2px 12px rgba(0,0,0,.07)}
+.bar .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:11px}
+.bar .n{flex:1;font-size:13.5px;color:var(--mut)}
+.bar .n b{color:var(--fg);font-size:15px}
+.bar a{background:var(--blu);color:#fff;text-decoration:none;padding:12px 22px;border-radius:9px;
+ font-size:15px;font-weight:700;white-space:nowrap}
+.bar a.off{background:#c9ced6;pointer-events:none}
+
+footer{color:var(--mut);font-size:12px;margin-top:26px;padding-top:12px;border-top:1px solid var(--line)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111214;--pg:#1c1e21;--fg:#e9eaec;--mut:#9aa0a8;--line:#2f3338;--chip:#26292e;--red:#ff8a8f;--yel:#e3b752;--blu:#7fb0f0;--grn:#5cc98d}
+:root:not([data-theme="light"]) .mock{background:#2a2617;border-color:#4a4122}
+:root:not([data-theme="light"]) .mock .t{color:#d9b84a}
+:root:not([data-theme="light"]) .pill.red{background:#3d2325} :root:not([data-theme="light"]) .pill.yel{background:#3a3117}
+:root:not([data-theme="light"]) .pill.blu{background:#1e2c40} :root:not([data-theme="light"]) .pill.ask{background:#1c3226}
+:root:not([data-theme="light"]) .bar a.off{background:#3a3f45}}
+</style></head><body>
+
+<header><div class="wrap">
+<h1>아침 한 장</h1>
+<div class="date">2026-09-18 (금) 07:00 · 어제 회의록 3건 들어옴</div>
+<div class="sum">
+  <div class="a"><b>3</b><span>오늘까지</span></div>
+  <div class="b"><b>4</b><span>답해 주실 것</span></div>
+  <div class="c"><b>7</b><span>이번주</span></div>
+</div>
+</div></header>
+
+<div class="wrap">
+
+<div class="mock">
+<div class="t">▸ 아침에 가는 메일은 이 세 줄이 전부입니다 (하루 1통)</div>
+<pre>제목: [KM] 9/18 금 · 오늘까지 3건 · 답할 것 4건
+
+연합기숙사 9건 · 양양쏠비치 1건
+오늘까지 : 타공도 재송부 / 도어락 파일 / CB외함 회신
+아래를 누르시면 한 장으로 열립니다 →  아침한장_260918.html</pre>
+</div>
+
+<h2>현장별 — 오늘 가시는 현장만 보시면 됩니다</h2>
+
+<div class="site" id="s1">
+ <div class="hd" onclick="tg('s1')"><span class="nm">연합기숙사</span><span class="ct">9건 · 오늘 3</span><span class="ar">▾</span></div>
+ <div class="bd">
+
+  <div class="item" data-code="KM-001">
+   <div class="l1"><span class="cd">KM-001</span><span class="pill red">오늘까지</span><span class="pill gry">김경찬 팀장</span></div>
+   <div class="tt">연합기숙사 타공도 정식 재송부</div>
+   <div class="wy">9/8에 보냈고 읽음 표시까지 떴는데 상대는 못 받았다고 합니다. 9/17에 "내일 보내겠다"고 하셨습니다. 메일 문안 만들어 뒀습니다.</div>
+   <div class="btns">
+    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
+   <div class="fix"><div class="h">한 줄만 고쳐 주십시오 (비워 두셔도 됩니다)</div><input placeholder="예) 팀장 말고 소장한테 보내"></div>
+  </div>
+
+  <div class="item" data-code="KM-002">
+   <div class="l1"><span class="cd">KM-002</span><span class="pill red">오늘까지</span><span class="pill gry">승인원 협력업체</span></div>
+   <div class="tt">도어락 자재승인원 작업 파일 송부</div>
+   <div class="wy">우리 직원이 도어락이 삭제된 줄 알고 자사분만 준비 중입니다. 갑지 목차에 도어락을 넣어야 합니다.</div>
+   <div class="btns">
+    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
+   <div class="fix"><div class="h">한 줄만 고쳐 주십시오</div><input placeholder=""></div>
+  </div>
+
+  <div class="item" data-code="KM-003">
+   <div class="l1"><span class="cd">KM-003</span><span class="pill red">오늘까지</span><span class="pill gry">시공사 차장</span></div>
+   <div class="tt">CB외함 최단 9/23 — 석고 9/18 착수 건 회신</div>
+   <div class="wy">9/15에 회신 약속을 하셨는데 아직 안 나갔고, 상대가 말한 석고 착수일이 <b>오늘</b>입니다. 최단은 23일(수)이라 못 맞춥니다.</div>
+   <div class="btns">
+    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
+   <div class="fix"><div class="h">한 줄만 고쳐 주십시오</div><input placeholder=""></div>
+  </div>
+
+  <div class="item" data-code="KM-004">
+   <div class="l1"><span class="cd">KM-004</span><span class="pill yel">명절 전</span><span class="pill gry">일능 홍승조 부장</span></div>
+   <div class="tt">견적서 송부 독촉 → 명절 전 계약 완료</div>
+   <div class="wy">계약이 되어야 CB외함이 출고됩니다. 상대가 "다 해놨는데 깜빡했다"를 반복하고 있습니다.</div>
+   <div class="btns">
+    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
+   <div class="fix"><div class="h">한 줄만 고쳐 주십시오</div><input placeholder="예) 명절 전은 9/24까지야"></div>
+  </div>
+
+  <div class="item" data-code="KM-007">
+   <div class="l1"><span class="cd">KM-007</span><span class="pill ask">제가 만들까요?</span><span class="pill gry">제 판단</span></div>
+   <div class="tt">전력계량기 299개 — 작업 범위 확인서</div>
+   <div class="wy">설치비가 견적에서 빠진 채 진행 중입니다. 서면으로 못 박아 두지 않으면 소판 반입 시점에 "그건 당연히 마이크로닉이" 소리가 납니다. <b>답 주시기 전에는 만들지 않습니다.</b></div>
+   <div class="btns">
+    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
+   <div class="fix"><div class="h">한 줄만 고쳐 주십시오</div><input placeholder=""></div>
+  </div>
+
+ </div>
+</div>
+
+<div class="site" id="s2">
+ <div class="hd" onclick="tg('s2')"><span class="nm">양양쏠비치</span><span class="ct">1건 · 답할 것 1</span><span class="ar">▾</span></div>
+ <div class="bd">
+  <div class="item" data-code="KM-006">
+   <div class="l1"><span class="cd">KM-006</span><span class="pill blu">이번주</span><span class="pill ask">확인해 주십시오</span></div>
+   <div class="tt">별동 68실 온도조절기 삭제 — 감액 내역 + 삼호MEP 서면 회신</div>
+   <div class="wy"><b>결론이 뒤집힌 건입니다.</b> 9/15 10:27 통화에서는 "32실을 뺀다"였는데, 13:56 통화에서 "68실짜리 맞대요"로 반대가 됐습니다. 저는 나중 통화를 확정으로 잡았습니다. 이게 맞으면 감액 대상은 68실 온도조절기 68EA입니다.</div>
+   <div class="btns">
+    <button data-c="완료">완료</button><button data-c="맞아">맞아</button>
+    <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
+   <div class="fix"><div class="h">한 줄만 고쳐 주십시오</div><input placeholder="예) 아니야 32실이 맞아"></div>
+  </div>
+ </div>
+</div>
+
+<div class="site closed" id="s3">
+ <div class="hd" onclick="tg('s3')"><span class="nm">어제 회의록</span><span class="ct">3건 · 아직 안 보심</span><span class="ar">▾</span></div>
+ <div class="bd">
+  <div class="item">
+   <div class="l1"><span class="cd">09-17</span><span class="pill gry">연합기숙사 · 김경찬 팀장</span></div>
+   <div class="tt">전력계량기 설치비 / 소판 반입 설치 방식</div>
+   <div class="wy">결정 0건 · 리스크 3건 · 할 일 3건 — 견적 제외 내역, 수량 299개 확정, 간선 연결 범위</div>
+  </div>
+  <div class="item">
+   <div class="l1"><span class="cd">09-17</span><span class="pill gry">연합기숙사 · 김경찬 팀장</span></div>
+   <div class="tt">자재승인원 도어락 포함 / 인증서 첨부</div>
+   <div class="wy">결정 1건 · 리스크 2건 · 할 일 3건 — 감리가 중국산 여부를 문제 삼을 수 있음</div>
+  </div>
+  <div class="item">
+   <div class="l1"><span class="cd">09-17</span><span class="pill gry">연합기숙사 · 김경찬 팀장</span></div>
+   <div class="tt">타공도 송부 여부</div>
+   <div class="wy">결정 1건 — 9/18 재송부하기로</div>
+  </div>
+ </div>
+</div>
+
+<h2>찾아갈 곳</h2>
+<div class="site" id="s4">
+ <div class="hd" onclick="tg('s4')"><span class="nm">견적 보내고 안 가본 곳</span><span class="ct">1곳</span><span class="ar">▾</span></div>
+ <div class="bd"><div class="item" data-code="KM-011">
+  <div class="l1"><span class="cd">KM-011</span><span class="pill yel">4일째</span><span class="pill gry">머큐리 앰버서더(명동)</span></div>
+  <div class="tt">견적 보낸 뒤 아직 안 가보셨습니다</div>
+  <div class="wy">9/14 발송 · 목업 2세대 · 2000 시리즈 지정 · 10월 공사(입찰)</div>
+  <div class="btns">
+    <button data-c="완료">다녀옴</button><button data-c="맞아">맞아</button>
+    <button data-c="아니야">아니야</button><button data-c="만들어줘">만들어줘</button></div>
+  <div class="fix"><div class="h">한 줄만</div><input placeholder=""></div>
+ </div></div>
+</div>
+
+<footer>
+누르신 것은 이 한 장 안에만 쌓입니다. 아래 <b>「골라서 보내기」</b>를 한 번 누르셔야 저에게 옵니다.<br>
+잘못 누르셨으면 같은 단추를 한 번 더 눌러 끄시면 됩니다. · 한국마이크로닉(주) 배성윤 차장
+</footer>
+</div>
+
+<div class="bar"><div class="in">
+ <div class="n"><b id="cnt">0건</b> 고르셨습니다</div>
+ <a id="go" class="off" href="#">골라서 보내기</a>
+</div></div>
+
+<script>
+var TO='bsy@micronic.co.kr', DAY='2026-09-18';
+function tg(id){document.getElementById(id).classList.toggle('closed');}
+function pick(){
+  var out=[];
+  document.querySelectorAll('.item[data-code]').forEach(function(it){
+    var on=it.querySelector('.btns button.on'); if(!on) return;
+    var c=on.dataset.c, v=(it.querySelector('.fix input')||{}).value||'';
+    var line=it.dataset.code+' '+c; v=v.trim(); if(v) line+=' '+v;
+    out.push(line);
+  });
+  return out;
+}
+function refresh(){
+  var o=pick(), g=document.getElementById('go');
+  document.getElementById('cnt').textContent=o.length+'건';
+  if(o.length){
+    g.classList.remove('off');
+    var body=o.join('\n')+'\n';
+    g.href='mailto:'+TO+'?subject='+encodeURIComponent('[KM] 회신 '+DAY)+'&body='+encodeURIComponent(body);
+  } else { g.classList.add('off'); g.href='#'; }
+}
+document.querySelectorAll('.btns button').forEach(function(b){
+  b.onclick=function(){
+    var box=b.parentNode, it=box.parentNode, was=b.classList.contains('on');
+    box.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});
+    if(!was) b.classList.add('on');
+    var fx=it.querySelector('.fix');
+    if(fx) fx.classList.toggle('on', !was && b.dataset.c==='아니야');
+    refresh();
+  };
+});
+document.querySelectorAll('.fix input').forEach(function(i){i.oninput=refresh;});
+refresh();
+</script>
+</body></html>
