@@ -195,7 +195,8 @@ def meetings():
         out.append({'site': site, 'day': day, 'who': who, 'agenda': agenda, 'decisions': [d for d in decisions if d and d != '없음'],
                     'actions': [a for a in actions if a and a != '없음'], 'todos': section(text, '할 일'),
                     'secret': section(text, '★\\s*대외'), 'risk': section(text, '리스크'), 'dept': section(text, '타부서'),
-                    'changes': section(text, '수량\\s*[·ㆍ・,/]?\\s*규격'), 'folder': folder,
+                    'changes': section(text, '수량\\s*[·ㆍ・,/]?\\s*규격'), 'unclear': section(text, '세부'),
+                    'advice': section(text, '조언'), 'folder': folder,
                     'docx': os.path.join(folder, docx[0]) if docx else p})
     out.sort(key=lambda m: m['day'] or datetime.date(2000, 1, 1), reverse=True)
     return out
@@ -643,7 +644,8 @@ def build(quiet=True):
                       ('  [%d일 지남]' % m['gap']) if m.get('gap') else ''))
             if m['agenda']:
                 md.append('  - 안건 : %s' % m['agenda'])
-            for nm, key in (('결정', 'decisions'), ('조치', 'actions'), ('할 일', 'todos'), ('수량·규격 변경', 'changes'), ('★대외금지', 'secret')):
+            for nm, key in (('결정', 'decisions'), ('조치', 'actions'), ('할 일', 'todos'), ('수량·규격 변경', 'changes'),
+                            ('리스크', 'risk'), ('타부서', 'dept'), ('상대 요청', 'advice'), ('확인 필요', 'unclear'), ('★대외금지', 'secret')):
                 for x in (m.get(key) or []):
                     md.append('  - %s : %s' % (nm, x))
         if mt_xlsx:
