@@ -274,6 +274,37 @@ def check(base, log):
     return R
 
 def run(keep=False):
+    # v46 고침 : check() 가 common.DEFAULTS['out'] 을 임시 폴더로 바꿔 놓고 되돌리지 않아,
+    #            41번(총괄점검)이 39번을 돌린 뒤에 만든 현황판·아침한장이 시험용 임시 경로를
+    #            가리켰다. 여기서 원래 값을 붙들어 두고 끝나면 반드시 되돌린다.
+    import common as _CMR
+    _keep = dict(_CMR.DEFAULTS)
+    try:
+        return _run_inner(keep)
+    finally:
+        _CMR.DEFAULTS.clear(); _CMR.DEFAULTS.update(_keep)
+        _restore_real()
+
+
+def _restore_real():
+    """시험이 실물 _현황판·_아침한장·_총괄점검 을 시험자료로 덮어쓰는 것을 되돌린다.
+    경로만 되돌려도 이미 쓰인 파일은 시험 내용이라, 실물 설정으로 다시 만든다.
+    (2026-09-18 : 현황판에 변산수련원·앵커호텔 부탁서 같은 시험자료가 섞여 나갔다)"""
+    try:
+        import t33_dashboard as _DB, t42_morning as _MO, t41_totalcheck as _TC
+        _DB.build(quiet=True)
+        _MO.build(quiet=True)
+        _TC.build(quiet=True, quick=True)
+    except TypeError:
+        try:
+            _TC.build(quiet=True)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+def _run_inner(keep=False):
     title('39. 자가 시험   (시험자료로 36번 전체 흐름을 임시 폴더에서 돌려 기대값과 대조. 토큰 0)')
     if not os.path.isdir(DATA):
         print('[시험자료 없음] %s' % DATA); return False
