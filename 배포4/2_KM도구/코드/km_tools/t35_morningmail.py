@@ -394,7 +394,7 @@ def _part_html(kind, title_):
     if kind == '제안':
         H.append('<div style="background:#f4f8f5;border:1px dashed #b8d8c6;border-radius:8px;padding:9px 12px;margin:0 0 12px;font-size:12.5px">'
                  '<b>이 메일에 그대로 회신해 주시면 반영됩니다.</b> 줄 앞 번호만 맞으면 됩니다 (번호는 끝날 때까지 안 바뀝니다)<br>'
-                 '<span style="font-family:monospace">3 완료 · 3 맞아 · 3 아니야 1개 층 선납으로 · 3 만들어줘 · 3 취소 · 3 미뤄 22일</span><br>'
+                 '<span style="font-family:monospace">3 진행중 · 3 완료 · 3 맞아 · 3 아니야 1개 층 선납으로 · 3 만들어줘 · 3 취소 · 3 미뤄 22일</span><br>'
                  '<b>답을 못 받은 줄은 제가 진행하지 않습니다.</b> 3일이 지나면 맨 위 「묵은 제안」 으로 올려 다시 여쭙니다.</div>')
     if not rows:
         H.append('<p style="color:#666">없습니다.</p>')

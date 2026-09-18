@@ -665,7 +665,7 @@ def build(quiet=True):
         H.append('<div class="src">앞으로 해야 될 것 전체 %d건 · <a href="%s">요약 엑셀</a> · 끝난 것은 46번으로 완료 표시</div>' % (len(plan_rows), file_url(plan_x)))
     H.append('<div class="src" style="background:#f4f8f5;border:1px dashed #b8d8c6;border-radius:8px;padding:9px 12px;margin:6px 0">'
              '<b>제가 틀렸으면 이 메일에 그대로 회신해 주십시오.</b> 줄 앞 <b style="color:#2A6099">번호</b>만 맞으면 됩니다 (번호는 끝날 때까지 안 바뀝니다)<br>'
-             '<span style="font-family:monospace">3 완료 · 3 맞아 · 3 아니야 1개 층 선납으로 · 3 만들어줘 · 3 취소 · 3 미뤄 22일</span><br>'
+             '<span style="font-family:monospace">3 진행중 · 3 완료 · 3 맞아 · 3 아니야 1개 층 선납으로 · 3 만들어줘 · 3 취소 · 3 미뤄 22일</span><br>'
              '단추를 누르시면 회신이 미리 써진 메일이 열립니다. 제가 못 알아들으면 다음 메일에 되묻습니다.</div>')
     H.append(''.join(r(c, t, tag, s, src) for c, s, t, tag, src in L1) if L1 else r('grn', '오늘 급한 것 없음', '없음'))
     H.append('<div id="l2"></div>' + h2('2층 · 현장 카드', '확정 > 역산 추정 > 미확정 · 펼치면 표') + (cards or '<div class="src">현장이 없습니다</div>'))
