@@ -81,6 +81,16 @@ def _morning_or(top):
                     SUBJ[0] += ' · 제가 만들까요 %d' % n_off
         except Exception:
             pass
+        try:
+            import t47_visit as VS
+            vs = [d for d in VS.rows() if d['need']]
+            if vs:
+                x, c = VS.build_xlsx(quiet=True)
+                if x:
+                    ATTACH.append(x)
+                SUBJ[0] += ' · 찾아갈 곳 %d곳' % len(vs)
+        except Exception:
+            pass
         if am and os.path.exists(am):
             return am
     except Exception:

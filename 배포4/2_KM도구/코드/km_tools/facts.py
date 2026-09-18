@@ -231,3 +231,113 @@ def plan_done(site, todo_part, day=None):
 def plan_offers():
     """「제가 만들까요?」 로 물어야 할 것 = 만들기 칸이 찬 대기 줄"""
     return [d for d in plan_load() if d['만들기']]
+
+# ---------------- 견적 보낸 곳 · 찾아갈 곳 대장 (v41) ----------------
+# 프로님 : "견적을 보낸 곳을 찾아가 봐야 된다고, 방문해야 할 것을 메일에 적게 해."
+# 견적을 보내고 가만히 있으면 그대로 식는다. 보낸 날부터 며칠 지났는지 세어
+# 42 아침 한 장 1층·35 아침 메일에 「찾아갈 곳」 으로 매일 띄운다.
+# 넣는 길 : 받은답 `견적발송,현장,받는곳,담당자,금액,메모` / 47번 / csv 직접 편집
+# 다녀오시면 : 받은답 `방문,현장,메모` 또는 47번에서 번호 입력 -> 마지막 방문일이 갱신되고 날짜가 다시 센다
+
+QUOTE = '견적발송.csv'
+QUOTE_HEAD = ['보낸날', '현장', '받는곳', '담당자', '금액', '마지막방문', '방문횟수', '상태', '메모']
+VISIT_DUE = 3        # 보낸 뒤 이 날짜가 지나도록 안 가보셨으면 빨강
+VISIT_AGAIN = 14     # 다녀오신 뒤 이만큼 지나면 다시 가보실 때
+
+def quote_path():
+    p = os.path.join(cfg('out'), '_대장')
+    os.makedirs(p, exist_ok=True)
+    return os.path.join(p, QUOTE)
+
+def _quote_rows():
+    p = quote_path()
+    if not os.path.exists(p):
+        write_csv(p, [['예) 2026-09-17', '앵커호텔', '더힐이앤씨', '이요한 선임', '', '', '0', '대기', '네고 견적']], QUOTE_HEAD)
+        return []
+    out = []
+    for r in _read(p)[1:]:
+        r = (r + [''] * 9)[:9]
+        if not r[1].strip() or r[0].startswith('예)'):
+            continue
+        out.append(dict(zip(['보낸날', '현장', '받는곳', '담당자', '금액', '마지막방문', '방문횟수', '상태', '메모'], [c.strip() for c in r])))
+    return out
+
+def _days_since(s, day=None):
+    """'2026-09-17' -> 오늘까지 며칠 (못 읽으면 None)"""
+    import datetime
+    if not s:
+        return None
+    m = re.search(r'(\d{4})-(\d{1,2})-(\d{1,2})', s) or re.search(r'(\d{2})(\d{2})(\d{2})$', s)
+    if not m:
+        return None
+    try:
+        g = m.groups()
+        y = int(g[0]) if len(g[0]) == 4 else 2000 + int(g[0])
+        return ((day or today()) - datetime.date(y, int(g[1]), int(g[2]))).days
+    except Exception:
+        return None
+
+def quote_load(active_only=True):
+    """견적 보낸 곳 [dict] + gap(보낸 뒤 며칠) · vgap(다녀온 뒤 며칠) · need(찾아가실 때인가) · why"""
+    out = []
+    for d in _quote_rows():
+        if active_only and d['상태'] in ('수주', '탈락', '취소', '끝'):
+            continue
+        d['gap'] = _days_since(d['보낸날'])
+        d['vgap'] = _days_since(d['마지막방문'])
+        if not d['마지막방문']:
+            d['need'] = (d['gap'] is None) or (d['gap'] >= VISIT_DUE)
+            d['why'] = ('보낸 지 %d일 · 아직 안 가보셨습니다' % d['gap']) if d['gap'] is not None else '보낸 날짜가 비어 있습니다'
+        else:
+            d['need'] = (d['vgap'] is not None and d['vgap'] >= VISIT_AGAIN)
+            d['why'] = ('다녀오신 지 %d일 · 다시 가보실 때입니다' % d['vgap']) if d['need'] else ('%d일 전 다녀오심' % (d['vgap'] or 0))
+        out.append(d)
+    out.sort(key=lambda d: (0 if d['need'] else 1, -(d['gap'] or 0)))
+    return out
+
+def quote_add(site, to='', pic='', amount='', memo='', day=None):
+    """견적 보낸 곳 한 줄 (같은 현장·같은 받는곳이 살아 있으면 보낸날만 새로 고친다)"""
+    p = quote_path()
+    rows = _read(p)
+    if not rows:
+        rows = [QUOTE_HEAD]
+    body = [r for r in rows[1:] if r and not r[0].startswith('예)')]
+    for r in body:
+        r += [''] * (9 - len(r))
+        if _norm(r[1]) == _norm(site) and _norm(r[2]) == _norm(to) and r[7].strip() not in ('수주', '탈락', '취소', '끝'):
+            r[0] = (day or today().isoformat())
+            if memo:
+                r[8] = memo
+            write_csv(p, body, QUOTE_HEAD)
+            log('견적발송', '%s %s (다시 보냄)' % (site, to))
+            return None
+    new = [(day or today().isoformat()), site, to, pic, str(amount), '', '0', '대기', memo]
+    write_csv(p, [new] + body, QUOTE_HEAD)
+    log('견적발송', '%s -> %s' % (site, to))
+    return new
+
+def quote_visit(site, memo='', day=None, to=''):
+    """다녀오셨다고 표시 (마지막 방문일 갱신 · 횟수 +1)"""
+    p = quote_path()
+    rows = _read(p)
+    if not rows:
+        return 0
+    body = rows[1:]
+    n = 0
+    for r in body:
+        r += [''] * (9 - len(r))
+        if r[7].strip() in ('수주', '탈락', '취소', '끝'):
+            continue
+        if (_norm(site) in _norm(r[1]) or _norm(r[1]) in _norm(site)) and (not to or _norm(to) in _norm(r[2])):
+            r[5] = (day or today().isoformat())
+            try:
+                r[6] = str(int(r[6] or 0) + 1)
+            except Exception:
+                r[6] = '1'
+            if memo:
+                r[8] = memo
+            n += 1
+    if n:
+        write_csv(p, body, QUOTE_HEAD)
+        log('방문', '%s x%d' % (site, n))
+    return n

@@ -414,6 +414,20 @@ def build(quiet=True):
                    (' → ' + esc(d['누가'])) if d['누가'] else '',
                    (' <b style="color:#6B4FA8">· 제가 %s 만들까요?</b>' % esc(d['만들기'])) if d['만들기'] else ''),
                    PL.tag(d) + ' · ' + d['등급'], ('왜 : ' + esc(d['왜'])) if d['왜'] else '출처 앞으로할것.csv'))
+    # 47 견적 보낸 곳 : 보내 놓고 안 가보시면 그대로 식는다. 「찾아가실 곳」 을 1층에 매일
+    try:
+        import t47_visit as VS
+        visit_rows = VS.rows()
+        visit_x, visit_c = VS.build_xlsx(visit_rows, quiet=True)
+    except Exception:
+        visit_rows, visit_x, visit_c = [], None, None
+    for d in visit_rows:
+        if not d['need']:
+            continue
+        L1.append(('red' if not d['마지막방문'] else 'yel', d['현장'],
+                   '%s · <b style="color:#2A6099">찾아가실 곳</b> %s%s — 견적 보낸 뒤 그대로입니다'
+                   % (esc(d['현장']), esc(d['받는곳'] or ''), (' ' + esc(d['담당자'])) if d['담당자'] else ''),
+                   '방문', esc(d['why']) + (' · ' + link(visit_x, '찾아갈곳 목록') if visit_x else '')))
     # 45 요청 분기 : 도면이 없어 견적을 못 만드는 현장은 「도면 요청 메일」 이 이미 만들어져 있다
     try:
         import t45_askgate as AG
@@ -583,7 +597,7 @@ def build(quiet=True):
          '<h1>KM 아침 한 장 <small style="font-size:12px;color:#8E99A4">%s · 도구 %s</small></h1>' % (t0.isoformat(), VERSION),
          '<div class="sub">회의록(업무판)·도면·돈·점검을 한 장에. 굵은 <span class="sure-tag">확정</span> 은 프로님이 정한 값이고, 빗금 공정바는 역산 추정입니다. 찾기칸은 이 파일 안에서만 돕니다(토큰 0).</div>',
          '<div class="lvl"><a href="#l0" style="border-color:#C0392B;color:#C0392B">0층 미확인 회의록</a><a href="#l1">1층 오늘</a><a href="#l2">2층 현장</a><a href="#l3">3층 부서·의뢰서</a><a href="#l4">4층 회의 이력</a><a href="#l5">5층 돈</a><a href="#l6">6층 점검</a><a href="#l7">7층 표·확정</a></div>',
-         '<div class="tiles">', tile('red', len(L0), '미확인 회의록', 'l0'), tile('red', n_red, '지남·미발행·결정', 'l1'), tile('yel', len([d for d in plan_rows if d['만들기']]), '제가 만들까요?', 'l1'), tile('yel', n_yel, '오늘·3일내·부탁서', 'l1'), tile('yel', n_wo, '의뢰서 미발행', 'l3'),
+         '<div class="tiles">', tile('red', len(L0), '미확인 회의록', 'l0'), tile('red', n_red, '지남·미발행·결정', 'l1'), tile('yel', len([d for d in plan_rows if d['만들기']]), '제가 만들까요?', 'l1'), tile('blu', len([d for d in visit_rows if d['need']]), '찾아갈 곳', 'l1'), tile('yel', n_yel, '오늘·3일내·부탁서', 'l1'), tile('yel', n_wo, '의뢰서 미발행', 'l3'),
          tile('red', len(quiet_sites), '조용한 현장', 'l6'), tile('pur', n_secret, '대외 금지 누적', 'l2'), tile('blu', len(recent), '회의 14일', 'l4'),
          tile('grn', len(fx), '확정 대장', 'l7'), '</div>']
     if kakao:
@@ -637,6 +651,9 @@ def build(quiet=True):
             md.append('요약 엑셀 : %s' % mt_xlsx)
     else:
         md.append('- (없음. 전부 확인하셨습니다)')
+    md += ['', '## 찾아갈 곳 (견적을 보내 놓고 아직 안 가보신 곳 — 매일 말씀드린다)']
+    _vn = [d for d in visit_rows if d['need']]
+    md += ['- **%s** · %s %s · %s (보낸날 %s)' % (d['현장'], d['받는곳'], d['담당자'], d['why'], d['보낸날']) for d in _vn] or ['- (없음)']
     md += ['', '## 제가 만들까요? (클로드가 먼저 물어야 할 것 — 프로님께 「만드세요」 라고 하지 않는다)']
     offers = [d for d in plan_rows if d['만들기']]
     md += ['- **%s** · %s · 「제가 %s 만들까요?」 (할 일 : %s)' % (d['현장'], d['때'], d['만들기'], d['할일']) for d in offers] or ['- (없음)']

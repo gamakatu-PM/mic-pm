@@ -51,6 +51,11 @@ def prepare():
     if os.path.exists(pl):
         os.makedirs(os.path.join(base, '_도구결과', '_대장'), exist_ok=True)
         shutil.copy(pl, os.path.join(base, '_도구결과', '_대장', '앞으로할것.csv'))
+    # 견적 보낸 곳 대장 (47 · 찾아갈 곳 검사용)
+    qv = os.path.join(DATA, '견적발송_시험.csv')
+    if os.path.exists(qv):
+        os.makedirs(os.path.join(base, '_도구결과', '_대장'), exist_ok=True)
+        shutil.copy(qv, os.path.join(base, '_도구결과', '_대장', '견적발송.csv'))
     # 현장대장 (도면 없는 현장 1곳 포함 - 45 도면 요청 메일 검사용)
     sb = os.path.join(DATA, '현장대장_시험.csv')
     if os.path.exists(sb):
@@ -155,6 +160,12 @@ def check(base, log):
     ok('완료된 줄은 아침 한 장에 안 뜸', '완료 표시 검사용' not in amt)
     px = glob.glob(os.path.join(o, '앞으로할것', '*', '앞으로할것_*.xlsx'))
     ok('46 요약 엑셀 생성', bool(px))
+    # v41 47 견적 보낸 곳 → 찾아갈 곳 (프로님 : 견적 보낸 곳을 찾아가야 된다고 메일에 적게 해)
+    ok('아침 한 장 1층에 「찾아가실 곳」 (앵커호텔 · 7일 지남)', '찾아가실 곳' in amt and '더힐이앤씨' in amt)
+    ok('어제 다녀온 곳은 안 뜸 (쏠비치양양)', amt.count('찾아가실 곳') == 1, '실제 %d줄' % amt.count('찾아가실 곳'))
+    ok('클로드용 md 에 「## 찾아갈 곳」 절', bool(amd) and '## 찾아갈 곳' in read_text(amd[-1]))
+    vx = glob.glob(os.path.join(o, '찾아갈곳', '*', '찾아갈곳_*.xlsx'))
+    ok('47 찾아갈 곳 엑셀 생성', bool(vx))
     if px:
         try:
             import openpyxl
@@ -169,6 +180,9 @@ def check(base, log):
     common.DEFAULTS['out'] = os.path.join(base, '_도구결과')
     fx = _F.load()
     _pl = _F.plan_load(active_only=False)
+    _qv = _F.quote_load()
+    ok('받은답 「견적발송,머큐리앰버서더,…」 → 견적발송 대장', any('머큐리' in d['현장'] for d in _qv), '실제 %s' % [d['현장'] for d in _qv])
+    ok('받은답 「방문,쏠비치양양」 → 마지막 방문일 기록', any('쏠비치' in d['현장'] and d['마지막방문'] for d in _qv))
     ok('받은답 「앞으로,조선호텔,…」 → 앞으로할것 대장', any(d['현장'] == '조선호텔' and '중도금' in d['할일'] and d['만들기'] == '중도금 신청서 초안' for d in _pl), '실제 %d줄' % len(_pl))
     ok('받은답 「앞으로완료,앵커호텔,PLAUD 파일명」 → 상태=완료', any(d['현장'] == '앵커호텔' and 'PLAUD' in d['할일'] and d['상태'] == '완료' for d in _pl))
     ok('받은답 「확정,앵커호텔,객실수,330」 → 확정 대장', any(d['현장'] == '앵커호텔' and d['항목'] == '객실수' and d['값'] == '330' for d in fx), '실제 %s' % [(d['현장'], d['항목'], d['값']) for d in fx])
