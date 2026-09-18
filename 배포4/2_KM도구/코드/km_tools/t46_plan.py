@@ -18,6 +18,24 @@ import facts
 TOOL = '앞으로할것'
 SUM_HEAD = ['번호', '때', 'D', '등급', '현장', '할 일', '누가', '왜', '제가 만들까요?', '상태', '적은 날']
 
+def waiting(site=None):
+    """답을 못 받은 제안 (확인 전) — 이것은 진행하지 않는다. 3일 넘으면 「묵은 제안」"""
+    import datetime
+    out = []
+    for d in rows(site):
+        if d['등급'] == '확정':
+            continue
+        gap = None
+        try:
+            y, m, dd = [int(x) for x in d['일자'].split('-')]
+            gap = (today() - datetime.date(y, m, dd)).days
+        except Exception:
+            pass
+        d['대기일'] = gap
+        d['묵음'] = (gap is not None and gap >= 3)
+        out.append(d)
+    return out
+
 def rows(site=None):
     out = []
     for d in facts.plan_load(site):

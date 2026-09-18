@@ -172,6 +172,16 @@ def check(base, log):
     ok('48 한 줄 해석 : 3 만들어줘 → 만들기', (_RP.parse_line('3 만들어줘') or ['', ''])[1] == '만들기')
     ok('48 한 줄 해석 : 모르는 말 → ? (못 알아들음)', (_RP.parse_line('3 음 글쎄') or ['', ''])[1] == '?')
     ok('48 : 번호 없는 줄은 건너뜀', _RP.parse_line('안녕하세요 배성윤입니다') is None)
+    # v45 나눠 보내기 + 「답 못 받은 것은 진행하지 않는다」
+    import t35_morningmail as _ML2, t46_plan as _PL4
+    _ML2.send = lambda *a, **k: True
+    _r1, _t1, _n1 = _ML2._part_html('제안', '① 답해 주십시오')
+    _r2, _t2, _n2 = _ML2._part_html('확정', '② 오늘 할 것')
+    ok('35 : ① 제안 편에 회신 안내가 들어감', '이 메일에 그대로 회신' in _r1 and '진행하지 않습니다' in _r1)
+    ok('35 : ② 확정 편에는 회신 단추가 없음', 'mailto:' not in _r2)
+    ok('35 : 제안과 확정이 섞이지 않음', _n1 >= 0 and _n2 >= 0 and ('① 답해' in _r1) and ('② 오늘' in _r2))
+    ok('46 : waiting() 이 확인 전 제안만 골라냄', all(d['등급'] != '확정' for d in _PL4.waiting()))
+    ok('md 에 「## 답을 못 받아 진행하지 않은 것」 절', bool(amd) and '## 답을 못 받아 진행하지 않은 것' in read_text(amd[-1]))
     import facts as _FF
     import common as _CM
     _CM.DEFAULTS['out'] = os.path.join(base, '_도구결과')

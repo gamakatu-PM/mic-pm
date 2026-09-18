@@ -55,6 +55,8 @@ def setup():
     port = ask('포트 [%s] > ' % (g('port') or '587'), g('port') or '587')
     user = ask('보내는 메일 주소 [%s] > ' % g('user'), g('user'))
     pw = ask('앱 비밀번호 (지메일 16자리) [%s] > ' % ('*' * 8 if g('password') else ''), g('password'))
+    sp = ask('나눠 보낼까요? (예 = ①답해주십시오 ②오늘할것 ③회의록 세 통 / 아니오 = 한 통) [%s] > ' % (g('나눠보내기') or '예'), g('나눠보내기') or '예')
+    c.set('메일', '나눠보내기', sp)
     to = ask('받는 메일 주소 [%s] > ' % (g('to') or 'bsy@micronic.co.kr'), g('to') or 'bsy@micronic.co.kr')   # 프로님 지정 2026-09-17
     for k, v in (('smtp', smtp), ('port', port), ('user', user), ('password', pw), ('to', to)):
         c.set('메일', k, v)
@@ -266,6 +268,8 @@ def auto():
     except Exception:
         pass
     head = '' if n_new else ' · 어제 회의록 아직 안 들어옴'
+    if split_on():
+        return bool(send_parts(kind_meeting=bool(n_new)))
     return _send_now('아침', head)
 
 def after_meeting(quiet=True):
@@ -288,7 +292,10 @@ def after_meeting(quiet=True):
             if not n:
                 return False                  # 7시 메일도 안 갔고 회의록도 없다
             add = n
-        ok = _send_now('회의록', ' · 어제 회의록 포함(새 회의 %d건)' % add)
+        if split_on():
+            ok = bool(send_parts(kind_meeting=True))
+        else:
+            ok = _send_now('회의록', ' · 어제 회의록 포함(새 회의 %d건)' % add)
         if not quiet:
             print('회의록이 %d건 새로 들어와 메일을 다시 보냈습니다.' % add)
         return ok
@@ -322,3 +329,128 @@ def run():
 
 if __name__ == '__main__':
     run(); pause()
+
+
+# ---------------- 나눠 보내기 (v45) ----------------
+# 프로님 (2026-09-18) : "아침에 메일을 꼭 한 메일에 몰아서 안 해도 돼.
+#   따로따로 나누어서 니가 나중에 헛짓을 안 하게 하는 방향으로 해야 돼."
+# 헛짓이 나는 지점은 「확인 안 된 제안」 과 「확정된 것」 이 한 덩어리로 섞이는 것이다.
+# 그래서 성격으로 가른다 — ① 답이 필요한 것 ② 보기만 하면 되는 것 ③ 어제 회의록.
+# 회신도 ① 번 메일에만 오므로 어느 줄에 대한 답인지 헷갈리지 않는다.
+
+PARTS = (('제안', '① 답해 주십시오'), ('확정', '② 오늘 할 것 (답 안 하셔도 됩니다)'), ('회의록', '③ 어제 회의록'))
+OLD_DAYS = 3      # 제안을 이만큼 답 없이 두면 「묵은 제안」 으로 맨 위에 따로 모은다
+
+def split_on():
+    c = conf()
+    v = c.get('메일', '나눠보내기', fallback='예').strip()
+    return not v.startswith(('아니', 'n', 'N', '0'))
+
+def _esc(s):
+    return str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+def _part_rows(kind):
+    """메일 한 통에 들어갈 줄 + 제목 꼬리"""
+    import facts, datetime
+    rows, tail = [], ''
+    if kind == '제안':
+        try:
+            import t46_plan as PL
+            xs = [d for d in PL.rows() if d['등급'] != '확정']
+        except Exception:
+            xs = []
+        old = []
+        for d in xs:
+            gap = None
+            try:
+                y, m, dd = [int(x) for x in d['일자'].split('-')]
+                gap = (today() - datetime.date(y, m, dd)).days
+            except Exception:
+                pass
+            (old if (gap is not None and gap >= OLD_DAYS) else rows).append((d, gap))
+        rows = [(d, g, '묵은 제안 %d일째' % g) for d, g in old] + [(d, g, '') for d, g in rows]
+        tail = ' · 제안 %d건%s' % (len(rows), (' (3일↑ %d)' % len(old)) if old else '')
+    elif kind == '확정':
+        try:
+            import t46_plan as PL
+            rows = [(d, None, '') for d in PL.rows() if d['등급'] == '확정']
+        except Exception:
+            rows = []
+        tail = ' · 오늘 할 것 %d건' % len(rows)
+    return rows, tail
+
+def _part_html(kind, title_):
+    import facts
+    rows, tail = _part_rows(kind)
+    to = ''
+    try:
+        import t42_morning as MO
+        to = MO.mail_to()
+    except Exception:
+        pass
+    H = ['<div style="font-family:\'맑은 고딕\',sans-serif;font-size:14px;line-height:1.6;color:#111;max-width:700px">',
+         '<h2 style="margin:0 0 2px;font-size:18px">%s</h2>' % _esc(title_),
+         '<p style="margin:0 0 12px;color:#666;font-size:12px">%s · %d건</p>' % (today().isoformat(), len(rows))]
+    if kind == '제안':
+        H.append('<div style="background:#f4f8f5;border:1px dashed #b8d8c6;border-radius:8px;padding:9px 12px;margin:0 0 12px;font-size:12.5px">'
+                 '<b>이 메일에 그대로 회신해 주시면 반영됩니다.</b> 줄 앞 번호만 맞으면 됩니다 (번호는 끝날 때까지 안 바뀝니다)<br>'
+                 '<span style="font-family:monospace">3 완료 · 3 맞아 · 3 아니야 1개 층 선납으로 · 3 만들어줘 · 3 취소 · 3 미뤄 22일</span><br>'
+                 '<b>답을 못 받은 줄은 제가 진행하지 않습니다.</b> 3일이 지나면 맨 위 「묵은 제안」 으로 올려 다시 여쭙니다.</div>')
+    if not rows:
+        H.append('<p style="color:#666">없습니다.</p>')
+    for d, gap, flag in rows:
+        code = (d.get('코드') or '').replace('KM-', '')
+        btn = ''
+        try:
+            import t42_morning as MO
+            btn = MO.reply_links(code, to) if kind == '제안' else ''
+        except Exception:
+            pass
+        H.append('<div style="border-top:1px solid #f0f1f3;padding:7px 0">'
+                 '%s<b style="color:#2A6099">%s</b> %s · %s%s'
+                 '<div style="color:#888;font-size:12px">%s%s</div>%s</div>'
+                 % (('<span style="background:#C0392B;color:#fff;font-size:11px;padding:1px 7px;border-radius:99px;margin-right:6px">%s</span>' % _esc(flag)) if flag else '',
+                    _esc(code), _esc(d.get('현장', '')), _esc(d.get('할일', '')),
+                    (' <b style="color:#6B4FA8">· 제가 %s 만들까요?</b>' % _esc(d['만들기'])) if d.get('만들기') else '',
+                    _esc(d.get('때', '')), (' · ' + _esc(d.get('왜', ''))) if d.get('왜') else '',
+                    ('<div style="margin-top:4px">%s</div>' % btn) if btn else ''))
+    # 못 알아들은 답은 ① 번 메일 맨 아래에 다시 여쭙는다
+    if kind == '제안':
+        try:
+            bad = facts.talk_load(days=7, state='못알아들음')
+        except Exception:
+            bad = []
+        if bad:
+            H.append('<div style="background:#fff6f5;border:1px solid #f2d9d5;border-radius:8px;padding:9px 12px;margin-top:12px;font-size:12.5px">'
+                     '<b style="color:#C0392B">제가 못 알아들은 답 %d건 — 한 줄만 다시 주십시오</b><ul style="margin:4px 0 0;padding-left:18px">' % len(bad))
+            for x in bad:
+                H.append('<li>%s 「%s」</li>' % (_esc(x['코드']), _esc(x['프로님 말'])))
+            H.append('</ul></div>')
+    H.append('</div>')
+    return '\n'.join(H), tail, len(rows)
+
+def send_parts(kind_meeting=False):
+    """성격별로 나눠 보낸다. 보낸 편 목록 돌려줌"""
+    sent = []
+    for kind, title_ in PARTS:
+        if kind == '회의록':
+            if not kind_meeting:
+                continue
+            top, mdp, blocks = DB.build(quiet=True)
+            top = _morning_or(top)            # 회의록 편은 아침 한 장 전체를 그대로
+            subj = '[KM] ③ 어제 회의록 %s%s' % (today().isoformat(), SUBJ[0])
+            ok = send(top, subject=subj, files=ATTACH)
+            mark_sent('회의록', meeting_count(), subj, ok)
+            sent.append(('회의록', ok)); continue
+        html, tail, n = _part_html(kind, title_)
+        if kind == '확정' and not n:
+            continue
+        p = os.path.join(outdir(TOOL), '메일_%s_%s.html' % (kind, ymd6()))
+        import io as _io
+        _io.open(p, 'w', encoding='utf-8').write(html)
+        subj = '[KM] %s %s%s' % (title_.split(' ')[0] + ' ' + title_.split(' ', 1)[1], today().isoformat(), tail)
+        ok = send(p, subject=subj)
+        mark_sent(kind, meeting_count(), subj, ok)
+        sent.append((kind, ok))
+    log(TOOL, '나눠보내기 %s' % sent)
+    return sent

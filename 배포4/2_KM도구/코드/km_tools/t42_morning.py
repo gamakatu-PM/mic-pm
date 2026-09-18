@@ -117,6 +117,15 @@ def board_todos(files):
         out.append({'site': cell(r, ci['site']), 'due': due_s or '미정', 'dd': dd, 'text': text, 'who': cell(r, ci['who']),
                     'src': cell(r, ci['src']), 'level': lv})
     try:
+        import t46_plan as _PL2
+        _wait = [d for d in _PL2.waiting() if d.get('묵음')]
+        if _wait:
+            L1.append(('red', '', '<b style="color:#C0392B">답을 못 받아 진행하지 않은 것 %d건</b> — %s'
+                       % (len(_wait), esc(' / '.join('%s %s' % ((d.get('코드') or '').replace('KM-', ''), d['할일'][:24]) for d in _wait[:4]))),
+                       '확인 요청', '3일 넘게 답이 없어 제가 손대지 않았습니다. 한 줄만 주시면 진행합니다'))
+    except Exception:
+        pass
+    try:
         for x in facts.talk_load(days=7, state='못알아들음'):
             L1.append(('red', x['현장'], '<b style="color:#C0392B">제가 못 알아들었습니다</b> · %s 「%s」 — 다시 한 줄만 주십시오'
                        % (esc(x['코드']), esc(x['프로님 말'])), '되물음', esc(x['내가 이해한 것'])))
@@ -715,6 +724,13 @@ def build(quiet=True):
     md += ['', '## 제가 못 알아들은 답 (다음 메일에 되묻는다)']
     _bad = [x for x in _talk if x['상태'] == '못알아들음']
     md += ['- %s [%s] %s : 「%s」 → %s' % (x['일자'], x['경로'], x['코드'], x['프로님 말'], x['내가 이해한 것']) for x in _bad] or ['- (없음)']
+    md += ['', '## 답을 못 받아 진행하지 않은 것 (확인 전에는 서류를 만들지 않는다)']
+    try:
+        import t46_plan as _PL3
+        _w = _PL3.waiting()
+    except Exception:
+        _w = []
+    md += ['- %s %s · %s%s' % ((d.get('코드') or ''), d['현장'], d['할일'], ('  [%d일째]' % d['대기일']) if d.get('대기일') else '') for d in _w] or ['- (없음)']
     md += ['', '## 제가 만들까요? (클로드가 먼저 물어야 할 것 — 프로님께 「만드세요」 라고 하지 않는다)']
     offers = [d for d in plan_rows if d['만들기']]
     md += ['- **%s** · %s · 「제가 %s 만들까요?」 (할 일 : %s)' % (d['현장'], d['때'], d['만들기'], d['할일']) for d in offers] or ['- (없음)']
