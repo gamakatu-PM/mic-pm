@@ -477,6 +477,24 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
   <div class="mbtns"><button class="bok" onclick="addPipe()">추가</button><button class="bca" onclick="cm('pipeModal')">취소</button></div>
 </div></div>
 
+<!-- 모달: 산군 카드 불러오기 (PC 도구 50번이 만든 JSON) -->
+<div class="overlay" id="sgModal"><div class="modal"><div class="mtitle">📡 산군 카드 불러오기</div>
+  <div style="font-size:11px;color:var(--tx2);line-height:1.6;margin-bottom:8px">
+    PC 도구 50번이 만든 <b>산군_앱카드_YYMMDD.json</b> 을 고르시거나, 메일 본문의 내용을 붙여넣으십시오.<br>
+    이미 있는 현장은 건너뜁니다. 새 현장만 <b>첫 접촉</b> 칸에 들어갑니다. 금액·단계는 직접 정하십시오.
+  </div>
+  <input type="file" id="sg-f" accept=".json,application/json" style="width:100%;margin-bottom:8px;font-size:12px"/>
+  <textarea id="sg-t" rows="5" placeholder="또는 JSON 붙여넣기"></textarea>
+  <div id="sg-msg" style="font-size:11px;color:var(--tx2);margin-top:6px"></div>
+  <div class="mbtns"><button class="bok" onclick="importSangun()">넣기</button><button class="bca" onclick="cm('sgModal')">취소</button></div>
+</div></div>
+
+<!-- 모달: 산군 카드 상세 -->
+<div class="overlay" id="sgDetail"><div class="modal"><div class="mtitle" id="sgdTitle">현장</div>
+  <pre id="sgdBody" style="white-space:pre-wrap;font-family:Noto Sans KR,sans-serif;font-size:12px;line-height:1.7;color:var(--tx);max-height:60vh;overflow:auto;margin:0"></pre>
+  <div class="mbtns"><button class="bca" onclick="cm('sgDetail')">닫기</button></div>
+</div></div>
+
 <!-- 모달: 업무일지 -->
 <div class="overlay" id="wjModal"><div class="modal"><div class="mtitle">업무일지 작성</div>
   <input id="wj-d" type="date"/>
@@ -809,8 +827,11 @@ function loadLocal(){
       var raw=localStorage.getItem(allKeys[ki]);
       if(!raw)continue;
       var d=JSON.parse(raw);
-      if(d.sites&&d.sites.length){
-        sites=d.sites;pipeline=d.pipeline||[];workJournals=d.workJournals||[];
+      // 현장이 하나도 없어도 영업 파이프라인·업무일지가 있으면 불러온다
+      // (2026-09-19 수정 : 산군 카드만 넣어 둔 상태에서 새로고침하면 사라지던 문제)
+      var has=(d.sites&&d.sites.length)||(d.pipeline&&d.pipeline.length)||(d.workJournals&&d.workJournals.length);
+      if(has){
+        sites=d.sites||[];pipeline=d.pipeline||[];workJournals=d.workJournals||[];
         // 현재 키로 마이그레이션
         if(allKeys[ki]!==LS_KEY){
           localStorage.setItem(LS_KEY,raw);
@@ -1839,11 +1860,80 @@ function renderWJDoc(w){const lines=w.content.split('\n');let html=`<div class="
 function delWJ(id){if(!confirm('삭제?'))return;workJournals=workJournals.filter(w=>w.id!==id);selWJ=workJournals.length?workJournals[workJournals.length-1].id:null;renderSL();renderWJPage();}
 
 // ── 영업 파이프라인 ──
-function renderPipe(){$('tabBar').innerHTML='';const cols=PIPE_STAGES.map((stage,i)=>{const cards=pipeline.filter(p=>p.stage===i).map(p=>`<div class="pcard"><div class="pcn">${p.name}</div><div class="pcm">${p.client}</div>${p.amount>0?`<div style="font-size:10px;color:var(--ac);margin-top:3px;font-family:JetBrains Mono">${(p.amount/10000).toFixed(0)}만원</div>`:''}<div style="display:flex;gap:5px;margin-top:7px;flex-wrap:wrap">${i>0?`<span style="font-size:10px;color:var(--tx2);cursor:pointer" onclick="mvP(${p.id},-1)">←</span>`:''} ${i<4?`<span style="font-size:10px;color:var(--ac);cursor:pointer" onclick="mvP(${p.id},1)">→</span>`:''} ${i===4?`<span style="font-size:10px;color:var(--gr);cursor:pointer" onclick="convP(${p.id})">PM전환</span>`:''}<span style="font-size:10px;color:var(--da);cursor:pointer;margin-left:auto" onclick="delP2(${p.id})">삭제</span></div></div>`).join('');return`<div class="pcol"><div class="pcolt">${stage} <span style="color:var(--tx3)">${pipeline.filter(p=>p.stage===i).length}</span></div>${cards}<button class="padd2" onclick="openPM(${i})">+ 추가</button></div>`;}).join('');$('mainContent').innerHTML=`<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between"><div><h2 style="font-size:16px;font-weight:700">영업 파이프라인</h2><p style="font-size:11px;color:var(--tx2);margin-top:2px">예상 계약금액 합계: ${(pipeline.reduce((a,p)=>a+p.amount,0)/10000).toFixed(0)}만원</p></div><button onclick="om('pipeModal')" style="padding:7px 12px;background:var(--ac);border:none;border-radius:7px;color:#fff;font-size:12px;cursor:pointer;font-family:Noto Sans KR,sans-serif">+ 현장 추가</button></div><div style="overflow-x:auto"><div class="pcols">${cols}</div></div>`;}
+function renderPipe(){$('tabBar').innerHTML='';const cols=PIPE_STAGES.map((stage,i)=>{const cards=pipeline.filter(p=>p.stage===i).map(p=>`<div class="pcard"><div class="pcn">${sgBadge(p)}${p.name}</div><div class="pcm">${p.client}</div>${p.amount>0?`<div style="font-size:10px;color:var(--ac);margin-top:3px;font-family:JetBrains Mono">${(p.amount/10000).toFixed(0)}만원</div>`:''}${sgLines(p)}<div style="display:flex;gap:5px;margin-top:7px;flex-wrap:wrap">${i>0?`<span style="font-size:10px;color:var(--tx2);cursor:pointer" onclick="mvP(${p.id},-1)">←</span>`:''} ${i<4?`<span style="font-size:10px;color:var(--ac);cursor:pointer" onclick="mvP(${p.id},1)">→</span>`:''} ${i===4?`<span style="font-size:10px;color:var(--gr);cursor:pointer" onclick="convP(${p.id})">PM전환</span>`:''}<span style="font-size:10px;color:var(--da);cursor:pointer;margin-left:auto" onclick="delP2(${p.id})">삭제</span></div></div>`).join('');return`<div class="pcol"><div class="pcolt">${stage} <span style="color:var(--tx3)">${pipeline.filter(p=>p.stage===i).length}</span></div>${cards}<button class="padd2" onclick="openPM(${i})">+ 추가</button></div>`;}).join('');$('mainContent').innerHTML=`<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between"><div><h2 style="font-size:16px;font-weight:700">영업 파이프라인</h2><p style="font-size:11px;color:var(--tx2);margin-top:2px">예상 계약금액 합계: ${(pipeline.reduce((a,p)=>a+p.amount,0)/10000).toFixed(0)}만원</p></div><div style="display:flex;gap:6px"><button onclick="openSangun()" style="padding:7px 12px;background:rgba(0,200,150,0.12);border:1px solid var(--gr);border-radius:7px;color:var(--gr);font-size:12px;cursor:pointer;font-family:Noto Sans KR,sans-serif">📡 산군 불러오기</button><button onclick="om('pipeModal')" style="padding:7px 12px;background:var(--ac);border:none;border-radius:7px;color:#fff;font-size:12px;cursor:pointer;font-family:Noto Sans KR,sans-serif">+ 현장 추가</button></div></div><div style="overflow-x:auto"><div class="pcols">${cols}</div></div>`;}
 function openPM(s){$('pi-s').value=s;om('pipeModal');}
-function addPipe(){const n=$('pi-n').value.trim();if(!n)return;pipeline.push({id:Date.now(),name:n,client:$('pi-c').value,addr:$('pi-a').value,stage:parseInt($('pi-s').value)||0,amount:parseInt($('pi-am').value)||0,note:$('pi-no').value});cm('pipeModal');renderPipe();}
-function mvP(id,dir){pipeline.find(x=>x.id===id).stage=Math.max(0,Math.min(4,pipeline.find(x=>x.id===id).stage+dir));renderPipe();}
-function delP2(id){if(!confirm('삭제?'))return;pipeline=pipeline.filter(p=>p.id!==id);renderPipe();}
+// ── 📡 산군 카드 (PC 도구 50번 : 산군 + 구글 뉴스 검색을 합친 영업 카드) ──
+function sgKey(n){return String(n||'').replace(/[\s\-()·,]/g,'').toLowerCase();}
+function sgBadge(p){
+  if(p.src!=='sangun'||!p.grade)return '';
+  return `<span title="${p.grade}" style="margin-right:3px">${p.grade.slice(0,2)}</span>`;
+}
+function sgLines(p){
+  if(p.src!=='sangun'||!p.note)return '';
+  const ls=p.note.split('\n');
+  const one=(ls[0]||'').replace(/^\[[^\]]*\]\s*/,'');
+  const urg=ls.find(x=>x.indexOf('★')===0)||'';
+  const room=ls.find(x=>x.indexOf('연면적')===0)||'';
+  let h='';
+  if(one)h+=`<div style="font-size:10px;color:var(--tx2);margin-top:4px;line-height:1.4">${one.slice(0,46)}</div>`;
+  if(room){
+    const parts=room.split(' · 예상');
+    h+=`<div style="font-size:10px;color:var(--tx3);margin-top:2px">${parts[0]}</div>`;
+    if(parts[1])h+=`<div style="font-size:10px;color:var(--gr);margin-top:2px">예상${parts[1].split('(')[0]}</div>`;
+  }
+  if(urg)h+=`<div style="font-size:10px;color:var(--wa);margin-top:2px;line-height:1.4">${urg.replace('★','')}</div>`;
+  h+=`<div style="font-size:10px;color:var(--ac);margin-top:4px;cursor:pointer" onclick="sgShow(${p.id})">자세히 ▸</div>`;
+  return h;
+}
+function sgShow(id){
+  const p=pipeline.find(x=>x.id===id);if(!p)return;
+  $('sgdTitle').textContent=p.name;
+  $('sgdBody').textContent=(p.addr?p.addr+'\n':'')+(p.client?'설계/시공 : '+p.client+'\n\n':'\n')+(p.note||'');
+  om('sgDetail');
+}
+function openSangun(){$('sg-t').value='';$('sg-msg').textContent='';const f=$('sg-f');if(f)f.value='';om('sgModal');}
+function sgMerge(text){
+  let d;
+  try{d=JSON.parse(text);}catch(e){return {err:'JSON 을 읽지 못했습니다. 파일을 그대로 고르시거나 전체를 붙여넣어 주십시오.'};}
+  const list=Array.isArray(d)?d:(d.cards||[]);
+  if(!list.length)return {err:'카드가 들어 있지 않습니다.'};
+  const have=new Set(pipeline.map(p=>sgKey(p.name)));
+  let add=0,skip=0,upd=0;
+  list.forEach(function(c,i){
+    const k=sgKey(c.name);
+    if(!k)return;
+    if(have.has(k)){
+      // 이미 있는 현장은 새로 만들지 않고, 산군으로 들어온 것이면 메모만 최신으로 바꾼다
+      const old=pipeline.find(p=>sgKey(p.name)===k);
+      if(old&&old.src==='sangun'&&c.note&&old.note!==c.note){old.note=c.note;old.grade=c.grade||old.grade;upd++;}
+      else skip++;
+      return;
+    }
+    have.add(k);
+    pipeline.push({id:Date.now()+i,name:c.name,client:c.client||'',addr:c.addr||'',
+                   stage:0,amount:0,note:c.note||'',src:'sangun',grade:c.grade||''});
+    add++;
+  });
+  saveLocal();
+  return {add:add,skip:skip,upd:upd};
+}
+function importSangun(){
+  const f=$('sg-f').files&&$('sg-f').files[0];
+  const done=function(text){
+    const r=sgMerge(text);
+    if(r.err){$('sg-msg').textContent='✕ '+r.err;return;}
+    cm('sgModal');
+    renderSL();renderPipe();
+    toast('산군 카드 '+r.add+'곳 추가 · '+r.upd+'곳 갱신 · '+r.skip+'곳은 이미 있어 건너뜀 ✓');
+  };
+  if(f){const rd=new FileReader();rd.onload=function(e){done(String(e.target.result||''));};rd.readAsText(f,'utf-8');return;}
+  const t=$('sg-t').value.trim();
+  if(!t){$('sg-msg').textContent='파일을 고르시거나 JSON 을 붙여넣어 주십시오.';return;}
+  done(t);
+}
+function addPipe(){const n=$('pi-n').value.trim();if(!n)return;pipeline.push({id:Date.now(),name:n,client:$('pi-c').value,addr:$('pi-a').value,stage:parseInt($('pi-s').value)||0,amount:parseInt($('pi-am').value)||0,note:$('pi-no').value});cm('pipeModal');saveLocal();renderPipe();}
+function mvP(id,dir){pipeline.find(x=>x.id===id).stage=Math.max(0,Math.min(4,pipeline.find(x=>x.id===id).stage+dir));saveLocal();renderPipe();}
+function delP2(id){if(!confirm('삭제?'))return;pipeline=pipeline.filter(p=>p.id!==id);saveLocal();renderPipe();}
 function convP(id){const p=pipeline.find(x=>x.id===id);if(!confirm(`"${p.name}"을 PM 현장으로 전환할까요?`))return;sites.push({id:Date.now(),name:p.name,addr:p.addr,products:'',client:p.client,stage:0,qty:{},issues:[],actions:[],minutes:[],memos:[],photos:[],calc:[],workorders:[],docs:[],files:[],schedule:[],excelHistory:[],excelHtml:'',excelChanges:{},fieldTalks:[],compComms:[]});pipeline=pipeline.filter(x=>x.id!==id);toast(p.name+' PM 전환 완료 ✓');renderSL();renderPipe();}
 
 // ── 캘린더 ──

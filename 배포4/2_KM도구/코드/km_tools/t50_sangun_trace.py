@@ -33,6 +33,17 @@ v2 (2026-09-19 오후, 프로님 「객관식·주관식 다 적용해」) :
      ㉡ 키가 없으면 설정.ini [소요시간] 표(서울=, 강원=, …)를 프로님이 채우신 값으로 적습니다. 비어 있으면 안 적습니다.
      (숫자는 도구가 정하지 않습니다 — 규칙 19)
 
+v3 (2026-09-19 밤, 프로님 「산군 + 신문 검색을 합치면 멋진 업그레이드 데이터가 나올 것 같다.
+    비서로서 효율적으로 알려 주고, 앱으로도 연결해 달라」) :
+  ④ **합친 값**을 냅니다 — 둘 중 하나만으로는 안 나오는 것
+     · 기사의 준공 예정 + 산군의 착공일 → **역산** : 기구물·속판·CB외함 작업의뢰서를 언제까지 내야 하는가
+     · 연면적 → 객실 추정 → 실당 단가(설정.ini [역산] 실당단가, 프로님 입력칸) → 예상 규모
+     · 같은 시·도끼리 묶은 **하루 동선**
+  ⑤ 메일 맨 위에 **「오늘 이것만」 세 줄** — 나머지는 아래에 펼쳐 둡니다
+  ⑥ **앱 연결** : 같은 내용을 앱(한국마이크로닉 현장관리)의 영업 파이프라인 형식 JSON 으로 만들어
+     메일에 첨부합니다. 앱 > 영업 파이프라인 > 「📡 산군 불러오기」 에서 그 파일을 고르시면 카드가 들어갑니다.
+     (단계는 전부 「첫 접촉」, 금액은 0 으로 넣습니다 — 판단과 금액은 프로님 몫)
+
 쓰는 법 : 49번(산군 관심현장 정리)을 돌린 뒤 50번. 49번 끝에서 엔터만 치셔도 이어집니다.
 대장 : _도구결과\\_대장\\산군_흔적.csv  (현장마다 마지막으로 찾아본 날·등급·기사 수)
 메일 설정 : 설정.ini [메일] 을 그대로 씁니다(35번에서 이미 넣으신 값). 받는 주소만 다르게 하시려면
@@ -57,10 +68,13 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 from common import (INI, HERE, cfg, title, ask, pause, today, ymd6, outdir,
                     write_csv, won, log, open_file)
 import common
+import sangun_card as SC
 
 TOOL = '산군흔적'
 TASK = 'KM_산군메일_주1회'
@@ -88,7 +102,8 @@ ORDER = {GRADE_GO: 0, GRADE_ASK: 1, GRADE_EARLY: 2, GRADE_NONE: 3, GRADE_DONE: 4
 BOOK_HEAD = ['마지막찾은날', '키', '현장명', '소재지', '등급', '기사수', '최근기사일', '한줄']
 OUT_HEAD = ['등급', '현장명', '소재지', '단계', '허가일', '착공일', '연면적㎡', '객실추정',
             '건축설계(갈 곳)', '시공사', '건축주·발주처', '기사수', '최근기사일', '무슨 일이 있었나',
-            '다음 행동', '기사1', '기사2', '기사3']
+            '다음 행동', '준공예정(기사)', '가장 급한 것', 'CB외함 의뢰', '기구물 의뢰', '속판 의뢰',
+            '예상 규모', '기사1', '기사2', '기사3']
 
 
 # ====================== 설정 ======================
@@ -123,6 +138,11 @@ def ensure_ini():
     for k, v in (('to', ''), ('다시찾기일수', '7'), ('출발지', ''), ('kakao_key', ''), ('본문읽기', '예')):
         if not c.has_option('산군메일', k):
             c.set('산군메일', k, v); changed = True
+    if not c.has_section('역산'):
+        c.add_section('역산'); changed = True
+        c.set('역산', '실당단가', '')      # 비우면 예상 금액을 안 적습니다 (규칙 19)
+        for k, v in SC.DAYS.items():
+            c.set('역산', k, str(v))
     if not c.has_section('소요시간'):
         c.add_section('소요시간'); changed = True
         for k in ('서울', '경기', '인천', '강원', '충북', '충남', '대전', '세종', '전북', '전남', '광주',
@@ -507,27 +527,59 @@ def esc(s):
 
 def card(rec, res):
     g = res['등급']
+    cd = res.get('카드') or {}
     color = {GRADE_GO: '#C0392B', GRADE_ASK: '#C77B2B', GRADE_EARLY: '#2A6099',
              GRADE_NONE: '#8E99A4', GRADE_DONE: '#6B4FA8', GRADE_ERR: '#8E99A4'}.get(g, '#ccc')
     h = ['<div style="border-left:5px solid %s;background:#fafafa;padding:10px 12px;margin:10px 0">' % color]
     h.append('<div style="font-size:15px"><b>%s</b> <span style="color:%s">%s</span></div>'
              % (esc(rec.get('현장명')), color, esc(g)))
     line = [x for x in [rec.get('소재지'), rec.get('단계'),
-                        (rec.get('연면적') and rec.get('연면적') + '㎡'), rec.get('객실추정')] if x]
+                        (rec.get('연면적') and rec.get('연면적') + '㎡'), cd.get('객실') or rec.get('객실추정')] if x]
     h.append('<div style="color:#444">%s</div>' % esc(' · '.join(line)))
+    if cd.get('규모금액'):
+        h.append('<div style="color:#1a5">%s</div>' % esc(cd['규모금액']))
     line2 = []
     if rec.get('허가일'):
         line2.append('허가 %s' % rec['허가일'])
     if rec.get('착공일'):
         line2.append('착공 %s' % rec['착공일'])
+    if cd.get('준공예정'):
+        line2.append('<b>준공 예정 %s</b>(기사)' % cd['준공예정'])
     if line2:
-        h.append('<div style="color:#444">%s</div>' % esc(' · '.join(line2)))
+        h.append('<div style="color:#444">%s</div>' % ' · '.join(line2))
     h.append('<div style="color:#444">설계 <b>%s</b> · 시공 %s · 건축주 %s</div>'
              % (esc(rec.get('건축설계') or '미표시'), esc(rec.get('시공사') or '미표시'),
                 esc(rec.get('건축주') or '미표시')))
     h.append('<div style="margin-top:6px"><b>무슨 일이 있었나</b> : %s</div>' % esc(res['한줄']))
+
+    # ---- 산군 + 뉴스를 합쳐야 나오는 것 ----
+    if cd.get('급한것'):
+        h.append('<div style="margin-top:6px;background:#fff3f2;border:1px solid #f3c5c0;padding:6px">'
+                 '<b>가장 급한 것</b> : %s</div>' % esc(cd['급한것']))
+    if cd.get('역산'):
+        h.append('<div style="margin-top:6px"><b>언제까지 무엇을</b> '
+                 '<span style="color:#888;font-size:12px">(기사의 준공 %s 에서 거꾸로 — 추정입니다)</span>'
+                 '<table style="border-collapse:collapse;font-size:13px;margin-top:3px">' % esc(cd.get('준공예정')))
+        for x in cd['역산']:
+            late = x['D'] < 0
+            h.append('<tr><td style="padding:2px 8px 2px 0">%s</td>'
+                     '<td style="padding:2px 8px 2px 0;font-weight:700;color:%s">%s</td>'
+                     '<td style="padding:2px 0;color:#888">%s</td></tr>'
+                     % (esc(x['무엇']), '#C0392B' if late else '#111', esc(x['언제까지']),
+                        esc(('이미 %d일 지남' % -x['D']) if late else ('D-%d' % x['D']))
+                        + ((' · ' + esc(x['근거'])) if x['근거'] else '')))
+        if cd.get('외함의뢰'):
+            h.append('<tr><td style="padding:2px 8px 2px 0">CB외함 작업의뢰서</td>'
+                     '<td style="padding:2px 8px 2px 0;font-weight:700">%s</td>'
+                     '<td style="padding:2px 0;color:#888">착공 기준 어림</td></tr>' % esc(cd['외함의뢰']))
+        h.append('</table></div>')
+    elif cd.get('외함의뢰'):
+        h.append('<div style="margin-top:6px"><b>CB외함 작업의뢰서</b> : %s 까지 '
+                 '<span style="color:#888;font-size:12px">(착공 기준 어림. 준공일이 기사에 없어 나머지는 못 냅니다)</span></div>'
+                 % esc(cd['외함의뢰']))
+
     if res['기사']:
-        h.append('<div style="margin-top:4px"><b>기사 %d건</b><ul style="margin:4px 0 0 18px;padding:0">'
+        h.append('<div style="margin-top:6px"><b>기사 %d건</b><ul style="margin:4px 0 0 18px;padding:0">'
                  % len(res['기사']))
         for a in res['기사'][:5]:
             h.append('<li style="margin:2px 0">%s <span style="color:#888">%s %s</span> %s</li>'
@@ -544,33 +596,78 @@ def card(rec, res):
     return ''.join(h)
 
 
-def build_html(groups, src, err_n):
+def build_html(groups, src, err_n, cards=None, jsonname=''):
+    cards = cards or []
     n = {k: len(v) for k, v in groups.items()}
     h = ['<div style="font-family:맑은 고딕,system-ui;font-size:14px;line-height:1.5">']
-    h.append('<h2 style="margin:0 0 2px">산군 현장 흔적 %s</h2>' % today().isoformat())
+    h.append('<h2 style="margin:0 0 2px">산군 현장 %s</h2>' % today().isoformat())
+
+    # ── ① 오늘 이것만 (비서가 맨 위에 적어 드리는 것) ──
+    tops = SC.top3(cards) if cards else []
+    if tops:
+        h.append('<div style="background:#fff8e6;border:2px solid #f0c36d;padding:10px 12px;margin:8px 0">')
+        h.append('<div style="font-size:15px;font-weight:700;margin-bottom:4px">오늘 이것만 하십시오</div>')
+        for t in tops:
+            h.append('<div style="margin:3px 0">%s</div>' % esc(t))
+        h.append('</div>')
+
     h.append('<div style="color:#666;font-size:12px">빨리 가보실 곳 <b>%d</b>곳 · 상황 물어보실 곳 <b>%d</b>곳 · '
-             '아직 이른 곳 %d곳 · 흔적 없는 곳 %d곳 · 끝난 곳 %d곳</div>'
+             '아직 이른 곳 %d곳 · 흔적 없는 곳 %d곳 · 끝난 곳 %d곳 · 검색 못 한 곳 %d곳</div>'
              % (n.get(GRADE_GO, 0), n.get(GRADE_ASK, 0), n.get(GRADE_EARLY, 0),
-                n.get(GRADE_NONE, 0), n.get(GRADE_DONE, 0)))
-    for g in (GRADE_GO, GRADE_ASK, GRADE_EARLY, GRADE_NONE, GRADE_DONE):
+                n.get(GRADE_NONE, 0), n.get(GRADE_DONE, 0), n.get(GRADE_ERR, 0)))
+
+    # ── ② 하루 동선 (같은 시·도끼리) ──
+    rts = SC.routes(cards) if cards else []
+    if rts:
+        h.append('<div style="margin:10px 0;padding:8px 12px;background:#eef4ff;border:1px solid #c6d8ff">')
+        h.append('<b>한 번 나가실 때 같이 보실 곳</b>')
+        for sido, xs in rts:
+            names = ' / '.join('%s %s' % (c['등급'][:2], c['현장명']) for c in xs)
+            h.append('<div style="margin:2px 0">· <b>%s</b> %d곳 — %s</div>' % (esc(sido), len(xs), esc(names)))
+        h.append('</div>')
+
+    # ── ③ 납기가 급한 순서 (합쳐야 나오는 값) ──
+    due = [c for c in cards if c.get('급한것')]
+    due.sort(key=lambda c: c.get('급한D', 9999))
+    if due:
+        h.append('<div style="margin:10px 0"><b>작업의뢰서 납기 — 급한 순서</b>'
+                 '<table style="border-collapse:collapse;font-size:13px;margin-top:4px">')
+        h.append('<tr style="color:#888"><td style="padding:2px 10px 2px 0">현장</td>'
+                 '<td style="padding:2px 10px 2px 0">무엇을 언제까지</td></tr>')
+        for c in due[:10]:
+            h.append('<tr><td style="padding:2px 10px 2px 0">%s</td><td style="padding:2px 0">%s</td></tr>'
+                     % (esc(c['현장명']), esc(c['급한것'])))
+        h.append('</table><div style="color:#888;font-size:12px">'
+                 '기사에 적힌 준공 예정에서 거꾸로 계산한 <b>추정</b>입니다. 현장에 확인하시고 쓰십시오.</div></div>')
+
+    for g in (GRADE_GO, GRADE_ASK, GRADE_EARLY, GRADE_NONE, GRADE_DONE, GRADE_ERR):
         if not groups.get(g):
             continue
         h.append('<h3 style="margin:18px 0 4px;border-bottom:2px solid #eee">%s (%d곳)</h3>'
                  % (esc(g), len(groups[g])))
         for rec, res in groups[g]:
             h.append(card(rec, res))
+
+    # ── ④ 앱으로 넣기 ──
+    if jsonname:
+        h.append('<div style="margin:16px 0;padding:10px 12px;background:#f2fbf6;border:1px solid #bfe3cf">'
+                 '<b>앱에 넣으시려면</b><br>이 메일에 붙은 <b>%s</b> 를 저장하시고, '
+                 '앱(한국마이크로닉 현장관리) &gt; <b>영업 파이프라인</b> &gt; <b>📡 산군 불러오기</b> 에서 그 파일을 고르십시오.<br>'
+                 '이미 있는 현장은 건너뛰고 새 현장만 「첫 접촉」 칸에 들어갑니다. 금액·단계는 프로님이 정하십시오.</div>'
+                 % esc(jsonname))
+
     h.append('<p style="color:#888;font-size:12px;margin-top:18px">'
              '산군 파일 : %s<br>'
-             '이 메일은 PC 도구 50번이 구글 뉴스 검색으로 찾은 것입니다(클로드·Gemini 안 씀, 요금 0원).'
+             '이 메일은 PC 도구 50번이 산군 자료와 구글 뉴스 검색을 합쳐 만든 것입니다(클로드·Gemini 안 씀, 요금 0원).'
              '%s<br>알리미(뉴스모니터링) 메일과 구글AI 레이더 메일은 <b>따로</b> 갑니다. 이 메일에 섞지 않았습니다.<br>'
              '한 번 찾아본 현장은 며칠 뒤에 다시 찾습니다(설정.ini [산군메일] 다시찾기일수).<br>'
-             '소요 시간이 안 보이면 설정.ini [산군메일] 에 kakao_key·출발지 를 넣거나 [소요시간] 표를 채워 주십시오.</p></div>'
+             '예상 금액·소요 시간이 안 보이면 설정.ini [역산] 실당단가 · [산군메일] kakao_key·출발지 · [소요시간] 표를 채워 주십시오.</p></div>'
              % (esc(os.path.basename(src)),
-                (' 검색이 막힌 현장 %d곳은 「흔적 없음」 으로 두었습니다.' % err_n) if err_n else ''))
+                (' 검색이 막힌 현장 %d곳은 따로 모아 두었습니다.' % err_n) if err_n else ''))
     return ''.join(h)
 
 
-def send_mail(subject, html):
+def send_mail(subject, html, files=()):
     """산군 전용 메일 한 통. 설정.ini [메일] 값을 그대로 씁니다(35번과 같은 계정, 다른 메일)."""
     c = conf()
     g = lambda k, d='': c.get('메일', k, fallback=d)
@@ -578,12 +675,27 @@ def send_mail(subject, html):
     if not (g('user') and g('password') and to):
         print('[메일 설정 없음] 35번에서 보내는 계정·앱 비밀번호를 먼저 넣어 주십시오.')
         return False
-    msg = MIMEMultipart('alternative')
+    msg = MIMEMultipart('mixed')
     msg['Subject'] = subject
     msg['From'] = g('user')
     msg['To'] = to
-    msg.attach(MIMEText('HTML 메일입니다. 안 보이시면 PC 의 산군_흔적 한 장을 여십시오.', 'plain', 'utf-8'))
-    msg.attach(MIMEText(html, 'html', 'utf-8'))
+    alt = MIMEMultipart('alternative')
+    alt.attach(MIMEText('HTML 메일입니다. 안 보이시면 PC 의 산군_흔적 한 장을 여십시오.', 'plain', 'utf-8'))
+    alt.attach(MIMEText(html, 'html', 'utf-8'))
+    msg.attach(alt)
+    for f in files or ():
+        try:
+            if not (f and os.path.exists(f)):
+                continue
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(io.open(f, 'rb').read())
+            encoders.encode_base64(part)
+            import email.header
+            nm = email.header.Header(os.path.basename(f), 'utf-8').encode()
+            part.add_header('Content-Disposition', 'attachment', filename=nm)
+            msg.attach(part)
+        except Exception as e:
+            print('[첨부 실패] %s : %s' % (os.path.basename(f), e))
     try:
         ctx = ssl.create_default_context()
         with smtplib.SMTP(g('smtp') or 'smtp.gmail.com', int(g('port') or 587), timeout=30) as s:
@@ -631,7 +743,7 @@ def run(src='', send=None, sleep=1.0, everything=False, direct=False):
         print('새로 찾아볼 현장이 없어 메일을 보내지 않습니다.')
         return
 
-    groups, body, err_n = {}, [], 0
+    groups, body, cards, err_n = {}, [], [], 0
     for i, rec in enumerate(todo, 1):
         q, arts, err = search(rec, sleep=sleep)
         if err:
@@ -644,18 +756,26 @@ def run(src='', send=None, sleep=1.0, everything=False, direct=False):
                 if b:
                     bodies[a['링크']] = b
         g, why, act = judge(rec, arts, err, bodies)
-        res = {'등급': g, '한줄': why, '행동': act, '기사': arts}
+        res = {'등급': g, '한줄': why, '행동': act, '기사': arts,
+               '본문': ' '.join(bodies.values())[:4000]}
+        res['카드'] = SC.build(rec, res, c)
         if g in (GRADE_GO, GRADE_ASK):
             res['지도'] = map_links(rec.get('소재지', ''), opt(c, '출발지'))
             res['소요'] = travel(rec.get('소재지', ''), c)
         groups.setdefault(g, []).append((rec, res))
+        cards.append(res['카드'])
         print('  [%d/%d] %s %s (기사 %d)' % (i, len(todo), g[:2], rec['현장명'][:24], len(arts)))
         a1 = arts[0] if arts else {}
         a2 = arts[1] if len(arts) > 1 else {}
         a3 = arts[2] if len(arts) > 2 else {}
+        cd = res['카드']
+        due = {x['무엇']: x['언제까지'] for x in cd['역산']}
         body.append([g, rec['현장명'], rec['소재지'], rec['단계'], rec['허가일'], rec['착공일'],
-                     rec['연면적'], rec['객실추정'], rec['건축설계'], rec['시공사'], rec['건축주'],
+                     rec['연면적'], cd['객실'] or rec['객실추정'], rec['건축설계'], rec['시공사'], rec['건축주'],
                      len(arts), recent(arts), why, act,
+                     cd['준공예정'], cd['급한것'], cd['외함의뢰'],
+                     due.get('기구물 작업의뢰서', ''), due.get('속판(제어분전함) 작업의뢰서', ''),
+                     cd['규모금액'],
                      a1.get('제목', ''), a2.get('제목', ''), a3.get('제목', '')])
         if g != GRADE_ERR:      # 검색이 막힌 현장은 대장에 안 적는다 -> 다음에 다시 찾는다
             book[key_of(rec)] = [today().isoformat(), key_of(rec), rec['현장명'], rec['소재지'],
@@ -664,7 +784,15 @@ def run(src='', send=None, sleep=1.0, everything=False, direct=False):
     body.sort(key=lambda r: ORDER.get(r[0], 9))
     od = outdir(TOOL)
     cp = write_csv(os.path.join(od, '산군_흔적_%s.csv' % ymd6()), body, OUT_HEAD)
-    html = build_html(groups, src, err_n)
+
+    # 앱(한국마이크로닉 현장관리)의 영업 파이프라인으로 그대로 들어가는 파일
+    jp = os.path.join(od, '산군_앱카드_%s.json' % ymd6())
+    try:
+        io.open(jp, 'w', encoding='utf-8').write(SC.app_json(cards))
+    except Exception as e:
+        print('[앱 카드 실패] %s' % e)
+        jp = ''
+    html = build_html(groups, src, err_n, cards, os.path.basename(jp) if jp else '')
     hp = os.path.join(od, '산군_흔적_%s.html' % ymd6())
     io.open(hp, 'w', encoding='utf-8').write(html)
     write_csv(book_path(), [book[k] for k in book], BOOK_HEAD)
@@ -678,6 +806,8 @@ def run(src='', send=None, sleep=1.0, everything=False, direct=False):
           % (go_n, ask_n, len(groups.get(GRADE_EARLY, [])), len(groups.get(GRADE_NONE, []))))
     print('파일 : %s' % cp)
     print('한 장 : %s' % hp)
+    if jp:
+        print('앱 카드 : %s  (앱 > 영업 파이프라인 > 📡 산군 불러오기)' % jp)
 
     only_err = (len(groups) == 1 and GRADE_ERR in groups)
     if only_err:
@@ -689,7 +819,7 @@ def run(src='', send=None, sleep=1.0, everything=False, direct=False):
     if send is None:
         send = (ask('메일로 보낼까요? (엔터=예) > ', '예') or '예').strip() not in ('아니오', 'n', 'N', '아니요')
     if send:
-        send_mail(subject, html)
+        send_mail(subject, html, files=[f for f in (jp,) if f])
     log(TOOL, '%d곳 중 빨리%d 물어봄%d' % (len(todo), go_n, ask_n))
     try:
         open_file(hp)
