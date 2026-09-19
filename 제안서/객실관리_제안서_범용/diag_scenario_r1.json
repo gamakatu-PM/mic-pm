@@ -1,0 +1,250 @@
+{
+ "size": [
+  12,
+  5.2
+ ],
+ "boxes": [
+  {
+   "id": "pms",
+   "x": 1.5,
+   "y": 4.2,
+   "w": 8.0,
+   "h": 0.75,
+   "style": "sub",
+   "title": "호텔 전산시스템 (PMS) SERVER   *발주처 공사분",
+   "lines": [
+    "체크인 · 체크아웃 · 객실판매 상태를 객실관리 서버와 TCP/IP 로 주고받습니다"
+   ],
+   "fs": 11,
+   "lfs": 8.5
+  },
+  {
+   "id": "s1",
+   "x": 0.3,
+   "y": 2.3,
+   "w": 1.25,
+   "h": 0.8,
+   "style": "sub",
+   "title": "고객 도착",
+   "fs": 10.5
+  },
+  {
+   "id": "s2",
+   "x": 1.75,
+   "y": 2.3,
+   "w": 1.25,
+   "h": 0.8,
+   "style": "main",
+   "title": "체크인",
+   "fs": 10.5
+  },
+  {
+   "id": "s3",
+   "x": 3.2,
+   "y": 2.3,
+   "w": 1.25,
+   "h": 0.8,
+   "style": "device",
+   "title": "입실",
+   "fs": 10.5
+  },
+  {
+   "id": "s4",
+   "x": 4.65,
+   "y": 2.3,
+   "w": 1.25,
+   "h": 0.8,
+   "style": "device",
+   "title": "외출",
+   "fs": 10.5
+  },
+  {
+   "id": "s5",
+   "x": 6.1,
+   "y": 2.3,
+   "w": 1.25,
+   "h": 0.8,
+   "style": "device",
+   "title": "재입실",
+   "fs": 10.5
+  },
+  {
+   "id": "s6",
+   "x": 7.55,
+   "y": 2.3,
+   "w": 1.25,
+   "h": 0.8,
+   "style": "main",
+   "title": "체크아웃",
+   "fs": 10.5
+  },
+  {
+   "id": "s7",
+   "x": 9.0,
+   "y": 2.3,
+   "w": 1.25,
+   "h": 0.8,
+   "style": "device",
+   "title": "청소중 / 완료",
+   "fs": 10
+  },
+  {
+   "id": "s8",
+   "x": 10.45,
+   "y": 2.3,
+   "w": 1.25,
+   "h": 0.8,
+   "style": "sub",
+   "title": "공실",
+   "fs": 10.5
+  }
+ ],
+ "links": [
+  {
+   "from": "s1",
+   "to": "s2",
+   "style": "comm",
+   "side": "h",
+   "arrow": "->"
+  },
+  {
+   "from": "s2",
+   "to": "s3",
+   "style": "comm",
+   "side": "h",
+   "arrow": "->"
+  },
+  {
+   "from": "s3",
+   "to": "s4",
+   "style": "comm",
+   "side": "h",
+   "arrow": "->"
+  },
+  {
+   "from": "s4",
+   "to": "s5",
+   "style": "comm",
+   "side": "h",
+   "arrow": "->"
+  },
+  {
+   "from": "s5",
+   "to": "s6",
+   "style": "comm",
+   "side": "h",
+   "arrow": "->"
+  },
+  {
+   "from": "s6",
+   "to": "s7",
+   "style": "comm",
+   "side": "h",
+   "arrow": "->"
+  },
+  {
+   "from": "s7",
+   "to": "s8",
+   "style": "comm",
+   "side": "h",
+   "arrow": "->"
+  },
+  {
+   "from": "pms",
+   "to": "s2",
+   "style": "power",
+   "side": "v",
+   "x": 2.375,
+   "label": "체크인/아웃 DATA 수신",
+   "arrow": "->"
+  },
+  {
+   "from": "s7",
+   "to": "pms",
+   "style": "power",
+   "side": "v",
+   "x": 9.625,
+   "label": "청소완료 → 객실판매가능 DATA 전달",
+   "arrow": "->"
+  }
+ ],
+ "notes": [
+  {
+   "x": 2.375,
+   "y": 1.45,
+   "text": "PMS DATA 수신\nDoor Card 발급\n냉·난방 강제 동작",
+   "ha": "center",
+   "fs": 8,
+   "color": "navy"
+  },
+  {
+   "x": 3.825,
+   "y": 1.45,
+   "text": "Card 투입\n전등·전열·온도 ON\n설정 온도로 제어",
+   "ha": "center",
+   "fs": 8,
+   "color": "navy"
+  },
+  {
+   "x": 5.275,
+   "y": 1.45,
+   "text": "카드 제거\n외출온도 제어",
+   "ha": "center",
+   "fs": 8,
+   "color": "navy"
+  },
+  {
+   "x": 6.725,
+   "y": 1.45,
+   "text": "입실과 동일\n동작",
+   "ha": "center",
+   "fs": 8,
+   "color": "navy"
+  },
+  {
+   "x": 8.175,
+   "y": 1.45,
+   "text": "카드 제거\nDoor Card 반납",
+   "ha": "center",
+   "fs": 8,
+   "color": "navy"
+  },
+  {
+   "x": 9.625,
+   "y": 1.45,
+   "text": "청소완료 후\n판매가능 DATA\nPMS 에 전달",
+   "ha": "center",
+   "fs": 8,
+   "color": "navy"
+  },
+  {
+   "x": 11.075,
+   "y": 1.45,
+   "text": "공실온도 제어\n(PC 환경설정\n변경 가능)",
+   "ha": "center",
+   "fs": 8,
+   "color": "navy"
+  },
+  {
+   "x": 0.3,
+   "y": 0.45,
+   "text": "※ 객실 상태(체크인 · 재실 · 외출 · 공실)를 객실관리 서버가 판단하여 조명 · 전열 · 냉난방을 자동 제어합니다.",
+   "fs": 9,
+   "color": "gray_tx"
+  }
+ ],
+ "legend": [
+  {
+   "x": 8.6,
+   "y": 0.45,
+   "style": "comm",
+   "label": "객실 상태 흐름"
+  },
+  {
+   "x": 10.4,
+   "y": 0.45,
+   "style": "power",
+   "label": "PMS 연동 DATA"
+  }
+ ]
+}
