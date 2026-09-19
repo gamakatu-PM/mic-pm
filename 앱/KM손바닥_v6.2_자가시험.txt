@@ -1,0 +1,25 @@
+✓ 여정 → 현장 열기
+✓ 시트 닫기 단추가 화면 위에 고정
+✓ 열쇠 열고 확정
+     줄: 확정,연합기숙사,수량표 확정,299개 · 도면 기준,시험 · 쉼표 포함
+✓ 확정 줄의 쉼표가 안전한가
+✗ 공정 탭이 열쇠를 따라가나 — page.click: Timeout 2500ms exceeded.
+✓ 공정 단계 누르면 열쇠로 감
+✓ 돈 탭 완료 → 열쇠 갱신
+✓ 회의 → 열쇠 갱신
+✗ 오늘 탭 · 맞아 — page.waitForSelector: Timeout 2500ms exceeded.
+     줄 수: 4
+✓ 보내기 묶음
+✗ 회의 품목 변경 — page.click: Timeout 2500ms exceeded.
+✗ 가져오기 두 번 해도 안 늘어남 — page.fill: Timeout 2500ms exceeded.
+✗ 여정 복귀 · 진행률 — page.waitForSelector: Timeout 2500ms exceeded.
+
+통과 8 / 실패 5
+exit=0
+오늘 카드 수: 22
+맞아 후 outbox: [ 'KM-007 맞아' ]
+문안 첫 2줄: 제목 : [연합기숙사] 도어락 자재승인원 작업 파일 송부 / 
+이렇게 만들겠습니다 열림: true
+가져오기 1회 후 17 2회 후 17 ✓ 안 늘어남
+페이지 오류: 없음
+exit=0
