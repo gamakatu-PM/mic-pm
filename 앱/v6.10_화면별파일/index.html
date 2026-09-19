@@ -74,13 +74,18 @@
     <div id="inbList" class="small"></div>
   </div>
   <div class="card">
+    <div class="t">결론 대장 <span class="small" id="decCount"></span></div>
+    <div class="m">앱에서 정해진 것이 지워지지 않고 쌓이는 곳입니다. 창고의 「정해진 것」 이 이것을 보여 줍니다.</div>
+    <div class="btns"><button class="b" onclick="view='ask';render()">창고에서 보기</button></div>
+  </div>
+  <div class="card">
     <div class="t">보낸 줄 이력 <span class="small" id="logCount"></span></div>
     <div id="logList" class="small"></div>
-    <div class="btns"><button class="b" id="btnExport">전체 내보내기(JSON)</button><button class="b ghost" id="btnReset">전부 지우기</button></div>
+    <div class="btns"><button class="b pri" id="btnCsv">확정 대장으로 내보내기</button><button class="b" id="btnExport">전체 내보내기(JSON)</button><button class="b ghost" id="btnReset">전부 지우기</button></div>
   </div>
   <div class="card small">
     <div class="t">이 앱</div>
-    KM 손바닥 v6.8 고칠 수 있는 판 (현장관리 PWA v5.7의 다음 판) · 2026-09-19<br>
+    KM 손바닥 v6.10 결론 대장 (현장관리 PWA v5.7의 다음 판) · 2026-09-19<br>
     저장 : 이 폰 + 클로드가 읽는 공유 저장소(연결되면 상단에 표시). PC 도구로는 「보내기」 메일 한 통으로 갑니다.<br>
     한 줄 문법은 PC 48번 회신 읽기 것을 그대로 씁니다. 금액·수량·요율은 앱이 정하지 않습니다.
   </div>

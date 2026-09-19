@@ -6,7 +6,7 @@ const PARTIES=['시공사','전기','통신','감리','발주처','설계사','�
 const BOUND=['외함 설치','강전 결선','약전 결선','외함 커버','전력계량기','바닥난방 밸브','타공','도어락 설치'];
 const DEFAULT_SET={mailTo:'gamakatu0924@gmail.com',cc:'',big:false};
 let S=loadLocal()||{sites:{},items:{},meetings:{},log:[],outbox:[],inbox:[],settings:{...DEFAULT_SET}};
-S.inbox=S.inbox||[];S.feedsrc=S.feedsrc||{};S.contacts=S.contacts||[];S.drops=S.drops||[];S.asks=S.asks||{};
+S.inbox=S.inbox||[];S.feedsrc=S.feedsrc||{};S.contacts=S.contacts||[];S.drops=S.drops||[];S.asks=S.asks||{};S.decisions=S.decisions||{};
 S.settings={...DEFAULT_SET,...(S.settings||{})};
 let view='map', curSite=null, siteTab='공정', curMeet=null;
 let db=null; const dbq={};
@@ -33,6 +33,15 @@ function saveItem(it){it.updated=now();S.items[it.id]=it;persist();dbWrite('item
 function saveSite(s){s.updated=now();S.sites[s.id]=s;persist();dbWrite('sites/'+s.id,s)}
 function saveMeet(m){m.updated=now();S.meetings[m.id]=m;persist();dbWrite('meetings/'+m.id,m)}
 function saveMeta(){persist();dbWrite('meta/outbox',{lines:S.outbox});dbWrite('meta/log',{lines:S.log.slice(-600)});dbWrite('meta/settings',S.settings)}
+/* 결론 대장 — 지우지 않고 쌓기만 한다. 프로님 규칙 : 덮어쓰지 않는다 */
+function saveDecision(d){
+  const id=(d.ts||now()).replace(/[-:.TZ]/g,'').slice(0,14)+'_'+hash((d.site||'')+(d.item||'')+(d.value||''));
+  const row={id,date:(d.date||now()).slice(0,10),site:d.site||'',item:d.item||'',value:String(d.value==null?'':d.value),
+    basis:d.basis||'',source:d.source||'',by:d.by||'프로님',prev:d.prev||null,ref:d.ref||null,ts:d.ts||now()};
+  S.decisions=S.decisions||{};S.decisions[id]=row;persist();dbWrite('decisions/'+id,row);
+  return row;
+}
+function decisionList(){return Object.values(S.decisions||{}).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''))}
 function addLog(type,site,text){S.log.push({ts:now(),type,site:site||'',text});if(S.log.length>600)S.log=S.log.slice(-600)}
 function safe(v){return String(v==null?'':v).replace(/[,\r\n]+/g,' · ').replace(/\s+/g,' ').trim()}
 function queue(line,site,type){S.outbox.push({ts:now(),line,site:site||'',type:type||'회신'});addLog(type||'회신',site,line);saveMeta();renderFab()}
@@ -76,7 +85,7 @@ async function initDb(){
       let ch=false;snap.docChanges().forEach(c=>{if(c.type==='removed'){delete tgt[c.doc.id];ch=true}else{const d=c.doc.data();if(!tgt[c.doc.id]||(d.updated||'')>(tgt[c.doc.id].updated||'')){tgt[c.doc.id]=d;ch=true}}});
       if(ch){persist();render()}
     },e=>console.warn(col,e&&e.code));
-    sub('items',S.items);sub('sites',S.sites);sub('meetings',S.meetings);sub('asks',S.asks);
+    sub('items',S.items);sub('sites',S.sites);sub('meetings',S.meetings);sub('asks',S.asks);sub('decisions',S.decisions);
     db.doc('meta/outbox').onSnapshot(s=>{if(s.metadata.hasPendingWrites||!s.exists)return;S.outbox=s.data().lines||[];persist();renderFab()});
     db.doc('meta/inbox').onSnapshot(s=>{if(s.metadata.hasPendingWrites||!s.exists)return;const L=s.data().lines||[];const n=L.filter(x=>!x.seen).length;const had=(S.inbox||[]).filter(x=>!x.seen).length;S.inbox=L;persist();render();if(n>had)toast('클로드가 '+(n-had)+'건 반영했습니다')});
     db.doc('meta/feedsrc').onSnapshot(s=>{if(s.metadata.hasPendingWrites||!s.exists)return;S.feedsrc=s.data()||{};persist();if(view==='set')render()});

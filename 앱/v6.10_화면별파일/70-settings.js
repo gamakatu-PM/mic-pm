@@ -8,10 +8,21 @@ function renderSet(){
   document.getElementById('inbCount').textContent=inb.length+'건';
   document.getElementById('inbList').innerHTML=inb.slice().reverse().slice(0,20).map(x=>`<div class="row"><span class="grow"><span class="mono">${esc((x.ts||'').slice(5,10))}</span> ${esc(x.text)}</span>${x.seen?'':'<span class="pill p-ok">새것</span>'}</div>`).join('')||'<div class="empty">아직 없음</div>';
   const cv=document.getElementById('cfgVerNow');if(cv)cv.textContent=String(S.cfgVer||0);
+  const dc=document.getElementById('decCount');if(dc)dc.textContent=decisionList().length+'줄';
   document.getElementById('logCount').textContent=S.log.length+'줄';
   document.getElementById('logList').innerHTML=S.log.slice(-30).reverse().map(l=>`<div class="row"><span class="grow"><span class="mono">${esc(l.ts.slice(5,16).replace('T',' '))}</span> <span class="pill p-off">${esc(l.type)}</span> ${esc(l.text)}</span></div>`).join('')||'<div class="empty">없음</div>';
 }
 document.getElementById('btnSaveSet').onclick=()=>{S.settings.mailTo=document.getElementById('setMailTo').value.trim()||DEFAULT_SET.mailTo;S.settings.cc=document.getElementById('setCc').value.trim();S.settings.big=document.getElementById('setBig').checked;document.body.classList.toggle('big',S.settings.big);saveMeta();toast('저장했습니다')};
+document.getElementById('btnCsv').onclick=()=>{
+  const L=decisionList();
+  const head='일자,현장,항목,값,근거,누가,상태';
+  const esc2=v=>{v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const body=L.map(d=>[d.date,d.site,d.item,d.value,d.basis,d.by,'확정'].map(esc2).join(',')).join('\n');
+  const t=head+'\n'+body;
+  openSheet(`<div class="hint">PC 43번 확정 대장(<span class="mono">확정사항.csv</span>)과 같은 칸입니다. 복사해 그 파일 아래에 붙이시면 됩니다. ${L.length}줄.</div>
+    <pre class="draft" style="max-height:260px;overflow:auto">${esc(t.slice(0,4000))}${t.length>4000?'\n…':''}</pre>
+    <div class="btns"><button class="b pri" onclick="copy(${JSON.stringify(t).replace(/"/g,'&quot;')})">복사</button><button class="b ghost" onclick="closeSheet()">닫기</button></div>`,'확정 대장으로 내보내기');
+};
 document.getElementById('btnExport').onclick=()=>{const t=JSON.stringify(S,null,1);openSheet(`<h3>내보내기</h3><div class="hint">전체 상태 JSON. 복사해 파일로 두시면 새 폰에서 붙여넣어 복원할 수 있습니다.</div><textarea style="min-height:200px">${esc(t)}</textarea><div class="btns"><button class="b pri" onclick="copy(${JSON.stringify(t).replace(/"/g,'&quot;')})">복사</button><button class="b ghost" onclick="closeSheet()">닫기</button></div>`)};
 document.getElementById('btnReset').onclick=()=>{if(!confirm('이 폰의 앱 데이터를 전부 지웁니다 (공유 저장소는 그대로). 계속할까요?'))return;S={sites:{},items:{},meetings:{},log:[],outbox:[],settings:{...DEFAULT_SET}};persist();render();toast('지웠습니다')};
 document.getElementById('btnFeed').onclick=()=>{

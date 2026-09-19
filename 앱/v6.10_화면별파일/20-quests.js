@@ -99,6 +99,9 @@ function setReq(s,key,state,value,basis,opt){
   if(st&&state==='확정'){s.stages=s.stages||{};const d=/^\d{4}-\d{2}-\d{2}$/.test(value||'')?value:ymd();s.stages[st]={date:d,note:basis||'',ts:now()}}
   const r=reqDef(key);
   queue(`${state},${safe(s.name)},${safe(r?r.n:key)},${safe(value)},${safe(basis||'앱')}`,s.name,state);
+  if(state==='확정')saveDecision({site:s.name,item:r?r.n:key,value,basis,source:'열쇠',
+    by:/클로드|PC |도구|판독/.test(basis||'')?'클로드':'프로님',
+    prev:cur.state?{state:cur.state,value:cur.value}:null,ref:{sid:s.id,reqKey:key}});
   return true;
 }
 function reqDef(key){const [qk,rk]=key.split('/');const q=QUESTS.find(x=>x.k===qk);return q&&q.req.find(x=>x.k===rk)}

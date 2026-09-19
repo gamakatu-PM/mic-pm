@@ -44,6 +44,22 @@ await T('설정 — PC 붙여넣기·고치기',async()=>{await go('set');await 
   const t=await p.textContent('#v-set');if(!/앱 내용 고치기/.test(t))throw new Error('고치기 없음')});
 await T('고치기 — 단계 9개',async()=>{await p.click('text=고치기 열기');await p.waitForSelector('#sheetBox .row');
   const n=await p.$$eval('#sheetBox .row',e=>e.length);if(n<9)throw new Error('단계 '+n);await X()});
+await T('결론 대장 — 확정하면 한 줄 쌓인다',async()=>{await X();await p.click('nav.tabbar button[data-v="map"]');await p.waitForTimeout(250);
+  if(await p.isVisible('text=‹ 현장 지도')){await p.click('text=‹ 현장 지도');await p.waitForTimeout(250)}
+  const before=await p.evaluate(()=>Object.keys(JSON.parse(localStorage.getItem('km6_state')).decisions||{}).length);
+  await p.click('.jcard >> nth=0');await p.waitForTimeout(250);
+  await p.click('.qn >> nth=0');await p.waitForTimeout(250);
+  await p.click('#sheetBox .row.rq >> nth=0');await p.waitForSelector('#rqVal');
+  await p.fill('#rqVal','시험값 '+Date.now());await p.fill('#rqBasis','자가시험');await p.click('#rqOk');await p.waitForTimeout(500);await X();
+  const after=await p.evaluate(()=>Object.keys(JSON.parse(localStorage.getItem('km6_state')).decisions||{}).length);
+  if(after!==before+1)throw new Error(before+'→'+after)});
+await T('창고 — 결론 대장이 보인다',async()=>{await go('ask');await p.waitForTimeout(300);
+  const t=await p.textContent('#askBody');if(!/\[프로님\]|\[제가\]/.test(t))throw new Error('결론 대장 표시 없음')});
+await T('확정 대장 CSV 내보내기',async()=>{await go('set');await p.waitForTimeout(250);
+  await p.click('#btnCsv');await p.waitForSelector('#sheetBox .draft');
+  const t=await p.textContent('#sheetBox .draft');
+  if(!/^일자,현장,항목,값,근거,누가,상태/.test(t.trim()))throw new Error('머리글 다름: '+t.slice(0,40));
+  console.log('     ',t.trim().split('\n')[1].slice(0,80));await X()});
 console.log(`\n통과 ${ok} / 실패 ${bad}`);
 if(errs.length)console.log('페이지 오류:',errs);
 process.exitCode=bad?1:0;

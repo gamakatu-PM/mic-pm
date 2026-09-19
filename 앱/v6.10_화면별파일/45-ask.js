@@ -1,6 +1,8 @@
 /* ---- 결정 · 질문 창고 ---- */
 function askDays(a){const t=a.ts||a.date;if(!t)return 0;return Math.max(0,Math.floor((Date.now()-new Date(t).getTime())/86400000))}
 function allDecisions(){
+  const led=decisionList();
+  if(led.length)return led.map(d=>({date:d.date,site:d.site,item:d.item,value:d.value,basis:(d.by==='클로드'?'[제가] ':'[프로님] ')+(d.basis||''),kind:d.source||'결론',prev:d.prev}));
   const out=[];
   Object.values(S.asks||{}).filter(a=>a.status==='답함').forEach(a=>out.push({date:(a.answeredAt||a.ts||'').slice(0,10),site:a.site||'',item:a.q,value:a.answer,basis:(a.who==='클로드'?'제 질문에 답하심':'제 답')+(a.why?' · '+a.why:''),kind:'문답'}));
   Object.values(S.sites).forEach(s=>{
@@ -40,6 +42,7 @@ function renderAsk(){
 window.answerAsk=function(id,ix){
   const a=S.asks[id];if(!a)return;
   const put=(ans)=>{a.answer=ans;a.status='답함';a.answeredAt=now();saveAsk(a);
+    saveDecision({site:a.site,item:a.q,value:ans,basis:(a.who==='클로드'?'제 질문에 프로님이 답하심':'제 답')+(a.why?' · '+a.why:''),source:'문답',by:a.who==='클로드'?'프로님':'클로드',ref:{askId:a.id}});
     queue(`답,${safe(a.site||'전체')},${safe(a.q)},${safe(ans)},앱 창고`,a.site,'답');
     if(a.site&&a.reqKey&&S.sites[a.sid]){setReq(S.sites[a.sid],a.reqKey,'확정',ans,'프로님 답 (창고)');saveSite(S.sites[a.sid])}
     render();toast('답을 담았습니다')};
