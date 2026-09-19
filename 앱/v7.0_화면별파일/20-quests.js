@@ -82,7 +82,9 @@ function applyConfig(c){
 }
 function cfgNow(){return {quests:QUESTS,lists:LISTS,ver:(S.cfgVer||0)+1,ts:now(),by:'프로님(앱)'}}
 function saveConfig(why){
-  const c=cfgNow();S.cfgVer=c.ver;S.cfgAt=c.ts;S.cfg=c;persist();
+  const c=cfgNow();c.why=why||'';
+  S.cfgHist=(S.cfgHist||[]).concat([JSON.parse(JSON.stringify(c))]).slice(-15);
+  S.cfgVer=c.ver;S.cfgAt=c.ts;S.cfg=c;persist();
   dbWrite('config/quests',c);dbWrite('config/bak_'+String(c.ver).padStart(3,'0'),{...c,why:why||''});
   queue(`앱고침,전체,${safe(why||'내용 수정')},판 ${c.ver},앱`,'','앱고침');
   addLog('앱고침','',`판 ${c.ver} · ${why||''}`);saveMeta();
@@ -95,8 +97,10 @@ const RSTATE={'':'미확정','추정':'추정','진행중':'진행중','확정':
 const LEAD={마감여유:7,시운전:7,기구물설치:7,빽커버:10,기구물제작:50,속판제작:60,강전:30,외함제작:14};
 function dAdd(iso,n){const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);return ymd(d)}
 function dDiff(iso){if(!iso)return null;return Math.round((new Date(iso+'T00:00:00')-new Date(ymd()+'T00:00:00'))/86400000)}
+function leadOf(s){return {...LEAD,...((s&&s.lead)||{})}}
 function deadlines(s){
-  /* 현장 하나의 「언제까지」 표 : {열쇠경로: {date, why}} */
+  /* 현장 하나의 「언제까지」 표 : {열쇠경로: {date, why}}  소요일은 현장 값이 있으면 그것(s.lead) */
+  const LEAD=leadOf(s);
   const out={};const req=s.req||{};
   const val=k=>{const v=req[k];return v&&isDate(v.value)?v.value.slice(0,10):''};
   if(s.due){

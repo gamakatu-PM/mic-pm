@@ -98,7 +98,7 @@ function renderSiteDetail(s){
     h+=['견적','계약','계산서1 외함','계산서2 속판','계산서3 기구물','수금'].map(k=>{const v=m[k]||{};return `<div class="row"><span class="grow"><b>${k}</b> <span class="small">${v.date?esc(v.date):''}</span></span><input style="width:120px" inputmode="numeric" placeholder="금액 [ ]" value="${esc(v.amt||'')}" onchange="moneySet('${s.id}','${k}','amt',this.value)"><button class="b sm ${v.date?'':'pri'}" onclick="moneySet('${s.id}','${k}','date','${ymd()}')">${v.date?'완료':'완료 표시'}</button></div>`}).join('');
   }
   if(siteTab==='검수'){
-    h+=`<div class="notice">외함 설치 · 기구물 설치 · 시운전 객실 O/X 는 <b>v6.3</b>에서 넣습니다 (K-5 답에 따라 모양이 정해집니다). 지금은 「한 줄 남기기」 로 하자를 적어 두시면 기록에 남습니다.</div><div class="btns"><button class="b mic" onclick="noteLine('${s.id}','하자 ')">🎙 하자 한 줄</button></div>`;
+    h+=inspHtml(s);
   }
   if(siteTab==='경계'){
     const b=s.bound||{};
@@ -108,13 +108,66 @@ function renderSiteDetail(s){
   }
   document.getElementById('siteDetail').innerHTML=h;
 }
-window.editSite=function(id){const s=S.sites[id];openSheet(`<label class="f">현장명 <span class="small">제가 통화 기록에서 뽑은 이름이라 틀릴 수 있습니다. 고치시면 그 이름을 씁니다</span></label><input id="esName" value="${esc(s.name)}"><div class="grid"><div><label class="f">객실 수</label><input id="esRooms" value="${esc(s.rooms||'')}" inputmode="numeric"></div><div><label class="f">준공일</label><input id="esDue" type="date" value="${esc(s.due||'')}"></div></div><div class="btns"><button class="b pri" id="esOk">저장</button><button class="b ghost" id="esX">취소</button></div>`,'현장 정보');
+/* ── 검수 · 시운전 : 객실 번호 격자, 탭하면 O → X → 미확인. X 는 하자 한 줄 → 하자 대장 */
+const INSP_STAGES=[['외함','외함 설치 검수','외함 위치·높이·타공이 도면과 맞나'],['기구물','기구물 설치 검수','챠임벨·K·DM·온도·L·BSP 가 제자리에 붙었나'],['시운전','시운전','전기 들어온 뒤 품목마다 동작하나']];
+function parseRooms(txt){
+  const out=[];String(txt||'').split(/[,\s]+/).forEach(t=>{if(!t)return;const m=t.match(/^(\d+)-(\d+)$/);
+    if(m){const a=+m[1],b=+m[2];if(b>=a&&b-a<400)for(let i=a;i<=b;i++)out.push(String(i))}else out.push(t)});
+  return [...new Set(out)];
+}
+function inspHtml(s){
+  const st=s.inspStage||'시운전';const rooms=s.roomList||[];const data=((s.insp||{})[st])||{};
+  const ok=rooms.filter(r=>data[r]&&data[r].ok===true).length, bad=rooms.filter(r=>data[r]&&data[r].ok===false).length;
+  let h=`<div class="tabs2">${INSP_STAGES.map(([k,l])=>`<button class="${st===k?'on':''}" onclick="S.sites['${s.id}'].inspStage='${k}';saveSite(S.sites['${s.id}']);render()">${l}</button>`).join('')}</div>
+  <div class="notice">${esc(INSP_STAGES.find(x=>x[0]===st)[2])}. 객실을 누르면 <b>O → X → 미확인</b> 으로 돌아갑니다. X 는 한 줄이 하자 대장으로 갑니다.</div>`;
+  if(!rooms.length){
+    h+=`<div class="card"><div class="t">객실 번호를 넣어 주십시오</div><div class="m">「301-320, 401-420」 처럼 범위로 적으시면 격자가 됩니다. 한 번만 넣으면 세 검수가 같이 씁니다.</div>
+      <textarea id="roomTxt" placeholder="301-320, 401-420, 501">${esc(s.roomTxt||'')}</textarea>
+      <div class="btns"><button class="b pri" onclick="setRooms('${s.id}')">격자 만들기</button></div></div>`;
+    return h;
+  }
+  h+=`<div class="card"><div class="jhead"><div><div class="t" style="margin:0">${esc(INSP_STAGES.find(x=>x[0]===st)[1])}</div><div class="small">O ${ok} · X ${bad} · 미확인 ${rooms.length-ok-bad} / ${rooms.length}실</div></div><div class="pct">${Math.round(ok/rooms.length*100)}%</div></div>
+    <div class="bar"><i style="width:${Math.round(ok/rooms.length*100)}%"></i></div>
+    <div class="grid9" style="margin-top:10px">${rooms.map(r=>{const c=data[r]||{};const cls=c.ok===true?'c-ok':c.ok===false?'c-x':'';return `<span class="cell ${cls}" onclick="inspTap('${s.id}','${esc(r)}')">${esc(r)}</span>`}).join('')}</div>
+    <div class="btns"><button class="b" onclick="inspAll('${s.id}',true)">전부 O</button><button class="b ghost" onclick="S.sites['${s.id}'].roomList=null;saveSite(S.sites['${s.id}']);render()">객실 번호 다시</button></div></div>`;
+  const defects=rooms.filter(r=>data[r]&&data[r].ok===false);
+  if(defects.length){h+=`<h2 class="sec">하자 ${defects.length} <small>X 인 객실</small></h2>`+defects.map(r=>`<div class="row"><span class="grow"><b>${esc(r)}호</b> ${esc((data[r].note||'').slice(0,60))}</span><button class="b sm" onclick="inspNote('${s.id}','${esc(r)}')">🎙</button></div>`).join('')
+    +`<div class="btns"><button class="b pri" onclick="asDraft('${s.id}')">시공팀 AS 의뢰서 초안</button></div>`}
+  if(ok===rooms.length&&st==='시운전'){h+=`<div class="card next"><div class="id">시운전 100%</div><div class="t">계산서 시점입니다</div><div class="btns"><button class="b pri" onclick="finishTest('${s.id}')">시운전 완료로 확정</button><button class="b" onclick="moneyDraftSimple('${s.id}')">제가 계산서 요청 문안 만들까요?</button></div></div>`}
+  return h;
+}
+window.setRooms=function(sid){const s=S.sites[sid];const t=document.getElementById('roomTxt').value;const r=parseRooms(t);
+  if(!r.length){toast('객실 번호를 못 읽었습니다');return}s.roomTxt=t;s.roomList=r;if(!s.rooms)s.rooms=String(r.length);saveSite(s);render();toast(r.length+'실 격자를 만들었습니다')};
+window.inspTap=function(sid,r){const s=S.sites[sid];const st=s.inspStage||'시운전';s.insp=s.insp||{};s.insp[st]=s.insp[st]||{};
+  const c=s.insp[st][r]||{};const nx=c.ok===true?false:c.ok===false?null:true;
+  s.insp[st][r]={...c,ok:nx,ts:now()};saveSite(s);render();
+  if(nx===false)inspNote(sid,r);};
+window.inspNote=function(sid,r){const s=S.sites[sid];const st=s.inspStage||'시운전';
+  micSheet(`${r}호 · 무엇이 안 됩니까?`,'품목과 증상을 말씀하시면 하자 대장으로 갑니다. 사진은 나중에 붙여도 됩니다.',(s.insp[st][r]||{}).note||'',v=>{
+    if(!v)return;s.insp[st][r].note=v;saveSite(s);queue(`하자,${safe(s.name)},${safe(r)},${safe(v)},${st}`,s.name,'하자');render()})};
+window.inspAll=function(sid,val){const s=S.sites[sid];const st=s.inspStage||'시운전';if(!confirm('전부 O 로 표시할까요?'))return;
+  s.insp=s.insp||{};s.insp[st]=s.insp[st]||{};(s.roomList||[]).forEach(r=>{s.insp[st][r]={...(s.insp[st][r]||{}),ok:val,ts:now()}});saveSite(s);render()};
+window.finishTest=function(sid){const s=S.sites[sid];setReq(s,'시운전/시운전완료','확정',ymd(),'검수 화면 100% · 프로님 확정');saveSite(s);render();cheer(s,QUESTS.find(q=>q.k==='시운전'),QUESTS.findIndex(q=>q.k==='시운전'))};
+window.moneyDraftSimple=function(sid){const s=S.sites[sid];
+  const text=`제목 : [${s.name}] 시운전 완료 · 계산서 발행 요청\n\n담당자님, 한국마이크로닉 배성윤입니다.\n\n${s.name} 현장 객실관리 시운전이 완료되었습니다(${ymd()}, ${(s.roomList||[]).length}실).\n아래와 같이 계산서 발행을 요청드립니다.\n\n- 구분 : 기구물 납품·시운전 완료분\n- 금액 : [        ]\n- 발행 요청일 : [        ]\n- 사업자 정보·발행 이메일 : [        ]\n- 첨부 : 시운전 확인서 · 사진대지\n\n감사합니다.\n한국마이크로닉(주) 배성윤 차장  전화 [        ]`;
+  draftSheet('계산서 요청 · '+s.name,text,s.name)};
+window.asDraft=function(sid){const s=S.sites[sid];const st=s.inspStage||'시운전';const d=s.insp[st]||{};
+  const rows=(s.roomList||[]).filter(r=>d[r]&&d[r].ok===false).map(r=>`- ${r}호 : ${d[r].note||'[증상  ]'}`).join('\n');
+  const text=`[작업의뢰서 초안 · 시공팀 AS]\n현장 : ${s.name}\n건명 : ${INSP_STAGES.find(x=>x[0]===st)[1]} 하자 처리\n의뢰 내용 :\n${rows}\n- 방문 희망일 : [        ]\n- 현장 연락 : [        ]\n첨부 : 사진 [  ]장\n의뢰 : 배성윤`;
+  draftSheet('AS 의뢰서 초안 · '+s.name,text,s.name);queue(`만들기,${safe(s.name)},AS 의뢰서 초안,하자 ${rows.split('\n').length}건,앱`,s.name,'만들기')};
+
+window.editSite=function(id){const s=S.sites[id];openSheet(`<label class="f">현장명 <span class="small">제가 통화 기록에서 뽑은 이름이라 틀릴 수 있습니다. 고치시면 그 이름을 씁니다</span></label><input id="esName" value="${esc(s.name)}"><div class="grid"><div><label class="f">객실 수</label><input id="esRooms" value="${esc(s.rooms||'')}" inputmode="numeric"></div><div><label class="f">준공일</label><input id="esDue" type="date" value="${esc(s.due||'')}"></div></div>
+  <h2 class="sec">이 현장 소요일 <small>비우면 기본값(전 현장 공통)</small></h2>
+  <div class="grid">${[['외함제작','외함 제작(일)'],['속판제작','속판 제작(일)'],['기구물제작','기구물 제작(일)'],['빽커버','빽커버(일)'],['기구물설치','기구물 설치(일)'],['시운전','시운전(일)'],['강전','강전 접속(일)'],['마감여유','준공 전 여유(일)']].map(([k,l])=>`<div><label class="f">${l} <span class="small">기본 ${LEAD[k]}</span></label><input id="ld_${k}" inputmode="numeric" value="${esc(String(((s.lead||{})[k])||''))}" placeholder="${LEAD[k]}"></div>`).join('')}</div>
+  <div class="btns"><button class="b pri" id="esOk">저장</button><button class="b ghost" id="esX">취소</button></div>`,'현장 정보');
   document.getElementById('esOk').onclick=()=>{const due=document.getElementById('esDue').value;
     const nn=document.getElementById('esName').value.trim();
     if(nn&&nn!==s.name){const old=s.name;Object.values(S.items).forEach(i=>{if(i.site===old){i.site=nn;saveItem(i)}});
       Object.values(S.meetings).forEach(m=>{if(m.site===old){m.site=nn;saveMeet(m)}});
       queue(`현장명,${safe(old)},→,${safe(nn)},프로님이 고치심`,nn,'현장명');s.name=nn;s.renamedFrom=old}
-    if(due&&due!==s.due){queue(`확정,${safe(s.name)},준공일,${safe(due)},앱 입력`,s.name,'확정')}
+    if(due&&due!==s.due){queue(`확정,${safe(s.name)},준공일,${safe(due)},앱 입력`,s.name,'확정');saveDecision({site:s.name,item:'준공일',value:due,basis:'앱 입력',source:'현장정보',by:'프로님',prev:s.due?{value:s.due}:null})}
+    const lead={};Object.keys(LEAD).forEach(k=>{const el=document.getElementById('ld_'+k);const v=el?parseInt(el.value,10):NaN;if(!isNaN(v)&&v>0&&v!==LEAD[k])lead[k]=v});
+    if(JSON.stringify(lead)!==JSON.stringify(s.lead||{})){s.lead=lead;const leadTxt=Object.keys(lead).map(k=>k+' '+lead[k]+'일').join(' · ')||'기본값';queue('소요일,'+safe(s.name)+','+safe(leadTxt)+',현장별,앱',s.name,'소요일')}
     s.rooms=document.getElementById('esRooms').value.trim();s.due=due;saveSite(s);closeSheet();render();toast('저장했습니다')};
   document.getElementById('esX').onclick=closeSheet};
 window.stageTap=function(sid,key){

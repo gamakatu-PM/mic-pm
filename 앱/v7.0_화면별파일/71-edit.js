@@ -51,10 +51,15 @@ window.saveLists=function(){['ITEMS_MEET','PARTIES','BOUND'].forEach(k=>{
   const v=document.getElementById('L_'+k).value.split(',').map(x=>x.trim()).filter(Boolean);if(v.length)LISTS[k]=v});
   saveConfig('목록 수정');render();toast('저장했습니다')};
 window.cfgHistory=function(){
-  openSheet(`<div class="story">고치실 때마다 판이 하나씩 올라가고 이전 판은 지워지지 않습니다. 「${S.cfgVer||0}번 되돌려」 라고 저에게 말씀하셔도 됩니다.<br><br>지금 판 : <b>${S.cfgVer||0}</b></div>
-  <div class="small">이전 판은 제 쪽(공유 저장소)에 <span class="mono">config/bak_###</span> 으로 쌓입니다. 폰에서 바로 되돌리려면 아래를 누르십시오 — 한 판 전으로 갑니다.</div>
-  <div class="btns"><button class="b" onclick="toast('제게 「N번 되돌려」 라고 말씀해 주십시오')">한 판 전으로</button><button class="b ghost" onclick="editQuests()">‹ 뒤로</button></div>`,'판 이력');
+  const H=(S.cfgHist||[]).slice().reverse();
+  openSheet(`<div class="story">고치실 때마다 판이 올라가고 이전 판은 지워지지 않습니다. 지금 판 <b>${S.cfgVer||0}</b>. 아래 판을 누르면 그 내용으로 돌아가고, 그것도 새 판으로 기록됩니다(덮어쓰지 않음).</div>
+  ${H.length?H.map(c=>`<div class="row"><span class="grow"><b>판 ${c.ver}</b> <span class="small mono">${esc((c.ts||'').slice(5,16).replace('T',' '))}</span><div class="small">${esc(c.why||'')}</div></span>${c.ver!==S.cfgVer?`<button class="b sm" onclick="restoreCfg(${c.ver})">이 판으로</button>`:'<span class="pill p-ok">지금</span>'}</div>`).join(''):'<div class="empty">이 폰에는 이전 판이 없습니다. 제게 「N번 되돌려」 라고 말씀해 주시면 저장소에서 꺼냅니다.</div>'}
+  <div class="btns"><button class="b ghost" onclick="editQuests()">‹ 뒤로</button></div>`,'판 이력');
 };
+window.restoreCfg=function(ver){const c=(S.cfgHist||[]).find(x=>x.ver===ver);if(!c)return;
+  if(!confirm(`판 ${ver} 내용으로 되돌릴까요? 지금 판은 이력에 남습니다.`))return;
+  QUESTS=JSON.parse(JSON.stringify(c.quests));LISTS={...DEFAULT_LISTS,...(c.lists||{})};
+  saveConfig(`판 ${ver} 으로 되돌림`);render();closeSheet();toast(`판 ${ver} 내용으로 돌아왔습니다 (새 판 ${S.cfgVer})`)};
 window.resetCfg=function(){if(!confirm('앱 내용을 처음 상태로 되돌릴까요? 고치신 것이 사라집니다(이전 판은 남습니다).'))return;
   QUESTS=JSON.parse(JSON.stringify(DEFAULT_QUESTS));LISTS=JSON.parse(JSON.stringify(DEFAULT_LISTS));
   saveConfig('처음 상태로 되돌림');render();closeSheet();toast('되돌렸습니다')};
