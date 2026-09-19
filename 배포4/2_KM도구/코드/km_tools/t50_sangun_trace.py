@@ -135,7 +135,8 @@ def ensure_ini():
     changed = False
     if not c.has_section('산군메일'):
         c.add_section('산군메일'); changed = True
-    for k, v in (('to', ''), ('다시찾기일수', '7'), ('출발지', ''), ('kakao_key', ''), ('본문읽기', '예')):
+    for k, v in (('to', ''), ('다시찾기일수', '7'), ('출발지', ''), ('kakao_key', ''), ('본문읽기', '예'),
+                 ('한번에', '60'), ('메일에펼칠곳', '25')):
         if not c.has_option('산군메일', k):
             c.set('산군메일', k, v); changed = True
     if not c.has_section('역산'):
@@ -160,6 +161,13 @@ def ensure_ini():
 def opt(c, k, d=''):
     try:
         return c.get('산군메일', k, fallback=d).strip()
+    except Exception:
+        return d
+
+
+def num(c, k, d):
+    try:
+        return int(re.sub(r'[^0-9]', '', c.get('산군메일', k, fallback=str(d))) or d)
     except Exception:
         return d
 
@@ -640,13 +648,39 @@ def build_html(groups, src, err_n, cards=None, jsonname=''):
         h.append('</table><div style="color:#888;font-size:12px">'
                  '기사에 적힌 준공 예정에서 거꾸로 계산한 <b>추정</b>입니다. 현장에 확인하시고 쓰십시오.</div></div>')
 
-    for g in (GRADE_GO, GRADE_ASK, GRADE_EARLY, GRADE_NONE, GRADE_DONE, GRADE_ERR):
-        if not groups.get(g):
+    # 🔴🟠🟡 는 카드로 펼치고, ⚪⚫⛔ 는 한 줄 표로 접는다 (300곳이면 메일이 감당이 안 됩니다)
+    wide = num(conf(), '메일에펼칠곳', 25)
+    left = wide
+    for g in (GRADE_GO, GRADE_ASK, GRADE_EARLY):
+        xs = groups.get(g) or []
+        if not xs:
             continue
         h.append('<h3 style="margin:18px 0 4px;border-bottom:2px solid #eee">%s (%d곳)</h3>'
-                 % (esc(g), len(groups[g])))
-        for rec, res in groups[g]:
+                 % (esc(g), len(xs)))
+        for rec, res in xs[:max(left, 0)]:
             h.append(card(rec, res))
+        if len(xs) > max(left, 0):
+            h.append('<div style="color:#888;font-size:12px">이 등급의 나머지 %d곳은 붙임 파일(CSV·앱 카드)에 있습니다.</div>'
+                     % (len(xs) - max(left, 0)))
+        left -= len(xs)
+
+    for g in (GRADE_NONE, GRADE_DONE, GRADE_ERR):
+        xs = groups.get(g) or []
+        if not xs:
+            continue
+        h.append('<h3 style="margin:18px 0 4px;border-bottom:2px solid #eee">%s (%d곳)</h3>' % (esc(g), len(xs)))
+        h.append('<table style="border-collapse:collapse;font-size:13px">')
+        for rec, res in xs[:60]:
+            cd = res.get('카드') or {}
+            h.append('<tr><td style="padding:2px 10px 2px 0">%s</td>'
+                     '<td style="padding:2px 10px 2px 0;color:#666">%s</td>'
+                     '<td style="padding:2px 10px 2px 0;color:#666">%s</td>'
+                     '<td style="padding:2px 0;color:#888">%s</td></tr>'
+                     % (esc(rec.get('현장명')), esc(rec.get('소재지')),
+                        esc(cd.get('객실') or ''), esc(cd.get('급한것') or res.get('한줄', '')[:40])))
+        if len(xs) > 60:
+            h.append('<tr><td colspan="4" style="color:#888">… 그 밖 %d곳은 붙임 파일에</td></tr>' % (len(xs) - 60))
+        h.append('</table>')
 
     # ── ④ 앱으로 넣기 ──
     if jsonname:
@@ -735,10 +769,25 @@ def run(src='', send=None, sleep=1.0, everything=False, direct=False):
 
     book = load_book()
     wait = again_days(c)
-    todo = [r for r in recs if days_since((book.get(key_of(r)) or ['', '', '', '', '', '', '', ''])[0]) >= wait]
+    cap = max(num(c, '한번에', 60), 1)
+
+    def last_seen(r):
+        return (book.get(key_of(r)) or ['', '', '', '', '', '', '', ''])[0]
+
+    todo = [r for r in recs if days_since(last_seen(r)) >= wait]
     skip = len(recs) - len(todo)
-    print('현장 %s곳 중 %s곳을 찾아봅니다 (%s곳은 %d일 안에 이미 찾아봄)'
-          % (won(len(recs)), won(len(todo)), won(skip), wait))
+    # ★최우선 먼저, 그 다음 오래 안 본 것부터 (300곳을 한 번에 두드리면 구글이 막습니다)
+    todo.sort(key=lambda r: (0 if str(r.get('판정', '')).startswith('★') else 1,
+                             -days_since(last_seen(r))))
+    rest = 0
+    if len(todo) > cap:
+        rest = len(todo) - cap
+        todo = todo[:cap]
+    print('현장 %s곳 중 %s곳을 찾아봅니다 (%s곳은 %d일 안에 이미 찾아봄%s)'
+          % (won(len(recs)), won(len(todo)), won(skip), wait,
+             (' · 오늘 못 한 %s곳은 다음에' % won(rest)) if rest else ''))
+    if rest:
+        print('  한 번에 찾는 곳수는 설정.ini [산군메일] 한번에 = %d 입니다.' % cap)
     if not todo:
         print('새로 찾아볼 현장이 없어 메일을 보내지 않습니다.')
         return

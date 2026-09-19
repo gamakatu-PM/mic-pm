@@ -12,9 +12,12 @@
 ★ 줄만 골라 클로드에게 「이 현장 조사해 줘」 라고 주시면 됩니다.
 
 쓰는 법
-  1) 산군 > 관심현장 > 엑셀 내려받기 (주 1회 최대 300건)
-  2) 49번 실행 → 엔터 (다운로드 폴더에서 가장 최근 산군 파일을 스스로 찾습니다)
+  1) 산군 > 관심현장 > 엑셀 내려받기 → **쓸 것만 남겨** 「클로드 폴더\\산군」 에 저장
+     (프로님 2026-09-19 : "산군 데이터 800건은 다 쓸모가 없어. 내가 클로드 폴더에 엑셀로
+      다시 저장해 놓은 게 맞아. 한 300건 될 거야.")
+  2) 49번 실행 → 엔터. 클로드 폴더\\산군 을 먼저 보고, 파일이 여럿이면 목록에서 고르게 해 드립니다
   3) 결과 : _도구결과\\산군\\산군_새현장_YYMMDD.xlsx / .csv / 한장.html
+     ✕제외된 줄도 버리지 않고 「산군_제외후보_YYMMDD.csv」 로 따로 남깁니다
 
 판정 기준(= km-site-radar 프로님 확정값)은 설정.ini [산군] 에서 고치실 수 있습니다.
   숙박 1500㎡ / 단독 496㎡ / 클럽하우스 1000㎡ / 그 밖 500㎡ , 기준의 2배면 ★
@@ -118,24 +121,41 @@ def write_default_ini():
 
 # ====================== 파일 읽기 ======================
 
-def guess_file():
-    """다운로드 폴더 등에서 가장 최근 산군 파일을 찾는다."""
-    pats = []
-    for d in (os.path.join(os.path.expanduser('~'), 'Downloads'),
-              os.path.join(os.path.expanduser('~'), '다운로드'),
-              os.path.join(cfg('base'), '산군'),
-              os.path.join(cfg('out'), TOOL)):
+def find_files():
+    """산군 파일 후보를 순서대로 모은다.
+    프로님 (2026-09-19) : "산군 데이터 800건은 다 쓸모가 없어. 내가 클로드 폴더에다가 엑셀로
+    다시 저장해 놓은 게 맞아. 한 300건 될 거야."
+    → 그래서 **클로드 폴더(=base)의 산군 폴더를 1순위**로 본다. 다운로드 폴더(원본 800건)는 맨 뒤다."""
+    base = cfg('base')
+    spots = [
+        (os.path.join(base, '산군'), '클로드 폴더\\산군'),
+        (os.path.join(base, '5_산출물', '산군'), '클로드 폴더\\5_산출물\\산군'),
+        (base, '클로드 폴더'),
+        (os.path.join(cfg('out'), TOOL), '_도구결과\\산군'),
+        (os.path.join(os.path.expanduser('~'), 'Downloads'), '다운로드(산군 원본일 수 있음)'),
+        (os.path.join(os.path.expanduser('~'), '다운로드'), '다운로드(산군 원본일 수 있음)'),
+    ]
+    out, seen = [], set()
+    for d, label in spots:
         if not d or not os.path.isdir(d):
             continue
+        got = []
         for ext in ('xlsx', 'xls', 'csv'):
-            pats += glob.glob(os.path.join(d, '*.%s' % ext))
-    cand = [p for p in pats if any(k in os.path.basename(p) for k in ('산군', 'sankun', '관심현장', '현장DB'))]
-    pool = cand or pats
-    pool = [p for p in pool if not os.path.basename(p).startswith('~$')]
-    if not pool:
-        return ''
-    pool.sort(key=lambda p: os.path.getmtime(p), reverse=True)
-    return pool[0]
+            got += glob.glob(os.path.join(d, '*.%s' % ext))
+        got = [g for g in got if not os.path.basename(g).startswith('~$')]
+        hit = [g for g in got if any(k in os.path.basename(g) for k in ('산군', 'sankun', '관심현장', '현장'))]
+        for g in sorted(hit or got, key=lambda x: os.path.getmtime(x), reverse=True)[:6]:
+            rp = os.path.realpath(g)
+            if rp in seen:
+                continue
+            seen.add(rp)
+            out.append((g, label))
+    return out
+
+
+def guess_file():
+    xs = find_files()
+    return xs[0][0] if xs else ''
 
 
 def read_table(path):
@@ -429,12 +449,29 @@ def run(chain=True):
     if write_default_ini():
         print('설정.ini 에 [산군] 기준값을 넣어 두었습니다 — 숫자는 프로님이 고치시면 됩니다.')
 
-    auto = guess_file()
-    p = ask('산군 파일 경로 [%s] > ' % (os.path.basename(auto) if auto else '없음'), auto)
-    if not p or not os.path.exists(p):
-        print('[없음] 산군에서 관심현장을 내려받아 다운로드 폴더에 두신 뒤 다시 실행해 주십시오.')
-        print('       산군 > 관심현장 > 엑셀 내려받기 (주 1회 최대 300건)')
+    xs = find_files()
+    if not xs:
+        print('[없음] 산군 파일을 못 찾았습니다.')
+        print('       프로님이 고르신 엑셀을 「%s\\산군」 폴더에 두시면 이 도구가 스스로 집습니다.' % cfg('base'))
+        print('       (산군 > 관심현장 > 엑셀 내려받기 → 쓸 것만 남겨 저장)')
         return
+    auto = xs[0][0]
+    if len(xs) > 1:
+        print('찾은 파일 (위에 있는 것이 프로님이 고르신 것일 가능성이 큽니다)')
+        for i, (f, label) in enumerate(xs[:8], 1):
+            when = datetime.datetime.fromtimestamp(os.path.getmtime(f)).strftime('%y-%m-%d %H:%M')
+            print('  %d) %-40s  %s  [%s]' % (i, os.path.basename(f)[:40], when, label))
+        v = ask('번호 또는 경로 (엔터=1번) > ', '1')
+        if v.isdigit() and 1 <= int(v) <= len(xs):
+            p = xs[int(v) - 1][0]
+        else:
+            p = v or auto
+    else:
+        p = ask('산군 파일 [%s] > ' % os.path.basename(auto), auto)
+    if not p or not os.path.exists(p):
+        print('[없음] %s' % p)
+        return
+    print('읽는 파일 : %s' % p)
 
     recs, err = parse(p)
     if err:
@@ -456,7 +493,7 @@ def run(chain=True):
             pass
 
     seen = load_seen()
-    body, new_seen = [], []
+    body, new_seen, dropped = [], [], []
     dup = skipped = 0
     for rec in recs:
         k = key_of(rec)
@@ -475,6 +512,7 @@ def run(chain=True):
                          g.replace('✕', 'X'), ''])
         if g == '✕제외':
             skipped += 1
+            dropped.append(row)          # 버리지 않고 따로 남깁니다 (프로님이 고르신 줄일 수 있으므로)
             continue
         body.append(row)
 
@@ -483,6 +521,9 @@ def run(chain=True):
 
     od = outdir(TOOL)
     cp = write_csv(os.path.join(od, '산군_새현장_%s.csv' % ymd6()), body, HEAD)
+    dp = ''
+    if dropped:
+        dp = write_csv(os.path.join(od, '산군_제외후보_%s.csv' % ymd6()), dropped, HEAD)
     xp = build_xlsx(os.path.join(od, '산군_새현장_%s.xlsx' % ymd6()), body)
     hp = build_html(os.path.join(od, '산군_새현장_%s.html' % ymd6()), body, p, skipped, dup,
                     files=[f for f in (xp, cp) if f])
@@ -492,6 +533,9 @@ def run(chain=True):
     print('')
     print('새 현장 %s건 (★최우선 %s · △검토 %s)' % (won(len(body)), won(stars), won(len(body) - stars)))
     print('이미 본 것 %s건 · 객실 아님 %s건 은 뺐습니다.' % (won(dup), won(skipped)))
+    if dp:
+        print('뺀 %s건은 버리지 않고 따로 두었습니다 : %s' % (won(skipped), os.path.basename(dp)))
+        print('  (프로님이 일부러 넣으신 줄이 있으면 말씀해 주십시오 — 기준을 고치겠습니다)')
     print('')
     for r in body[:15]:
         print('  [%s] %-22s %-14s %s' % (r[0], r[2][:22], (r[12] or '설계사 미표시')[:14], r[1][:40]))
