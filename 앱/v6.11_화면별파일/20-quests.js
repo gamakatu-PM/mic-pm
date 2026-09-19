@@ -88,6 +88,58 @@ function saveConfig(why){
   addLog('앱고침','',`판 ${c.ver} · ${why||''}`);saveMeta();
 }
 const RSTATE={'':'미확정','추정':'추정','진행중':'진행중','확정':'확정'};
+/* ── 언제까지 해야 하는가 (준공일에서 거꾸로) ────────────────
+   소요일은 배성윤 프로 확정값 : 외함 제작 2주 / 속판 제작 2달 / 강전 접속 속판납품+1달
+   기구물 제작 1.5~2달 / 빽커버 벽지완료+1~2주 / 기구물 설치 빽커버+1주 / 시운전 1주
+   외함·속판 납품일은 현장 공법이 정하므로 열쇠 값이 있으면 그것이 이긴다 */
+const LEAD={마감여유:7,시운전:7,기구물설치:7,빽커버:10,기구물제작:50,속판제작:60,강전:30,외함제작:14};
+function dAdd(iso,n){const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);return ymd(d)}
+function dDiff(iso){if(!iso)return null;return Math.round((new Date(iso+'T00:00:00')-new Date(ymd()+'T00:00:00'))/86400000)}
+function deadlines(s){
+  /* 현장 하나의 「언제까지」 표 : {열쇠경로: {date, why}} */
+  const out={};const req=s.req||{};
+  const val=k=>{const v=req[k];return v&&isDate(v.value)?v.value.slice(0,10):''};
+  if(s.due){
+    const 시운전=dAdd(s.due,-LEAD.마감여유);
+    const 설치=dAdd(시운전,-LEAD.시운전);
+    const 빽커버=dAdd(설치,-LEAD.기구물설치);
+    const 벽지=dAdd(빽커버,-LEAD.빽커버);
+    out['시운전/시운전완료']={date:시운전,why:'준공일 −'+LEAD.마감여유+'일'};
+    out['설치/설치완료']={date:설치,why:'시운전 '+LEAD.시운전+'일 전'};
+    out['설치/빽커버']={date:빽커버,why:'설치 '+LEAD.기구물설치+'일 전'};
+    out['기구물제작/벽지예정']={date:벽지,why:'빽커버 '+LEAD.빽커버+'일 전'};
+    out['기구물제작/기구물의뢰서']={date:dAdd(벽지,-LEAD.기구물제작),why:'벽지 완료 −제작 '+LEAD.기구물제작+'일'};
+    out['기구물제작/계약선금']={date:dAdd(벽지,-LEAD.기구물제작-3),why:'기구물 의뢰서 3일 전'};
+  }
+  const 벽지값=val('기구물제작/벽지예정');
+  if(벽지값){out['기구물제작/기구물의뢰서']={date:dAdd(벽지값,-LEAD.기구물제작),why:'벽지 예정일 −제작 '+LEAD.기구물제작+'일'};
+    out['기구물제작/계약선금']={date:dAdd(벽지값,-LEAD.기구물제작-3),why:'기구물 의뢰서 3일 전'};}
+  const 외함납기=val('외함/외함납기');
+  if(외함납기){out['외함/외함의뢰서']={date:dAdd(외함납기,-LEAD.외함제작),why:'외함 납품 −제작 '+LEAD.외함제작+'일'};
+    out['외함/계약선금']={date:dAdd(외함납기,-LEAD.외함제작-3),why:'외함 의뢰서 3일 전'};}
+  const 속판납품=val('속판/속판납품');
+  if(속판납품){out['속판/속판의뢰서']={date:dAdd(속판납품,-LEAD.속판제작),why:'속판 납품 −제작 '+LEAD.속판제작+'일'};
+    out['속판/계약선금']={date:dAdd(속판납품,-LEAD.속판제작-3),why:'속판 의뢰서 3일 전'};}
+  else if(s.due){const 강전=dAdd(dAdd(s.due,-LEAD.마감여유),-LEAD.강전);
+    out['속판/속판의뢰서']={date:dAdd(강전,-LEAD.속판제작),why:'준공일 역산 (강전 '+LEAD.강전+'일 전 납품)'};
+    out['속판/계약선금']={date:dAdd(강전,-LEAD.속판제작-3),why:'속판 의뢰서 3일 전'};}
+  return out;
+}
+function dueOf(s,key){const dl=deadlines(s)[key];if(!dl)return null;
+  const st=(s.req||{})[key];if(st&&st.state==='확정')return null;      // 끝난 것은 안 재촉한다
+  return {...dl,d:dDiff(dl.date)};}
+function duePill(x){if(!x)return '';
+  const cls=x.d<0?'p-ask':x.d<=7?'p-warn':'p-off';
+  const t=x.d<0?Math.abs(x.d)+'일 지남':x.d===0?'오늘까지':'D-'+x.d;
+  return `<span class="pill ${cls}">${t}</span>`}
+function lateList(){
+  /* 모든 현장에서 「늦으면 안 되는 것」 — 급한 순 */
+  const out=[];
+  Object.values(S.sites).forEach(s=>{const dl=deadlines(s);
+    Object.keys(dl).forEach(k=>{const x=dueOf(s,k);if(!x||x.d>30)return;
+      const r=reqDef(k);out.push({s,key:k,r,...x})})});
+  return out.sort((a,b)=>a.d-b.d);
+}
 function reqOf(s,qk,rk){return ((s.req||{})[qk+'/'+rk])||{}}
 /* 어느 화면에서든 열쇠를 갱신하는 단 하나의 길. 확정은 덮지 않는다(프로님 값이 이긴다). */
 function setReq(s,key,state,value,basis,opt){

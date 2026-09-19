@@ -8,11 +8,21 @@ function renderToday(){
   const ask=sortItems(openItems('ask')), todo=sortItems(openItems('todo')), make=sortItems(openItems('make'));
   const doneToday=Object.values(S.items).filter(i=>['done','confirmed','requested'].includes(i.status)&&(i.updated||'').slice(0,10)===ymd());
   const openAsk=Object.values(S.asks||{}).filter(a=>a.who==='클로드'&&a.status!=='답함'&&a.status!=='닫힘').length;
-  document.getElementById('todayChips').innerHTML=(openAsk?`<button class="chip ask" onclick="view='ask';render()">창고에 답할 것 ${openAsk}</button>`:'')+
+  const lateN=lateList().filter(x=>x.d<=7).length;
+  document.getElementById('todayChips').innerHTML=(lateN?`<button class="chip ask" onclick="scrollTo(0,0)">늦으면 안 됨 ${lateN}</button>`:'')+(openAsk?`<button class="chip ask" onclick="view='ask';render()">창고에 답할 것 ${openAsk}</button>`:'')+
     `<span class="chip ask">답해 주십시오 ${ask.length}</span><span class="chip ok">오늘 할 것 ${todo.filter(t=>whenRank(t.when)===0).length}</span><span class="chip acc">제가 만들까요 ${make.length}</span><span class="chip">끝낸 것 ${doneToday.length}</span>`;
   let h='';
   if(!ask.length&&!todo.length&&!make.length){
     h+=`<div class="notice">아직 줄이 없습니다. <b>설정 › 아침 한 장 가져오기</b>에 PC가 보낸 [KM] 메일 글을 붙이시면 여기에 카드가 됩니다. 클로드와 연결되면 클로드가 직접 채워 넣기도 합니다.</div>`;
+  }
+  const late=lateList();
+  if(late.length){
+    h+=`<h2 class="sec">늦으면 안 되는 것 <small>준공일·납품일에서 거꾸로 센 것</small></h2>`;
+    h+=late.slice(0,8).map(x=>`<div class="card" style="border-color:${x.d<0?'var(--ask)':x.d<=7?'var(--warn)':'var(--line)'}" onclick="curSite='${x.s.id}';view='map';render();openReqByKey('${x.s.id}','${x.key}')">
+      <div class="id">${esc(x.s.name)} · ${esc(x.date)} 까지 · ${esc(x.why)}</div>
+      <div class="t">${esc(x.r?x.r.n:x.key)} ${duePill(x)}</div>
+      <div class="m">${esc(x.r&&x.r.how?x.r.how.slice(0,70):'')}</div></div>`).join('');
+    if(late.length>8)h+=`<div class="small" style="padding:4px">그 밖 ${late.length-8}건</div>`;
   }
   h+=`<h2 class="sec">답해 주십시오 <small>확인 전에는 전부 제안</small></h2>`;
   h+=ask.length?ask.map(cardAsk).join(''):`<div class="empty">없음</div>`;

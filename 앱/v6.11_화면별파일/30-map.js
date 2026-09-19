@@ -28,6 +28,9 @@ function journeyHtml(s){
   <div class="card"><div class="jhead"><div><div class="t" style="font-size:1.15rem;margin:0">${esc(s.name)}</div><div class="small">${s.rooms?esc(s.rooms)+'실 · ':''}${s.due?'준공 '+esc(s.due):'준공일 [ ] · 「정보 고치기」 에서'}</div></div><div class="pct">${p.pct}%</div></div>
     <div class="bar"><i style="width:${p.pct}%"></i></div>
     <div class="small" style="margin-top:4px">열쇠 ${p.done} / ${p.total} · 지금 <b>${esc(QUESTS[qi].n)}</b> (${qi+1}/9)</div></div>`;
+  const lateHere=lateList().filter(x=>x.s.id===s.id);
+  if(lateHere.length){h+=`<div class="card" style="border-color:var(--ask)"><div class="id" style="color:var(--ask)">늦으면 안 되는 것 ${lateHere.length}</div>
+    ${lateHere.slice(0,4).map(x=>`<div class="row" onclick="openReqByKey('${s.id}','${x.key}')"><span class="grow"><b>${esc(x.r?x.r.n:x.key)}</b><div class="small">${esc(x.date)} 까지 · ${esc(x.why)}</div></span>${duePill(x)}</div>`).join('')}</div>`}
   if(m){h+=`<div class="card next"><div class="id">다음 한 수</div><div class="t">${esc(m.r.n)}</div><div class="m">${esc(moveText(m))}</div>
     <div class="btns"><button class="b pri" onclick="reqSheet('${s.id}',${qi},'${m.r.k}')">열기</button><button class="b" onclick="reqDraft('${s.id}',${qi},'${m.r.k}')">${esc(moveAsk(m.r))}</button></div></div>`}
   h+=`<div class="trail">`+QUESTS.map((q,i)=>{const pr=questProg(s,q);const st=questStatus(s,i);const deg=Math.round(pr.done/pr.total*360);
@@ -37,6 +40,7 @@ function journeyHtml(s){
       <div class="qgo">›</div></div>`}).join('')+`</div>`;
   return h;
 }
+window.openReqByKey=function(sid,key){const pr=key.split('/');const qi=QUESTS.findIndex(q=>q.k===pr[0]);if(qi>=0)reqSheet(sid,qi,pr[1])};
 window.questSheet=function(sid,qi){
   const s=S.sites[sid],q=QUESTS[qi];const pr=questProg(s,q);const st=questStatus(s,qi);
   const miss=q.req.filter(r=>reqOf(s,q.k,r.k).state!=='확정');
@@ -51,7 +55,8 @@ window.questSheet=function(sid,qi){
   <div class="kv" style="margin:8px 0"><b>이 단계가 내는 것</b><span>${esc(q.out)}</span></div>
   <h2 class="sec">열쇠 (필요한 것) · 누르면 채웁니다</h2>
   ${q.req.map(r=>{const rs=reqOf(s,q.k,r.k);const cls=rs.state==='확정'?'ok':rs.state==='추정'?'warn':rs.state==='진행중'?'acc':'off';
-    return `<div class="row rq${r.gate?' gaterow':''}" onclick="reqSheet('${sid}',${qi},'${r.k}')"><span class="dot d-${cls==='acc'?'ask':cls}"></span><span class="grow"><b>${esc(r.n)}</b><div class="small">${esc(r.who)}${rs.value?' · '+esc(rs.value):''}${rs.date?' · '+esc(rs.date):''}</div></span><span class="pill p-${cls}">${esc(RSTATE[rs.state||''])}</span></div>`}).join('')}
+    const dd=dueOf(s,q.k+'/'+r.k);
+    return `<div class="row rq${r.gate?' gaterow':''}" onclick="reqSheet('${sid}',${qi},'${r.k}')"><span class="dot d-${cls==='acc'?'ask':cls}"></span><span class="grow"><b>${esc(r.n)}</b> ${duePill(dd)}<div class="small">${esc(r.who)}${rs.value?' · '+esc(rs.value):''}${dd?' · '+esc(dd.date)+' 까지 ('+esc(dd.why)+')':''}</div></span><span class="pill p-${cls}">${esc(RSTATE[rs.state||''])}</span></div>`}).join('')}
   ${rel.length?`<h2 class="sec">이 단계의 할 일 ${rel.length} <small>회의록에서 나온 것</small></h2>`+rel.map(i=>`<div class="card"><div class="id">${esc(i.id)} ${whenPill(i.when)} ${i.quest?'<span class="pill p-acc">이 단계</span>':'<span class="pill p-off">글자 매칭</span>'}</div><div class="t">${esc(i.makeq||i.text)}</div>${i.memo?`<div class="m">${esc(i.memo)}</div>`:''}
     <div class="btns">${i.kind==='todo'?`<button class="b pri" onclick="showDraft('${esc(i.id)}')">문안</button>`:''}${i.kind==='make'?`<button class="b pri" onclick="actMake('${esc(i.id)}')">만들어줘</button>`:''}<button class="b" onclick="act('${esc(i.id)}','done')">완료</button><button class="b mic" onclick="actNo('${esc(i.id)}')">아니야 🎙</button></div></div>`).join(''):'<div class="empty">이 단계에 걸린 할 일 없음</div>'}
   <div class="btns">${miss.length&&qi<currentQuest(s)?`<button class="b" onclick="questPass('${sid}',${qi})">이 단계는 이미 지났음 (남은 열쇠 전부 확정)</button>`:''}<button class="b ghost" onclick="closeSheet()">닫기</button></div>`,(qi+1)+'. '+q.n);

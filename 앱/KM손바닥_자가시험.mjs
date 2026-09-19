@@ -60,6 +60,16 @@ await T('확정 대장 CSV 내보내기',async()=>{await go('set');await p.waitF
   const t=await p.textContent('#sheetBox .draft');
   if(!/^일자,현장,항목,값,근거,누가,상태/.test(t.trim()))throw new Error('머리글 다름: '+t.slice(0,40));
   console.log('     ',t.trim().split('\n')[1].slice(0,80));await X()});
+await T('마감 — 오늘 화면에 늦으면 안 되는 것',async()=>{await X();await go('today');await p.waitForTimeout(400);
+  const t=await p.textContent('#todayBody');
+  if(!/늦으면 안 되는 것/.test(t))throw new Error('절 없음');
+  const seg=t.replace(/\s+/g,' ').match(/늦으면 안 되는 것[\s\S]{0,200}/)[0];console.log('     ',seg.slice(0,190))});
+await T('마감 — 열쇠에 D-day',async()=>{await go('map');
+  if(await p.isVisible('text=‹ 현장 지도')){await p.click('text=‹ 현장 지도');await p.waitForTimeout(250)}
+  await p.click('.jcard:has-text("조선호텔")');await p.waitForTimeout(300);
+  const t=await p.textContent('#mapBody');
+  if(!/D-\d|일 지남|오늘까지/.test(t))throw new Error('D-day 없음');
+  console.log('     ',t.replace(/\s+/g,' ').match(/늦으면 안 되는 것[\s\S]{0,150}/)?.[0]?.slice(0,150)||'(현장 카드에만)')});
 console.log(`\n통과 ${ok} / 실패 ${bad}`);
 if(errs.length)console.log('페이지 오류:',errs);
 process.exitCode=bad?1:0;
