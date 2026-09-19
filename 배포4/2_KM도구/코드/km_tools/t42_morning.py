@@ -396,6 +396,49 @@ def same_site(a, b):
 
 # ---------------- 만들기 ----------------
 
+
+QUIET_DAYS = 14      # 이만큼 아무 기록이 없으면 「조용한 현장」 (v47)
+
+def last_touch(site, t0):
+    """회의 말고도 손댄 흔적을 전부 본다 -> (며칠 지났나, 무엇으로 마지막에 손댔나)
+    확정 대장 / 앞으로할것 / 견적 보낸 날 / 다녀온 날 넷 중 가장 최근.
+    프로님 (2026-09-19) : 「번호는 내가 다 아는데, 내가 3주째 안 간 곳은 모른다」"""
+    import datetime, re as _re
+    import facts as _F
+    best, why = None, ''
+    def look(ds, label):
+        nonlocal best, why
+        for x in ds:
+            m = _re.match(r'(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})', str(x or '').strip())
+            if not m:
+                continue
+            try:
+                g = (t0 - datetime.date(*map(int, m.groups()))).days
+            except Exception:
+                continue
+            if g < 0:
+                continue
+            if best is None or g < best:
+                best, why = g, label
+    try:
+        look([d['일자'] for d in _F.load(active_only=False) if same_site(d['현장'], site)], '확정 입력')
+    except Exception:
+        pass
+    try:
+        look([d['일자'] for d in _F.plan_load(site, active_only=False)], '할 일 적음')
+        look([d['완료일'] for d in _F.plan_load(site, active_only=False)], '할 일 끝냄')
+    except Exception:
+        pass
+    try:
+        for d in _F.quote_load(active_only=False):
+            if same_site(d['현장'], site):
+                look([d['보낸날']], '견적 보냄')
+                look([d['마지막방문']], '다녀옴')
+    except Exception:
+        pass
+    return best, why
+
+
 def build(quiet=True):
     import sitebook
     try:
@@ -529,9 +572,14 @@ def build(quiet=True):
         ms = [m for m in mts if same_site(m['site'], site)]
         last = ms[0] if ms else None
         gap = (t0 - last['day']).days if last and last['day'] else None
+        # v47 : 「조용」 을 회의록만으로 보지 않는다. 회의가 없어도 확정·할일·견적·방문 기록이
+        #       있으면 손을 대고 계신 것이다. 넷 중 가장 최근 날짜로 다시 센다.
+        touch, why = last_touch(site, t0)
+        if touch is not None and (gap is None or touch < gap):
+            gap = touch
         col_ = 'grn'
-        if gap is None or gap >= 14:
-            col_ = 'red'; quiet_sites.append((site, gap))
+        if gap is None or gap >= QUIET_DAYS:
+            col_ = 'red'; quiet_sites.append((site, gap, why))
         my_todos = [t for t in todos if same_site(t['site'], site)]
         my_orders = [o for o in orders if same_site(o['site'], site)]
         my_unb = [x for x in unb if same_site(x[0], site)]
@@ -628,7 +676,7 @@ def build(quiet=True):
             a, b_ = decs[0][1], decs[1][1]
             if a and b_ and a != b_ and any(w in a for w in ('변경', '대신', '취소', '철회', '→')):
                 L6 += r('yel', '%s · 결정 변경 가능성 : 「%s」(%s) ← 「%s」(%s)' % (esc(site), esc(a[:50]), esc(decs[0][0]), esc(b_[:50]), esc(decs[1][0])), '번복', site)
-    for site, gap in quiet_sites:
+    for site, gap, _why in quiet_sites:
         L6 += r('red', '%s · %s 회의 없음 → 전화 한 통' % (esc(site), ('%d일째' % gap) if gap is not None else '회의록 자체가'), '조용', site)
     L6 += r('gry', 'PLAUD 녹음 ↔ 회의록 대조는 파이썬이 못 봅니다 → 「PLAUD 가져와」 라고 하면 클로드가 회의록 없는 녹음 목록을 줍니다', 'PLAUD')
     # ---- 7층 ----
@@ -753,7 +801,9 @@ def build(quiet=True):
     if plan_x:
         md.append(''); md.append('요약 엑셀 : %s' % plan_x)
     md += ['', '## 1층 지금 할 것'] + ['- [%s] %s' % (tag, re.sub(r'<[^>]+>', '', t)) for c, s, t, tag, src in L1]
-    md += ['', '## 조용한 현장'] + ['- %s : %s' % (s, ('%d일째 회의 없음' % g) if g is not None else '회의록 없음') for s, g in quiet_sites]
+    md += ['', '## 조용한 현장 (%d일 넘게 아무 기록이 없는 곳 — 회의·확정·할일·견적·방문 전부 봄)' % QUIET_DAYS]
+    md += ['- %s : %s' % (s_, ('%d일째 손 안 댐%s' % (g, (' (마지막 : %s)' % w) if w else '')) if g is not None else '기록이 하나도 없음')
+           for s_, g, w in quiet_sites] or ['- (없음)']
     md += ['', '## 현장 공정 (확정/추정/미확정)']
     for site in names:
         b = book.get(site) or {}

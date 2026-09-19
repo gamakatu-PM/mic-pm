@@ -179,6 +179,27 @@ def check(base, log):
     _mv = _RP.parse_line('5 다음주로 미뤄')
     ok('48 : 「다음주로 미뤄」 의 때가 「다음주」 (로 미뤄 로 잘리지 않음)', _mv and _mv[1] == '미룸' and _mv[2] == '다음주', '실제 %s' % (str(_mv)[:50]))
     ok('48 : 「미뤄」 만 주시면 때는 미정', (_RP.parse_line('5 미뤄') or ['', '', ''])[2] == '미정')
+    # v47 조용 경보 - 회의록만 보던 것을 대장 전체로
+    import t42_morning as _MO2
+    ok('42 : last_touch 가 확정·할일·견적·방문을 본다', hasattr(_MO2, 'last_touch') and hasattr(_MO2, 'QUIET_DAYS'))
+    ok('md 「조용한 현장」 절이 회의 말고도 본다고 적혀 있다',
+       bool(amd) and '회의·확정·할일·견적·방문 전부 봄' in read_text(amd[-1]))
+    # 대장 내용에 흔들리지 않게, 가짜 대장을 끼워 넣고 계산만 본다
+    import facts as _FQ
+    _keep = (_FQ.load, _FQ.plan_load, _FQ.quote_load)
+    try:
+        _FQ.load = lambda active_only=True: [{'현장': '조용시험현장', '일자': '2026-09-01'}]
+        _FQ.plan_load = (lambda site=None, active_only=True:
+                         [{'현장': '조용시험현장', '일자': '2026-09-10', '완료일': ''}]
+                         if (site or '') == '조용시험현장' else [])   # 실물 plan_load 처럼 현장으로 거른다
+        _FQ.quote_load = lambda active_only=True: []
+        _d0 = __import__('datetime').date(2026, 9, 19)
+        _lt, _why = _MO2.last_touch('조용시험현장', _d0)
+        ok('42 : 회의록이 없어도 대장 기록이 있으면 조용이 아니다', _lt == 9, '실제 %s (%s)' % (_lt, _why))
+        _n, _ = _MO2.last_touch('없는현장이름', _d0)
+        ok('42 : 기록이 하나도 없으면 None', _n is None, '실제 %s' % str(_n))
+    finally:
+        _FQ.load, _FQ.plan_load, _FQ.quote_load = _keep
     ok('md 에 「## 진행중」 절', bool(amd) and '## 진행중' in read_text(amd[-1]))
     ok('md 에 「## 제가 이렇게 만들겠습니다」 절 (만들어줘 는 먼저 여쭙는다)', bool(amd) and '## 제가 이렇게 만들겠습니다' in read_text(amd[-1]))
     # v45 나눠 보내기 + 「답 못 받은 것은 진행하지 않는다」
