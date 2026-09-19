@@ -22,6 +22,17 @@
   🟡 아직 이릅니다   협약·계획·추진·심의 단계 (설계 들어가기 전에 찍어 둘 곳)
   ⚪ 흔적 없음      기사가 없음 → 설계사·구청에 직접 물어보실 곳
 
+v2 (2026-09-19 오후, 프로님 「객관식·주관식 다 적용해」) :
+  ① 기사 **본문**까지 읽습니다. 제목에 「착공」 이 있어도 본문이 「착공 예정·앞두고」 면 🔴 이 아니라 🟡 로 내립니다.
+     (구글 뉴스 링크 → 원래 신문사 주소로 풀어서 본문을 읽습니다. 못 풀면 제목만 봅니다)
+  ② **주 1회 자동** : 50번 안의 「등록」 을 누르면 작업 스케줄러에 매주 월요일 07:30 이 들어갑니다.
+     그때는 다운로드 폴더의 최신 산군 파일로 49번을 묻지 않고 돌리고, 지금까지 본 ★·△ 현장 전부를
+     7일 주기로 다시 찾아 메일을 보냅니다. 새 흔적이 하나도 없으면 메일은 안 갑니다.
+  ③ 🔴·🟠 현장에 **지도 링크 + 예상 소요 시간**. 지도는 키 없이 카카오맵·네이버지도 링크.
+     소요 시간은 ㉠ 설정.ini [산군메일] kakao_key + 출발지 를 넣으시면 카카오 길찾기로 자동차 시간을 받아 오고
+     ㉡ 키가 없으면 설정.ini [소요시간] 표(서울=, 강원=, …)를 프로님이 채우신 값으로 적습니다. 비어 있으면 안 적습니다.
+     (숫자는 도구가 정하지 않습니다 — 규칙 19)
+
 쓰는 법 : 49번(산군 관심현장 정리)을 돌린 뒤 50번. 49번 끝에서 엔터만 치셔도 이어집니다.
 대장 : _도구결과\\_대장\\산군_흔적.csv  (현장마다 마지막으로 찾아본 날·등급·기사 수)
 메일 설정 : 설정.ini [메일] 을 그대로 씁니다(35번에서 이미 넣으신 값). 받는 주소만 다르게 하시려면
@@ -37,16 +48,24 @@ import time
 import smtplib
 import configparser
 import datetime
+import sys
+import json
+import html as _html
+import subprocess
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from common import (INI, cfg, title, ask, pause, today, ymd6, outdir,
-                    write_csv, won, log, open_file, AUTO)
+from common import (INI, HERE, cfg, title, ask, pause, today, ymd6, outdir,
+                    write_csv, won, log, open_file)
+import common
 
 TOOL = '산군흔적'
+TASK = 'KM_산군메일_주1회'
+WEEKLY_AT = '07:30'
+WEEKLY_DAY = 'MON'
 RSS = 'https://news.google.com/rss/search?q=%s&hl=ko&gl=KR&ceid=KR:ko'
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
 
@@ -56,6 +75,10 @@ ASK = ('중단', '표류', '무산', '취소', '소송', '유찰', '연기', '�
        '부도', '회생', '분쟁', '철회')
 EARLY = ('협약', 'MOU', '추진', '계획', '심의', '유치', '공모', '투자', '검토', '승인')
 DONE = ('준공', '개관', '오픈', '개장', '영업 시작', '입주 시작')
+# 본문에 이 말이 있으면 「착공」 이 아니라 「착공 예정」 이다
+NOT_YET = ('착공 예정', '착공예정', '착공을 앞두', '착공 앞두', '착공할 예정', '착공 계획', '착공 목표',
+           '연내 착공', '내년 착공', '착공에 들어갈', '착공할 계획', '착공 전')
+YET_DONE = ('착공했', '착공식', '기공식', '첫 삽을', '착공에 들어갔', '공사에 들어갔', '공사가 시작')
 
 GRADE_GO, GRADE_ASK, GRADE_EARLY, GRADE_NONE, GRADE_DONE, GRADE_ERR = (
     '🔴 지금 가십시오', '🟠 상황을 물어보십시오', '🟡 아직 이릅니다', '⚪ 흔적 없음', '⚫ 이미 끝남',
@@ -84,6 +107,41 @@ def mail_to(c):
     if c.has_option('산군메일', 'to') and c.get('산군메일', 'to').strip():
         return c.get('산군메일', 'to').strip()
     return c.get('메일', 'to', fallback='').strip()
+
+
+def ensure_ini():
+    """[산군메일]·[소요시간] 입력칸이 없으면 빈 칸으로 만들어 둔다 (프로님이 채우시는 곳)"""
+    c = configparser.ConfigParser()
+    if os.path.exists(INI):
+        try:
+            c.read(INI, encoding='utf-8')
+        except Exception:
+            pass
+    changed = False
+    if not c.has_section('산군메일'):
+        c.add_section('산군메일'); changed = True
+    for k, v in (('to', ''), ('다시찾기일수', '7'), ('출발지', ''), ('kakao_key', ''), ('본문읽기', '예')):
+        if not c.has_option('산군메일', k):
+            c.set('산군메일', k, v); changed = True
+    if not c.has_section('소요시간'):
+        c.add_section('소요시간'); changed = True
+        for k in ('서울', '경기', '인천', '강원', '충북', '충남', '대전', '세종', '전북', '전남', '광주',
+                  '경북', '경남', '대구', '울산', '부산', '제주'):
+            c.set('소요시간', k, '')
+    if changed:
+        try:
+            with io.open(INI, 'w', encoding='utf-8') as fp:
+                c.write(fp)
+        except Exception:
+            pass
+    return c
+
+
+def opt(c, k, d=''):
+    try:
+        return c.get('산군메일', k, fallback=d).strip()
+    except Exception:
+        return d
 
 
 def again_days(c):
@@ -170,6 +228,123 @@ def search(rec, sleep=1.0):
     return q, arts, err
 
 
+# ====================== 기사 본문 ======================
+
+def http_get(url, timeout=10):
+    req = urllib.request.Request(url, headers={'User-Agent': UA, 'Accept-Language': 'ko'})
+    r = urllib.request.urlopen(req, timeout=timeout)
+    raw = r.read()
+    final = r.geturl()
+    enc = 'utf-8'
+    m = re.search(rb'charset=["\']?([\w-]+)', raw[:4000], re.I)
+    if m:
+        enc = m.group(1).decode('ascii', 'ignore')
+    try:
+        txt = raw.decode(enc, 'replace')
+    except Exception:
+        txt = raw.decode('utf-8', 'replace')
+    return final, txt
+
+
+def resolve_google(link):
+    """구글 뉴스 링크 → (원래 신문사 주소, 이미 받은 본문 HTML). 못 풀면 ('', '')
+    구글이 바로 신문사로 넘겨 주면 그 페이지를 그대로 쓴다(두 번 안 받는다)."""
+    if 'news.google.com' not in link:
+        return link, ''
+    try:
+        final, page = http_get(link)
+    except Exception:
+        return '', ''
+    if 'news.google.com' not in final:
+        return final, page
+    for pat in (r'data-n-au="([^"]+)"', r'<a[^>]+href="(https?://(?!news\.google|www\.google|accounts\.google)[^"]+)"',
+                r'"(https?://(?!news\.google|www\.google|accounts\.google|policies\.google)[^"\s]{12,})"'):
+        m = re.search(pat, page)
+        if m:
+            return _html.unescape(m.group(1)), ''
+    return '', ''
+
+
+def strip_html(page, limit=5000):
+    page = re.sub(r'(?is)<(script|style|noscript|header|footer|nav)[^>]*>.*?</\1>', ' ', page)
+    page = re.sub(r'(?s)<[^>]+>', ' ', page)
+    page = _html.unescape(page)
+    page = re.sub(r'\s+', ' ', page).strip()
+    return page[:limit]
+
+
+def read_body(link):
+    """기사 본문 앞부분. (제목만으로 안 갈리는 것을 본문으로 가른다) 못 읽으면 ''"""
+    url, page = resolve_google(link)
+    if not url:
+        return ''
+    if not page:
+        try:
+            _, page = http_get(url)
+        except Exception:
+            return ''
+    return strip_html(page)
+
+
+# ====================== 지도 · 소요 시간 ======================
+
+def map_links(addr, origin=''):
+    a = urllib.parse.quote(addr or '')
+    out = {'카카오맵': 'https://map.kakao.com/?q=' + a,
+           '네이버지도': 'https://map.naver.com/p/search/' + a}
+    if origin:
+        out['길찾기'] = 'https://map.kakao.com/?sName=%s&eName=%s' % (urllib.parse.quote(origin), a)
+    return out
+
+
+def kakao_xy(addr, key):
+    for path, q in (('address', addr), ('keyword', addr)):
+        url = 'https://dapi.kakao.com/v2/local/search/%s.json?query=%s' % (path, urllib.parse.quote(addr))
+        req = urllib.request.Request(url, headers={'Authorization': 'KakaoAK ' + key, 'User-Agent': UA})
+        try:
+            d = json.loads(urllib.request.urlopen(req, timeout=10).read().decode('utf-8'))
+            docs = d.get('documents') or []
+            if docs:
+                return docs[0]['x'], docs[0]['y']
+        except Exception:
+            continue
+    return None
+
+
+_XY = {}
+
+
+def travel(addr, c):
+    """예상 소요 시간 문구. ㉠ 카카오 키+출발지 있으면 길찾기 API ㉡ 없으면 [소요시간] 입력표 ㉢ 둘 다 없으면 ''"""
+    key, origin = opt(c, 'kakao_key'), opt(c, '출발지')
+    if key and origin and addr:
+        try:
+            if origin not in _XY:
+                _XY[origin] = kakao_xy(origin, key)
+            o, d = _XY[origin], kakao_xy(addr, key)
+            if o and d:
+                url = ('https://apis-navi.kakaomobility.com/v1/directions?origin=%s,%s&destination=%s,%s'
+                       % (o[0], o[1], d[0], d[1]))
+                req = urllib.request.Request(url, headers={'Authorization': 'KakaoAK ' + key, 'User-Agent': UA})
+                js = json.loads(urllib.request.urlopen(req, timeout=15).read().decode('utf-8'))
+                sm = js['routes'][0]['summary']
+                sec, km = int(sm['duration']), sm['distance'] / 1000.0
+                h, m = sec // 3600, (sec % 3600) // 60
+                return '자동차 약 %s%d분 · %.0fkm (카카오 길찾기, %s 출발)' % (('%d시간 ' % h) if h else '', m, km, origin)
+        except Exception as e:
+            pass
+    # 입력표
+    try:
+        first = (addr or '').split(' ')[0]
+        for k in c.options('소요시간') if c.has_section('소요시간') else []:
+            v = c.get('소요시간', k).strip()
+            if v and first.startswith(k):
+                return '대략 %s (설정.ini 소요시간표 「%s」)' % (v, k)
+    except Exception:
+        pass
+    return ''
+
+
 # ====================== 판정 ======================
 
 def recent(arts):
@@ -186,8 +361,9 @@ def hits(arts, words):
     return got
 
 
-def judge(rec, arts, err):
-    """등급 · 무슨 일이 있었나 · 다음 행동(복사해서 바로 쓰실 문안까지)"""
+def judge(rec, arts, err, bodies=None):
+    """등급 · 무슨 일이 있었나 · 다음 행동(복사해서 바로 쓰실 문안까지)
+    bodies = {링크: 본문} — 본문이 있으면 제목+본문으로 낱말을 찾고, 「착공 예정」 은 🔴 에서 뺀다"""
     site = rec.get('현장명') or ''
     designer = (rec.get('건축설계') or '').strip()
     builder = (rec.get('시공사') or '').strip()
@@ -202,23 +378,33 @@ def judge(rec, arts, err):
         return (GRADE_NONE, '기사 한 줄 없음 — 조용히 진행 중이거나 아직 안 알려진 현장',
                 '%s 에 전화 : "%s 건으로 연락드렸습니다. 객실관리(RCU) 설계 반영 시점을 여쭙고 싶습니다."' % (who, site))
 
-    go, ask_, early, done = hits(arts, GO), hits(arts, ASK), hits(arts, EARLY), hits(arts, DONE)
+    bodies = bodies or {}
+    pool = [dict(a, 제목=a['제목'] + ' ' + bodies.get(a['링크'], '')[:3000]) for a in arts]
+    go, ask_, early, done = hits(pool, GO), hits(pool, ASK), hits(pool, EARLY), hits(pool, DONE)
     top = arts[0]['제목']
+    text_all = ' '.join(p['제목'] for p in pool)
+    not_yet = any(w in text_all for w in NOT_YET) and not any(w in text_all for w in YET_DONE)
+    read_n = sum(1 for a in arts if bodies.get(a['링크']))
+    tag = (' (본문 %d건 읽음)' % read_n) if read_n else ' (제목만 봄)'
 
     if ask_:
         who = builder or designer or ('%s 건축과' % gu)
-        return (GRADE_ASK, '기사에 「%s」 — %s' % ('·'.join(ask_), top),
+        return (GRADE_ASK, '기사에 「%s」%s — %s' % ('·'.join(ask_), tag, top),
                 '%s 에 전화 : "%s 현장이 지금 어떤 상황인지 여쭙고 싶습니다. 재개되면 객실관리는 저희가 준비해 두겠습니다."' % (who, site))
     if done and not go:
-        return (GRADE_DONE, '기사에 「%s」 — 이미 끝났을 수 있음 : %s' % ('·'.join(done), top),
+        return (GRADE_DONE, '기사에 「%s」%s — 이미 끝났을 수 있음 : %s' % ('·'.join(done), tag, top),
                 '신축은 늦었습니다. 교체·증축 영업으로 돌리시려면 운영사에 연락하십시오.')
+    if go and not_yet:
+        who = designer or builder or ('%s 건축과' % gu)
+        return (GRADE_EARLY, '기사에 「%s」 가 있지만 본문은 「착공 예정」%s — %s' % ('·'.join(go), tag, top),
+                '%s 에 미리 연락 : "%s 착공 전에 객실관리 도면 협의를 하고 싶습니다. 착공 예정일이 언제입니까?"' % (who, site))
     if go:
         who = builder or designer or '시공사'
-        return (GRADE_GO, '기사에 「%s」 — %s' % ('·'.join(go), top),
+        return (GRADE_GO, '기사에 「%s」%s — %s' % ('·'.join(go), tag, top),
                 '%s 에 바로 연락 : "%s 착공 기사를 봤습니다. CB 외함 납품 시점 맞추려면 지금 도면 협의가 필요합니다. 방문드려도 되겠습니까?"' % (who, site))
     if early:
         who = designer or ('%s 건축과' % gu)
-        return (GRADE_EARLY, '기사에 「%s」 — %s' % ('·'.join(early), top),
+        return (GRADE_EARLY, '기사에 「%s」%s — %s' % ('·'.join(early), tag, top),
                 '%s 에 미리 찍어 두기 : "%s 건으로 객실관리 시방서·심볼을 미리 드리고 싶습니다." (설계 단계가 제일 좋습니다)' % (who, site))
     return (GRADE_EARLY, '기사는 있으나 공사 단계 낱말이 없음 — %s' % top,
             '기사 먼저 읽어 보시고, 설계사(%s)에 진행 단계를 확인하십시오.' % (designer or '미표시'))
@@ -240,6 +426,24 @@ def read_csv_rows(p):
         except Exception:
             continue
     return []
+
+
+def all_49_csv():
+    return sorted(glob.glob(os.path.join(cfg('out'), '산군', '*', '산군_새현장_*.csv')),
+                  key=lambda p: os.path.getmtime(p))
+
+
+def targets_all():
+    """지금까지 49번이 낸 CSV 전부 → 현장 목록(같은 현장은 한 번). 주 1회 자동 실행이 쓴다"""
+    seen, out = set(), []
+    for p in all_49_csv():
+        for r in targets(p):
+            k = key_of(r)
+            if k in seen:
+                continue
+            seen.add(k)
+            out.append(r)
+    return out
 
 
 def targets(p):
@@ -330,6 +534,10 @@ def card(rec, res):
                      % (esc(a['제목']), esc(a['날짜']), esc(a['언론사']),
                         ('<a href="%s">보기</a>' % esc(a['링크'])) if a['링크'] else ''))
         h.append('</ul></div>')
+    if g in (GRADE_GO, GRADE_ASK) and rec.get('소재지'):
+        links = ' · '.join('<a href="%s">%s</a>' % (esc(u), esc(k)) for k, u in res.get('지도', {}).items())
+        h.append('<div style="margin-top:4px">%s%s</div>'
+                 % (('<b>가는 길</b> : ' + esc(res['소요']) + ' · ') if res.get('소요') else '<b>지도</b> : ', links))
     h.append('<div style="margin-top:6px;background:#fff;border:1px dashed #bbb;padding:6px">'
              '<b>다음 행동</b> : %s</div>' % esc(res['행동']))
     h.append('</div>')
@@ -355,7 +563,8 @@ def build_html(groups, src, err_n):
              '산군 파일 : %s<br>'
              '이 메일은 PC 도구 50번이 구글 뉴스 검색으로 찾은 것입니다(클로드·Gemini 안 씀, 요금 0원).'
              '%s<br>알리미(뉴스모니터링) 메일과 구글AI 레이더 메일은 <b>따로</b> 갑니다. 이 메일에 섞지 않았습니다.<br>'
-             '한 번 찾아본 현장은 며칠 뒤에 다시 찾습니다(설정.ini [산군메일] 다시찾기일수).</p></div>'
+             '한 번 찾아본 현장은 며칠 뒤에 다시 찾습니다(설정.ini [산군메일] 다시찾기일수).<br>'
+             '소요 시간이 안 보이면 설정.ini [산군메일] 에 kakao_key·출발지 를 넣거나 [소요시간] 표를 채워 주십시오.</p></div>'
              % (esc(os.path.basename(src)),
                 (' 검색이 막힌 현장 %d곳은 「흔적 없음」 으로 두었습니다.' % err_n) if err_n else ''))
     return ''.join(h)
@@ -391,17 +600,26 @@ def send_mail(subject, html):
 
 # ====================== 본체 ======================
 
-def run(src='', send=None, sleep=1.0):
+def run(src='', send=None, sleep=1.0, everything=False, direct=False):
+    """src = 49번 CSV 하나 / everything=True 면 지금까지 본 현장 전부(주 1회 자동이 씀)
+    메뉴(시작.py)에서 아무 인자 없이 부르면 번호 메뉴를 먼저 보여 준다."""
+    if not (direct or src or everything or send is not None):
+        return menu()
     title('50. 산군 현장 흔적 찾기 + 산군 전용 메일 (토큰 0)')
-    c = conf()
-    src = src or latest_49_csv()
-    if not src or not os.path.exists(src):
-        print('49번(산군 관심현장 정리) 결과가 없습니다. 49번을 먼저 돌려 주십시오.')
-        return
-    recs = targets(src)
+    c = ensure_ini()
+    if everything:
+        recs = targets_all()
+        src = latest_49_csv() or '(지금까지 본 현장 전부)'
+    else:
+        src = src or latest_49_csv()
+        if not src or not os.path.exists(src):
+            print('49번(산군 관심현장 정리) 결과가 없습니다. 49번을 먼저 돌려 주십시오.')
+            return
+        recs = targets(src)
     if not recs:
         print('찾아볼 현장이 없습니다 : %s' % src)
         return
+    read_body_on = opt(c, '본문읽기', '예') not in ('아니오', '아니요', 'n', 'N', '0')
 
     book = load_book()
     wait = again_days(c)
@@ -418,8 +636,18 @@ def run(src='', send=None, sleep=1.0):
         q, arts, err = search(rec, sleep=sleep)
         if err:
             err_n += 1
-        g, why, act = judge(rec, arts, err)
+        bodies = {}
+        if read_body_on and arts:
+            # 제목에 공사 단계 낱말이 있는 기사만 본문을 읽는다 (많이 읽을수록 느려지므로 최대 2건)
+            for a in [a for a in arts if any(w in a['제목'] for w in GO + ASK + DONE)][:2]:
+                b = read_body(a['링크']) if a['링크'] else ''
+                if b:
+                    bodies[a['링크']] = b
+        g, why, act = judge(rec, arts, err, bodies)
         res = {'등급': g, '한줄': why, '행동': act, '기사': arts}
+        if g in (GRADE_GO, GRADE_ASK):
+            res['지도'] = map_links(rec.get('소재지', ''), opt(c, '출발지'))
+            res['소요'] = travel(rec.get('소재지', ''), c)
         groups.setdefault(g, []).append((rec, res))
         print('  [%d/%d] %s %s (기사 %d)' % (i, len(todo), g[:2], rec['현장명'][:24], len(arts)))
         a1 = arts[0] if arts else {}
@@ -467,6 +695,94 @@ def run(src='', send=None, sleep=1.0):
         open_file(hp)
     except Exception:
         pass
+
+
+# ====================== 주 1회 자동 (작업 스케줄러) ======================
+
+def launcher_path():
+    # 2_KM도구\\산군메일.py  (시작.py 옆)
+    return os.path.join(os.path.dirname(os.path.dirname(HERE)), '산군메일.py')
+
+
+def write_launcher():
+    code = '''# -*- coding: utf-8 -*-
+"""KM 산군 메일 - 작업 스케줄러가 매주 부르는 파일. 직접 눌러도 됩니다. 클로드 안 씀."""
+import os, sys
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, '코드', 'km_tools'))
+import common
+common.AUTO = True
+import t50_sangun_trace
+t50_sangun_trace.auto()
+'''
+    p = launcher_path()
+    io.open(p, 'w', encoding='utf-8').write(code)
+    return p
+
+
+def auto():
+    """주 1회 : 다운로드 폴더의 최신 산군 파일로 49번(묻지 않음) → 지금까지 본 현장 전부를 7일 주기로 다시 찾아 메일"""
+    common.AUTO = True
+    try:
+        import t49_sangun
+        t49_sangun.ask = common.ask
+        t49_sangun.run(chain=False)
+    except Exception as e:
+        print('[49번 건너뜀] %s' % e)
+    run(send=True, everything=True)
+
+
+def register():
+    if os.name != 'nt':
+        print('윈도우에서만 등록됩니다.')
+        return False
+    lp = write_launcher()
+    py = sys.executable.replace('pythonw.exe', 'python.exe')
+    cmd = ['schtasks', '/Create', '/F', '/SC', 'WEEKLY', '/D', WEEKLY_DAY, '/ST', WEEKLY_AT,
+           '/TN', TASK, '/TR', '"%s" "%s"' % (py, lp)]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode == 0:
+            print('등록했습니다 : 매주 월요일 %s  「%s」' % (WEEKLY_AT, TASK))
+            print('  실행 파일 : %s' % lp)
+            print('  산군 파일만 다운로드 폴더에 받아 두시면 됩니다. PC 가 꺼져 있으면 그 주는 안 갑니다.')
+            return True
+        print('[등록 실패] %s' % (r.stderr or r.stdout))
+    except Exception as e:
+        print('[등록 실패] %s' % e)
+    return False
+
+
+def unregister():
+    if os.name != 'nt':
+        return
+    subprocess.run(['schtasks', '/Delete', '/F', '/TN', TASK], capture_output=True, text=True)
+    print('해제했습니다 : %s' % TASK)
+
+
+def menu():
+    title('50. 산군 현장 흔적 찾기 + 산군 전용 메일 (토큰 0)')
+    print(' 1) 지금 찾기 (49번 최신 결과)')
+    print(' 2) 지금까지 본 현장 전부 다시 찾기')
+    print(' 3) 주 1회 자동 등록 (매주 월요일 %s)' % WEEKLY_AT)
+    print(' 4) 자동 해제')
+    print(' 5) 설정 보기 (설정.ini [산군메일]·[소요시간])')
+    ensure_ini()
+    v = ask('번호 (엔터=1) > ', '1')
+    if v == '2':
+        run(everything=True, direct=True)
+    elif v == '3':
+        register()
+    elif v == '4':
+        unregister()
+    elif v == '5':
+        print(INI)
+        try:
+            open_file(INI)
+        except Exception:
+            pass
+    else:
+        run(direct=True)
 
 
 if __name__ == '__main__':

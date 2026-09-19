@@ -424,7 +424,7 @@ def parse(path):
     return out, ''
 
 
-def run():
+def run(chain=True):
     title('49. 산군 관심현장 정리 (토큰 0)')
     if write_default_ini():
         print('설정.ini 에 [산군] 기준값을 넣어 두었습니다 — 숫자는 프로님이 고치시면 됩니다.')
@@ -508,7 +508,7 @@ def run():
         pass
 
     # 이어서 50번(흔적 찾기 + 산군 전용 메일) — 엔터만 치시면 됩니다
-    if body:
+    if body and chain:
         go = (ask('\n이어서 인터넷에서 흔적을 찾아 메일로 보낼까요? (엔터=예) > ', '예') or '예').strip()
         if go not in ('아니오', '아니요', 'n', 'N'):
             try:
