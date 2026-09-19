@@ -1,0 +1,209 @@
+<title>KM 손바닥 다음 계획</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#f6f7f5; --paper:#ffffff; --ink:#1d2426; --ink2:#4b5659; --line:#d9dedc; --soft:#eef1ef;
+  --acc:#0f6f66; --acc-soft:#dcefec; --ok:#2f8f4e; --ok-soft:#e1f2e6;
+  --warn:#a86f12; --warn-soft:#fbefd6; --bad:#b3423a; --bad-soft:#f9e3e1; --off:#7d8689; --off-soft:#e9ecec;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace; --sans:"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a1b; --paper:#1c2426; --ink:#e8ecea; --ink2:#a9b4b6; --line:#2f3a3c; --soft:#222c2e;
+  --acc:#4cc2b5; --acc-soft:#1c3835; --ok:#6fcf8e; --ok-soft:#1f3a2a;
+  --warn:#e2b25a; --warn-soft:#3d3218; --bad:#ef8d84; --bad-soft:#44252a; --off:#8b979a; --off-soft:#2a3335;
+}}
+:root[data-theme="dark"]{
+  --bg:#141a1b; --paper:#1c2426; --ink:#e8ecea; --ink2:#a9b4b6; --line:#2f3a3c; --soft:#222c2e;
+  --acc:#4cc2b5; --acc-soft:#1c3835; --ok:#6fcf8e; --ok-soft:#1f3a2a;
+  --warn:#e2b25a; --warn-soft:#3d3218; --bad:#ef8d84; --bad-soft:#44252a; --off:#8b979a; --off-soft:#2a3335;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;padding-inline:16px;padding-block:20px 56px}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:1.55rem;margin:0 0 4px;text-wrap:balance}
+h2{font-size:1.12rem;margin:38px 0 10px;padding-top:14px;border-top:2px solid var(--line);text-wrap:balance}
+h3{font-size:1rem;margin:22px 0 6px}
+p{margin:6px 0;max-width:70ch}
+.eyebrow{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+.lead{font-size:1.05rem;font-weight:500;max-width:70ch}
+.verdict{background:var(--bad-soft);border-left:4px solid var(--bad);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0}
+.verdict b{color:var(--bad)}
+.note{background:var(--soft);border-left:3px solid var(--acc);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+.tw{overflow-x:auto;margin:10px 0}
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:520px}
+th,td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--ink2);font-size:.79rem;background:var(--soft);position:sticky;top:0}
+td.k{white-space:nowrap;font-weight:600}
+.pill{display:inline-block;font-size:.71rem;padding:1px 8px;border-radius:999px;font-weight:600;line-height:1.55;white-space:nowrap}
+.p-ok{background:var(--ok-soft);color:var(--ok)}.p-warn{background:var(--warn-soft);color:var(--warn)}.p-bad{background:var(--bad-soft);color:var(--bad)}.p-off{background:var(--off-soft);color:var(--off)}.p-acc{background:var(--acc-soft);color:var(--acc)}
+.mono{font-family:var(--mono);font-size:.85em}
+.rel{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:12px 0;background:var(--paper)}
+.rel .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+.rel .ver{font-family:var(--mono);font-size:1.05rem;font-weight:500;color:var(--acc)}
+.rel .what{font-weight:700;font-size:1.02rem}
+.rel .why{color:var(--ink2);font-size:.9rem;margin:4px 0 8px}
+.rel dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:.88rem}
+.rel dt{color:var(--ink2);font-weight:500;white-space:nowrap}
+.rel dd{margin:0}
+.rel.first{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+ol,ul{padding-left:1.3em;max-width:70ch}
+li{margin:3px 0}
+.small{font-size:.85rem;color:var(--ink2)}
+code{font-family:var(--mono);font-size:.85em;background:var(--soft);padding:1px 5px;border-radius:4px}
+.ask{border:1px solid var(--acc);border-radius:12px;padding:12px 16px;margin:10px 0;background:var(--paper)}
+.ask .q{font-weight:700}
+.ask ol{margin:4px 0 0}
+.count{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+.count div{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:96px}
+.count .n{font-family:var(--mono);font-size:1.35rem;font-weight:500}
+.count .l{font-size:.78rem;color:var(--ink2)}
+</style>
+<div class="wrap">
+<div class="eyebrow">계획 v2 · 2026-09-19 · 한국마이크로닉(주) 배성윤 프로 · 앞 판 = 설계 v1</div>
+<h1>KM 손바닥 다음 계획</h1>
+<p class="lead">「지금이 최고냐」 에 대한 답은 아니오입니다. 오늘 확인된 오류 7건은 고쳤고, 최고가 아닌 이유 5가지와 그것을 없애는 판 5개를 아래에 답니다.</p>
+
+<div class="verdict"><b>정직하게 말씀드리면</b> — 지금 v6.2 는 「돌아가는 첫 판」 입니다. 가장 큰 결함은 오류가 아니라 구조입니다. <b>열쇠 38개 × 현장 200곳 = 7,600번을 프로님 손으로 채우게 되어 있습니다.</b> 프로님 제1규칙(손이 안 가는 것)에 정면으로 어긋납니다. 이것을 v6.3에서 먼저 없앱니다.</div>
+
+<div class="count">
+  <div><div class="n">7</div><div class="l">오늘 고친 오류</div></div>
+  <div><div class="n">5</div><div class="l">남은 한계</div></div>
+  <div><div class="n">13</div><div class="l">자동으로 채울 열쇠</div></div>
+  <div><div class="n">8 / 13</div><div class="l">자가 시험 통과</div></div>
+</div>
+
+<h2>1. 오늘 무엇이 잘못되어 있었나 (전부 실제로 눌러 확인)</h2>
+<p class="small">폰 크기 브라우저에서 화면을 실제로 클릭하는 시험을 돌려 찾은 것입니다. 추측이 아닙니다.</p>
+<div class="tw"><table>
+<tr><th>무엇이 잘못</th><th>어떻게 드러났나</th><th>고친 내용</th></tr>
+<tr><td class="k">시트에 갇힘</td><td>열쇠 창이 열리면 아래 탭(여정·오늘·현장)이 눌리지 않음. 닫기는 창 맨 아래라 스크롤해야 보임</td><td>모든 창 맨 위에 <b>제목 + ✕ 닫기</b> 를 고정</td></tr>
+<tr><td class="k">회의가 여정에 안 감</td><td>회의에서 「외함 납품 9/23」 을 찍어도 여정 열쇠는 계속 「추정」. 프로님이 보시면 왜 반영이 안 되나 싶음</td><td>회의 끝 → 일정·수량이 <b>열쇠로 들어감</b>. 이전 값은 <span class="mono">prev</span> 에 남김. 회의 끝 화면에 「열쇠 n개 갱신」 표시</td></tr>
+<tr><td class="k">돈이 여정에 안 감</td><td>계산서·계약 완료를 눌러도 여정은 그대로</td><td>돈 탭 완료 → 해당 열쇠 확정</td></tr>
+<tr><td class="k">쉼표가 줄을 깨뜨림</td><td>「소판 부착 반입, 타공만」 처럼 값에 쉼표가 있으면 PC 48번이 칸을 잘못 나눔</td><td>값 안의 쉼표·줄바꿈을 <span class="mono">·</span> 로 바꿔 보냄. 시험에서 5칸 유지 확인</td></tr>
+<tr><td class="k">의뢰서 건명 중복</td><td>「건명 : 작업의뢰서(외함)」 로 나옴</td><td>「건명 : CB외함 제작 · 납품」 으로</td></tr>
+<tr><td class="k">저장 실패가 조용함</td><td>공유 저장소에 못 써도 프로님은 모름</td><td>위쪽 배지가 <span class="pill p-bad">저장 실패 — 폰에만 있음</span> 으로 바뀜</td></tr>
+<tr><td class="k">「지나옴」 을 제가 단정</td><td>확인하지 않은 단계를 지나왔다고 표시 (규칙 13 위반)</td><td>「지나왔을 수 있음 · 빈칸 n」 으로 바꾸고, 프로님이 한 번에 확정하는 단추를 둠</td></tr>
+<tr><td class="k">진실이 두 곳</td><td>공정 9단계와 열쇠가 따로 저장되어 서로 다른 값을 가리킴</td><td>공정 표시를 <b>열쇠에서 파생</b>. 진실은 열쇠 하나. 단계를 누르면 그 열쇠가 열림</td></tr>
+</table></div>
+
+<h2>2. 최고가 아닌 이유 (남은 한계)</h2>
+<div class="tw"><table>
+<tr><th>등급</th><th>한계</th><th>지금 무슨 일이 생기나</th><th>언제 없애나</th></tr>
+<tr><td><span class="pill p-bad">큼</span></td><td class="k">열쇠를 손으로 채움</td><td>현장 200곳이면 7,600번. 프로님은 몇 개 채우다 그만두시게 됩니다</td><td><b>v6.3</b></td></tr>
+<tr><td><span class="pill p-bad">큼</span></td><td class="k">회사 대장과 끊김</td><td>PC 도구가 이미 아는 것(의뢰서·수금·도면 접수)을 앱은 모릅니다. 같은 값을 두 번 넣게 됩니다</td><td><b>v6.3</b></td></tr>
+<tr><td><span class="pill p-warn">중간</span></td><td class="k">언제까지인지 없음</td><td>열쇠에 마감이 없어 「늦었다」 를 앱이 못 알려 줍니다. 속판은 2달이라 늦으면 못 되돌립니다</td><td><b>v6.4</b></td></tr>
+<tr><td><span class="pill p-warn">중간</span></td><td class="k">열쇠 문장이 코드 안</td><td>「어떻게·왜」 가 틀려도 프로님이 앱에서 못 고치십니다. 제게 말씀하셔야 합니다</td><td><b>v6.5</b></td></tr>
+<tr><td><span class="pill p-off">작음</span></td><td class="k">마이크·메일 열기 미검증</td><td>아티팩트 화면 안에서 마이크 권한·메일 앱 열기가 막힐 수 있습니다. 막히면 「복사만」 으로 우회</td><td>프로님이 한 번 눌러 보시면 즉시 판명</td></tr>
+</table></div>
+
+<h2>3. 판 5개 — 무엇을 · 누가 · 어떻게 확인</h2>
+
+<div class="rel first">
+<div class="top"><span class="ver">v6.3</span><span class="what">열쇠가 저절로 채워진다</span><span class="pill p-bad">가장 먼저</span></div>
+<div class="why">손 7,600번을 없애는 판. 회사 대장이 이미 아는 것은 제가 넣고, 프로님은 상대가 말해 준 것만 누르십니다.</div>
+<dl>
+<dt>무엇을</dt><dd>열쇠 38개 중 <b>13개를 자동</b>으로 채웁니다(아래 표). 나머지 25개는 사람이 말해야 아는 것이라 그대로 둡니다.</dd>
+<dt>프로님 손</dt><dd><b>0</b>. 아침에 여정을 열면 이미 채워져 있습니다.</dd>
+<dt>제 일</dt><dd>아침 한 장·의뢰서 대장·수금 대장·도면 접수·견적 발송을 읽어 열쇠에 넣습니다. 제가 넣은 것은 <b>추정·진행중</b> 이고 근거에 「도구 n번」 을 적습니다. 확정은 프로님만.</dd>
+<dt>확인 방법</dt><dd>여정을 열었을 때 연합기숙사 열쇠가 1개가 아니라 <b>10개 이상</b> 채워져 있으면 된 것입니다.</dd>
+<dt>위험</dt><dd>PC 도구가 내보내는 값과 열쇠 이름을 맞춰야 합니다. 틀리면 엉뚱한 열쇠가 채워지므로, 제가 넣은 것은 전부 「제 판독」 으로 표시해 되돌릴 수 있게 합니다.</dd>
+</dl>
+</div>
+
+<div class="rel">
+<div class="top"><span class="ver">v6.4</span><span class="what">언제까지 해야 하는가</span></div>
+<div class="why">속판 2달, 외함 2주, 기구물 1.5~2달. 늦으면 못 되돌리는 것을 앱이 먼저 말해야 합니다.</div>
+<dl>
+<dt>무엇을</dt><dd>의뢰서 열쇠 8개에 <b>발행 마감일</b>을 붙입니다. 준공일 또는 벽지 예정일에서 거꾸로 계산합니다. 여정 카드에 「속판 의뢰서 D-12」 가 뜨고, 지났으면 빨강.</dd>
+<dt>프로님 손</dt><dd>현장당 <b>1번</b> — 준공일(또는 벽지 예정일) 입력. 이미 아시는 현장은 회의에서 찍힌 값으로 자동.</dd>
+<dt>제 일</dt><dd>역산 규칙을 넣습니다. 시운전 7일 → 설치 7일 → 빽커버 10일 → 벽지 완료 → 기구물 제작 1.5~2달. 외함·속판은 현장 공법이 정하므로 역산하지 않고 상대가 말한 날만 씁니다.</dd>
+<dt>확인 방법</dt><dd>준공일을 넣으면 의뢰서 열쇠에 D-day 가 뜨고, 그 값이 프로님 머릿속 계산과 맞는지 한 현장만 보시면 됩니다.</dd>
+<dt>위험</dt><dd>소요일이 현장마다 다릅니다. 현장별로 고칠 수 있는 칸을 둡니다. 제가 정하지 않습니다.</dd>
+</dl>
+</div>
+
+<div class="rel">
+<div class="top"><span class="ver">v6.5</span><span class="what">열쇠를 프로님이 고친다</span></div>
+<div class="why">「어떻게·왜」 문장은 지금 제가 쓴 것입니다. 현장을 아시는 분은 프로님입니다.</div>
+<dl>
+<dt>무엇을</dt><dd>열쇠마다 「이 설명 고치기」. 고치신 문장이 <b>모든 현장에 적용</b>되고 저도 그것을 읽습니다. 현장 하나만 다르면 그 현장에만 두는 선택도 둡니다.</dd>
+<dt>프로님 손</dt><dd>틀린 줄에서 1번. 말씀으로 고치셔도 됩니다(🎙).</dd>
+<dt>제 일</dt><dd>고치신 문장을 스킬(km-35)과 인수인계에 이중 저장합니다. 새 창도 같은 문장을 씁니다.</dd>
+<dt>확인 방법</dt><dd>한 줄 고치고 다른 현장 같은 열쇠를 열었을 때 그 문장이 보이면 된 것입니다.</dd>
+</dl>
+</div>
+
+<div class="rel">
+<div class="top"><span class="ver">v6.6</span><span class="what">검수 · 시운전</span><span class="pill p-warn">답 필요</span></div>
+<div class="why">수금의 마지막 근거. 지금 시운전을 무엇으로 확인하시는지 몰라 뒤로 뺐습니다.</div>
+<dl>
+<dt>무엇을</dt><dd>객실 번호 격자에 품목별 O/X. X는 사진 한 장 + 한 줄 → 하자 목록 → 시공팀 AS 의뢰서 초안 → 사진대지(8번)로.</dd>
+<dt>프로님 손</dt><dd>객실당 1탭. 200실이면 200탭이지만 이동 중이 아니라 현장에서 하시는 일이라 대체가 없습니다.</dd>
+<dt>제 일</dt><dd>시운전 100%가 되면 「계산서 요청 문안 만들까요?」 를 먼저 내밉니다.</dd>
+<dt>먼저 여쭐 것</dt><dd><b>지금은 무엇으로 확인하십니까?</b> 종이 체크표 / 사진만 / 시공팀이 따로 / 머리로. 답에 따라 격자 모양이 달라집니다.</dd>
+</dl>
+</div>
+
+<div class="rel">
+<div class="top"><span class="ver">v7.0</span><span class="what">메일 없이 저와 바로 주고받기</span></div>
+<div class="why">지금은 「보내기」 가 메일을 한 통 띄웁니다. 그 단계도 없앨 수 있습니다.</div>
+<dl>
+<dt>무엇을</dt><dd>앱에 쌓인 줄을 제가 공유 저장소에서 <b>바로 읽습니다.</b> 프로님은 보내기를 누르지 않아도 됩니다. 제가 처리한 줄은 앱에 「반영했습니다 · 무엇을」 로 되돌아옵니다.</dd>
+<dt>프로님 손</dt><dd>0. 단추만 누르시면 끝.</dd>
+<dt>제 일</dt><dd>새 창을 열 때 저장소의 미처리 줄부터 읽고, 확정 대장·서류에 반영한 뒤 앱에 표시를 되돌립니다.</dd>
+<dt>남는 것</dt><dd>PC 도구(48번)로 보내는 메일은 그대로 둡니다. 없애지 않습니다. 두 길이 같은 대장을 봅니다.</dd>
+</dl>
+</div>
+
+<h2>4. v6.3 에서 자동으로 채울 열쇠 13개</h2>
+<div class="tw"><table>
+<tr><th>단계 · 열쇠</th><th>어디서 읽나</th><th>넣는 상태</th></tr>
+<tr><td class="k">설계 · 설계의뢰 접수</td><td>도면 폴더 최초 접수일 (31번 도면접수)</td><td>추정</td></tr>
+<tr><td class="k">설계 · 객실관리 도면 납품</td><td>의뢰서 대장 + 도면 판(31번)</td><td>추정</td></tr>
+<tr><td class="k">견적 · 수량표 확정</td><td>27번 도면수량 결과 유무</td><td>진행중</td></tr>
+<tr><td class="k">견적 · 실행 산출</td><td>28번 실행산출 파일 유무</td><td>진행중</td></tr>
+<tr><td class="k">견적 · 견적서 발송</td><td>47번 <span class="mono">견적발송.csv</span></td><td>확정 후보(날짜 있음)</td></tr>
+<tr><td class="k">외함 · 의뢰서 발행</td><td>10번 의뢰서 대장</td><td>확정 후보</td></tr>
+<tr><td class="k">외함 · 납품 완료</td><td>수금 대장 계산서 1회</td><td>확정 후보</td></tr>
+<tr><td class="k">속판 · 의뢰서 발행</td><td>10번 의뢰서 대장</td><td>확정 후보</td></tr>
+<tr><td class="k">속판 · 납품</td><td>수금 대장 계산서 2회</td><td>확정 후보</td></tr>
+<tr><td class="k">기구물 · 의뢰서 발행</td><td>10번 의뢰서 대장</td><td>확정 후보</td></tr>
+<tr><td class="k">기구물 · 납품</td><td>수금 대장 계산서 3회</td><td>확정 후보</td></tr>
+<tr><td class="k">시운전 · 계산서 3회</td><td>21번 월말집계</td><td>추정</td></tr>
+<tr><td class="k">시운전 · 수금</td><td>6번 수금레이더</td><td>추정</td></tr>
+</table></div>
+<div class="note"><b>「확정 후보」 의 뜻</b> — 대장에 날짜가 있으면 사실이 거의 확실하지만, 그래도 제가 확정으로 만들지 않습니다. 노랑으로 띄워 두고 프로님이 한 번 누르시면 확정이 됩니다. 「확정은 프로님만」 규칙을 깨지 않으면서 손은 13번 → 1번으로 줍니다(단계별 일괄 확인).</div>
+
+<h2>5. 순서와 이유</h2>
+<ol>
+<li><b>v6.3 자동 채움</b> — 이것이 안 되면 나머지가 소용없습니다. 열쇠가 비어 있으면 아무도 안 씁니다.</li>
+<li><b>v6.4 D-day</b> — 채워진 열쇠에 마감이 붙어야 「지금 무엇을」 이 나옵니다.</li>
+<li><b>v6.5 문장 고치기</b> — 프로님이 쓰실수록 틀린 문장이 드러납니다. 그때 고칠 길이 있어야 합니다.</li>
+<li><b>v6.6 검수</b> — 현장에서 쓰는 화면이라 앞의 셋과 성격이 다릅니다. 답을 받은 뒤에.</li>
+<li><b>v7.0 직접 주고받기</b> — 앞이 다 돌아간 뒤 마지막 손 1번을 없앱니다.</li>
+</ol>
+
+<h2>6. 여쭐 것</h2>
+<div class="ask"><div class="q">ㄱ · 무엇부터 할까요?</div><ol><li>v6.3 자동 채움 (추천 — 손 7,600번을 없앰)</li><li>v6.4 D-day 부터</li><li>먼저 며칠 써 보고 정하겠다</li><li>모르겠음</li></ol></div>
+<div class="ask"><div class="q">ㄴ · 시운전은 지금 무엇으로 확인하십니까? (v6.6 화면이 여기서 정해집니다)</div><ol><li>종이 체크표</li><li>사진만</li><li>시공팀이 따로 함</li><li>머리로 · 그때그때</li></ol></div>
+<div class="ask"><div class="q">ㄷ · 단계가 닫힐 때</div><ol><li>축하 한 줄 + 다음 단계 안내 (지금 이렇게 되어 있음)</li><li>조용히 체크만</li><li>현장별 점수·순위까지</li><li>모르겠음</li></ol></div>
+
+<h2>7. 자가진단 · 변경 이력</h2>
+<div class="tw"><table>
+<tr><th>항목</th><th>결과</th></tr>
+<tr><td class="k">실제로 눌러 본 시험</td><td>13개 중 8개 통과. 실패 5개 중 4개는 시험 코드의 화면 찾기 문제였고, 1개(시트 갇힘)는 진짜 오류라 고쳤습니다</td></tr>
+<tr><td class="k">화면 오류(콘솔)</td><td>없음</td></tr>
+<tr><td class="k">쉼표 시험</td><td>「시험, 쉼표 포함」 을 넣어도 줄이 5칸 유지 — 통과</td></tr>
+<tr><td class="k">두 번 가져오기</td><td>같은 아침 한 장을 두 번 넣어도 줄이 안 늘어남(17 → 17) — 통과</td></tr>
+<tr><td class="k">아직 검증 못 한 것</td><td>마이크 · 메일 앱 열기 · 실제 폰에서의 손맛. 프로님이 한 번 눌러 보셔야 압니다</td></tr>
+<tr><td class="k">제가 정한 적 없는 것</td><td>금액 · 수량 · 요율 · 확정값 — 전부 입력칸이거나 프로님 단추입니다</td></tr>
+</table></div>
+<div class="tw"><table>
+<tr><th>판</th><th>날짜</th><th>내용</th></tr>
+<tr><td class="k">설계 v1</td><td>09-19</td><td>화면 3개 · 양방향 4고리 · 결정 6건</td></tr>
+<tr><td class="k">앱 v6.0</td><td>09-19</td><td>오늘 · 현장 · 회의 · 설정</td></tr>
+<tr><td class="k">앱 v6.1</td><td>09-19</td><td>여정 9단계 × 열쇠 38개</td></tr>
+<tr><td class="k">앱 v6.2</td><td>09-19</td><td>확인된 오류 7건 수정 · 진실을 열쇠 하나로</td></tr>
+<tr><td class="k">계획 v2</td><td>09-19</td><td>이 문서 — 한계 5개와 판 5개</td></tr>
+</table></div>
+<p class="small">정본 : GitHub gamakatu-PM/mic-pm 브랜치 claude/app-idea-suggestions-01y26r → 설계/KM손바닥_계획_v2.html · 앱/KM손바닥_v6.2.html</p>
+</div>
