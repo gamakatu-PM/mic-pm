@@ -21,6 +21,8 @@
 금액·요율은 이 도구가 정하지 않습니다(규칙 19).
 
 대장 : _도구결과\\_대장\\산군_처리.csv  — 한 번 본 현장은 다음 번에 다시 올라오지 않습니다.
+
+끝나면 50번(흔적 찾기 + 산군 전용 메일)으로 이어집니다. 엔터만 치시면 됩니다.
 """
 import os
 import io
@@ -504,6 +506,17 @@ def run():
         open_file(hp)
     except Exception:
         pass
+
+    # 이어서 50번(흔적 찾기 + 산군 전용 메일) — 엔터만 치시면 됩니다
+    if body:
+        go = (ask('\n이어서 인터넷에서 흔적을 찾아 메일로 보낼까요? (엔터=예) > ', '예') or '예').strip()
+        if go not in ('아니오', '아니요', 'n', 'N'):
+            try:
+                import t50_sangun_trace as TR
+                TR.run(src=cp)
+            except Exception as e:
+                print('[50번 실행 실패] %s' % e)
+                print('  50번을 따로 실행하셔도 됩니다.')
 
 
 if __name__ == '__main__':
