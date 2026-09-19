@@ -48,7 +48,8 @@ function takeFeed(d){
     S.sites[id]=s;saveSite(s);
   });
   (d.items||[]).forEach(x=>{
-    const ex=S.items[x.id];
+    const same=S.items[x.id]||Object.values(S.items).find(i=>i.site===x.site&&i.text===x.text&&i.kind!=='make');
+    const ex=same;
     if(ex){if(['done','confirmed','cancel','requested'].includes(ex.status))return;
       let ch=false;['when','to','memo','quest','text'].forEach(k=>{if(x[k]&&!ex[k]){ex[k]=x[k];ch=true}});
       if(ch)saveItem(ex);return}

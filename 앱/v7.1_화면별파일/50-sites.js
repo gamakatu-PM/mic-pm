@@ -187,7 +187,8 @@ window.addPerson=function(sid){const s=S.sites[sid];openSheet(`<label class="f">
   document.getElementById('ppX').onclick=closeSheet};
 window.noteLine=function(sid,prefix){const s=S.sites[sid];micSheet('한 줄 남기기 · '+s.name,'통화·현장에서 들은 것을 그대로. 고치지 않고 기록에 남습니다.',prefix||'',v=>{if(!v)return;queue(`메모,${s.name},${v}`,s.name,'메모');saveSite(s);render();toast('기록했습니다')})};
 window.addFact=function(sid){const s=S.sites[sid];openSheet(`<div class="hint">프로님이 정한 값. 어떤 추정보다 우선합니다.</div><label class="f">항목</label><input id="fcItem" placeholder="CB외함 납품일 / 객실 수 / 계약 형태 …"><label class="f">값</label><input id="fcVal"><label class="f">근거</label><input id="fcBasis" placeholder="누구 통화 · 언제"><div class="btns"><button class="b pri" id="fcOk">확정</button><button class="b ghost" id="fcX">취소</button></div>`,'확정값 넣기');
-  document.getElementById('fcOk').onclick=()=>{const f={date:ymd(),item:document.getElementById('fcItem').value.trim(),value:document.getElementById('fcVal').value.trim(),basis:document.getElementById('fcBasis').value.trim()};if(!f.item||!f.value)return;s.facts=(s.facts||[]).concat([f]);saveSite(s);queue(`확정,${s.name},${f.item},${f.value},${f.basis||'앱 입력'}`,s.name,'확정');closeSheet();render()};
+  document.getElementById('fcOk').onclick=()=>{const f={date:ymd(),item:document.getElementById('fcItem').value.trim(),value:document.getElementById('fcVal').value.trim(),basis:document.getElementById('fcBasis').value.trim()};if(!f.item||!f.value)return;s.facts=(s.facts||[]).concat([f]);saveSite(s);queue(`확정,${safe(s.name)},${safe(f.item)},${safe(f.value)},${safe(f.basis||'앱 입력')}`,s.name,'확정');
+    saveDecision({site:s.name,item:f.item,value:f.value,basis:f.basis||'앱 입력',source:'확정값',by:'프로님'});closeSheet();render()};
   document.getElementById('fcX').onclick=closeSheet};
 window.moneySet=function(sid,k,f,v){const s=S.sites[sid];s.money=s.money||{};s.money[k]=s.money[k]||{};if(f==='date'&&s.money[k].date){return}s.money[k][f]=v;
   if(f==='date'){queue(`돈,${safe(s.name)},${safe(k)},완료,${safe(v)}`,s.name,'돈');
@@ -196,7 +197,8 @@ window.moneySet=function(sid,k,f,v){const s=S.sites[sid];s.money=s.money||{};s.m
     if(nx)toast(nx+' 계산서 시점입니다. 여정 열쇠도 갱신했습니다');else toast('담았습니다');}
   saveSite(s);render()};
 window.boundSet=function(sid,k,who){const s=S.sites[sid];s.bound=s.bound||{};s.bound[k]={who,sure:(s.bound[k]||{}).sure||'추정',ts:now()};saveSite(s);if(who)queue(`경계,${s.name},${k},${who},${s.bound[k].sure}`,s.name,'경계');render()};
-window.boundSure=function(sid,k){const s=S.sites[sid];const b=s.bound[k];b.sure=b.sure==='확정'?'추정':'확정';saveSite(s);queue(`경계,${s.name},${k},${b.who},${b.sure}`,s.name,'경계');render()};
+window.boundSure=function(sid,k){const s=S.sites[sid];const b=s.bound[k];const prev=b.sure;b.sure=b.sure==='확정'?'추정':'확정';saveSite(s);queue(`경계,${safe(s.name)},${safe(k)},${safe(b.who)},${b.sure}`,s.name,'경계');
+  if(b.sure==='확정')saveDecision({site:s.name,item:'경계 · '+k,value:b.who,basis:'경계 표에서 확정',source:'경계',by:'프로님',prev:{state:prev}});render()};
 window.boundDraft=function(sid){const s=S.sites[sid];const b=s.bound||{};const rows=LISTS.BOUND.filter(k=>b[k]&&b[k].who).map(k=>`- ${k} : ${b[k].who}${b[k].sure==='추정'?' (확인 요청)':''}`);
   const text=`제목 : [${s.name}] 객실관리 공사 업무 경계 확인 요청\n\n담당자님, 한국마이크로닉 배성윤입니다.\n\n${s.name} 현장의 객실관리 관련 업무 경계를 아래와 같이 정리하였습니다. 다른 부분이 있으면 회신 부탁드립니다.\n\n${rows.length?rows.join('\n'):'- [ ]'}\n\n※ 강전 결선은 전기공사, 약전 결선·제어분전함 내부 설치·시운전은 당사 범위입니다.\n확인 회신 기한 : [        ]\n\n감사합니다.\n한국마이크로닉(주) 배성윤 차장  전화 [        ]`;
   draftSheet('경계 확인 메일 · '+s.name,text,s.name)};

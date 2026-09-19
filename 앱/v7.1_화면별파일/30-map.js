@@ -66,7 +66,7 @@ window.questPass=function(sid,qi){
   if(!confirm(`${q.n} 의 남은 열쇠를 전부 「확정 · 지남」 으로 채울까요? (프로님 확인으로 기록됩니다)`))return;
   s.req=s.req||{};
   q.req.forEach(r=>{if(reqOf(s,q.k,r.k).state!=='확정'){s.req[q.k+'/'+r.k]={state:'확정',value:'지남',basis:'프로님 확인(앱)',date:ymd(),ts:now()}}});
-  saveSite(s);queue(`확정,${s.name},${q.n},단계 지남,프로님 확인`,s.name,'확정');closeSheet();render();toast(q.n+' 닫힘');
+  saveSite(s);queue(`확정,${safe(s.name)},${safe(q.n)},단계 지남,프로님 확인`,s.name,'확정');saveDecision({site:s.name,item:q.n,value:'단계 지남',basis:'프로님 확인(앱)',source:'열쇠',by:'프로님'});closeSheet();render();toast(q.n+' 닫힘');
 };
 function gateBlocked(s,q,r){
   // 의뢰서(제작 착수)인데 같은 단계의 「계약·계산서」 게이트가 아직 확정이 아니면 막는다
