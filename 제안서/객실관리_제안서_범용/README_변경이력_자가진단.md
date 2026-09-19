@@ -4,6 +4,9 @@
 현장명은 `[현장명]` 빈칸이며, 현장이 정해지면 spec 의 `[현장명]` 을 바꿔 r2 로 다시 빌드한다.
 
 ## 만든 방법 (새 창이 그대로 재현할 수 있게)
+**r2 (현행)** : `node build_r2.js out.pptx` — 스크립트 안 `IMG` 경로(스킬 assets 사진, diag png)만 맞추면 된다. 사진은 km-spec-builder/assets/png(제품)·km-proposal/assets/photos(현장).
+
+**r1 (이전)** :
 1. `diag_*_r1.json` → km-proposal 스킬 `assets/draw_diagram.py` 로 png 2장
 2. `spec_r1.json` → `assets/build_proposal.js` (pptxgenjs) 로 pptx 10장
 3. LibreOffice Impress → PDF (조회본)
@@ -28,6 +31,12 @@
 | 판 | 날짜 | 바꾼 것 | 등급 |
 |---|---|---|---|
 | r1 | 2026-09-19 | 최초 작성. 프로님 지시 "니 마음대로 구성해서 만들어봐" | A |
+| r2 | 2026-09-19 | 프로님 지시 "pptx 스킬로, PDF 없이, 사람이 만든 듯이". pptxgenjs 직접 작성(`build_r2.js`) — 제품 사진 10종·현장 사진 4장·아이콘, 표지 반면 사진, 제품 카드 4×2, 공정 타임라인, 담당 매트릭스(●/○). 독립 감사 지적 반영: 구성도 겹침 4건, 9장 내부 메모 문구→발표자 노트로, 조사 띄어쓰기, 파일 속성 subject. r1 PDF 는 저장소에서 제거(프로님 "PDF 필요 없어") | B |
+
+## 자가진단 (r2)
+- [x] validate.py 통과 / 렌더 10장 육안 확인 / 조사 띄어쓰기 grep 0건 / core.xml subject 교체
+- [x] r1 독립 감사 지적 5건 반영 (구성도 겹침·내부 메모·조사·BSP 문구 결정·subject)
+- [ ] BSP 구성 문구 : tech-constants 원문(콘센트+USB+L)이 아니라 프로님 규칙(온도+조명+USB+콘센트)으로 둠 — 확인 요청
 
 ## 자가진단 (r1)
 - [x] 장수 10 = 렌더 10 (pymupdf 로 셈)
