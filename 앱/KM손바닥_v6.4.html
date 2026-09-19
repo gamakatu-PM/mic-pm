@@ -1,0 +1,1024 @@
+<title>KM 손바닥</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#f4f6f5; --paper:#ffffff; --ink:#1c2426; --ink2:#55626a; --line:#d8dedc; --soft:#eaefed;
+  --acc:#0f6f66; --acc-ink:#ffffff; --acc-soft:#d9eeea;
+  --ok:#2f8f4e; --ok-soft:#dff2e5; --warn:#a86f12; --warn-soft:#fbeed3; --off:#7d8689; --off-soft:#e7ebea; --ask:#b3423a; --ask-soft:#f8e2df;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace; --sans:"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --fs:15px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121819; --paper:#1b2325; --ink:#e7ebe9; --ink2:#a5b1b4; --line:#2e393b; --soft:#212b2d;
+  --acc:#4cc2b5; --acc-ink:#0f1c1a; --acc-soft:#1b3633;
+  --ok:#6fcf8e; --ok-soft:#1e3928; --warn:#e2b25a; --warn-soft:#3b3017; --off:#8b979a; --off-soft:#293234; --ask:#ef8d84; --ask-soft:#432429;
+}}
+:root[data-theme="dark"]{
+  --bg:#121819; --paper:#1b2325; --ink:#e7ebe9; --ink2:#a5b1b4; --line:#2e393b; --soft:#212b2d;
+  --acc:#4cc2b5; --acc-ink:#0f1c1a; --acc-soft:#1b3633;
+  --ok:#6fcf8e; --ok-soft:#1e3928; --warn:#e2b25a; --warn-soft:#3b3017; --off:#8b979a; --off-soft:#293234; --ask:#ef8d84; --ask-soft:#432429;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:var(--fs);line-height:1.5;padding-inline:0;padding-block:0;-webkit-tap-highlight-color:transparent}
+body.big{--fs:17px}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+textarea{min-height:90px;resize:vertical}
+a{color:var(--acc)}
+.app{max-width:720px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:10px 16px 6px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+header.top h1{font-size:1.1rem;margin:0;font-weight:700}
+header.top .sub{font-size:.75rem;color:var(--ink2)}
+.badge{font-size:.7rem;padding:2px 8px;border-radius:999px;background:var(--off-soft);color:var(--off);font-weight:600;white-space:nowrap}
+.badge.on{background:var(--ok-soft);color:var(--ok)}
+.badge.fail{background:var(--ask-soft);color:var(--ask)}
+main{flex:1;padding:12px 16px 110px}
+.view[hidden]{display:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.chip{font-size:.75rem;padding:3px 10px;border-radius:999px;background:var(--soft);color:var(--ink2);font-weight:600;border:0}
+.chip.ask{background:var(--ask-soft);color:var(--ask)}.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.acc{background:var(--acc-soft);color:var(--acc)}.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.sel{outline:2px solid var(--acc)}
+h2.sec{font-size:.78rem;color:var(--ink2);letter-spacing:.04em;margin:18px 0 6px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+h2.sec small{font-weight:400}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.card .id{font-family:var(--mono);font-size:.72rem;color:var(--ink2);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card .t{font-weight:600;margin:3px 0 2px}
+.card .m{color:var(--ink2);font-size:.82rem;white-space:pre-wrap}
+.card .fix{margin-top:4px;font-size:.85rem;background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:4px 8px}
+.card.done{opacity:.6}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.b{font-size:.8rem;padding:6px 10px;border-radius:9px;border:1px solid var(--line);background:var(--paper);font-weight:600;min-height:34px;white-space:nowrap}
+.b.pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.b.mic{border-style:dashed}
+.b.ghost{border-color:transparent;color:var(--ink2)}
+.b.sm{font-size:.72rem;padding:3px 8px;min-height:26px}
+.b:disabled{opacity:.5;cursor:default}
+.pill{display:inline-block;font-size:.7rem;padding:1px 7px;border-radius:999px;font-weight:600;line-height:1.5}
+.p-ok{background:var(--ok-soft);color:var(--ok)}.p-warn{background:var(--warn-soft);color:var(--warn)}.p-off{background:var(--off-soft);color:var(--off)}.p-ask{background:var(--ask-soft);color:var(--ask)}.p-acc{background:var(--acc-soft);color:var(--acc)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--line);font-size:.9rem}
+.row:last-child{border-bottom:0}
+.row .grow{flex:1;min-width:0}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.d-ok{background:var(--ok)}.d-warn{background:var(--warn)}.d-off{background:var(--off)}.d-ask{background:var(--ask)}
+.empty{color:var(--ink2);font-size:.88rem;padding:10px 4px}
+.fab{position:fixed;right:16px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:6;background:var(--acc);color:var(--acc-ink);font-weight:700;padding:10px 16px;border-radius:999px;border:0;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:.9rem}
+.fab[hidden]{display:none}
+nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--paper);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px))}
+nav.tabbar button{flex:1;border:0;background:transparent;font-size:.78rem;font-weight:600;color:var(--ink2);padding:6px 0}
+nav.tabbar button.on{color:var(--acc)}
+nav.tabbar button .n{display:block;font-size:1.05rem}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center}
+.sheet[hidden]{display:none}
+.sheetbar{position:sticky;top:0;background:var(--paper);margin:-16px -16px 6px;padding:10px 16px 8px;display:flex;justify-content:space-between;align-items:center;z-index:3;border-bottom:1px solid var(--line)}
+.sheetbar .ttl{font-weight:700;font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet .box{background:var(--paper);width:100%;max-width:720px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow:auto}
+.sheet h3{margin:0 0 8px;font-size:1rem}
+.sheet .hint{font-size:.8rem;color:var(--ink2);margin-bottom:8px}
+.mono{font-family:var(--mono);font-size:.85em}
+pre.draft{white-space:pre-wrap;background:var(--soft);border-radius:10px;padding:10px;font-size:.85rem;font-family:var(--sans);margin:8px 0}
+.list .card{cursor:pointer}
+.search{margin-bottom:8px}
+.tl .st{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 0 8px 16px;border-left:2px solid var(--line);margin-left:6px;position:relative;font-size:.9rem;cursor:pointer}
+.tl .st .dot{position:absolute;left:-6px}
+.tl .st .dt{font-family:var(--mono);font-size:.75rem;color:var(--ink2)}
+.tabs2{display:flex;gap:4px;overflow-x:auto;margin:8px 0}
+.tabs2 button{flex:none;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:600}
+.tabs2 button.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+label.f{display:block;font-size:.78rem;color:var(--ink2);margin:8px 0 2px}
+.qty{display:flex;align-items:center;gap:6px}
+.qty .v{font-family:var(--mono);min-width:64px;text-align:center}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.85rem}
+.kv b{color:var(--ink2);font-weight:500}
+.notice{background:var(--soft);border-left:3px solid var(--acc);padding:8px 12px;border-radius:0 8px 8px 0;font-size:.85rem;margin:8px 0}
+.small{font-size:.8rem;color:var(--ink2)}
+.rec{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media (prefers-reduced-motion: reduce){.rec{animation:none}}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(120px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:.85rem;z-index:30;opacity:0;transition:opacity .2s}
+.toast.show{opacity:1}
+
+/* 연동 */
+.feedbar{background:var(--acc-soft);border:1px solid var(--acc);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer}
+.feedbar .ft{font-weight:600;font-size:.9rem;color:var(--acc)}
+.feedbar .fs{font-size:.78rem;color:var(--ink2)}
+.inboxbar{background:var(--ok-soft);border:1px solid var(--ok);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.inboxbar .it{font-weight:600;font-size:.9rem;color:var(--ok)}
+.src{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;font-size:.84rem;align-items:center}
+/* 여정 */
+.jcard{cursor:pointer}
+.jhead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.pct{font-family:var(--mono);font-size:1.3rem;font-weight:500;color:var(--acc)}
+.bar{height:8px;border-radius:999px;background:var(--soft);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--ok));border-radius:999px;transition:width .4s}
+.trail-mini{display:flex;align-items:center;margin-top:8px}
+.trail-mini .tm{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);background:var(--paper);font-size:.6rem;display:flex;align-items:center;justify-content:center;flex:none;color:var(--acc)}
+.trail-mini i{flex:1;height:2px;background:var(--line)}
+.trail-mini .tm.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.trail-mini .tm.here{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.trail-mini .tm.warn{border-color:var(--warn);background:var(--warn-soft)}
+.trail{position:relative;margin:14px 0 0 4px;padding-left:4px}
+.trail::before{content:"";position:absolute;left:29px;top:24px;bottom:24px;width:3px;background:var(--line);border-radius:2px}
+.qn{display:grid;grid-template-columns:52px 1fr 20px;gap:10px;align-items:center;padding:8px 6px 8px 0;cursor:pointer;position:relative}
+.ring{width:52px;height:52px;border-radius:50%;background:conic-gradient(var(--acc) var(--deg),var(--soft) 0);display:flex;align-items:center;justify-content:center;position:relative;flex:none}
+.ring span{width:40px;height:40px;border-radius:50%;background:var(--paper);display:flex;align-items:center;justify-content:center;font-size:1.05rem;color:var(--ink2)}
+.qn.ok .ring{background:var(--ok)}.qn.ok .ring span{color:var(--ok);font-weight:700}
+.qn.here .ring{box-shadow:0 0 0 4px var(--acc-soft)}.qn.here .ring span{color:var(--acc)}
+.qn.here .qname{color:var(--acc)}
+.qn.lock{opacity:.55}
+.qn.warn .ring span{color:var(--warn)}
+.qname{font-weight:600}
+.qgo{color:var(--ink2);font-size:1.2rem;text-align:right}
+.card.next{border-color:var(--acc);background:var(--acc-soft)}
+.story{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:.9rem;line-height:1.55}
+.row.rq{cursor:pointer}
+</style>
+
+<div class="app">
+<header class="top">
+  <div><h1 id="hTitle">오늘</h1><div class="sub" id="hSub"></div></div>
+  <span class="badge" id="dbBadge">연결 확인 중</span>
+</header>
+
+<main>
+<!-- 여정 -->
+<section class="view" id="v-map"><div id="mapBody"></div></section>
+
+<!-- 오늘 -->
+<section class="view" id="v-today">
+  <div class="chips" id="todayChips"></div>
+  <div id="todayBody"></div>
+</section>
+
+<!-- 현장 -->
+<section class="view" id="v-sites" hidden>
+  <div id="sitesList">
+    <input class="search" id="siteSearch" placeholder="현장 찾기" autocomplete="off">
+    <div class="list" id="siteCards"></div>
+    <div class="btns"><button class="b" id="btnAddSite">+ 현장 추가</button></div>
+  </div>
+  <div id="siteDetail" hidden></div>
+</section>
+
+<!-- 회의 -->
+<section class="view" id="v-meet" hidden>
+  <div id="meetBody"></div>
+</section>
+
+<!-- 설정 -->
+<section class="view" id="v-set" hidden>
+  <div class="card">
+    <div class="t">아침 한 장 가져오기</div>
+    <div class="m">PC가 보낸 [KM] 아침 한 장 메일(또는 _아침한장.md)의 글을 전부 복사해 아래에 붙이고 「가져오기」. 같은 번호는 덮어쓰지 않고 새 내용만 더합니다.</div>
+    <textarea id="importText" placeholder="여기에 붙여넣기"></textarea>
+    <div class="btns"><button class="b pri" id="btnImport">가져오기</button></div>
+  </div>
+  <div class="card">
+    <div class="t">PC로 보내는 메일</div>
+    <label class="f">받는 주소 (48번 회신 읽기가 보는 메일함)</label>
+    <input id="setMailTo" placeholder="gamakatu0924@gmail.com">
+    <label class="f">사본</label>
+    <input id="setCc" placeholder="bsy@micronic.co.kr (선택)">
+    <label class="f"><input type="checkbox" id="setBig" style="width:auto"> 글자 크게</label>
+    <div class="btns"><button class="b pri" id="btnSaveSet">저장</button></div>
+  </div>
+  <div class="card">
+    <div class="t">연동 상태 <span class="small">쌓이는 데이터가 앱으로 들어온 기록</span></div>
+    <div id="srcList" class="src"></div>
+    <div class="small" style="margin-top:8px">제가 새 대장·회의록을 읽을 때마다 여기 날짜가 바뀌고, 채운 것은 여정 맨 위에 뜹니다.</div>
+  </div>
+  <div class="card">
+    <div class="t">제가 반영한 것 <span class="small" id="inbCount"></span></div>
+    <div id="inbList" class="small"></div>
+  </div>
+  <div class="card">
+    <div class="t">보낸 줄 이력 <span class="small" id="logCount"></span></div>
+    <div id="logList" class="small"></div>
+    <div class="btns"><button class="b" id="btnExport">전체 내보내기(JSON)</button><button class="b ghost" id="btnReset">전부 지우기</button></div>
+  </div>
+  <div class="card small">
+    <div class="t">이 앱</div>
+    KM 손바닥 v6.4 연동판 (현장관리 PWA v5.7의 다음 판) · 2026-09-19<br>
+    저장 : 이 폰 + 클로드가 읽는 공유 저장소(연결되면 상단에 표시). PC 도구로는 「보내기」 메일 한 통으로 갑니다.<br>
+    한 줄 문법은 PC 48번 회신 읽기 것을 그대로 씁니다. 금액·수량·요율은 앱이 정하지 않습니다.
+  </div>
+</section>
+</main>
+
+<button class="fab" id="fab" hidden>보내기 0건</button>
+
+<nav class="tabbar">
+  <button data-v="map" class="on"><span class="n">⛳</span>여정</button>
+  <button data-v="today"><span class="n">☀</span>오늘</button>
+  <button data-v="sites"><span class="n">▦</span>현장</button>
+  <button data-v="meet"><span class="n">◎</span>회의</button>
+  <button data-v="set"><span class="n">⚙</span>설정</button>
+</nav>
+
+<div class="sheet" id="sheet" hidden><div class="box" id="sheetBox"></div></div>
+<div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============ 상태 ============ */
+const LS='km6_state';
+const STAGES=[['외함제작','외함 제작'],['외함납품','외함 납품'],['속판제작','속판 제작'],['기구물제작','기구물 제작'],['벽지완료','벽지 완료'],['빽커버','빽커버 설치'],['기구물설치','기구물 설치'],['강전약전','강전·약전 결선'],['시운전','시운전']];
+const ITEMS_MEET=['K','DM','L','온도조절기','BSP','챠임벨','FIP','PC','멀티아울렛','CB','외함','전력계량기','도어락'];
+const PARTIES=['시공사','전기','통신','감리','발주처','설계사','인테리어','건축','설비','에어컨','바닥난방'];
+const BOUND=['외함 설치','강전 결선','약전 결선','외함 커버','전력계량기','바닥난방 밸브','타공','도어락 설치'];
+const DEFAULT_SET={mailTo:'gamakatu0924@gmail.com',cc:'',big:false};
+let S=loadLocal()||{sites:{},items:{},meetings:{},log:[],outbox:[],inbox:[],settings:{...DEFAULT_SET}};
+S.inbox=S.inbox||[];S.feedsrc=S.feedsrc||{};S.contacts=S.contacts||[];
+S.settings={...DEFAULT_SET,...(S.settings||{})};
+let view='map', curSite=null, siteTab='공정', curMeet=null;
+let db=null; const dbq={};
+function loadLocal(){try{return JSON.parse(localStorage.getItem(LS)||'null')}catch(e){return null}}
+function persist(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+function now(){return new Date().toISOString()}
+function ymd(d){d=d||new Date();const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
+function yymmdd(){return ymd().slice(2).replace(/-/g,'')}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(36)}
+function siteId(name){return 's_'+hash(name.replace(/\s/g,''))}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
+
+/* ============ 저장 (폰 + 공유 저장소) ============ */
+function dbWrite(path,data){
+  if(!db)return;
+  dbq[path]=(dbq[path]||Promise.resolve()).then(()=>db.doc(path).set(JSON.parse(JSON.stringify(data)))).then(()=>{
+    const b=document.getElementById('dbBadge');if(b&&b.dataset.fail){delete b.dataset.fail;b.textContent='클로드와 연결됨';b.className='badge on'}
+  }).catch(e=>{console.warn('db',path,e&&e.code);
+    const b=document.getElementById('dbBadge');if(b){b.dataset.fail='1';b.textContent='저장 실패 — 폰에만 있음';b.className='badge fail'}});
+}
+function saveItem(it){it.updated=now();S.items[it.id]=it;persist();dbWrite('items/'+it.id,it)}
+function saveSite(s){s.updated=now();S.sites[s.id]=s;persist();dbWrite('sites/'+s.id,s)}
+function saveMeet(m){m.updated=now();S.meetings[m.id]=m;persist();dbWrite('meetings/'+m.id,m)}
+function saveMeta(){persist();dbWrite('meta/outbox',{lines:S.outbox});dbWrite('meta/log',{lines:S.log.slice(-600)});dbWrite('meta/settings',S.settings)}
+function addLog(type,site,text){S.log.push({ts:now(),type,site:site||'',text});if(S.log.length>600)S.log=S.log.slice(-600)}
+function safe(v){return String(v==null?'':v).replace(/[,\r\n]+/g,' · ').replace(/\s+/g,' ').trim()}
+function queue(line,site,type){S.outbox.push({ts:now(),line,site:site||'',type:type||'회신'});addLog(type||'회신',site,line);saveMeta();renderFab()}
+
+async function initDb(){
+  const badge=document.getElementById('dbBadge');
+  try{
+    db=await (window.claude&&window.claude.use?window.claude.use('db'):Promise.resolve(null));
+  }catch(e){db=null}
+  if(!db){badge.textContent='이 폰에만 저장';badge.className='badge';return}
+  try{
+    const [it,si,me,ob,lg,st,ib,fs]=await Promise.all([db.collection('items').get(),db.collection('sites').get(),db.collection('meetings').get(),db.doc('meta/outbox').get(),db.doc('meta/log').get(),db.doc('meta/settings').get(),db.doc('meta/inbox').get(),db.doc('meta/feedsrc').get()]);
+    if(ib.exists&&Array.isArray(ib.data().lines))S.inbox=ib.data().lines;
+    if(fs.exists)S.feedsrc=fs.data()||{};
+    try{const ct=await db.doc('meta/contacts').get();if(ct.exists&&Array.isArray(ct.data().lines)){const mine=S.contacts||[];S.contacts=ct.data().lines.map((x,i)=>({...x,...(mine[i]&&mine[i].site?{site:mine[i].site}:{})}))}}catch(e){}
+    const remoteHas=it.size||si.size||me.size;
+    if(remoteHas){
+      it.docs.forEach(d=>mergeIn(S.items,d.id,d.data()));
+      si.docs.forEach(d=>mergeIn(S.sites,d.id,d.data()));
+      me.docs.forEach(d=>mergeIn(S.meetings,d.id,d.data()));
+      if(ob.exists&&Array.isArray(ob.data().lines))S.outbox=ob.data().lines;
+      if(lg.exists&&Array.isArray(lg.data().lines))S.log=lg.data().lines;
+      if(st.exists)S.settings={...S.settings,...st.data()};
+      // 폰에만 있던 것은 올린다
+      Object.values(S.items).forEach(x=>{if(!it.docs.find(d=>d.id===x.id))dbWrite('items/'+x.id,x)});
+      Object.values(S.sites).forEach(x=>{if(!si.docs.find(d=>d.id===x.id))dbWrite('sites/'+x.id,x)});
+      persist();
+    }else if(Object.keys(S.items).length||Object.keys(S.sites).length){
+      Object.values(S.items).forEach(x=>dbWrite('items/'+x.id,x));
+      Object.values(S.sites).forEach(x=>dbWrite('sites/'+x.id,x));
+      Object.values(S.meetings).forEach(x=>dbWrite('meetings/'+x.id,x));
+      saveMeta();
+    }
+    badge.textContent='클로드와 연결됨';badge.className='badge on';
+    const sub=(col,tgt)=>db.collection(col).onSnapshot(snap=>{
+      if(snap.metadata.hasPendingWrites)return;
+      let ch=false;snap.docChanges().forEach(c=>{if(c.type==='removed'){delete tgt[c.doc.id];ch=true}else{const d=c.doc.data();if(!tgt[c.doc.id]||(d.updated||'')>(tgt[c.doc.id].updated||'')){tgt[c.doc.id]=d;ch=true}}});
+      if(ch){persist();render()}
+    },e=>console.warn(col,e&&e.code));
+    sub('items',S.items);sub('sites',S.sites);sub('meetings',S.meetings);
+    db.doc('meta/outbox').onSnapshot(s=>{if(s.metadata.hasPendingWrites||!s.exists)return;S.outbox=s.data().lines||[];persist();renderFab()});
+    db.doc('meta/inbox').onSnapshot(s=>{if(s.metadata.hasPendingWrites||!s.exists)return;const L=s.data().lines||[];const n=L.filter(x=>!x.seen).length;const had=(S.inbox||[]).filter(x=>!x.seen).length;S.inbox=L;persist();render();if(n>had)toast('클로드가 '+(n-had)+'건 반영했습니다')});
+    db.doc('meta/feedsrc').onSnapshot(s=>{if(s.metadata.hasPendingWrites||!s.exists)return;S.feedsrc=s.data()||{};persist();if(view==='set')render()});
+    render();
+  }catch(e){console.warn(e);badge.textContent='이 폰에만 저장';badge.className='badge'}
+}
+function mergeIn(tgt,id,d){if(!tgt[id]||(d.updated||'')>(tgt[id].updated||''))tgt[id]=d}
+
+/* ============ 공용 UI ============ */
+const sheet=document.getElementById('sheet'), sheetBox=document.getElementById('sheetBox');
+function openSheet(html,title){
+  sheetBox.innerHTML='<div class="sheetbar"><span class="ttl">'+esc(title||'')+'</span><button class="b" onclick="closeSheet()">✕ 닫기</button></div>'+html;
+  sheet.hidden=false;sheetBox.scrollTop=0}
+function closeSheet(){sheet.hidden=true;sheetBox.innerHTML=''}
+sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet()});
+function micSheet(title,hint,initial,cb){
+  openSheet(`<div class="hint">${esc(hint||'')}</div>
+    <textarea id="micText">${esc(initial||'')}</textarea>
+    <div class="btns"><button class="b mic" id="micBtn">🎙 말하기</button><button class="b pri" id="micOk">확인</button><button class="b ghost" id="micCancel">취소</button></div>`,title);
+  const ta=document.getElementById('micText');
+  const R=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const mb=document.getElementById('micBtn');
+  if(!R){mb.textContent='이 브라우저는 말하기 미지원';mb.disabled=true}
+  else{let rec=null;mb.onclick=()=>{
+    if(rec){rec.stop();return}
+    rec=new R();rec.lang='ko-KR';rec.interimResults=true;rec.continuous=false;
+    const base=ta.value?ta.value.trim()+' ':'';
+    rec.onresult=e=>{let s='';for(const r of e.results)s+=r[0].transcript;ta.value=base+s};
+    rec.onend=()=>{rec=null;mb.classList.remove('rec');mb.textContent='🎙 말하기'};
+    rec.onerror=()=>{rec=null;mb.classList.remove('rec');mb.textContent='🎙 말하기';toast('마이크를 못 썼습니다. 글로 적어 주십시오')};
+    rec.start();mb.classList.add('rec');mb.textContent='● 듣는 중 (누르면 멈춤)';
+  }}
+  document.getElementById('micOk').onclick=()=>{const v=ta.value.trim();closeSheet();cb(v)};
+  document.getElementById('micCancel').onclick=closeSheet;
+  setTimeout(()=>ta.focus(),50);
+}
+function draftSheet(title,text,site,doneLine){
+  openSheet(`<div class="hint">금액·수량·기한의 [ ] 는 프로님이 채우십니다. 복사해 그룹웨어·카톡에 붙이시면 됩니다.</div>
+    <pre class="draft" id="draftText">${esc(text)}</pre>
+    <div class="btns"><button class="b pri" id="dCopy">복사</button><button class="b" id="dMail">메일로</button>${doneLine?'<button class="b" id="dDone">보냈음 (완료)</button>':''}<button class="b ghost" id="dClose">닫기</button></div>`,title);
+  document.getElementById('dCopy').onclick=()=>copy(text);
+  document.getElementById('dMail').onclick=()=>{const [subj,...rest]=text.split('\n');location.href='mailto:?subject='+encodeURIComponent(subj.replace(/^제목\s*:\s*/,''))+'&body='+encodeURIComponent(rest.join('\n').trim())};
+  const dd=document.getElementById('dDone');if(dd)dd.onclick=()=>{doneLine();closeSheet()};
+  document.getElementById('dClose').onclick=closeSheet;
+}
+async function copy(t){try{await navigator.clipboard.writeText(t);toast('복사했습니다')}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('복사했습니다')}catch(_){toast('길게 눌러 복사해 주십시오')}ta.remove()}}
+
+/* ============ 화면 전환 ============ */
+document.querySelectorAll('nav.tabbar button').forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});
+function render(){
+  document.querySelectorAll('nav.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
+  ['map','today','sites','meet','set'].forEach(v=>document.getElementById('v-'+v).hidden=(v!==view));
+  const titles={map:'여정',today:'오늘',sites:'현장',meet:'회의',set:'설정'};
+  document.getElementById('hTitle').textContent=titles[view];
+  const d=new Date();document.getElementById('hSub').textContent=ymd(d)+' ('+'일월화수목금토'[d.getDay()]+') · 현장 '+Object.keys(S.sites).length+'곳';
+  if(view==='map')renderMap();if(view==='today')renderToday();if(view==='sites')renderSites();if(view==='meet')renderMeet();if(view==='set')renderSet();
+  renderFab();
+}
+function renderFab(){const f=document.getElementById('fab');const n=S.outbox.length;f.hidden=!n||view==='set';f.textContent='보내기 '+n+'건 ↑'}
+document.getElementById('fab').onclick=sendOutbox;
+
+/* ============ 오늘 ============ */
+function itemsBy(kind){return Object.values(S.items).filter(i=>i.kind===kind)}
+function openItems(kind){return itemsBy(kind).filter(i=>!['done','confirmed','cancel','requested'].includes(i.status))}
+function whenRank(w){if(!w)return 5;if(w==='오늘')return 0;if(/^\d{4}-\d{2}-\d{2}$/.test(w))return w<=ymd()?0:2;if(w==='이번주')return 3;return 4}
+function sortItems(a){return a.sort((x,y)=>whenRank(x.when)-whenRank(y.when)||(x.id>y.id?1:-1))}
+function daysSince(iso){if(!iso)return '';const d=Math.floor((Date.now()-new Date(iso).getTime())/86400000);return d>=1?d+'일째':''}
+function renderToday(){
+  const ask=sortItems(openItems('ask')), todo=sortItems(openItems('todo')), make=sortItems(openItems('make'));
+  const doneToday=Object.values(S.items).filter(i=>['done','confirmed','requested'].includes(i.status)&&(i.updated||'').slice(0,10)===ymd());
+  document.getElementById('todayChips').innerHTML=
+    `<span class="chip ask">답해 주십시오 ${ask.length}</span><span class="chip ok">오늘 할 것 ${todo.filter(t=>whenRank(t.when)===0).length}</span><span class="chip acc">제가 만들까요 ${make.length}</span><span class="chip">끝낸 것 ${doneToday.length}</span>`;
+  let h='';
+  if(!ask.length&&!todo.length&&!make.length){
+    h+=`<div class="notice">아직 줄이 없습니다. <b>설정 › 아침 한 장 가져오기</b>에 PC가 보낸 [KM] 메일 글을 붙이시면 여기에 카드가 됩니다. 클로드와 연결되면 클로드가 직접 채워 넣기도 합니다.</div>`;
+  }
+  h+=`<h2 class="sec">답해 주십시오 <small>확인 전에는 전부 제안</small></h2>`;
+  h+=ask.length?ask.map(cardAsk).join(''):`<div class="empty">없음</div>`;
+  h+=`<h2 class="sec">오늘 할 것 <small>확정 · 문안이 붙어 있음</small></h2>`;
+  h+=todo.length?todo.map(cardTodo).join(''):`<div class="empty">없음</div>`;
+  h+=`<h2 class="sec">제가 만들까요? <small>「예」 → 이렇게 만들겠습니다 → 「맞아」</small></h2>`;
+  h+=make.length?make.map(cardMake).join(''):`<div class="empty">없음</div>`;
+  if(doneToday.length){h+=`<h2 class="sec">오늘 끝낸 것 ${doneToday.length}</h2>`+doneToday.map(i=>`<div class="card done"><div class="id">${esc(i.id)} · ${esc(i.site)} · <span class="pill p-off">${esc(statusKo(i.status))}</span></div><div class="t">${esc(i.text)}</div></div>`).join('')}
+  document.getElementById('todayBody').innerHTML=h;
+}
+function statusKo(s){return {open:'대기',progress:'진행중',done:'완료',confirmed:'확정',cancel:'취소',requested:'만들기 요청',fixed:'고침'}[s]||s}
+function whenPill(w){if(!w)return '';const r=whenRank(w);return `<span class="pill ${r===0?'p-ask':r<=3?'p-warn':'p-off'}">${esc(w)}</span>`}
+function cardAsk(i){
+  return `<div class="card" data-id="${esc(i.id)}"><div class="id">${esc(i.id)} · ${esc(i.site)} ${whenPill(i.when)} ${i.status==='progress'?'<span class="pill p-acc">진행중</span>':''} <span>${esc(daysSince(i.created))}</span></div>
+  <div class="t">${esc(i.text)}</div>${i.memo?`<div class="m">${esc(i.memo)}</div>`:''}${i.to?`<div class="m">→ ${esc(i.to)}</div>`:''}
+  ${i.fix?`<div class="fix">원래 → 고치신 것 : ${esc(i.fix)}</div>`:''}
+  <div class="btns"><button class="b" onclick="act('${esc(i.id)}','progress')">진행중</button><button class="b" onclick="act('${esc(i.id)}','done')">완료</button><button class="b pri" onclick="act('${esc(i.id)}','confirmed')">맞아</button><button class="b mic" onclick="actNo('${esc(i.id)}')">아니야 🎙</button><button class="b" onclick="actMake('${esc(i.id)}')">만들어줘</button></div></div>`;
+}
+function cardTodo(i){
+  return `<div class="card" data-id="${esc(i.id)}"><div class="id">${esc(i.id)} · ${esc(i.site)} ${whenPill(i.when)} <span class="pill p-ok">확정</span></div>
+  <div class="t">${esc(i.text)}</div>${i.to?`<div class="m">→ ${esc(i.to)}</div>`:''}${i.memo?`<div class="m">${esc(i.memo)}</div>`:''}
+  <div class="btns"><button class="b pri" onclick="showDraft('${esc(i.id)}')">문안</button><button class="b" onclick="act('${esc(i.id)}','done')">완료</button><button class="b" onclick="act('${esc(i.id)}','progress')">진행중</button><button class="b mic" onclick="actNo('${esc(i.id)}')">아니야 🎙</button></div></div>`;
+}
+function cardMake(i){
+  return `<div class="card" data-id="${esc(i.id)}"><div class="id">${esc(i.id)} · ${esc(i.site)} ${whenPill(i.when)}</div>
+  <div class="t">${esc(i.makeq||('제가 '+i.text+' 만들까요?'))}</div>${i.text&&i.makeq?`<div class="m">할 일 : ${esc(i.text)}</div>`:''}
+  <div class="btns"><button class="b pri" onclick="actYes('${esc(i.id)}')">예</button><button class="b" onclick="act('${esc(i.id)}','cancel')">아니</button><button class="b" onclick="act('${esc(i.id)}','progress')">나중에</button></div></div>`;
+}
+function replyLine(i,word,val){
+  const num=/^KM-\d+$/.test(i.id)?i.id:null;
+  if(num)return `${num} ${word}${val?' '+val:''}`;
+  return `${i.site} · ${i.text} → ${word}${val?' '+val:''}`;
+}
+window.act=function(id,status){
+  const i=S.items[id];if(!i)return;
+  const word={progress:'진행중',done:'완료',confirmed:'맞아',cancel:'취소'}[status];
+  i.history=(i.history||[]).concat([{ts:now(),from:i.status,to:status}]);
+  i.status=status;saveItem(i);queue(replyLine(i,word),i.site,'회신');render();toast(word+' — 보내기에 담았습니다');
+};
+window.actNo=function(id){
+  const i=S.items[id];if(!i)return;
+  micSheet('아니야 — 어떻게 고칠까요?','원래 글은 지우지 않고 「원래 → 고치신 것」 으로 남습니다. 이 값이 제 추정을 이깁니다.','',v=>{
+    if(!v)return;i.history=(i.history||[]).concat([{ts:now(),from:i.status,to:'fixed',fix:v}]);i.fix=v;i.status='progress';saveItem(i);
+    queue(replyLine(i,'아니야',v),i.site,'수정');render();toast('고치신 것을 담았습니다');
+  });
+};
+window.actMake=function(id){
+  const i=S.items[id];if(!i)return;
+  openSheet(`<div class="hint">바로 만들지 않습니다. 「맞아」 를 누르시면 만들기 요청이 PC·클로드로 갑니다.</div>
+  <pre class="draft">${esc(makePlan(i))}</pre>
+  <div class="btns"><button class="b pri" id="mkOk">맞아, 만들어</button><button class="b mic" id="mkFix">다르게 🎙</button><button class="b ghost" id="mkX">취소</button></div>`,'이렇게 만들겠습니다');
+  document.getElementById('mkOk').onclick=()=>{i.status='requested';saveItem(i);queue(replyLine(i,'만들어줘'),i.site,'만들기');closeSheet();render();toast('만들기 요청을 담았습니다')};
+  document.getElementById('mkFix').onclick=()=>{closeSheet();micSheet('어떻게 다르게?','',(v)=>{if(!v)return;i.status='requested';i.fix=v;saveItem(i);queue(replyLine(i,'만들어줘',v),i.site,'만들기');render()})};
+  document.getElementById('mkX').onclick=closeSheet;
+};
+window.actYes=function(id){actMake(id)};
+function makePlan(i){
+  const what=(i.makeq||'').replace(/^제가\s*/,'').replace(/\s*만들까요\?*$/,'')||i.text;
+  return `현장 : ${i.site}\n만들 것 : ${what}\n근거 : ${i.text}${i.memo?'\n메모 : '+i.memo:''}\n\n형식 : 회사 원틀(정답본) 그대로, 값만 채움\n채울 칸 : 금액·수량·기한은 [ ] 로 비워 두고 프로님이 채움\n나오는 것 : 편집용 파일 + 보낼 메일 제목·본문\n언제 : 다음 아침 한 장에 「제가 이렇게 만들겠습니다」 로 먼저 띄우고, 맞아 → 만듦`;
+}
+window.showDraft=function(id){
+  const i=S.items[id];if(!i)return;
+  const to=i.to||'[받는 곳]';
+  const text=`제목 : [${i.site}] ${i.text}\n\n${to} 담당자님, 한국마이크로닉 배성윤입니다.\n\n${i.site} 현장 「${i.text}」 건으로 연락드립니다.\n${i.memo?'- '+i.memo.replace(/\n/g,'\n- ')+'\n':''}- 요청 사항 : [        ]\n- 필요 시점 : [        ] (사유 : [        ])\n- 첨부 : [        ]\n\n확인되시면 회신 부탁드립니다. 감사합니다.\n\n한국마이크로닉(주) 배성윤 차장\n객실관리시스템(RCU/BSP/CB 제어분전함) 설계·시공\n전화 [        ]  메일 [        ]`;
+  draftSheet('문안 · '+i.id,text,i.site,()=>act(id,'done'));
+};
+
+/* ============ 보내기 ============ */
+function sendOutbox(){
+  if(!S.outbox.length)return;
+  const subj=`[KM] 회신 ${yymmdd()} · ${S.outbox.length}건`;
+  const body=S.outbox.map(o=>o.line).join('\n')+'\n\n(KM 손바닥 v6.4 에서 보냄 · 줄 앞 번호가 있는 줄은 48번이 읽고, 없는 줄은 「못 알아들은 답」 으로 클로드가 읽습니다)';
+  openSheet(`<div class="hint">메일 한 통으로 갑니다. 받는 곳 ${esc(S.settings.mailTo)}${S.settings.cc?' · 사본 '+esc(S.settings.cc):''}</div>
+  <pre class="draft">${esc(body)}</pre>
+  <div class="btns"><button class="b pri" id="sbMail">메일 앱으로</button><button class="b" id="sbCopy">복사만</button><button class="b" id="sbSent">보냈음 (비우기)</button><button class="b ghost" id="sbX">닫기</button></div>`,'PC로 보내기 '+S.outbox.length+'건');
+  document.getElementById('sbMail').onclick=()=>{location.href='mailto:'+encodeURIComponent(S.settings.mailTo)+(S.settings.cc?'?cc='+encodeURIComponent(S.settings.cc)+'&':'?')+'subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body)};
+  document.getElementById('sbCopy').onclick=()=>copy(body);
+  document.getElementById('sbSent').onclick=()=>{addLog('보냄','',subj+' ('+S.outbox.length+'줄)');S.outbox=[];saveMeta();closeSheet();render();toast('비웠습니다. 이력에 남아 있습니다')};
+  document.getElementById('sbX').onclick=closeSheet;
+}
+
+/* ============ 현장 ============ */
+function renderSites(){
+  const det=document.getElementById('siteDetail'), list=document.getElementById('sitesList');
+  if(curSite&&S.sites[curSite]){list.hidden=true;det.hidden=false;renderSiteDetail(S.sites[curSite]);return}
+  list.hidden=false;det.hidden=true;
+  const cts=(S.contacts||[]).filter(c=>!c.site);
+  const q=(document.getElementById('siteSearch').value||'').trim();
+  const arr=Object.values(S.sites).filter(s=>!q||s.name.includes(q)).sort((a,b)=>(b.updated||'')>(a.updated||'')?1:-1);
+  const head=cts.length?`<div class="feedbar" onclick="contactSheet()"><div><div class="ft">현장을 못 정한 연락처 ${cts.length}명</div><div class="fs">통화 기록에서 나온 분들입니다. 현장을 정해 주시면 그 현장으로 옮깁니다</div></div><span class="b sm pri">보기</span></div>`:'';
+  document.getElementById('siteCards').innerHTML=head+(arr.length?arr.map(s=>{
+    const st=stageState(s);const cur=st.find(x=>x.status!=='확정')||st[st.length-1];
+    const open=Object.values(S.items).filter(i=>i.site===s.name&&!['done','confirmed','cancel','requested'].includes(i.status)).length;
+    return `<div class="card" onclick="openSite('${s.id}')"><div class="id">${s.rooms?esc(s.rooms)+'실 · ':''}${s.due?'준공 '+esc(s.due):'준공일 미입력'}</div><div class="t">${esc(s.name)}</div>
+    <div class="m"><span class="dot d-${cur.status==='확정'?'ok':cur.status==='추정'?'warn':'off'}" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>${esc(cur.label)} · ${esc(cur.status)}${cur.date?' '+esc(cur.date):''} · 미결 ${open}</div></div>`;
+  }).join(''):`<div class="empty">현장이 없습니다. 아침 한 장을 가져오거나 「+ 현장 추가」.</div>`);
+}
+window.contactSheet=function(){
+  const cts=(S.contacts||[]).map((c,i)=>({...c,_i:i})).filter(c=>!c.site).sort((a,b)=>(b.calls||0)-(a.calls||0));
+  const opts=Object.values(S.sites).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  openSheet(`<div class="story">통화는 했는데 이름에 현장이 없어 제가 배정하지 못한 분들입니다. 짐작으로 옮기지 않았습니다. 고르시면 그 현장 「사람」 탭으로 들어갑니다.</div>
+  ${cts.slice(0,60).map(c=>`<div class="row"><span class="grow"><b>${esc(c.name||c.org)}</b><div class="small">${esc(c.org||'')} · 통화 ${c.calls||0}건${c.last?' · 최종 '+esc(c.last):''}</div></span>
+    <select onchange="assignContact(${c._i},this.value)" style="width:120px"><option value="">현장 고르기</option>${opts}<option value="__new">+ 새 현장</option><option value="__skip">안 씀</option></select>
+    ${c.phone?`<a class="b sm" href="tel:${esc(c.phone)}">📞</a>`:''}</div>`).join('')}
+  ${cts.length>60?`<div class="small">그 밖 ${cts.length-60}명은 배정 뒤에 보여 드립니다</div>`:''}
+  <div class="btns"><button class="b ghost" onclick="closeSheet()">닫기</button></div>`,'현장 못 정한 연락처 '+cts.length+'명');
+};
+window.assignContact=function(ix,val){
+  const c=(S.contacts||[])[ix];if(!c)return;
+  if(val==='__skip'){c.site='(안 씀)';saveContacts();closeSheet();render();return}
+  let s;
+  if(val==='__new'){const n=prompt('현장명');if(!n)return;s=ensureSite(n);saveSite(s)}
+  else s=S.sites[val];
+  if(!s)return;
+  s.people=(s.people||[]).concat([{role:c.role||'미정',name:c.name||c.org,org:c.org||'',phone:c.phone||'',calls:c.calls,last:c.last,from:'프로님이 배정'}]);
+  c.site=s.name;saveSite(s);saveContacts();
+  queue(`담당자,${safe(s.name)},${safe(c.role||'미정')},${safe(c.name||c.org)},${safe(c.org||'')},${safe(c.phone||'')}`,s.name,'담당자');
+  closeSheet();render();toast(s.name+' 으로 옮겼습니다');
+};
+function saveContacts(){persist();dbWrite('meta/contacts',{lines:S.contacts})}
+document.getElementById('siteSearch').oninput=renderSites;
+document.getElementById('btnAddSite').onclick=()=>{
+  openSheet(`<label class="f">현장명</label><input id="nsName"><div class="grid"><div><label class="f">객실 수</label><input id="nsRooms" inputmode="numeric"></div><div><label class="f">준공일</label><input id="nsDue" type="date"></div></div>
+  <div class="btns"><button class="b pri" id="nsOk">추가</button><button class="b ghost" id="nsX">취소</button></div>`,'현장 추가');
+  document.getElementById('nsOk').onclick=()=>{const n=document.getElementById('nsName').value.trim();if(!n)return;const s=ensureSite(n);s.rooms=document.getElementById('nsRooms').value.trim();s.due=document.getElementById('nsDue').value;saveSite(s);closeSheet();curSite=s.id;render()};
+  document.getElementById('nsX').onclick=closeSheet;
+};
+function ensureSite(name){const id=siteId(name);if(!S.sites[id]){S.sites[id]={id,name,rooms:'',due:'',stages:{},people:[],facts:[],created:now(),updated:now()}}return S.sites[id]}
+window.openSite=function(id){curSite=id;siteTab='공정';render()};
+function addDays(iso,n){const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);return ymd(d)}
+function isDate(v){return /^\d{4}-\d{2}-\d{2}$/.test(String(v||'').slice(0,10))}
+function stageState(s){
+  // 진실은 열쇠(req) 하나. 아래 구역만 준공일에서 거꾸로 (시운전 7 → 설치 7 → 빽커버 10 → 벽지 → 제작 60)
+  const est={};
+  if(s.due){let d=s.due;est['시운전']=addDays(d,-7);est['강전약전']=est['시운전'];est['기구물설치']=addDays(est['시운전'],-7);est['빽커버']=addDays(est['기구물설치'],-10);est['벽지완료']=est['빽커버'];est['기구물제작']=addDays(est['벽지완료'],-60)}
+  const doneKeyOf={};Object.keys(REQ2STAGE).forEach(kk=>doneKeyOf[REQ2STAGE[kk]]=kk);
+  return STAGES.map(([k,label])=>{
+    const dk=doneKeyOf[k], dr=dk?((s.req||{})[dk]||{}):{};
+    if(dr.state==='확정')return {key:k,label,status:'확정',date:isDate(dr.value)?dr.value.slice(0,10):(dr.date||''),note:dr.basis||'',reqKey:dk};
+    const c=(s.stages||{})[k];
+    if(c&&c.date)return {key:k,label,status:'확정',date:c.date,note:c.note||'',reqKey:dk};
+    const pk=STAGE2REQ[k], pr=pk?((s.req||{})[pk]||{}):{};
+    if(pr.state&&isDate(pr.value))return {key:k,label,status:pr.state==='확정'?'예정':'추정',date:pr.value.slice(0,10),note:pr.basis||'',reqKey:pk};
+    if(pr.state)return {key:k,label,status:'진행',date:'',note:pr.value||pr.basis||'',reqKey:pk};
+    if(est[k])return {key:k,label,status:'추정',date:est[k],note:'준공일 역산',reqKey:dk||pk};
+    return {key:k,label,status:'미확정',date:'',note:'',reqKey:dk||pk};
+  });
+}
+function stageCls(st){return st==='확정'?'ok':st==='예정'?'ok':st==='추정'||st==='진행'?'warn':'off'}
+function renderSiteDetail(s){
+  const tabs=['공정','사람','기록','돈','검수','경계'];
+  let h=`<div class="btns" style="margin-top:0"><button class="b ghost" onclick="curSite=null;render()">‹ 현장 목록</button><button class="b ghost" onclick="editSite('${s.id}')">정보 고치기</button></div>
+  <div class="card"><div class="t" style="font-size:1.05rem">${esc(s.name)}</div><div class="kv"><b>객실</b><span>${esc(s.rooms||'[ ]')}</span><b>준공일</b><span>${s.due?esc(s.due)+' <span class="pill p-ok">확정</span>':'[ ] <span class="small">넣으면 아래 추정이 채워집니다</span>'}</span></div></div>
+  <div class="tabs2">${tabs.map(t=>`<button class="${t===siteTab?'on':''}" onclick="siteTab='${t}';render()">${t}</button>`).join('')}</div>`;
+  if(siteTab==='공정'){
+    const st=stageState(s);
+    h+=`<div class="btns" style="margin:0 0 6px"><button class="b pri" onclick="view='map';render()">⛳ 여정 지도로 (필요한 것 · 지금 상태)</button></div><div class="notice">단계를 누르면 그 단계의 <b>열쇠</b>가 열립니다. <span class="pill p-ok">확정</span>=끝난 것·상대가 말한 날 <span class="pill p-warn">추정</span>=역산·제 판독 <span class="pill p-off">미확정</span></div><div class="tl">`;
+    h+=st.map(x=>`<div class="st" onclick="stageTap('${s.id}','${x.key}')"><span class="dot d-${stageCls(x.status)}"></span><span>${esc(x.label)}${x.note?' <span class="small">'+esc(x.note.slice(0,36))+'</span>':''}</span><span class="dt">${esc(x.status)}${x.date?' '+esc(x.date):''}</span></div>`).join('');
+    h+=`</div>`;
+    const items=Object.values(S.items).filter(i=>i.site===s.name&&!['done','confirmed','cancel','requested'].includes(i.status));
+    if(items.length){h+=`<h2 class="sec">이 현장의 미결 ${items.length}</h2>`+items.map(i=>`<div class="row"><span class="dot d-${i.kind==='todo'?'ok':'ask'}"></span><span class="grow"><span class="pill ${i.kind==='todo'?'p-ok':i.kind==='make'?'p-acc':'p-ask'}">${i.kind==='todo'?'할 것':i.kind==='make'?'만들까요':'제안'}</span> ${esc(i.makeq||i.text)}</span>${whenPill(i.when)}</div>`).join('')}
+  }
+  if(siteTab==='사람'){
+    h+=`<div class="notice">담당자를 누르면 전화가 걸립니다. 통화가 끝나면 「한 줄 남기기」.</div>`;
+    h+=(s.people||[]).length?(s.people||[]).map((p,ix)=>`<div class="row"><span class="grow"><b>${esc(p.name)}</b> ${p.role&&p.role!=='미정'?`<span class="pill p-off">${esc(p.role)}</span>`:''}<div class="small">${esc(p.org||'')}${p.calls?' · 통화 '+p.calls+'건'+(p.last?' · 최종 '+esc(p.last):''):''}</div></span>${p.phone?`<a class="b" href="tel:${esc(p.phone.replace(/[^\d+]/g,''))}">📞</a>`:''}<button class="b sm" onclick="noteLine('${s.id}','${esc(p.role)} ${esc(p.name)}')">한 줄</button></div>`).join(''):`<div class="empty">담당자가 없습니다</div>`;
+    h+=`<div class="btns"><button class="b" onclick="addPerson('${s.id}')">+ 담당자</button><button class="b mic" onclick="noteLine('${s.id}','')">🎙 한 줄 남기기</button></div>`;
+  }
+  if(siteTab==='기록'){
+    const facts=(s.facts||[]);const logs=S.log.filter(l=>l.site===s.name).slice().reverse();
+    h+=`<h2 class="sec">확정 (프로님이 정한 값 · 어떤 추정보다 우선)</h2>`;
+    h+=facts.length?facts.slice().reverse().map(f=>`<div class="row"><span class="grow"><span class="small mono">${esc(f.date||'')}</span> <b>${esc(f.item)}</b> = ${esc(f.value)}<div class="small">${esc(f.basis||'')}</div></span></div>`).join(''):`<div class="empty">없음</div>`;
+    h+=`<h2 class="sec">한 줄 기록 ${logs.length}</h2>`;
+    h+=logs.length?logs.slice(0,60).map(l=>`<div class="row"><span class="grow"><span class="small mono">${esc(l.ts.slice(5,16).replace('T',' '))}</span> <span class="pill p-off">${esc(l.type)}</span> ${esc(l.text)}</span></div>`).join(''):`<div class="empty">없음</div>`;
+    h+=`<div class="btns"><button class="b" onclick="addFact('${s.id}')">+ 확정값 넣기</button><button class="b mic" onclick="noteLine('${s.id}','')">🎙 한 줄</button></div>`;
+  }
+  if(siteTab==='돈'){
+    const m=s.money||{};
+    h+=`<div class="notice">금액은 프로님만 넣습니다. 납품 완료를 누르면 계산서 시점을 알려 드립니다. (v6.2에서 6번 수금레이더와 연결)</div>`;
+    h+=['견적','계약','계산서1 외함','계산서2 속판','계산서3 기구물','수금'].map(k=>{const v=m[k]||{};return `<div class="row"><span class="grow"><b>${k}</b> <span class="small">${v.date?esc(v.date):''}</span></span><input style="width:120px" inputmode="numeric" placeholder="금액 [ ]" value="${esc(v.amt||'')}" onchange="moneySet('${s.id}','${k}','amt',this.value)"><button class="b sm ${v.date?'':'pri'}" onclick="moneySet('${s.id}','${k}','date','${ymd()}')">${v.date?'완료':'완료 표시'}</button></div>`}).join('');
+  }
+  if(siteTab==='검수'){
+    h+=`<div class="notice">외함 설치 · 기구물 설치 · 시운전 객실 O/X 는 <b>v6.3</b>에서 넣습니다 (K-5 답에 따라 모양이 정해집니다). 지금은 「한 줄 남기기」 로 하자를 적어 두시면 기록에 남습니다.</div><div class="btns"><button class="b mic" onclick="noteLine('${s.id}','하자 ')">🎙 하자 한 줄</button></div>`;
+  }
+  if(siteTab==='경계'){
+    const b=s.bound||{};
+    h+=`<div class="notice">「누가 무엇을」. 셀을 바꾸면 경계 줄이 보내기에 담기고, 확인 메일 문안을 만들 수 있습니다. 회의에서 들은 것은 확정, 제 짐작은 추정.</div>`;
+    h+=BOUND.map(k=>{const v=b[k]||{};return `<div class="row"><span class="grow"><b>${k}</b></span><select style="width:130px" onchange="boundSet('${s.id}','${k}',this.value)"><option value="">[ ]</option>${['한국마이크로닉','전기','통신','건축','설비','발주처','미정'].map(o=>`<option ${v.who===o?'selected':''}>${o}</option>`).join('')}</select>${v.who?`<span class="pill ${v.sure==='확정'?'p-ok':'p-warn'}" onclick="boundSure('${s.id}','${k}')">${esc(v.sure||'추정')}</span>`:''}</div>`}).join('');
+    h+=`<div class="btns"><button class="b" onclick="boundDraft('${s.id}')">경계 확인 메일 문안</button></div>`;
+  }
+  document.getElementById('siteDetail').innerHTML=h;
+}
+window.editSite=function(id){const s=S.sites[id];openSheet(`<label class="f">현장명 <span class="small">제가 통화 기록에서 뽑은 이름이라 틀릴 수 있습니다. 고치시면 그 이름을 씁니다</span></label><input id="esName" value="${esc(s.name)}"><div class="grid"><div><label class="f">객실 수</label><input id="esRooms" value="${esc(s.rooms||'')}" inputmode="numeric"></div><div><label class="f">준공일</label><input id="esDue" type="date" value="${esc(s.due||'')}"></div></div><div class="btns"><button class="b pri" id="esOk">저장</button><button class="b ghost" id="esX">취소</button></div>`,'현장 정보');
+  document.getElementById('esOk').onclick=()=>{const due=document.getElementById('esDue').value;
+    const nn=document.getElementById('esName').value.trim();
+    if(nn&&nn!==s.name){const old=s.name;Object.values(S.items).forEach(i=>{if(i.site===old){i.site=nn;saveItem(i)}});
+      Object.values(S.meetings).forEach(m=>{if(m.site===old){m.site=nn;saveMeet(m)}});
+      queue(`현장명,${safe(old)},→,${safe(nn)},프로님이 고치심`,nn,'현장명');s.name=nn;s.renamedFrom=old}
+    if(due&&due!==s.due){queue(`확정,${safe(s.name)},준공일,${safe(due)},앱 입력`,s.name,'확정')}
+    s.rooms=document.getElementById('esRooms').value.trim();s.due=due;saveSite(s);closeSheet();render();toast('저장했습니다')};
+  document.getElementById('esX').onclick=closeSheet};
+window.stageTap=function(sid,key){
+  const s=S.sites[sid];
+  const _st=stageState(s).find(x=>x.key===key);
+  if(_st&&_st.reqKey){const pr=_st.reqKey.split('/');const qi=QUESTS.findIndex(q=>q.k===pr[0]);if(qi>=0){view='map';curSite=sid;render();reqSheet(sid,qi,pr[1]);return}}
+  const label=STAGES.find(x=>x[0]===key)[1];const cur=(s.stages||{})[key]||{};
+  openSheet(`<h3>${esc(label)}</h3><div class="hint">완료된 날짜를 넣으면 「확정」 이 되어 확정 대장에 들어갑니다. 역산 추정을 이깁니다.</div>
+  <label class="f">완료일</label><input type="date" id="stDate" value="${esc(cur.date||ymd())}"><label class="f">근거 (선택)</label><input id="stNote" value="${esc(cur.note||'')}" placeholder="현장 확인 / 홍부장 통화 …">
+  <div class="btns"><button class="b pri" id="stOk">확정</button>${cur.date?'<button class="b" id="stClr">확정 지우기(미확정으로)</button>':''}<button class="b ghost" id="stX">취소</button></div>`);
+  document.getElementById('stOk').onclick=()=>{const d=document.getElementById('stDate').value;if(!d)return;const n=document.getElementById('stNote').value.trim();s.stages=s.stages||{};s.stages[key]={date:d,note:n,ts:now()};saveSite(s);queue(`확정,${s.name},${label},${d},${n||'앱 입력'}`,s.name,'확정');closeSheet();render();toast('확정 대장에 담았습니다')};
+  const c=document.getElementById('stClr');if(c)c.onclick=()=>{if(!confirm('확정을 지우고 미확정으로 되돌릴까요? (이력은 남습니다)'))return;addLog('되돌림',s.name,`${label} 확정 ${cur.date} 지움`);delete s.stages[key];saveSite(s);queue(`확정,${s.name},${label},취소,앱에서 되돌림`,s.name,'확정');closeSheet();render()};
+  document.getElementById('stX').onclick=closeSheet;
+};
+window.addPerson=function(sid){const s=S.sites[sid];openSheet(`<label class="f">역할</label><select id="ppRole">${PARTIES.concat(['협력업체','내부']).map(p=>`<option>${p}</option>`).join('')}</select><label class="f">이름·직함</label><input id="ppName"><label class="f">회사</label><input id="ppOrg"><label class="f">전화</label><input id="ppPhone" inputmode="tel"><div class="btns"><button class="b pri" id="ppOk">추가</button><button class="b ghost" id="ppX">취소</button></div>`,'담당자');
+  document.getElementById('ppOk').onclick=()=>{const p={role:document.getElementById('ppRole').value,name:document.getElementById('ppName').value.trim(),org:document.getElementById('ppOrg').value.trim(),phone:document.getElementById('ppPhone').value.trim()};if(!p.name)return;s.people=(s.people||[]).concat([p]);saveSite(s);queue(`담당자,${s.name},${p.role},${p.name},${p.org},${p.phone}`,s.name,'담당자');closeSheet();render()};
+  document.getElementById('ppX').onclick=closeSheet};
+window.noteLine=function(sid,prefix){const s=S.sites[sid];micSheet('한 줄 남기기 · '+s.name,'통화·현장에서 들은 것을 그대로. 고치지 않고 기록에 남습니다.',prefix||'',v=>{if(!v)return;queue(`메모,${s.name},${v}`,s.name,'메모');saveSite(s);render();toast('기록했습니다')})};
+window.addFact=function(sid){const s=S.sites[sid];openSheet(`<div class="hint">프로님이 정한 값. 어떤 추정보다 우선합니다.</div><label class="f">항목</label><input id="fcItem" placeholder="CB외함 납품일 / 객실 수 / 계약 형태 …"><label class="f">값</label><input id="fcVal"><label class="f">근거</label><input id="fcBasis" placeholder="누구 통화 · 언제"><div class="btns"><button class="b pri" id="fcOk">확정</button><button class="b ghost" id="fcX">취소</button></div>`,'확정값 넣기');
+  document.getElementById('fcOk').onclick=()=>{const f={date:ymd(),item:document.getElementById('fcItem').value.trim(),value:document.getElementById('fcVal').value.trim(),basis:document.getElementById('fcBasis').value.trim()};if(!f.item||!f.value)return;s.facts=(s.facts||[]).concat([f]);saveSite(s);queue(`확정,${s.name},${f.item},${f.value},${f.basis||'앱 입력'}`,s.name,'확정');closeSheet();render()};
+  document.getElementById('fcX').onclick=closeSheet};
+window.moneySet=function(sid,k,f,v){const s=S.sites[sid];s.money=s.money||{};s.money[k]=s.money[k]||{};if(f==='date'&&s.money[k].date){return}s.money[k][f]=v;
+  if(f==='date'){queue(`돈,${safe(s.name)},${safe(k)},완료,${safe(v)}`,s.name,'돈');
+    const key=MONEY2REQ[k];if(key)setReq(s,key,'확정',v,'돈 탭에서 완료 표시');
+    const nx={'계산서1 외함':'외함 납품분','계산서2 속판':'속판 납품분','계산서3 기구물':'기구물 납품분'}[k];
+    if(nx)toast(nx+' 계산서 시점입니다. 여정 열쇠도 갱신했습니다');else toast('담았습니다');}
+  saveSite(s);render()};
+window.boundSet=function(sid,k,who){const s=S.sites[sid];s.bound=s.bound||{};s.bound[k]={who,sure:(s.bound[k]||{}).sure||'추정',ts:now()};saveSite(s);if(who)queue(`경계,${s.name},${k},${who},${s.bound[k].sure}`,s.name,'경계');render()};
+window.boundSure=function(sid,k){const s=S.sites[sid];const b=s.bound[k];b.sure=b.sure==='확정'?'추정':'확정';saveSite(s);queue(`경계,${s.name},${k},${b.who},${b.sure}`,s.name,'경계');render()};
+window.boundDraft=function(sid){const s=S.sites[sid];const b=s.bound||{};const rows=BOUND.filter(k=>b[k]&&b[k].who).map(k=>`- ${k} : ${b[k].who}${b[k].sure==='추정'?' (확인 요청)':''}`);
+  const text=`제목 : [${s.name}] 객실관리 공사 업무 경계 확인 요청\n\n담당자님, 한국마이크로닉 배성윤입니다.\n\n${s.name} 현장의 객실관리 관련 업무 경계를 아래와 같이 정리하였습니다. 다른 부분이 있으면 회신 부탁드립니다.\n\n${rows.length?rows.join('\n'):'- [ ]'}\n\n※ 강전 결선은 전기공사, 약전 결선·제어분전함 내부 설치·시운전은 당사 범위입니다.\n확인 회신 기한 : [        ]\n\n감사합니다.\n한국마이크로닉(주) 배성윤 차장  전화 [        ]`;
+  draftSheet('경계 확인 메일 · '+s.name,text,s.name)};
+
+/* ============ 회의 ============ */
+function renderMeet(){
+  const body=document.getElementById('meetBody');
+  const m=curMeet&&S.meetings[curMeet];
+  if(!m){
+    const past=Object.values(S.meetings).sort((a,b)=>(b.created>a.created?1:-1));
+    body.innerHTML=`<div class="notice">회의 중 또는 회의 뒤 차 안에서, 바뀐 것만 단추로 찍습니다. 「회의 끝」 을 누르면 초안 5종이 나옵니다. PLAUD 회의록은 밤에 PC가 대조합니다.</div>
+    <div class="card"><div class="t">새 회의</div><label class="f">현장</label><select id="mtSite">${Object.values(S.sites).map(s=>`<option>${esc(s.name)}</option>`).join('')}<option value="__new">+ 새 현장…</option></select>
+    <label class="f">참석</label><div class="chips" id="mtParties">${PARTIES.map(p=>`<button class="chip" data-p="${p}" onclick="this.classList.toggle('sel')">${p}</button>`).join('')}</div>
+    <div class="btns"><button class="b pri" id="mtStart">회의 시작</button></div></div>
+    ${past.length?`<h2 class="sec">지난 회의</h2>`+past.slice(0,20).map(x=>`<div class="card" onclick="curMeet='${x.id}';render()"><div class="id">${esc(x.created.slice(0,16).replace('T',' '))} ${x.ended?'<span class="pill p-off">끝</span>':'<span class="pill p-acc">진행중</span>'}</div><div class="t">${esc(x.site)} · ${(x.attendees||[]).join('·')}</div><div class="m">변경 ${x.changes.length} · 일정 ${x.sched.length} · 메모 ${x.notes.length}</div></div>`).join(''):''}`;
+    document.getElementById('mtStart').onclick=()=>{
+      let site=document.getElementById('mtSite').value;
+      if(site==='__new'){site=prompt('현장명');if(!site)return;ensureSite(site);saveSite(S.sites[siteId(site)])}
+      if(!site){toast('현장을 먼저 추가해 주십시오');return}
+      const att=[...document.querySelectorAll('#mtParties .chip.sel')].map(b=>b.dataset.p);
+      const id='m_'+Date.now();const mm={id,site,attendees:att,changes:[],sched:[],bound:[],notes:[],ended:'',created:now(),updated:now()};saveMeet(mm);curMeet=id;render();
+    };
+    return;
+  }
+  let h=`<div class="btns" style="margin-top:0"><button class="b ghost" onclick="curMeet=null;render()">‹ 회의 목록</button></div>
+  <div class="card"><div class="id">${esc(m.created.slice(0,16).replace('T',' '))} ${m.ended?'<span class="pill p-off">끝 '+esc(m.ended.slice(11,16))+'</span>':'<span class="pill p-acc">진행 중</span>'}</div><div class="t" style="font-size:1.05rem">${esc(m.site)}</div><div class="m">참석 : ${(m.attendees||[]).join(' · ')||'[ ]'}</div></div>`;
+  h+=`<h2 class="sec">수량 · 규격 <small>누르면 전→후</small></h2><div class="chips">${ITEMS_MEET.map(k=>`<button class="chip" onclick="mtChange('${m.id}','${k}')">${k}</button>`).join('')}<button class="chip" onclick="mtChange('${m.id}','')">+ 기타</button></div>`;
+  h+=m.changes.length?m.changes.map((c,ix)=>`<div class="row"><span class="grow"><b>${esc(c.item)}</b> <span class="mono">${esc(c.from||'?')} → ${esc(c.to)}</span>${c.spec?'<div class="small">'+esc(c.spec)+'</div>':''}</span><span class="pill ${c.sure==='확정'?'p-ok':'p-warn'}" onclick="mtToggle('${m.id}','changes',${ix})">${esc(c.sure)}</span>${m.ended?'':`<button class="b sm ghost" onclick="mtDel('${m.id}','changes',${ix})">✕</button>`}</div>`).join(''):`<div class="empty">아직 없음</div>`;
+  h+=`<h2 class="sec">일정</h2><div class="btns" style="margin:0 0 6px"><button class="b" onclick="mtSched('${m.id}')">+ 단계 · 날짜</button></div>`;
+  h+=m.sched.length?m.sched.map((c,ix)=>`<div class="row"><span class="grow"><b>${esc(c.label)}</b> <span class="mono">${esc(c.date)}</span>${c.note?'<div class="small">'+esc(c.note)+'</div>':''}</span><span class="pill ${c.sure==='확정'?'p-ok':'p-warn'}" onclick="mtToggle('${m.id}','sched',${ix})">${esc(c.sure)}</span></div>`).join(''):`<div class="empty">아직 없음</div>`;
+  h+=`<h2 class="sec">경계 (누가 무엇을)</h2><div class="btns" style="margin:0 0 6px"><button class="b" onclick="mtBound('${m.id}')">+ 경계</button></div>`;
+  h+=m.bound.length?m.bound.map((c,ix)=>`<div class="row"><span class="grow"><b>${esc(c.item)}</b> = ${esc(c.who)}</span><span class="pill ${c.sure==='확정'?'p-ok':'p-warn'}" onclick="mtToggle('${m.id}','bound',${ix})">${esc(c.sure)}</span></div>`).join(''):`<div class="empty">아직 없음</div>`;
+  h+=`<h2 class="sec">메모 (말한 대로)</h2><div class="btns" style="margin:0 0 6px"><button class="b mic" onclick="mtNote('${m.id}')">🎙 한 줄</button></div>`;
+  h+=m.notes.length?m.notes.map(n=>`<div class="row"><span class="grow"><span class="small mono">${esc(n.ts.slice(11,16))}</span> ${esc(n.text)}</span></div>`).join(''):`<div class="empty">아직 없음</div>`;
+  h+=`<div class="btns" style="margin-top:16px">${m.ended?`<button class="b pri" onclick="mtDrafts('${m.id}')">초안 5종 다시 보기</button>`:`<button class="b pri" onclick="mtEnd('${m.id}')">회의 끝 → 초안 5종</button>`}</div>`;
+  body.innerHTML=h;
+}
+window.mtChange=function(mid,item){const m=S.meetings[mid];
+  openSheet(`<label class="f">품목</label><input id="chItem" value="${esc(item)}" placeholder="품목"><div class="grid"><div><label class="f">전 (도면·견적)</label><input id="chFrom" inputmode="numeric" placeholder="[ ]"></div><div><label class="f">후 (회의)</label><input id="chTo" inputmode="numeric" placeholder="[ ]"></div></div><label class="f">규격·메모 (선택)</label><input id="chSpec"><label class="f">누가 말했나</label><select id="chSure"><option>확정</option><option>추정</option></select><div class="hint" style="margin-top:6px">상대가 말한 것=확정, 제가 짐작한 것=추정</div><div class="btns"><button class="b pri" id="chOk">넣기</button><button class="b ghost" id="chX">취소</button></div>`,'수량 · 규격 변경');
+  document.getElementById('chOk').onclick=()=>{const c={item:document.getElementById('chItem').value.trim(),from:document.getElementById('chFrom').value.trim(),to:document.getElementById('chTo').value.trim(),spec:document.getElementById('chSpec').value.trim(),sure:document.getElementById('chSure').value};if(!c.item||!c.to)return;m.changes.push(c);saveMeet(m);closeSheet();render()};
+  document.getElementById('chX').onclick=closeSheet};
+window.mtSched=function(mid){const m=S.meetings[mid];
+  openSheet(`<label class="f">단계</label><select id="scKey">${STAGES.map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}<option value="기타">기타</option></select><label class="f">날짜</label><input type="date" id="scDate" value="${ymd()}"><label class="f">메모</label><input id="scNote"><label class="f">누가 말했나</label><select id="scSure"><option>확정</option><option>추정</option></select><div class="btns"><button class="b pri" id="scOk">넣기</button><button class="b ghost" id="scX">취소</button></div>`,'일정');
+  document.getElementById('scOk').onclick=()=>{const k=document.getElementById('scKey').value;const st=STAGES.find(x=>x[0]===k);m.sched.push({key:k,label:st?st[1]:'기타',date:document.getElementById('scDate').value,note:document.getElementById('scNote').value.trim(),sure:document.getElementById('scSure').value});saveMeet(m);closeSheet();render()};
+  document.getElementById('scX').onclick=closeSheet};
+window.mtBound=function(mid){const m=S.meetings[mid];
+  openSheet(`<label class="f">항목</label><select id="bdItem">${BOUND.map(b=>`<option>${b}</option>`).join('')}</select><label class="f">누가</label><select id="bdWho">${['한국마이크로닉','전기','통신','건축','설비','발주처','미정'].map(o=>`<option>${o}</option>`).join('')}</select><label class="f">누가 말했나</label><select id="bdSure"><option>확정</option><option>추정</option></select><div class="btns"><button class="b pri" id="bdOk">넣기</button><button class="b ghost" id="bdX">취소</button></div>`,'경계');
+  document.getElementById('bdOk').onclick=()=>{m.bound.push({item:document.getElementById('bdItem').value,who:document.getElementById('bdWho').value,sure:document.getElementById('bdSure').value});saveMeet(m);closeSheet();render()};
+  document.getElementById('bdX').onclick=closeSheet};
+window.mtNote=function(mid){const m=S.meetings[mid];micSheet('메모 · 말한 대로','들은 그대로. 고치지 않습니다.','',v=>{if(!v)return;m.notes.push({ts:now(),text:v});saveMeet(m);render()})};
+window.mtToggle=function(mid,arr,ix){const m=S.meetings[mid];if(m.ended)return;const c=m[arr][ix];c.sure=c.sure==='확정'?'추정':'확정';saveMeet(m);render()};
+window.mtDel=function(mid,arr,ix){const m=S.meetings[mid];m[arr].splice(ix,1);saveMeet(m);render()};
+window.mtEnd=function(mid){const m=S.meetings[mid];m.ended=now();saveMeet(m);
+  const s=ensureSite(m.site);
+  // 현장 반영 + 보내기 줄
+  const att=(m.attendees||[]).join('·')||'회의';
+  let touched=0;
+  m.changes.forEach(c=>{
+    queue(`회의,${safe(m.site)},${safe(c.item)},${safe((c.from||'?')+'→'+c.to)},${c.sure},${safe(att)}`,m.site,'회의');
+    if(setReq(s,itemReqKey(c.item),c.sure==='확정'?'확정':'진행중',`${c.item} ${c.from||'?'}→${c.to}${c.spec?' ('+c.spec+')':''}`,`${m.created.slice(0,10)} ${att} 회의`))touched++;
+  });
+  m.sched.forEach(c=>{
+    const key=STAGE2REQ[c.key];
+    if(key&&setReq(s,key,c.sure,c.date,`${m.created.slice(0,10)} ${att} 회의${c.note?' · '+c.note:''}`))touched++;
+    else queue(`${c.sure},${safe(m.site)},${safe(c.label)},${safe(c.date)},회의 ${safe(c.note||'')}`,m.site,'일정');
+  });
+  m.bound.forEach(c=>{s.bound=s.bound||{};s.bound[c.item]={who:c.who,sure:c.sure,ts:now()};queue(`경계,${safe(m.site)},${safe(c.item)},${safe(c.who)},${c.sure}`,m.site,'경계')});
+  m.notes.forEach(n=>queue(`메모,${m.site},${n.text}`,m.site,'메모'));
+  saveSite(s);render();mtDrafts(mid,touched)};
+window.mtDrafts=function(mid,touched){const m=S.meetings[mid];const d=meetDrafts(m);
+  openSheet(`<div class="hint">복사해 그룹웨어 의뢰서·메일에 붙이십니다. 단가·금액은 PC 7번이 붙입니다. 이 회의의 줄들은 보내기에 담겼고${touched?`, <b>여정 열쇠 ${touched}개</b>가 갱신되었습니다`:''}.</div>
+  ${d.map((x,ix)=>`<h2 class="sec">${ix+1}. ${esc(x.title)}</h2><pre class="draft">${esc(x.text)}</pre><div class="btns" style="margin-top:0"><button class="b sm" onclick="copy(${JSON.stringify(x.text).replace(/"/g,'&quot;')})">복사</button></div>`).join('')}
+  <div class="btns"><button class="b pri" id="mdAll">전부 복사</button>${touched?`<button class="b" onclick="closeSheet();curMeet=null;view='map';render()">여정에서 보기</button>`:''}<button class="b ghost" id="mdX">닫기</button></div>`,'회의 끝 · '+m.site);
+  document.getElementById('mdAll').onclick=()=>copy(d.map(x=>'■ '+x.title+'\n'+x.text).join('\n\n'));
+  document.getElementById('mdX').onclick=closeSheet};
+function meetDrafts(m){
+  const dt=m.created.slice(0,10), att=(m.attendees||[]).join('·')||'[ ]';
+  const chg=m.changes.map(c=>`- ${c.item} : ${c.from||'?'} → ${c.to}${c.spec?' ('+c.spec+')':''} [${c.sure}]`).join('\n')||'- 없음';
+  const sch=m.sched.map(c=>`- ${c.label} : ${c.date}${c.note?' · '+c.note:''} [${c.sure}]`).join('\n')||'- 없음';
+  const bnd=m.bound.map(c=>`- ${c.item} : ${c.who} [${c.sure}]`).join('\n')||'- 없음';
+  const notes=m.notes.map(n=>'- '+n.text).join('\n')||'- 없음';
+  const out=[];
+  out.push({title:'회의 요약',text:`${m.site} 협의 · ${dt} · 참석 ${att}\n\n[수량·규격]\n${chg}\n\n[일정]\n${sch}\n\n[업무 경계]\n${bnd}\n\n[말한 대로]\n${notes}\n\n※ [확정]=상대가 말한 것 / [추정]=내 판단. 추정은 서면 확인 전까지 확정이 아님`});
+  const depts=[];if(m.changes.length){depts.push(['설계팀','수량·규격 변경을 객실관리 도면(배치·계통·CB 배선)에 반영, Rev 올림',chg]);depts.push(['제작팀','아래 수량으로 제작 수량 변경 (이미 발행된 의뢰서와 대조 요망)',chg])}
+  if(m.sched.length)depts.push(['시공팀','아래 일정으로 현장 투입 계획 조정',sch]);
+  if(m.bound.length)depts.push(['시공팀·구매팀','업무 경계 변경 확인',bnd]);
+  out.push({title:'작업의뢰서 본문 (부서별)',text:depts.length?depts.map(([d,why,body])=>`[작업의뢰서 · ${d}]\n현장 : ${m.site}\n의뢰 사유 : ${dt} ${att} 협의 결과\n의뢰 내용 : ${why}\n${body}\n납기 : [        ]\n첨부 : [        ]\n의뢰 : 배성윤`).join('\n\n'):'변경이 없어 의뢰서 없음'});
+  out.push({title:'상대 확인 메일',text:`제목 : [${m.site}] ${dt} 협의 내용 확인 요청\n\n${att} 담당자님, 한국마이크로닉 배성윤입니다.\n오늘 협의한 내용을 아래와 같이 정리하였습니다. 다른 부분이 있으면 회신 부탁드립니다. 회신이 없으면 아래대로 진행하겠습니다.\n\n[수량·규격]\n${chg}\n\n[일정]\n${sch}\n\n[업무 경계]\n${bnd}\n\n회신 기한 : [        ]\n감사합니다.\n한국마이크로닉(주) 배성윤 차장  전화 [        ]`});
+  out.push({title:'증감 예비표 (단가·금액은 PC 7번)',text:`품목 | 전 | 후 | 증감 | 단가 | 금액\n`+(m.changes.map(c=>{const a=parseFloat(c.from),b=parseFloat(c.to);const d=(isFinite(a)&&isFinite(b))?(b-a):'?';return `${c.item} | ${c.from||'?'} | ${c.to} | ${d} | [PC] | [PC]`}).join('\n')||'없음')+`\n\n※ 요율·단가는 앱이 정하지 않음. 수량은 검토용, 수량표로 확정`});
+  const todos=[];if(m.changes.length)todos.push('- 증감 내역 확정 → 발주처·시공사 서면 확인 [기한  ]');if(m.sched.some(c=>c.sure==='추정'))todos.push('- 추정 일정 확인 전화 → '+att);if(m.bound.length)todos.push('- 경계 확인 메일 발송');todos.push('- PLAUD 회의록과 대조 (PC 40번, 밤)');
+  out.push({title:'할 일',text:todos.join('\n')});
+  return out;
+}
+
+/* ============ 설정 · 가져오기 ============ */
+function renderSet(){
+  document.getElementById('setMailTo').value=S.settings.mailTo||'';document.getElementById('setCc').value=S.settings.cc||'';document.getElementById('setBig').checked=!!S.settings.big;
+  const SRC=[['확정 대장','확정사항.csv · 43번'],['통화 기록','녹취 분석 · PLAUD'],['앞으로 할 것','46번'],['견적 발송','47번'],['회의록','PLAUD v10'],['의뢰서 대장','10번']];
+  document.getElementById('srcList').innerHTML=SRC.map(([k,w])=>{const v=(S.feedsrc||{})[k]||{};
+    return `<span><b>${k}</b><div class="small">${w}</div></span><span class="small">${v.date?esc(v.date):'—'}</span><span class="pill ${v.date?'p-ok':'p-off'}">${v.count!=null?esc(String(v.count))+'건':'아직'}</span>`}).join('');
+  const inb=S.inbox||[];
+  document.getElementById('inbCount').textContent=inb.length+'건';
+  document.getElementById('inbList').innerHTML=inb.slice().reverse().slice(0,20).map(x=>`<div class="row"><span class="grow"><span class="mono">${esc((x.ts||'').slice(5,10))}</span> ${esc(x.text)}</span>${x.seen?'':'<span class="pill p-ok">새것</span>'}</div>`).join('')||'<div class="empty">아직 없음</div>';
+  document.getElementById('logCount').textContent=S.log.length+'줄';
+  document.getElementById('logList').innerHTML=S.log.slice(-30).reverse().map(l=>`<div class="row"><span class="grow"><span class="mono">${esc(l.ts.slice(5,16).replace('T',' '))}</span> <span class="pill p-off">${esc(l.type)}</span> ${esc(l.text)}</span></div>`).join('')||'<div class="empty">없음</div>';
+}
+document.getElementById('btnSaveSet').onclick=()=>{S.settings.mailTo=document.getElementById('setMailTo').value.trim()||DEFAULT_SET.mailTo;S.settings.cc=document.getElementById('setCc').value.trim();S.settings.big=document.getElementById('setBig').checked;document.body.classList.toggle('big',S.settings.big);saveMeta();toast('저장했습니다')};
+document.getElementById('btnExport').onclick=()=>{const t=JSON.stringify(S,null,1);openSheet(`<h3>내보내기</h3><div class="hint">전체 상태 JSON. 복사해 파일로 두시면 새 폰에서 붙여넣어 복원할 수 있습니다.</div><textarea style="min-height:200px">${esc(t)}</textarea><div class="btns"><button class="b pri" onclick="copy(${JSON.stringify(t).replace(/"/g,'&quot;')})">복사</button><button class="b ghost" onclick="closeSheet()">닫기</button></div>`)};
+document.getElementById('btnReset').onclick=()=>{if(!confirm('이 폰의 앱 데이터를 전부 지웁니다 (공유 저장소는 그대로). 계속할까요?'))return;S={sites:{},items:{},meetings:{},log:[],outbox:[],settings:{...DEFAULT_SET}};persist();render();toast('지웠습니다')};
+document.getElementById('btnImport').onclick=()=>{const t=document.getElementById('importText').value;if(!t.trim())return;const r=importText(t);document.getElementById('importText').value='';render();toast(`가져옴 : 줄 ${r.items}건 · 확정 ${r.facts}건 · 현장 ${r.sites}곳`);if(r.items||r.facts){view='today';render()}};
+function importText(t){
+  let items=0,facts=0,sites=0;const seenSites=new Set();
+  const lines=t.replace(/\r/g,'').split('\n');
+  let section='',site='';
+  const put=(id,obj)=>{const ex=S.items[id];if(ex){if(['done','confirmed','cancel','requested'].includes(ex.status))return;const merged={...ex,status:ex.status,fix:ex.fix,history:ex.history,created:ex.created};for(const k in obj){if(obj[k]&&!ex[k])merged[k]=obj[k]}if(JSON.stringify(merged)!==JSON.stringify(ex)){saveItem(merged)}return}obj.id=id;obj.status='open';obj.created=now();saveItem(obj);items++};
+  const mark=(name)=>{if(!name)return;if(!seenSites.has(name)){seenSites.add(name);if(!S.sites[siteId(name)]){ensureSite(name);sites++}}};
+  for(let raw of lines){
+    const l=raw.trim();
+    if(/^##\s/.test(l)){section=l.replace(/^#+\s*/,'');site='';continue}
+    if(/^###\s/.test(l)){site=l.replace(/^#+\s*/,'').trim();mark(site);continue}
+    let m;
+    // 확정 표 : | 일자 | 현장 | 항목 | 값 | 근거 |
+    if((m=l.match(/^\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|$/))){
+      const sName=m[2].trim();mark(sName);const s=ensureSite(sName);const f={date:m[1],item:m[3].trim(),value:m[4].replace(/\*\*/g,'').trim(),basis:m[5].trim()};
+      s.facts=s.facts||[];if(!s.facts.find(x=>x.item===f.item&&x.value===f.value)){s.facts.push(f);facts++;saveSite(s)}continue}
+    // KM-010 현장 · 내용 [n일째]
+    if((m=l.match(/^-?\s*(KM-\d{3,4})\s+([^·]+?)\s*·\s*(.+?)\s*(?:\[(\d+)일째\])?\s*$/))){
+      const sName=m[2].trim();mark(sName);put(m[1],{kind:'ask',site:sName,text:m[3].trim(),when:''});continue}
+    // - **현장** · 이번주 · 「제가 … 만들까요?」 (할 일 : …)
+    if((m=l.match(/^-\s*\*\*([^*]+)\*\*\s*·\s*([^·]+?)\s*·\s*「([^」]+)」\s*(?:\(할 일\s*:\s*(.+?)\))?\s*$/))){
+      const sName=m[1].trim();mark(sName);const q=m[3].trim();const todo=(m[4]||'').trim();put('M-'+hash(sName+q+todo),{kind:'make',site:sName,when:m[2].trim(),makeq:q,text:todo});continue}
+    // - 오늘 [확정] 내용 → 받는곳 — 메모 【제가 … 만들까요?】
+    if(site&&(m=l.match(/^-\s*(\S+)\s*\[(확정|제안)\]\s*(.+?)\s*(?:→\s*([^—]+?))?\s*(?:—\s*(.+?))?\s*(?:【([^】]+)】)?\s*$/))){
+      const when=m[1].replace(/\(.*\)/,'').trim();const kind=m[2]==='확정'?'todo':'ask';const text=m[3].trim();
+      const whenV=/^\d{1,2}\/\d{1,2}/.test(when)?(String(new Date().getFullYear())+'-'+when.split('/').map(x=>x.padStart(2,'0')).join('-')):when;
+      const same=Object.values(S.items).find(x=>x.site===site&&x.text===text&&x.kind!=='make');
+      const id=same?same.id:((kind==='todo'?'A-':'P-')+hash(site+text));
+      put(id,{kind:same?same.kind:kind,site,text,when:whenV,to:(m[4]||'').trim(),memo:(m[5]||'').trim()});
+      if(m[6]){put('M-'+hash(site+m[6].trim()+text),{kind:'make',site,when:whenV,makeq:m[6].trim(),text})}
+      continue}
+  }
+  addLog('가져옴','',`아침 한 장 붙여넣기 : 줄 ${items} · 확정 ${facts} · 현장 ${sites}`);saveMeta();
+  return {items,facts,sites};
+}
+
+/* ============ 공정 여정 (게임판) ============ */
+/* 프로님이 알려 주신 흐름 : 설계의뢰→도면납품 → 견적·계약 → CB외함 제작·납품 → 외함 설치(전기·통신)
+   → 속판(제어분전함) 제작·설치 → 강전(전기)·약전(우리) 결선·커버 → 기구물 제작(의뢰서 없으면 안 움직임)
+   → 벽지 완료 후 설치 → 전기 공급·시운전 → 계산서·수금.  각 단계 = 퀘스트, 필요한 것 = 열쇠. */
+const QUESTS=[
+ {k:'설계',n:'설계 · 도면 납품',icon:'✎',hint:['설계','도면','평면','전등','성급','룸타입','Rev'],out:'객실관리 도면 + 수량표(검토용)',
+  req:[
+   {k:'의뢰접수',n:'설계사 설계의뢰 접수',type:'ext',who:'설계사',how:'의뢰 메일·건축 도면이 들어온 날을 넣습니다.',why:'이 날부터 우리 시계가 돕니다.'},
+   {k:'평면도',n:'건축 단위세대 평면도 수령',type:'ext',who:'설계사·건축',how:'룸타입별 평면(작업 전 도면)이 있어야 배치를 예상합니다. 없으면 요청 메일.',why:'평면이 없으면 수량도 견적도 없습니다.'},
+   {k:'등급객실',n:'성급 · 객실 수 · 룸타입 확정',type:'fact',who:'발주처·설계사',how:'1~3성=K만·온도+L / 4~5성=K+DM·BSP(온도+L+USB+유니버셜)·욕실 L. 리조트는 DM 제외.',why:'성급 하나가 기구물 종류를 전부 정합니다.'},
+   {k:'전등설계',n:'전기설계 전등 회로(L 구수)',type:'ext',who:'전기설계 업체',how:'전등 설계가 나오기 전에는 「L」 로만 표기합니다. 나오면 1~6구를 넣습니다.',why:'조명 스위치 구수는 우리가 정하지 않습니다.'},
+   {k:'도면납품',n:'객실관리 도면 납품',type:'work',who:'설계팀',how:'작업의뢰서(설계)가 있어야 설계팀이 움직입니다. 납품한 Rev 와 날짜를 넣습니다.',why:'이 도면이 견적·외함·속판·기구물의 뿌리입니다.',order:'설계팀'},
+  ]},
+ {k:'계약',n:'견적 · 계약',icon:'₩',hint:['견적','계약','실행','수량표','증감','감액','명절'],out:'견적서 · 실행산출 · 계약서',
+  req:[
+   {k:'수량표',n:'수량표 확정',type:'fact',who:'프로님',how:'도면 NOTE 수량과 블록 수량을 나란히 보고 프로님이 채택합니다. 계통도에 수량이 없으면 상대에게 수량표를 요청합니다.',why:'검토용 수량으로 견적을 내면 증감 분쟁이 됩니다.'},
+   {k:'실행',n:'실행(원가) 산출',type:'work',who:'PC 28번',how:'단가장 + 정답본(연합기숙사 v5) 틀로 PC가 만듭니다. 빈칸은 프로님 숫자.',why:'이윤을 알아야 계약가를 정합니다.'},
+   {k:'견적발송',n:'견적서 발송',type:'doc',who:'프로님',how:'광희동 Rev1 틀. 보낸 날을 넣으면 47번 「찾아갈 곳」 에 올라갑니다.',why:'보내 놓고 가만히 있으면 식습니다. 3일 뒤 방문.'},
+   {k:'계약형태',n:'계약 형태 확정',type:'fact',who:'시공사·발주처',how:'정식 계약서(내역서+사업자등록증+기본내역) / 약식 / 구두. 상대가 말한 것만 확정.',why:'외함 출고 조건이 계약 완료인 현장이 많습니다.'},
+   {k:'계약완료',n:'계약 체결',type:'ext',who:'시공사·발주처',how:'계약서 서명일. 안 되면 독촉 문안.',why:'계약 전 출고는 우리 위험입니다.'},
+  ]},
+ {k:'외함',n:'CB외함 제작 · 납품',icon:'▣',hint:['외함','CB외함','타공','석고','골조','매립','스터드'],out:'외함 작업의뢰서 · 외함 납품 · 계산서 1회',
+  req:[
+   {k:'외함공법',n:'외함 설치 공법 확정',type:'fact',who:'시공사(건축)',how:'옹벽 매립이면 골조 올릴 때, 스터드 고정이면 석고 치기 전. 현장이 정하는 값이라 역산하지 않습니다.',why:'납품 시점이 여기서 정해집니다.'},
+   {k:'외함규격',n:'외함 규격 · CB 대수 확정',type:'fact',who:'프로님·설계팀',how:'도면의 CB 대수와 외함 치수. 층별 CB 위치까지.',why:'외함 세트(4번 도구)가 이 값을 씁니다.'},
+   {k:'외함납기',n:'외함 납품일 확정',type:'fact',who:'시공사',how:'현장이 요구한 날. 제작 2주가 필요하니 그 2주 전이 의뢰서 발행 마감입니다.',why:'외함이 늦으면 전기·통신 공정이 섭니다.'},
+   {k:'외함의뢰서',n:'작업의뢰서(외함) 발행',type:'doc',who:'프로님→제작',how:'규격·수량·납기·현장 주소. 결재 후 제작 착수.',why:'의뢰서가 없으면 제작팀은 시작하지 않습니다.',order:'제작팀(외함)'},
+   {k:'외함납품',n:'외함 납품 완료',type:'work',who:'제작·물류',how:'납품일과 인수자. 이때 계산서 1회.',why:'수금의 첫 근거입니다.'},
+  ]},
+ {k:'외함설치',n:'외함 설치 (전기 · 통신)',icon:'⚒',hint:['설치 업체','설치 위치','타공도'],out:'설치 완료 사진',
+  req:[
+   {k:'설치주체',n:'외함 설치 업체 확정',type:'fact',who:'시공사',how:'전기업체인지 통신업체인지. 통합 공정회의에서 확정.',why:'타공도를 누구에게 보내야 하는지 정해집니다.'},
+   {k:'타공도',n:'타공도 · 설치 안내 송부',type:'doc',who:'프로님→설치 업체',how:'보낸 날 + 상대가 「받았다」 한 날. 읽음 표시만으로는 확정이 아닙니다.',why:'못 받았다는 말이 나오면 우리가 늦은 것이 됩니다.'},
+   {k:'설치완료',n:'외함 설치 완료 확인',type:'ext',who:'설치 업체',how:'사진 한 장 + 날짜. 위치·높이가 도면과 다르면 하자 한 줄.',why:'속판은 외함이 붙어 있어야 들어갑니다.'},
+  ]},
+ {k:'속판',n:'속판(제어분전함) 제작 · 설치',icon:'⊞',hint:['속판','배선도','모듈','CB 구성','RCBO','릴레이'],out:'속판 작업의뢰서 · 속판 납품 · 계산서 2회',
+  req:[
+   {k:'배선도',n:'CB 배선도 · 모듈 구성 확정',type:'fact',who:'설계팀·프로님',how:'배선도에서 모듈 종류·수량을 뽑아 단가장(29번)에 맞춥니다. 없는 모듈은 주황 줄.',why:'속판 내부가 이 그림대로 만들어집니다.'},
+   {k:'속판의뢰서',n:'작업의뢰서(속판) 발행',type:'doc',who:'프로님→제작',how:'제작 2달. 납품 예정 2달 전이 발행 마감.',why:'2달은 줄일 수 없습니다.',order:'제작팀(속판)'},
+   {k:'속판납품',n:'속판 납품 · 외함 내 설치',type:'work',who:'우리(시공팀)',how:'외함 설치 완료 뒤. 설치일과 대수. 이때 계산서 2회.',why:'강전 결선이 이 뒤에 옵니다.',order:'시공팀(속판 설치)'},
+  ]},
+ {k:'결선',n:'강전 · 약전 결선 · 커버',icon:'⚡',hint:['강전','약전','결선','커버','전기업체'],out:'결선 완료 · 커버 설치',
+  req:[
+   {k:'강전일정',n:'전기업체 강전 결선 일정',type:'ext',who:'전기업체',how:'속판 납품 후 1달 안. 전기업체가 말한 날.',why:'강전이 끝나야 우리 약전이 들어갑니다.'},
+   {k:'약전의뢰서',n:'시공팀 약전 결선 의뢰서',type:'doc',who:'프로님→시공팀',how:'객실 수·CB 대수·현장 일정.',why:'의뢰서 없이는 시공팀 배정이 안 됩니다.',order:'시공팀(약전 결선)'},
+   {k:'커버',n:'외함 커버 설치',type:'work',who:'우리(시공팀)',how:'강전·약전 끝난 뒤. 날짜.',why:'커버가 붙으면 CB 공정이 닫힙니다.'},
+  ]},
+ {k:'기구물제작',n:'기구물 제작',icon:'◈',hint:['기구물','챠임벨','키센서','온도조절기','조명','BSP','스위치','도어락','형번','2000M','색상'],out:'기구물 작업의뢰서 · 기구물 납품 · 계산서 3회',
+  req:[
+   {k:'기구물수량',n:'기구물 수량 · 형번 확정',type:'fact',who:'프로님',how:'수량표 확정본 + 계열(규격 없으면 2000M). 회의에서 바뀐 것은 증감으로.',why:'제작에 들어간 뒤 바뀌면 손실입니다.'},
+   {k:'마감',n:'색상 · 마감 확정',type:'fact',who:'인테리어',how:'벽지·도장 색에 맞춘 플레이트 색. 인테리어가 말한 것.',why:'색이 늦으면 제작이 섭니다.'},
+   {k:'벽지예정',n:'벽지 · 페인트 완료 예정일',type:'ext',who:'건축',how:'건축이 말한 예정일. 제작 1.5~2달이 여기서 거꾸로 갑니다.',why:'설치는 벽지 뒤에만 됩니다.'},
+   {k:'기구물의뢰서',n:'작업의뢰서(기구물) 발행',type:'doc',who:'프로님→제작·개발',how:'품목별 수량·형번·색상·납기. 벽지 예정일 −(빽커버 10일+설치 7일+시운전 7일) 이 납기.',why:'의뢰서가 관문입니다.',order:'제작팀·개발팀(기구물)'},
+   {k:'기구물납품',n:'기구물 납품',type:'work',who:'제작·물류',how:'납품일. 이때 계산서 3회.',why:'세 번째 수금 근거.'},
+  ]},
+ {k:'설치',n:'빽커버 · 기구물 설치',icon:'⌂',hint:['벽지','페인트','빽커버','설치'],out:'설치 완료 · 사진대지',
+  req:[
+   {k:'벽지완료',n:'벽지 · 페인트 완료',type:'ext',who:'건축',how:'실제 완료된 날. 층별로 다르면 먼저 끝난 층부터.',why:'이 날 전에는 아무것도 붙일 수 없습니다.'},
+   {k:'빽커버',n:'빽커버 설치',type:'work',who:'우리(시공팀)',how:'벽지 완료 후 1~2주.',why:'기구물 설치의 바탕.'},
+   {k:'설치의뢰서',n:'시공팀 설치 의뢰서',type:'doc',who:'프로님→시공팀',how:'객실 수·품목·현장 일정·인원.',why:'배정 근거.',order:'시공팀(기구물 설치)'},
+   {k:'설치완료',n:'기구물 설치 완료',type:'work',who:'우리(시공팀)',how:'빽커버 후 1주. 완료일 + 사진.',why:'시운전 시작 조건.'},
+  ]},
+ {k:'시운전',n:'시운전 · 수금',icon:'★',hint:['시운전','전기 공급','하자','계산서','수금','중도금','잔금'],out:'시운전 완료 · 계산서 3회 · 수금',
+  req:[
+   {k:'전기공급',n:'전기 공급',type:'ext',who:'전기업체·시공사',how:'수전된 날.',why:'전기가 와야 제품이 동작합니다.'},
+   {k:'시운전완료',n:'시운전 완료',type:'work',who:'우리',how:'1주. 객실 O/X 로 확인(v6.3).',why:'납품의 마지막 증명.'},
+   {k:'하자',n:'하자 처리 완료',type:'work',who:'우리(시공팀·AS)',how:'X 였던 객실이 전부 O 가 된 날.',why:'하자가 남으면 수금이 밀립니다.'},
+   {k:'계산서',n:'계산서 3회 발행 확인',type:'doc',who:'프로님→경리',how:'외함·속판·기구물 각 납품 때 1회씩.',why:'발행하지 않은 계산서는 수금이 없습니다.'},
+   {k:'수금',n:'수금 완료',type:'fact',who:'발주처·시공사',how:'입금일과 금액 [ ]. 금액은 프로님만.',why:'여기가 결승선입니다.'},
+  ]},
+];
+const RSTATE={'':'미확정','추정':'추정','진행중':'진행중','확정':'확정'};
+function reqOf(s,qk,rk){return ((s.req||{})[qk+'/'+rk])||{}}
+/* 어느 화면에서든 열쇠를 갱신하는 단 하나의 길. 확정은 덮지 않는다(프로님 값이 이긴다). */
+function setReq(s,key,state,value,basis,opt){
+  const cur=(s.req||{})[key]||{};
+  if(cur.state==='확정'&&state!=='확정'&&!(opt&&opt.force))return false;   // 확정을 추정으로 되돌리지 않는다
+  s.req=s.req||{};
+  s.req[key]={state,value:value||cur.value||'',basis:basis||cur.basis||'',date:ymd(),ts:now(),prev:cur.state?{state:cur.state,value:cur.value}:undefined};
+  const st=REQ2STAGE[key];
+  if(st&&state==='확정'){s.stages=s.stages||{};const d=/^\d{4}-\d{2}-\d{2}$/.test(value||'')?value:ymd();s.stages[st]={date:d,note:basis||'',ts:now()}}
+  const r=reqDef(key);
+  queue(`${state},${safe(s.name)},${safe(r?r.n:key)},${safe(value)},${safe(basis||'앱')}`,s.name,state);
+  return true;
+}
+function reqDef(key){const [qk,rk]=key.split('/');const q=QUESTS.find(x=>x.k===qk);return q&&q.req.find(x=>x.k===rk)}
+const REQ2STAGE={'외함/외함의뢰서':'외함제작','외함/외함납품':'외함납품','속판/속판납품':'속판제작','기구물제작/기구물납품':'기구물제작','설치/벽지완료':'벽지완료','설치/빽커버':'빽커버','설치/설치완료':'기구물설치','결선/커버':'강전약전','시운전/시운전완료':'시운전'};
+/* 회의에서 찍은 공정 단계 → 열쇠 */
+const STAGE2REQ={'외함제작':'외함/외함의뢰서','외함납품':'외함/외함납기','속판제작':'속판/속판납품','기구물제작':'기구물제작/기구물납품','벽지완료':'기구물제작/벽지예정','빽커버':'설치/빽커버','기구물설치':'설치/설치완료','강전약전':'결선/강전일정','시운전':'시운전/시운전완료'};
+/* 돈 탭 → 열쇠 */
+const MONEY2REQ={'견적':'계약/견적발송','계약':'계약/계약완료','계산서1 외함':'외함/외함납품','계산서2 속판':'속판/속판납품','계산서3 기구물':'기구물제작/기구물납품','수금':'시운전/수금'};
+/* 회의 품목 → 수량 열쇠 */
+const ITEM2REQ={'CB':'외함/외함규격','외함':'외함/외함규격','전력계량기':'기구물제작/기구물수량'};
+function itemReqKey(item){if(ITEM2REQ[item])return ITEM2REQ[item];return '기구물제작/기구물수량'}
+function questProg(s,q){const done=q.req.filter(r=>reqOf(s,q.k,r.k).state==='확정').length;const part=q.req.filter(r=>['추정','진행중'].includes(reqOf(s,q.k,r.k).state)).length;return {done,part,total:q.req.length,pct:Math.round(done/q.req.length*100)}}
+function questStatus(s,qi){
+  const q=QUESTS[qi];const p=questProg(s,q);
+  if(p.done===p.total)return {label:'완료',cls:'ok'};
+  const prev=qi>0?questProg(s,QUESTS[qi-1]):null;
+  const cur=currentQuest(s);
+  if(qi===cur)return {label:p.done||p.part?'여기 · 진행 중':'여기 · 시작 전',cls:'here'};
+  if(qi<cur)return {label:'지나왔을 수 있음 · 빈칸 '+(p.total-p.done),cls:'warn'};
+  if(p.done||p.part)return {label:'준비 중',cls:'next'};
+  if(prev&&prev.done<prev.total*0.5)return {label:'아직 멀음',cls:'lock'};
+  return {label:'다음',cls:'next'};
+}
+function currentQuest(s){
+  // 위치 = 활동(확정·추정·진행)이 있는 첫 미완 단계. 활동이 전혀 없으면 첫 미완 단계.
+  const inc=i=>questProg(s,QUESTS[i]).done<QUESTS[i].req.length;
+  const act=i=>{const p=questProg(s,QUESTS[i]);return p.done+p.part>0};
+  for(let i=0;i<QUESTS.length;i++)if(inc(i)&&act(i))return i;
+  for(let i=0;i<QUESTS.length;i++)if(inc(i))return i;
+  return QUESTS.length-1}
+function siteProg(s){let d=0,t=0;QUESTS.forEach(q=>{const p=questProg(s,q);d+=p.done;t+=p.total});return {done:d,total:t,pct:Math.round(d/t*100)}}
+function relatedItems(s,q){return Object.values(S.items).filter(i=>i.site===s.name&&!['done','confirmed','cancel','requested'].includes(i.status)&&(i.quest===q.k||(!i.quest&&q.hint.some(h=>(i.text+' '+(i.makeq||'')).includes(h)))))}
+function nextMove(s){
+  const qi=currentQuest(s);const q=QUESTS[qi];
+  const miss=q.req.filter(r=>reqOf(s,q.k,r.k).state!=='확정');
+  const r=miss.find(x=>reqOf(s,q.k,x.k).state==='')||miss[0];
+  return r?{q,r,st:reqOf(s,q.k,r.k)}:null;
+}
+function moveText(m){
+  if(!m)return '전부 확정입니다. 결승선.';
+  const {q,r,st}=m;
+  const lead=st.state==='진행중'?'진행 중이라 마무리만 남았습니다':st.state==='추정'?`지금은 추정(${st.value||''})이라 확정이 필요합니다`:'아직 비어 있습니다';
+  return `${q.n} › ${r.n} — ${lead}. ${r.how}`;
+}
+function moveAsk(r){return r.type==='doc'?(r.order?`제가 ${r.n.replace(/발행|송부/,'').trim()} 초안 만들까요?`:'제가 문안 만들까요?'):r.type==='fact'?'제가 협의 문안 만들까요?':r.type==='ext'?'제가 확인 요청 문안 만들까요?':'제가 시공팀 의뢰서 초안 만들까요?'}
+
+/* ---- 연동 : 쌓이는 데이터가 앱으로, 앱이 다시 나에게 ---- */
+function claudeFilled(s){const out=[];const r=s.req||{};
+  Object.keys(r).forEach(k=>{const v=r[k];if(v&&v.from&&v.state!=='확정')out.push({site:s.name,sid:s.id,key:k,...v})});return out}
+function allFilled(){let a=[];Object.values(S.sites).forEach(s=>{a=a.concat(claudeFilled(s))});return a}
+function renderFeedBar(){
+  const f=allFilled();const inb=(S.inbox||[]).filter(x=>!x.seen);
+  let o='';
+  if(inb.length)o+=`<div class="inboxbar"><div class="it">제가 반영했습니다 · ${inb.length}건</div>${inb.slice(0,4).map(x=>`<div class="small">· ${esc(x.text)}</div>`).join('')}<div class="btns"><button class="b sm" onclick="seenInbox()">봤습니다</button>${inb.length>4?`<button class="b sm ghost" onclick="view='set';render()">전부 보기</button>`:''}</div></div>`;
+  if(f.length)o+=`<div class="feedbar" onclick="filledSheet()"><div><div class="ft">제가 채운 것 ${f.length}건</div><div class="fs">대장·통화 기록에서 읽었습니다. 맞는지 봐 주십시오</div></div><span class="b sm pri">보기</span></div>`;
+  return o;
+}
+window.seenInbox=function(){(S.inbox||[]).forEach(x=>x.seen=1);persist();dbWrite('meta/inbox',{lines:S.inbox});render()};
+window.filledSheet=function(){
+  const f=allFilled();
+  openSheet(`<div class="story">대장(확정사항·견적발송)과 통화 기록에서 읽어 채운 것입니다. 전부 <b>추정·진행중</b> 이라 프로님이 「맞아」 를 누르셔야 확정이 됩니다. 틀리면 「아니야」 로 고쳐 주십시오.</div>
+  ${f.map(x=>{const r=reqDef(x.key);return `<div class="card"><div class="id">${esc(x.site)} · <span class="pill p-${x.state==='추정'?'warn':'acc'}">${esc(x.state)}</span> <span class="small">${esc(x.from||'')}</span></div>
+    <div class="t">${esc(r?r.n:x.key)}</div><div class="m">${esc(x.value||'')}</div><div class="small">근거 : ${esc(x.basis||'')}</div>
+    <div class="btns"><button class="b pri" onclick="fillOk('${x.sid}','${x.key}')">맞아 (확정)</button><button class="b mic" onclick="fillNo('${x.sid}','${x.key}')">아니야 🎙</button><button class="b ghost" onclick="fillOpen('${x.sid}','${x.key}')">열쇠 열기</button></div></div>`}).join('')||'<div class="empty">없음</div>'}
+  <div class="btns"><button class="b ghost" onclick="closeSheet()">닫기</button></div>`,'제가 채운 것 '+f.length+'건');
+};
+window.fillOk=function(sidv,key){const s=S.sites[sidv];const cur=(s.req||{})[key]||{};
+  setReq(s,key,'확정',cur.value,(cur.basis||'')+' · 프로님 확인');saveSite(s);closeSheet();render();toast('확정했습니다')};
+window.fillNo=function(sidv,key){const s=S.sites[sidv];const r=reqDef(key);
+  micSheet((r?r.n:key)+' · 아니야','제가 읽은 값이 틀렸습니다. 맞는 값을 말씀해 주십시오. 제 값은 이력에 남습니다.','',v=>{
+    if(!v)return;setReq(s,key,'확정',v,'프로님이 고치심');saveSite(s);closeSheet();render();toast('고치신 값으로 확정했습니다')})};
+window.fillOpen=function(sidv,key){const pr=key.split('/');const qi=QUESTS.findIndex(q=>q.k===pr[0]);closeSheet();curSite=sidv;view='map';render();if(qi>=0)reqSheet(sidv,qi,pr[1])};
+
+/* ---- 화면 : 여정 지도 (홈) ---- */
+function renderMap(){
+  const el=document.getElementById('mapBody');
+  if(curSite&&S.sites[curSite]){el.innerHTML=journeyHtml(S.sites[curSite]);return}
+  const arr=Object.values(S.sites).sort((a,b)=>siteProg(b).pct-siteProg(a).pct||(a.name>b.name?1:-1));
+  if(!arr.length){el.innerHTML=renderFeedBar()+`<div class="notice">현장이 없습니다. 「현장」 탭에서 추가하거나 아침 한 장을 가져오십시오.</div>`;return}
+  const totalOpen=Object.values(S.items).filter(i=>!['done','confirmed','cancel','requested'].includes(i.status)).length;
+  el.innerHTML=renderFeedBar()+`<div class="notice">현장마다 9단계 여정입니다. 단계를 누르면 <b>무엇이 필요하고 · 지금 어디까지 왔고 · 제가 무엇을 만들어 드릴 수 있는지</b>가 나옵니다. 열쇠(필요한 것)를 채우면 단계가 닫힙니다.</div>
+  <div class="chips"><span class="chip acc">현장 ${arr.length}</span><span class="chip ask">미결 ${totalOpen}</span><span class="chip">열쇠 ${arr.reduce((a,s)=>a+siteProg(s).done,0)} / ${arr.reduce((a,s)=>a+siteProg(s).total,0)}</span></div>
+  ${arr.map(s=>{const p=siteProg(s);const qi=currentQuest(s);const m=nextMove(s);
+    return `<div class="card jcard" onclick="curSite='${s.id}';render()">
+      <div class="jhead"><div><div class="t" style="font-size:1.05rem;margin:0">${esc(s.name)}</div><div class="small">${s.rooms?esc(s.rooms)+'실 · ':''}${s.due?'준공 '+esc(s.due):'준공일 [ ]'}</div></div><div class="pct">${p.pct}%</div></div>
+      <div class="trail-mini">${QUESTS.map((q,i)=>{const st=questStatus(s,i);return `<span class="tm ${st.cls}" title="${esc(q.n)}">${i===qi?'●':questProg(s,q).done===q.req.length?'✓':''}</span>`}).join('<i></i>')}</div>
+      <div class="small" style="margin-top:6px"><b>${esc(QUESTS[qi].n)}</b> 에 있음 · 다음 한 수 : ${m?esc(m.r.n):'없음'}</div>
+    </div>`}).join('')}`;
+}
+function journeyHtml(s){
+  const p=siteProg(s);const qi=currentQuest(s);const m=nextMove(s);
+  let h=`<div class="btns" style="margin-top:0"><button class="b ghost" onclick="curSite=null;render()">‹ 현장 지도</button><button class="b ghost" onclick="view='sites';siteTab='기록';render()">기록 · 사람 · 돈</button></div>
+  <div class="card"><div class="jhead"><div><div class="t" style="font-size:1.15rem;margin:0">${esc(s.name)}</div><div class="small">${s.rooms?esc(s.rooms)+'실 · ':''}${s.due?'준공 '+esc(s.due):'준공일 [ ] · 「정보 고치기」 에서'}</div></div><div class="pct">${p.pct}%</div></div>
+    <div class="bar"><i style="width:${p.pct}%"></i></div>
+    <div class="small" style="margin-top:4px">열쇠 ${p.done} / ${p.total} · 지금 <b>${esc(QUESTS[qi].n)}</b> (${qi+1}/9)</div></div>`;
+  if(m){h+=`<div class="card next"><div class="id">다음 한 수</div><div class="t">${esc(m.r.n)}</div><div class="m">${esc(moveText(m))}</div>
+    <div class="btns"><button class="b pri" onclick="reqSheet('${s.id}',${qi},'${m.r.k}')">열기</button><button class="b" onclick="reqDraft('${s.id}',${qi},'${m.r.k}')">${esc(moveAsk(m.r))}</button></div></div>`}
+  h+=`<div class="trail">`+QUESTS.map((q,i)=>{const pr=questProg(s,q);const st=questStatus(s,i);const deg=Math.round(pr.done/pr.total*360);
+    return `<div class="qn ${st.cls}" onclick="questSheet('${s.id}',${i})">
+      <div class="ring" style="--deg:${deg}deg"><span>${pr.done===pr.total?'✓':q.icon}</span></div>
+      <div class="qtxt"><div class="qname">${i+1}. ${esc(q.n)}</div><div class="small">${esc(st.label)} · 열쇠 ${pr.done}/${pr.total}${pr.part?' · 추정·진행 '+pr.part:''}</div></div>
+      <div class="qgo">›</div></div>`}).join('')+`</div>`;
+  return h;
+}
+window.questSheet=function(sid,qi){
+  const s=S.sites[sid],q=QUESTS[qi];const pr=questProg(s,q);const st=questStatus(s,qi);
+  const miss=q.req.filter(r=>reqOf(s,q.k,r.k).state!=='확정');
+  const rel=relatedItems(s,q);
+  let story='';
+  if(!miss.length)story=`이 단계는 닫혔습니다. 산출 : ${q.out}.`;
+  else{const first=miss.find(x=>reqOf(s,q.k,x.k).state==='')||miss[0];const fs=reqOf(s,q.k,first.k);
+    story=`${q.n}${qi===currentQuest(s)?'에 지금 서 있습니다':qi<currentQuest(s)?'는 지나왔지만 빈칸이 남았습니다':'는 아직 앞입니다'}. 열쇠 ${pr.total}개 중 ${pr.done}개 확정${pr.part?', '+pr.part+'개는 추정·진행 중':''}. 먼저 채울 것은 「${first.n}」 — ${fs.state==='추정'?'지금 값은 추정('+(fs.value||'')+')입니다. ':fs.state==='진행중'?'진행 중입니다. ':''}${first.how}`;
+  }
+  openSheet(`<div style="margin-bottom:6px"><span class="pill ${st.cls==='ok'?'p-ok':st.cls==='here'?'p-acc':st.cls==='warn'?'p-warn':'p-off'}">${esc(st.label)}</span></div>
+  <div class="story">${esc(story)}</div>
+  <div class="kv" style="margin:8px 0"><b>이 단계가 내는 것</b><span>${esc(q.out)}</span></div>
+  <h2 class="sec">열쇠 (필요한 것) · 누르면 채웁니다</h2>
+  ${q.req.map(r=>{const rs=reqOf(s,q.k,r.k);const cls=rs.state==='확정'?'ok':rs.state==='추정'?'warn':rs.state==='진행중'?'acc':'off';
+    return `<div class="row rq" onclick="reqSheet('${sid}',${qi},'${r.k}')"><span class="dot d-${cls==='acc'?'ask':cls}"></span><span class="grow"><b>${esc(r.n)}</b><div class="small">${esc(r.who)}${rs.value?' · '+esc(rs.value):''}${rs.date?' · '+esc(rs.date):''}</div></span><span class="pill p-${cls}">${esc(RSTATE[rs.state||''])}</span></div>`}).join('')}
+  ${rel.length?`<h2 class="sec">이 단계와 얽힌 할 일 ${rel.length}</h2>`+rel.map(i=>`<div class="row"><span class="dot d-${i.kind==='todo'?'ok':'ask'}"></span><span class="grow">${esc(i.id)} · ${esc(i.makeq||i.text)}</span>${whenPill(i.when)}</div>`).join(''):''}
+  <div class="btns">${miss.length&&qi<currentQuest(s)?`<button class="b" onclick="questPass('${sid}',${qi})">이 단계는 이미 지났음 (남은 열쇠 전부 확정)</button>`:''}<button class="b ghost" onclick="closeSheet()">닫기</button></div>`,(qi+1)+'. '+q.n);
+};
+window.questPass=function(sid,qi){
+  const s=S.sites[sid],q=QUESTS[qi];
+  if(!confirm(`${q.n} 의 남은 열쇠를 전부 「확정 · 지남」 으로 채울까요? (프로님 확인으로 기록됩니다)`))return;
+  s.req=s.req||{};
+  q.req.forEach(r=>{if(reqOf(s,q.k,r.k).state!=='확정'){s.req[q.k+'/'+r.k]={state:'확정',value:'지남',basis:'프로님 확인(앱)',date:ymd(),ts:now()}}});
+  saveSite(s);queue(`확정,${s.name},${q.n},단계 지남,프로님 확인`,s.name,'확정');closeSheet();render();toast(q.n+' 닫힘');
+};
+window.reqSheet=function(sid,qi,rk){
+  const s=S.sites[sid],q=QUESTS[qi],r=q.req.find(x=>x.k===rk);const rs=reqOf(s,q.k,rk);
+  const stateTxt=rs.state==='확정'?`확정 · ${rs.value||''} ${rs.date||''}${rs.basis?' · 근거 '+rs.basis:''}`:rs.state==='추정'?`추정 · ${rs.value||''}${rs.basis?' · '+rs.basis:''} → 상대가 말해 주면 확정으로`:rs.state==='진행중'?`진행 중 · ${rs.value||''}${rs.basis?' · '+rs.basis:''}`:'비어 있음';
+  openSheet(`<div class="kv"><b>지금</b><span>${esc(stateTxt)}</span><b>누가</b><span>${esc(r.who)}</span><b>어떻게</b><span>${esc(r.how)}</span><b>왜</b><span>${esc(r.why)}</span></div>
+  <h2 class="sec">채우기</h2>
+  <label class="f">값 (날짜·수량·내용)</label><input id="rqVal" value="${esc(rs.value||'')}" placeholder="${r.type==='fact'?'예: 정식 계약서 / 299실 / 스터드':'날짜 또는 한 줄'}">
+  <label class="f">근거 (누구 · 언제)</label><input id="rqBasis" value="${esc(rs.basis||'')}" placeholder="홍부장 9/15 통화 / 회의 / 메일">
+  <div class="btns"><button class="b pri" id="rqOk">확정</button><button class="b" id="rqEst">추정으로</button><button class="b" id="rqWip">진행중</button>${rs.state?'<button class="b ghost" id="rqClr">비우기</button>':''}</div>
+  <h2 class="sec">제가 할 수 있는 것</h2>
+  <div class="btns" style="margin-top:0"><button class="b" onclick="reqDraft('${sid}',${qi},'${rk}')">${esc(moveAsk(r))}</button><button class="b" onclick="reqCall('${sid}',${qi},'${rk}')">전화 첫마디</button><button class="b mic" onclick="reqNote('${sid}',${qi},'${rk}')">🎙 들은 대로 한 줄</button></div>
+  <div class="btns"><button class="b ghost" onclick="questSheet('${sid}',${qi})">‹ 단계로</button></div>`,r.n);
+  const setState=(state)=>{const val=document.getElementById('rqVal').value.trim(),basis=document.getElementById('rqBasis').value.trim();
+    if(state==='확정'&&!val){toast('확정에는 값이 필요합니다');return}
+    if(state===''){delete (s.req||{})[q.k+'/'+rk];saveSite(s);queue(`비움,${safe(s.name)},${safe(r.n)},-,앱`,s.name,'비움');closeSheet();render();toast('비웠습니다');return}
+    setReq(s,q.k+'/'+rk,state,val,basis||'앱 입력',{force:true});
+    saveSite(s);closeSheet();render();
+    const pr=questProg(s,q);const rel=relatedItems(s,q);
+    if(state==='확정'&&rel.length){askClose(s,q,rel,pr,qi);return}
+    if(state==='확정'&&pr.done===pr.total)cheer(s,q,qi);else toast(RSTATE[state]+' 으로 담았습니다');
+  };
+  document.getElementById('rqOk').onclick=()=>setState('확정');
+  document.getElementById('rqEst').onclick=()=>setState('추정');
+  document.getElementById('rqWip').onclick=()=>setState('진행중');
+  const c=document.getElementById('rqClr');if(c)c.onclick=()=>{if(confirm('이 열쇠를 비울까요? (이력은 남습니다)'))setState('')};
+};
+function cheer(s,q,qi){
+  const nx=QUESTS[qi+1];const p=siteProg(s);
+  openSheet(`<div style="text-align:center;padding:6px 0 2px"><div style="font-size:2.4rem">🎉</div>
+    <div class="t" style="font-size:1.1rem">${esc(q.n)} 닫혔습니다</div>
+    <div class="small">${esc(s.name)} · 열쇠 ${p.done}/${p.total} · ${p.pct}%</div></div>
+    <div class="story" style="margin-top:8px">${nx?`다음은 <b>${esc(nx.n)}</b> 입니다. 먼저 채울 것 : ${esc(nx.req[0].n)} — ${esc(nx.req[0].how)}`:'마지막 단계까지 끝났습니다. 수금만 남았습니다.'}</div>
+    <div class="btns">${nx?`<button class="b pri" onclick="questSheet('${s.id}',${qi+1})">다음 단계 열기</button>`:''}<button class="b ghost" onclick="closeSheet()">닫기</button></div>`,'단계 완료');
+}
+function askClose(s,q,rel,pr,qi){
+  openSheet(`<div class="story">「${esc(q.n)}」 의 열쇠를 채우셨습니다. 이 단계에 얽힌 할 일 ${rel.length}건이 아직 열려 있습니다. 같이 끝난 것이면 눌러 주십시오.</div>
+    ${rel.map(i=>`<div class="row"><span class="grow">${esc(i.id)} · ${esc(i.makeq||i.text)}</span><button class="b sm pri" onclick="act('${esc(i.id)}','done');this.closest('.row').remove()">완료</button></div>`).join('')}
+    <div class="btns"><button class="b" onclick="closeSheet();${pr.done===pr.total?`cheer(S.sites['${s.id}'],QUESTS[${qi}],${qi})`:''}">${pr.done===pr.total?'다 끝났습니다':'닫기'}</button></div>`,'같이 끝난 것이 있습니까?');
+}
+window.cheer=cheer;
+window.reqDraft=function(sid,qi,rk){
+  const s=S.sites[sid],q=QUESTS[qi],r=q.req.find(x=>x.k===rk);const rs=reqOf(s,q.k,rk);
+  if(r.type==='doc'&&r.order){
+    const facts=q.req.filter(x=>reqOf(s,q.k,x.k).state==='확정').map(x=>`- ${x.n} : ${reqOf(s,q.k,x.k).value}`).join('\n')||'- (확정된 값 없음 — 아래 [ ] 를 채워 주십시오)';
+    const text=`[작업의뢰서 초안 · ${r.order}]\n현장 : ${s.name}${s.rooms?' ('+s.rooms+'실)':''}\n건명 : ${q.n}\n의뢰 내용 :\n${facts}\n- 수량 : [        ]\n- 규격·형번 : [        ]\n- 납기 : [        ]  (근거 : ${r.how})\n- 현장 주소·인수자 : [        ]\n첨부 : 도면 Rev [  ] · 수량표 [  ]\n의뢰 : 배성윤  결재 : [  ]\n\n※ 이 초안은 앱이 만든 것입니다. 「맞아」 를 주시면 원틀 양식으로 완성해 드립니다.`;
+    draftSheet(r.n+' · 초안',text,s.name);
+    queue(`만들기,${s.name},${r.n},초안 요청,${rs.value||''}`,s.name,'만들기');
+    return;
+  }
+  const to=r.who.includes('→')?r.who.split('→')[1].trim():r.who;
+  const text=`제목 : [${s.name}] ${r.n} 확인 요청\n\n${to} 담당자님, 한국마이크로닉 배성윤입니다.\n\n${s.name} 현장 객실관리 공정을 진행하려면 「${r.n}」 이 확정되어야 합니다.\n${rs.state==='추정'?`- 현재 저희가 파악한 값 : ${rs.value} (${rs.basis||'구두'}) — 맞는지 확인 부탁드립니다.\n`:'- 확인 요청 : [        ]\n'}- 필요한 이유 : ${r.why}\n- 회신 부탁 기한 : [        ]\n- 확정되면 저희가 바로 : ${q.out}\n\n확인 회신 주시면 그대로 진행하겠습니다. 감사합니다.\n\n한국마이크로닉(주) 배성윤 차장\n객실관리시스템(RCU/BSP/CB 제어분전함) 설계·시공\n전화 [        ]  메일 [        ]`;
+  draftSheet(r.n+' · 확인 요청 문안',text,s.name);
+};
+window.reqCall=function(sid,qi,rk){
+  const s=S.sites[sid],q=QUESTS[qi],r=q.req.find(x=>x.k===rk);const rs=reqOf(s,q.k,rk);
+  const text=`전화 첫마디\n\n"${r.who} 담당자님, 마이크로닉 배성윤입니다. ${s.name} 건으로 한 가지만 확인드리려고요.\n${r.n} 이 ${rs.state==='추정'?'저희는 '+rs.value+' 로 알고 있는데 맞는지':'아직 저희가 못 받았는데 언제쯤 정해지는지'} 여쭙고 싶습니다.\n그게 정해져야 저희가 ${q.out.split(' · ')[0]} 을(를) 바로 진행할 수 있어서요."\n\n끊고 나서 → 이 열쇠에 「들은 대로 한 줄 🎙」`;
+  draftSheet(r.n+' · 전화',text,s.name);
+};
+window.reqNote=function(sid,qi,rk){
+  const s=S.sites[sid],q=QUESTS[qi],r=q.req.find(x=>x.k===rk);
+  micSheet(r.n+' · 들은 대로','상대가 말한 것을 그대로. 값이 나왔으면 다음에 「확정」 으로 올립니다.','',v=>{if(!v)return;s.req=s.req||{};const cur=s.req[q.k+'/'+rk]||{};s.req[q.k+'/'+rk]={...cur,state:cur.state||'진행중',value:cur.value||v,basis:(cur.basis?cur.basis+' / ':'')+v.slice(0,60),ts:now(),date:ymd()};saveSite(s);queue(`메모,${s.name},${r.n} : ${v}`,s.name,'메모');render();toast('기록했습니다')});
+};
+
+/* ============ 시작 ============ */
+document.body.classList.toggle('big',!!S.settings.big);
+render();
+initDb();
+</script>
