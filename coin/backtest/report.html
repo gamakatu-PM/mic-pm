@@ -1,0 +1,138 @@
+<title>ETH 백테스트 결과 — 수수료가 범인인가</title>
+<style>
+  :root{--ink:#1c1f24;--mute:#8E99A4;--line:#e3e6ea;--bg:#f7f8fa;--card:#fff;
+        --blue:#2A6099;--orange:#C77B2B;--red:#C0392B;--green:#2E7D5B;--yel:#fff3c4}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,"Malgun Gothic","맑은 고딕",sans-serif;
+       padding:16px;max-width:880px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 2px}
+  h2{font-size:16px;margin:26px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--line)}
+  .sub{color:var(--mute);font-size:13px;margin-bottom:16px}
+  .lead{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--red);
+        border-radius:8px;padding:13px 15px;margin-bottom:14px}
+  .lead b{color:var(--red)}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:14px 0}
+  .kpi div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .kpi b{display:block;font-size:22px;line-height:1.2;margin:2px 0}
+  .kpi small{color:var(--mute);font-size:12px}
+  .wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:6px}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--card);border:1px solid var(--line);border-radius:8px}
+  th,td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{background:#fafbfc;color:var(--mute);font-weight:600}
+  .g{color:var(--green);font-weight:700}.r{color:var(--red);font-weight:700}
+  .o{color:var(--orange);font-weight:700}.b{color:var(--blue);font-weight:700}.m{color:var(--mute)}
+  .hi{background:var(--yel)}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:9px}
+  .box h3{margin:0 0 5px;font-size:15px}
+  ul{margin:5px 0 0;padding-left:20px}li{margin:3px 0;font-size:13.5px}
+  .warn{background:#fff5f4;border:1px solid #f3c9c4;border-left:5px solid var(--red);border-radius:8px;padding:12px 14px;margin:12px 0}
+  .note{font-size:12.5px;color:var(--mute);border-top:1px dashed var(--line);padding-top:10px;margin-top:22px}
+  code{background:#eef2f6;border-radius:3px;padding:1px 5px;font-size:12.5px}
+</style>
+
+<h1>ETH 백테스트 — 수수료가 범인인가</h1>
+<div class="sub">2026-09-20 · 실데이터 ETH/USDT 1시간봉 22,760개 (2017-10-26 ~ 2020-05-31, Huobi 공개 1분봉을 집계) · 레버리지 1배 · 슬리피지 0.02%</div>
+
+<div class="lead">
+<b>결론: 수수료가 범인입니다.</b> 같은 전략·같은 파라미터로 수수료만 바꿔 봤더니,
+편도 0.40%에서는 벌어들인 이익의 <b>91%가 수수료로 사라졌습니다</b>.
+수수료를 0.06%로 낮추면 같은 매매가 <b>+416% 대신 +3,454%</b>가 됩니다.
+전략을 바꾸는 것보다 <b>수수료율을 확인하고 낮추는 것</b>이 몇 배 큽니다.
+</div>
+
+<div class="kpi">
+  <div><small>가장 큰 지렛대</small><b class="r">수수료율</b><small>0.40% → 0.06%</small></div>
+  <div><small>두 번째</small><b class="o">거래 횟수</b><small>적게 할수록 유리</small></div>
+  <div><small>하지 말 것</small><b class="r">역추세</b><small>모든 수수료에서 손실</small></div>
+  <div><small>검증 방식</small><b class="b">워크포워드</b><small>5구간 + 무작위 대조 300회</small></div>
+</div>
+
+<h2>1. 수수료만 바꿨을 때 (파라미터 고정, 전 구간)</h2>
+<div class="wrap"><table>
+<tr><th>전략</th><th>거래수</th><th>0%</th><th>0.02%</th><th>0.06%</th><th>0.10%</th><th>0.20%</th><th class="hi">0.40%</th><th>0.60%</th></tr>
+<tr><td>이동평균 교차</td><td>284</td><td class="g">+4,890%</td><td class="g">+4,357%</td><td class="g">+3,454%</td><td class="g">+2,734%</td><td class="g">+1,508%</td><td class="o hi">+416%</td><td class="o">+65%</td></tr>
+<tr><td>돌파 (돈치안)</td><td>189</td><td class="g">+2,633%</td><td class="g">+2,436%</td><td class="g">+2,081%</td><td class="g">+1,776%</td><td class="g">+1,187%</td><td class="g hi">+504%</td><td class="o">+183%</td></tr>
+<tr><td>추세필터+돌파</td><td>209</td><td class="g">+1,456%</td><td class="g">+1,331%</td><td class="g">+1,112%</td><td class="g">+926%</td><td class="g">+576%</td><td class="o hi">+192%</td><td class="o">+26%</td></tr>
+<tr><td>RSI 역추세</td><td>306</td><td class="r">−96%</td><td class="r">−97%</td><td class="r">−98%</td><td class="r">−98%</td><td class="r">−99%</td><td class="r hi">−100%</td><td class="r">−100%</td></tr>
+</table></div>
+<div class="m" style="font-size:12.5px">숫자는 편도 수수료. 왕복은 두 배입니다. 2.6년 복리라 절대값이 커 보이는 것이고, <b>봐야 할 것은 칸 사이의 낙폭</b>입니다.</div>
+
+<h2>2. 수수료가 먹은 몫</h2>
+<div class="wrap"><table>
+<tr><th>전략</th><th>거래수</th><th>수수료 0%</th><th>편도 0.40%</th><th>증발</th><th>이익 중 남은 비율</th></tr>
+<tr><td>이동평균 교차</td><td>284</td><td>+4,890%</td><td>+416%</td><td class="r">−4,475%p</td><td class="r">8.5%만 남음</td></tr>
+<tr><td>돌파 (돈치안)</td><td>189</td><td>+2,633%</td><td>+504%</td><td class="r">−2,129%p</td><td class="o">19%만 남음</td></tr>
+<tr><td>추세필터+돌파</td><td>209</td><td>+1,456%</td><td>+192%</td><td class="r">−1,263%p</td><td class="o">13%만 남음</td></tr>
+</table></div>
+<div class="m" style="font-size:12.5px">거래를 많이 하는 전략일수록 더 많이 뺏깁니다. 284거래 전략이 189거래 전략보다 훨씬 크게 깎였습니다.</div>
+
+<h2>3. 손익분기 — 한 번 사고팔 때 최소 얼마를 벌어야 본전인가</h2>
+<div class="wrap"><table>
+<tr><th>편도 수수료</th><th>왕복 비용(수수료+슬리피지)</th><th>승률 50%라면 이긴 거래가 평균 이만큼은 나야 본전</th></tr>
+<tr><td>0.02%</td><td>0.08%</td><td class="g">0.16%</td></tr>
+<tr><td>0.06%</td><td>0.16%</td><td class="g">0.32%</td></tr>
+<tr><td>0.10%</td><td>0.24%</td><td class="o">0.48%</td></tr>
+<tr><td class="hi">0.40%</td><td class="hi">0.84%</td><td class="r hi">1.68%</td></tr>
+</table></div>
+<div class="m" style="font-size:12.5px">ETH 1시간봉에서 한 번 먹는 폭이 보통 0.5~1.5%입니다. <b>편도 0.40%면 이긴 거래마다 1.68% 이상 나야 본전</b>이라, 웬만한 단타는 구조적으로 안 됩니다.</div>
+
+<h2>4. 진짜 실력인가, 그 시절 시장 덕인가 (워크포워드 + 무작위 대조)</h2>
+<div class="box">
+앞 8개월에서 파라미터를 고르고 <b>그 다음 4개월(처음 보는 구간)</b>에서만 채점했습니다. 5구간 반복.
+그리고 <b>같은 횟수로 아무렇게나 사고판 300회</b>와 비교했습니다.
+</div>
+<div class="wrap"><table>
+<tr><th>편도 0.06%</th><th>검증 수익</th><th>무작위 300회 중 백분위</th><th>판정</th></tr>
+<tr><td>돌파 (돈치안)</td><td class="g">+447%</td><td>99%</td><td class="g">무작위보다 확실히 낫다</td></tr>
+<tr><td>추세필터+돌파</td><td class="g">+408%</td><td>98%</td><td class="g">무작위보다 확실히 낫다</td></tr>
+<tr><td>이동평균 교차</td><td class="g">+224%</td><td>97%</td><td class="g">무작위보다 확실히 낫다</td></tr>
+<tr><td>RSI 역추세</td><td class="r">−25%</td><td>65%</td><td class="r">무작위와 구별 안 됨</td></tr>
+<tr><td class="m">(참고) 그냥 들고 있기</td><td class="r">−52%</td><td class="m">—</td><td class="m">이 시기는 하락장이었다</td></tr>
+</table></div>
+<div class="m" style="font-size:12.5px">무작위 매매는 300회 중 <b>27%만 흑자</b>였고 중앙값이 −58%였습니다. 추세 전략 셋은 그 분포의 위쪽 끝에 있습니다.</div>
+
+<h2>5. 믿으면 안 되는 것 (정직하게)</h2>
+<div class="warn">
+<ul>
+<li><b>데이터가 6년 전에 끝납니다.</b> 2017-10 ~ 2020-05. 거래소 시세 API가 이 작업 환경에서 조직 정책으로 막혀 최근 데이터를 못 받았습니다. <b>지금 시장에서도 같다는 보장은 없습니다.</b></li>
+<li><b>이 시기는 큰 하락장이었습니다.</b> 그냥 들고 있으면 −52%. 추세추종이 숏으로 크게 먹기 좋은 구간이라 성적이 부풀려졌을 수 있습니다.</li>
+<li><b>절대 수익률을 기대하지 마십시오.</b> 2.6년 복리라 숫자가 큽니다. 믿을 것은 <b>칸 사이의 비율</b>이지 +4,890% 같은 값이 아닙니다.</li>
+<li><b>파라미터는 불안정합니다.</b> 워크포워드에서 수수료를 0.06%→0.10%로 올렸더니 오히려 성적이 좋아졌습니다. 최적화가 매번 다른 숫자를 고른다는 뜻이라, <b>특정 파라미터 값(20/100 같은)을 정답으로 받아들이면 안 됩니다.</b></li>
+<li><b>숏은 1배여도 원금 이상 잃을 수 있습니다.</b> 무작위 대조군에서 −105%가 나왔습니다. 가격이 두 배가 되면 숏은 −100%입니다.</li>
+<li>거래소는 Huobi, 우리는 딥코인입니다. 가격은 거의 같지만 같은 거래소 데이터는 아닙니다.</li>
+</ul>
+</div>
+
+<h2>6. 그래서 무엇을 할까 (순서대로)</h2>
+<div class="box"><h3><span class="r">1순위</span> 내 수수료율이 실제로 얼마인지 확인</h3>
+효과가 압도적으로 큽니다. 8월 19일 통화에 나온 <b>0.4 / 0.6 / 0.81</b>이 각각 무엇인지 아직 모릅니다.
+%인지, 왕복인지, 레퍼럴 수수료인지 확인해야 합니다. 딥코인 앱의 체결내역에 건별 수수료가 찍히니 <b>한 건만 캡처해도 바로 계산됩니다.</b>
+</div>
+<div class="box"><h3><span class="o">2순위</span> 거래 횟수를 줄이는 쪽으로</h3>
+같은 수수료에서 284거래는 8.5%만 남고 189거래는 19%가 남았습니다. 1시간봉 단타보다 <b>4시간봉·일봉 추세추종</b>이 수수료를 덜 먹습니다.
+</div>
+<div class="box"><h3><span class="o">3순위</span> 역추세(RSI 반전)는 쓰지 않기</h3>
+수수료 0%에서도 −96%였습니다. 수수료 문제가 아니라 <b>전략 자체가 이 시장에서 안 맞습니다.</b>
+</div>
+<div class="box"><h3><span class="b">4순위</span> 최근 데이터로 다시 검증</h3>
+여기서는 못 받았습니다. 트레이딩뷰 전략 테스터에 <b>수수료와 슬리피지를 넣으면</b> 최근 몇 년으로 같은 시험을 차장님 화면에서 바로 하실 수 있습니다.
+또는 시세 CSV를 주시면 제가 같은 엔진으로 돌립니다.
+</div>
+
+<h2>7. 이 결과를 만든 코드</h2>
+<div class="wrap"><table>
+<tr><th>파일</th><th>하는 일</th><th>실행</th></tr>
+<tr><td><code>prep.js</code></td><td>1분봉 CSV → 1시간봉 집계</td><td>1회</td></tr>
+<tr><td><code>engine.js</code></td><td>백테스트 엔진. 수수료·슬리피지·손절·익절·레버리지·숏</td><td>—</td></tr>
+<tr><td><code>selftest.js</code></td><td>엔진 자가시험 19건 — 손으로 계산한 답과 대조</td><td class="g">19/19 통과</td></tr>
+<tr><td><code>strategies.js</code></td><td>전략 5종 + 파라미터 격자</td><td>—</td></tr>
+<tr><td><code>run.js</code></td><td>워크포워드 5구간 × 수수료 4단계</td><td>1초</td></tr>
+<tr><td><code>montecarlo.js</code></td><td>무작위 매매 300회 대조군</td><td>1초</td></tr>
+<tr><td><code>feesweep.js</code></td><td>파라미터 고정 · 수수료만 변경</td><td>1초</td></tr>
+</table></div>
+
+<div class="note">
+※ 지어낸 숫자 없음. 표의 모든 값은 위 코드를 실제로 돌려 나온 출력입니다. 데이터는 공개 저장소 <code>wugool/huobi-historical-data</code>의 ETH/USDT 1분봉을 1시간봉으로 집계한 것이고, 집계 과정에서 구멍(결측) 0개를 확인했습니다.
+미래 수익을 약속하는 문서가 아닙니다. 이 문서가 말하는 것은 <b>「지금 조건에서 수수료가 이익의 대부분을 먹고 있다」</b> 하나입니다.
+</div>

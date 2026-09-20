@@ -1,0 +1,414 @@
+{
+ "meta": {
+  "candles": 22760,
+  "from": "2017-10-26",
+  "to": "2020-05-31",
+  "folds": 5,
+  "isMonths": 8,
+  "oosMonths": 4,
+  "slipBp": 2,
+  "lev": 1
+ },
+ "rows": [
+  {
+   "feeBp": 2,
+   "lines": [
+    {
+     "name": "donchian",
+     "ret": 410.1967978890338,
+     "totTrades": 91,
+     "winRate": 40.65934065934066,
+     "totFee": 45.84556451332598,
+     "totGross": 2646.110873395057,
+     "feeShare": 1.7325640045651018,
+     "mddMax": 40.59590706971758,
+     "oosPositive": 4,
+     "folds": 5,
+     "chosen": [
+      "n:48",
+      "n:48",
+      "n:48",
+      "n:120",
+      "n:168"
+     ]
+    },
+    {
+     "name": "trendBreak",
+     "ret": 302.09248459001384,
+     "totTrades": 147,
+     "winRate": 25.170068027210885,
+     "totFee": 61.57617629102777,
+     "totGross": 2316.8226460508163,
+     "feeShare": 2.65778549756446,
+     "mddMax": 42.5528687160077,
+     "oosPositive": 3,
+     "folds": 5,
+     "chosen": [
+      "n:24,trend:200",
+      "n:72,trend:100",
+      "n:48,trend:300",
+      "n:12,trend:200",
+      "n:48,trend:300"
+     ]
+    },
+    {
+     "name": "maCross",
+     "ret": 272.3687343803524,
+     "totTrades": 173,
+     "winRate": 32.947976878612714,
+     "totFee": 85.92208034728276,
+     "totGross": 1914.2518143690077,
+     "feeShare": 4.488546371084682,
+     "mddMax": 39.28915778009693,
+     "oosPositive": 4,
+     "folds": 5,
+     "chosen": [
+      "fast:20,slow:100",
+      "fast:20,slow:100",
+      "fast:10,slow:100",
+      "fast:50,slow:150",
+      "fast:50,slow:150"
+     ]
+    },
+    {
+     "name": "rsiRevert",
+     "ret": -24.880143668869426,
+     "totTrades": 35,
+     "winRate": 45.714285714285715,
+     "totFee": 13.519330244687723,
+     "totGross": -234.6477506748264,
+     "feeShare": null,
+     "mddMax": 29.860198430057505,
+     "oosPositive": 2,
+     "folds": 5,
+     "chosen": [
+      "n:21,lo:20,hi:75",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:75",
+      "n:21,lo:20,hi:80"
+     ]
+    },
+    {
+     "name": "buyHold",
+     "ret": -51.78247037070385,
+     "totTrades": 5,
+     "winRate": 40,
+     "totFee": 2.0210036471785497,
+     "totGross": 105.01823589274727,
+     "feeShare": 1.9244311523596287,
+     "mddMax": 66.39550915895214,
+     "oosPositive": 2,
+     "folds": 5,
+     "chosen": [
+      "",
+      "",
+      "",
+      "",
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "feeBp": 6,
+   "lines": [
+    {
+     "name": "donchian",
+     "ret": 447.0992001786049,
+     "totTrades": 68,
+     "winRate": 44.11764705882353,
+     "totFee": 102.4592099537036,
+     "totGross": 2829.3794657218323,
+     "feeShare": 3.6212608169036873,
+     "mddMax": 35.2050185861125,
+     "oosPositive": 3,
+     "folds": 5,
+     "chosen": [
+      "n:72",
+      "n:48",
+      "n:120",
+      "n:120",
+      "n:168"
+     ]
+    },
+    {
+     "name": "trendBreak",
+     "ret": 407.53933532340926,
+     "totTrades": 117,
+     "winRate": 27.350427350427353,
+     "totFee": 154.86293267392395,
+     "totGross": 2645.648203141961,
+     "feeShare": 5.853496791070309,
+     "mddMax": 43.47447710173828,
+     "oosPositive": 4,
+     "folds": 5,
+     "chosen": [
+      "n:24,trend:200",
+      "n:72,trend:100",
+      "n:48,trend:300",
+      "n:48,trend:300",
+      "n:48,trend:300"
+     ]
+    },
+    {
+     "name": "maCross",
+     "ret": 224.3132938116113,
+     "totTrades": 173,
+     "winRate": 32.947976878612714,
+     "totFee": 253.90577440288936,
+     "totGross": 1890.575186885619,
+     "feeShare": 13.430080758710963,
+     "mddMax": 39.48266549394725,
+     "oosPositive": 4,
+     "folds": 5,
+     "chosen": [
+      "fast:20,slow:100",
+      "fast:20,slow:100",
+      "fast:10,slow:100",
+      "fast:50,slow:150",
+      "fast:50,slow:150"
+     ]
+    },
+    {
+     "name": "rsiRevert",
+     "ret": -25.127312318314953,
+     "totTrades": 33,
+     "winRate": 45.45454545454545,
+     "totFee": 38.35427193837545,
+     "totGross": -213.3440604642335,
+     "feeShare": null,
+     "mddMax": 30.204660205974033,
+     "oosPositive": 2,
+     "folds": 5,
+     "chosen": [
+      "n:21,lo:20,hi:75",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:80"
+     ]
+    },
+    {
+     "name": "buyHold",
+     "ret": -52.007257706255274,
+     "totTrades": 5,
+     "winRate": 40,
+     "totFee": 6.063010941535648,
+     "totGross": 105.01823589274727,
+     "feeShare": 5.773293457078886,
+     "mddMax": 66.39550915895214,
+     "oosPositive": 2,
+     "folds": 5,
+     "chosen": [
+      "",
+      "",
+      "",
+      "",
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "feeBp": 10,
+   "lines": [
+    {
+     "name": "trendBreak",
+     "ret": 798.8139531365454,
+     "totTrades": 98,
+     "winRate": 35.714285714285715,
+     "totFee": 242.4330887384278,
+     "totGross": 3226.8483352470034,
+     "feeShare": 7.512999172918068,
+     "mddMax": 34.524807632118794,
+     "oosPositive": 5,
+     "folds": 5,
+     "chosen": [
+      "n:72,trend:100",
+      "n:72,trend:100",
+      "n:48,trend:300",
+      "n:48,trend:300",
+      "n:48,trend:300"
+     ]
+    },
+    {
+     "name": "donchian",
+     "ret": 418.35894128492185,
+     "totTrades": 68,
+     "winRate": 44.11764705882353,
+     "totFee": 169.68288407740937,
+     "totGross": 2811.4253899719292,
+     "feeShare": 6.035475267551154,
+     "mddMax": 35.827865606263394,
+     "oosPositive": 3,
+     "folds": 5,
+     "chosen": [
+      "n:72",
+      "n:48",
+      "n:120",
+      "n:120",
+      "n:168"
+     ]
+    },
+    {
+     "name": "maCross",
+     "ret": 182.42833116026952,
+     "totTrades": 173,
+     "winRate": 31.213872832369944,
+     "totFee": 416.8679435701647,
+     "totGross": 1867.3558825556997,
+     "feeShare": 22.323968744491868,
+     "mddMax": 39.67571150603833,
+     "oosPositive": 3,
+     "folds": 5,
+     "chosen": [
+      "fast:20,slow:100",
+      "fast:20,slow:100",
+      "fast:10,slow:100",
+      "fast:50,slow:150",
+      "fast:50,slow:150"
+     ]
+    },
+    {
+     "name": "rsiRevert",
+     "ret": -27.090480823412644,
+     "totTrades": 33,
+     "winRate": 45.45454545454545,
+     "totFee": 63.76057307606992,
+     "totGross": -213.0079034807245,
+     "feeShare": null,
+     "mddMax": 30.547711667824412,
+     "oosPositive": 2,
+     "folds": 5,
+     "chosen": [
+      "n:21,lo:20,hi:75",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:80"
+     ]
+    },
+    {
+     "name": "buyHold",
+     "ret": -52.23122220821503,
+     "totTrades": 5,
+     "winRate": 40,
+     "totFee": 10.105018235892748,
+     "totGross": 105.01823589274727,
+     "feeShare": 9.622155761798144,
+     "mddMax": 66.39550915895214,
+     "oosPositive": 2,
+     "folds": 5,
+     "chosen": [
+      "",
+      "",
+      "",
+      "",
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "feeBp": 40,
+   "lines": [
+    {
+     "name": "trendBreak",
+     "ret": 363.69042060754964,
+     "totTrades": 98,
+     "winRate": 33.6734693877551,
+     "totFee": 907.6740288439473,
+     "totGross": 2930.8483700635497,
+     "feeShare": 30.96966865004573,
+     "mddMax": 35.59541744473037,
+     "oosPositive": 5,
+     "folds": 5,
+     "chosen": [
+      "n:72,trend:100",
+      "n:72,trend:100",
+      "n:72,trend:300",
+      "n:48,trend:300",
+      "n:48,trend:300"
+     ]
+    },
+    {
+     "name": "donchian",
+     "ret": 162.1457341639656,
+     "totTrades": 61,
+     "winRate": 47.540983606557376,
+     "totFee": 525.8251576936738,
+     "totGross": 1960.7095746381556,
+     "feeShare": 26.818105266340304,
+     "mddMax": 49.23290498088215,
+     "oosPositive": 3,
+     "folds": 5,
+     "chosen": [
+      "n:72",
+      "n:72",
+      "n:120",
+      "n:120",
+      "n:168"
+     ]
+    },
+    {
+     "name": "maCross",
+     "ret": 21.116908484654417,
+     "totTrades": 148,
+     "winRate": 31.08108108108108,
+     "totFee": 1167.4517011870244,
+     "totGross": 1728.5607546788924,
+     "feeShare": 67.53894521942314,
+     "mddMax": 41.10891372647034,
+     "oosPositive": 2,
+     "folds": 5,
+     "chosen": [
+      "fast:20,slow:100",
+      "fast:50,slow:200",
+      "fast:10,slow:100",
+      "fast:50,slow:150",
+      "fast:50,slow:150"
+     ]
+    },
+    {
+     "name": "rsiRevert",
+     "ret": -40.304365021404934,
+     "totTrades": 33,
+     "winRate": 39.39393939393939,
+     "totFee": 250.21362223639454,
+     "totGross": -210.58196694621512,
+     "feeShare": null,
+     "mddMax": 33.07610847504098,
+     "oosPositive": 1,
+     "folds": 5,
+     "chosen": [
+      "n:21,lo:20,hi:75",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:80",
+      "n:21,lo:20,hi:80"
+     ]
+    },
+    {
+     "name": "buyHold",
+     "ret": -53.884951202215134,
+     "totTrades": 5,
+     "winRate": 40,
+     "totFee": 40.42007294357099,
+     "totGross": 105.01823589274727,
+     "feeShare": 38.488623047192576,
+     "mddMax": 66.39550915895214,
+     "oosPositive": 2,
+     "folds": 5,
+     "chosen": [
+      "",
+      "",
+      "",
+      "",
+      ""
+     ]
+    }
+   ]
+  }
+ ]
+}
