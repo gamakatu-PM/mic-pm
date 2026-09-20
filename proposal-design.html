@@ -92,6 +92,11 @@ select{width:100%; padding:8px; border:1px solid var(--line); border-radius:7px;
   position:absolute; right:0; top:0; width:17px; height:17px; background:rgba(192,57,43,.92); color:#fff;
   font-style:normal; font-size:11px; line-height:17px; text-align:center; cursor:pointer;
 }
+button.big4{
+  width:100%; border:0; border-radius:9px; padding:13px 10px; font-size:13.5px; font-weight:800;
+  cursor:pointer; font-family:inherit; color:#fff; background:var(--purple); line-height:1.4;
+}
+button.big4:active{opacity:.85}
 .pane{display:none}
 .pane.on{display:block}
 .tag{display:inline-block; background:#EEF2F7; color:var(--ink2); border-radius:4px; padding:1px 5px; font-size:10.5px; margin-left:4px}
@@ -289,6 +294,7 @@ footer{padding:14px; text-align:center; color:var(--gray); font-size:11px}
 
     <div class="row">
       <div class="lab">현장 조건 <span style="color:var(--orange)">노란칸 = 직접 입력</span></div>
+      <input type="text" id="gSite" placeholder="현장명 (예: 쏠비치 양양)" style="margin-bottom:6px">
       <div style="display:flex; gap:6px">
         <input type="text" id="gFloors" placeholder="층수 (예: 12)" style="flex:1">
         <input type="text" id="gRooms" placeholder="실수 (예: 320)" style="flex:1">
@@ -301,6 +307,17 @@ footer{padding:14px; text-align:center; color:var(--gray); font-size:11px}
     </div>
 
     <div class="row">
+      <div class="lab">현장 카드 <i id="cardCnt">0개 저장됨</i></div>
+      <select id="cardSel"><option value="">— 저장된 현장을 고르세요 —</option></select>
+      <div class="btns sm" style="margin-top:6px">
+        <button onclick="cardLoad()">불러오기</button>
+        <button onclick="cardSave(this)">이 현장 저장</button>
+        <button onclick="cardDel()">삭제</button>
+      </div>
+      <div class="hint">한 번 넣은 값은 이 브라우저에 남습니다. 다음에 그 현장을 고르면 <b>다시 타이핑하지 않습니다.</b></div>
+    </div>
+
+    <div class="row">
       <div class="lab">성급 <i id="starNow">자동</i></div>
       <div class="btns sm" id="starBtns"></div>
       <div class="hint">배치도에서 1~3성급과 4~5성급의 규칙이 다릅니다(DM·화장실·베란다·BSP).</div>
@@ -308,8 +325,17 @@ footer{padding:14px; text-align:center; color:var(--gray); font-size:11px}
 
     <div class="act">
       <button class="save" onclick="draw3Go()">그려줘</button>
-      <button class="copy" onclick="savePNG3()">PNG 저장</button>
+      <button class="copy" onclick="savePNG3()">이 장만</button>
       <button class="reset" onclick="copyPNG3(this)">복사</button>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <div class="lab">제안 4종 한 번에 <i id="dirNow3">폴더 미지정</i></div>
+      <div class="btns sm" style="margin-bottom:7px">
+        <button onclick="pickDir3()" id="dirBtn3">저장 폴더 정하기</button>
+      </div>
+      <button class="big4" onclick="saveAll4(this)">① 표지 ② 구성도 ③ 배치도 ④ 공사한계 — 한 번에 저장</button>
+      <div class="hint">폴더를 정하시면 <b>현장명 폴더를 만들어 4장 + 현장카드.txt</b> 를 한꺼번에 넣습니다(PC 크롬·엣지). 폴더를 안 정하시면 4장이 차례로 내려받아집니다. 같은 폴더에 덮어쓰지 않고 <b>날짜가 붙은 새 폴더</b>로 나갑니다.</div>
     </div>
 
     <div class="row" style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px">
@@ -334,7 +360,7 @@ footer{padding:14px; text-align:center; color:var(--gray); font-size:11px}
 
 </div><!-- /wrap -->
 
-<footer>제안서 디자인 스튜디오 v4 · 2026-09-13 · 모든 처리는 이 브라우저 안에서만 일어나며 사진은 어디로도 전송되지 않습니다.</footer>
+<footer>제안서 디자인 스튜디오 v5 · 2026-09-20 · 모든 처리는 이 브라우저 안에서만 일어나며 사진은 어디로도 전송되지 않습니다.</footer>
 
 <script>
 /* ===================== 공통 ===================== */
@@ -1037,7 +1063,7 @@ var DEFAULTS = ['CB','RCU','KEY','CHIME','TEMP','LSW'];
 
 var G = { prompt:'', kind:'auto', ratio:'16:9', theme:'light', star:0,
           site:'', rooms:'', floors:'', items:[], flags:{}, foot:'한국마이크로닉(주)',
-          floorsIn:'', roomsIn:'', netUp:'', netDn:'' };
+          floorsIn:'', roomsIn:'', netUp:'', netDn:'', siteIn:'' };
 
 function parsePrompt(){
   var p = G.prompt || '';
@@ -1435,9 +1461,9 @@ function drawCover(ctx, W, H, T, L){
   var ts = fitText(ctx, G.title3, W-pad*2, Math.round(m*0.098), '800');
   var yT = Math.round(H*0.44);
   var RM = G.roomsIn || G.rooms;
-  if(G.site){
+  if(siteName()){
     var head = [((G.roomsIn||G.rooms) ? (G.roomsIn||G.rooms) + '실' : ''), (G.star ? G.star + '성급' : '')]
-                 .filter(Boolean).join('   ·   ') || G.site;
+                 .filter(Boolean).join('   ·   ') || siteName();
     ctx.fillStyle = T.sub;
     fitText(ctx, head, W-pad*2, Math.round(m*0.034), '700');
     ctx.fillText(head, pad, yT - Math.round(ts*1.00));
@@ -1523,7 +1549,7 @@ function drawScope(ctx, W, H, T, L){
 var KINDNAME = {system:'계통·구성도', layout:'객실 기구물 배치도', cover:'제품 소개 배너·표지', scope:'공사 한계 구분도'};
 function titles(kind){
   var parts = [];
-  if(G.site) parts.push(G.site);
+  if(siteName()) parts.push(siteName());
   if(G.roomsIn || G.rooms) parts.push((G.roomsIn || G.rooms) + '실');
   if(G.floorsIn || G.floors) parts.push('지상 ' + (G.floorsIn || G.floors) + '층');
   if(G.star) parts.push(G.star + '성급');
@@ -1532,7 +1558,7 @@ function titles(kind){
   else if(kind === 'layout') G.title3 = '객실 기구물 배치도';
   else if(kind === 'scope') G.title3 = '공사 한계 구분표';
   else {
-    G.title3 = (G.site ? G.site + ' ' : '') + '객실관리 시스템';
+    G.title3 = (siteName() ? siteName() + ' ' : '') + '객실관리 시스템';
     G.sub3 = 'RCU · CB 제어분전함 · 객실 기구물 일괄 공급';
   }
 }
@@ -1561,14 +1587,14 @@ function render3(){
   var got = G.items.map(function(d){ return d.t; }).join(', ');
   var fl = [];
   if(G.flags.veranda) fl.push('베란다'); if(G.flags.living) fl.push('거실'); if(G.flags.desk) fl.push('책상');
-  $('#readTag').innerHTML = '읽은 것: <b>' + (G.site || '현장명 없음') + '</b>'
+  $('#readTag').innerHTML = '읽은 것: <b>' + (siteName() || '현장명 없음') + '</b>'
     + ((G.roomsIn||G.rooms) ? ' · ' + (G.roomsIn||G.rooms) + '실' : '')
     + ((G.floorsIn||G.floors) ? ' · ' + (G.floorsIn||G.floors) + '층' : '') + ' · ' + G.star + '성급'
     + (fl.length ? ' · ' + fl.join('/') : '') + '<br>기구물: ' + (got || '—');
 }
 function draw3Go(){ G.prompt = $('#gp').value; render3(); }
 $('#gp').oninput = function(){ G.prompt = this.value; render3(); };
-[['gFloors','floorsIn'], ['gRooms','roomsIn'], ['gNetUp','netUp'], ['gNetDn','netDn']].forEach(function(a){
+[['gSite','siteIn'], ['gFloors','floorsIn'], ['gRooms','roomsIn'], ['gNetUp','netUp'], ['gNetDn','netDn']].forEach(function(a){
   $('#'+a[0]).oninput = function(){ G[a[1]] = this.value.trim(); render3(); };
 });
 
@@ -1659,6 +1685,194 @@ function aiGen(btn){
     .catch(function(e){ alert('실패: ' + e.message); })
     .then(function(){ btn.textContent = o; });
 }
+
+/* ===================== 현장 카드 + 제안 4종 한 번에 ===================== */
+function siteName(){ return (G.siteIn || G.site || '').trim(); }
+function safeName(t){ return (t || '현장').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '').slice(0, 30); }
+
+/* ---- 현장 카드 (이 브라우저에 남는다) ---- */
+var CKEY = 'km-proposal-sites';
+function cardsGet(){ try{ return JSON.parse(localStorage.getItem(CKEY) || '[]'); }catch(e){ return []; } }
+function cardsPut(a){ try{ localStorage.setItem(CKEY, JSON.stringify(a)); }catch(e){ alert('이 브라우저에 저장할 수 없습니다(비공개 모드일 수 있습니다).'); } }
+function cardNow(){
+  return { name:siteName(), prompt:G.prompt, star:G.starLock || 0, ratio:G.ratio, theme:G.theme,
+           floors:G.floorsIn, rooms:G.roomsIn, netUp:G.netUp, netDn:G.netDn,
+           at:(new Date()).toISOString().slice(0,10) };
+}
+function cardsSync(){
+  var a = cardsGet(), sel = $('#cardSel');
+  sel.innerHTML = '<option value="">— 저장된 현장을 고르세요 —</option>';
+  a.forEach(function(c, i){
+    var o = document.createElement('option');
+    o.value = i;
+    o.textContent = c.name + (c.rooms ? '  ·  ' + c.rooms + '실' : '') + (c.floors ? '·' + c.floors + '층' : '') + '   (' + c.at + ')';
+    sel.appendChild(o);
+  });
+  $('#cardCnt').textContent = a.length + '개 저장됨';
+}
+function cardSave(btn){
+  if(!siteName()){ alert('현장명을 먼저 넣어주세요.\n(현장 조건 첫 칸)'); $('#gSite').focus(); return; }
+  var a = cardsGet(), c = cardNow();
+  var i = a.findIndex(function(x){ return x.name === c.name; });
+  if(i >= 0) a[i] = c; else a.push(c);
+  cardsPut(a); cardsSync();
+  var o = btn.textContent; btn.textContent = (i >= 0 ? '갱신됨' : '저장됨');
+  setTimeout(function(){ btn.textContent = o; }, 1400);
+}
+function cardLoad(){
+  var v = $('#cardSel').value; if(v === '') return;
+  var c = cardsGet()[+v]; if(!c) return;
+  G.siteIn = c.name;   $('#gSite').value = c.name;
+  G.prompt = c.prompt || ''; $('#gp').value = G.prompt;
+  G.floorsIn = c.floors || ''; $('#gFloors').value = G.floorsIn;
+  G.roomsIn = c.rooms || '';   $('#gRooms').value = G.roomsIn;
+  G.netUp = c.netUp || '';     $('#gNetUp').value = G.netUp;
+  G.netDn = c.netDn || '';     $('#gNetDn').value = G.netDn;
+  G.starLock = c.star || 0; G.ratio = c.ratio || '16:9'; G.theme = c.theme || 'light';
+  buildBtns3(); render3(); cardsSync(); syncDir3();
+}
+function cardDel(){
+  var v = $('#cardSel').value; if(v === '') return;
+  var a = cardsGet(), c = a[+v]; if(!c) return;
+  if(!confirm('「' + c.name + '」 카드를 지웁니다.\n저장해 둔 PNG 파일은 지워지지 않습니다.')) return;
+  a.splice(+v, 1); cardsPut(a); cardsSync();
+}
+
+/* ---- 저장 폴더 (PC 크롬·엣지) ---- */
+var DIR3 = null;
+function idb3(){ return new Promise(function(res, rej){
+  var q = indexedDB.open('kmProposal', 1);
+  q.onupgradeneeded = function(){ q.result.createObjectStore('kv'); };
+  q.onsuccess = function(){ res(q.result); }; q.onerror = function(){ rej(q.error); };
+}); }
+function idb3Put(k, v){ return idb3().then(function(db){ return new Promise(function(res, rej){
+  var t = db.transaction('kv','readwrite'); t.objectStore('kv').put(v, k);
+  t.oncomplete = function(){ res(); }; t.onerror = function(){ rej(t.error); }; }); }); }
+function idb3Get(k){ return idb3().then(function(db){ return new Promise(function(res, rej){
+  var t = db.transaction('kv','readonly'), q = t.objectStore('kv').get(k);
+  q.onsuccess = function(){ res(q.result); }; q.onerror = function(){ rej(q.error); }; }); }); }
+function syncDir3(){
+  $('#dirNow3').textContent = DIR3 ? DIR3.name : '폴더 미지정';
+  $('#dirBtn3').textContent = DIR3 ? '폴더 바꾸기' : '저장 폴더 정하기';
+  $('#dirBtn3').className = DIR3 ? 'on' : '';
+}
+function pickDir3(){
+  if(!window.showDirectoryPicker){
+    alert('이 브라우저는 폴더 저장을 지원하지 않습니다.\n\nPC의 크롬 또는 엣지에서 열어주세요.\n휴대폰에서는 4장이 차례로 내려받아집니다.');
+    return;
+  }
+  window.showDirectoryPicker({ mode:'readwrite', id:'km-proposal', startIn:'documents' }).then(function(h){
+    DIR3 = h; idb3Put('dir', h).catch(function(){}); syncDir3();
+  }).catch(function(){});
+}
+
+/* ---- 제안 4종 한 번에 ---- */
+var KINDS4 = [
+  {k:'cover',  n:'1_표지'},
+  {k:'system', n:'2_계통구성도'},
+  {k:'layout', n:'3_객실배치도'},
+  {k:'scope',  n:'4_공사한계표'}
+];
+function infoTxt(folder){
+  var miss = [];
+  if(!(G.floorsIn || G.floors)) miss.push('층수');
+  if(!(G.roomsIn  || G.rooms))  miss.push('실수');
+  if(!G.netUp) miss.push('중앙↔층 통신 규격');
+  if(!G.netDn) miss.push('층↔객실 통신 규격');
+  var L = [];
+  L.push('KM 제안 4종 — 현장 카드');
+  L.push('='.repeat(46));
+  L.push('폴더      : ' + folder);
+  L.push('만든 날   : ' + (new Date()).toLocaleString('ko-KR'));
+  L.push('');
+  L.push('현장명    : ' + (siteName() || '(없음)'));
+  L.push('성급      : ' + G.star + '성급' + (G.starLock ? ' (지정)' : ' (프롬프트에서 판정)'));
+  L.push('실수      : ' + ((G.roomsIn || G.rooms) ? (G.roomsIn || G.rooms) + '실' : '[ 미확정 ]'));
+  L.push('층수      : ' + ((G.floorsIn || G.floors) ? (G.floorsIn || G.floors) + '층' : '[ 미확정 ]'));
+  L.push('중앙↔층   : ' + (G.netUp || '[ 미확정 ]'));
+  L.push('층↔객실   : ' + (G.netDn || '[ 미확정 ]'));
+  L.push('객실 조건 : ' + ([G.flags.veranda && '베란다', G.flags.living && '거실', G.flags.desk && '책상']
+          .filter(Boolean).join(', ') || '없음'));
+  L.push('');
+  L.push('비율      : ' + RLABEL[G.ratio]);
+  L.push('바탕      : ' + ({light:'흰색', soft:'연회색', dark:'다크', blue:'KM 블루'}[G.theme]));
+  L.push('기구물    : ' + G.items.map(function(d){ return d.t; }).join(', '));
+  L.push('');
+  L.push('원문      : ' + (G.prompt || '(없음)'));
+  L.push('');
+  L.push('-'.repeat(46));
+  L.push(miss.length
+    ? '※ 미확정 ' + miss.length + '곳 : ' + miss.join(' / ') + '\r\n  → 도면에 [    ] 로 나갑니다. 확정되면 값을 넣고 다시 뽑으십시오.'
+    : '※ 미확정 없음 — 4장 모두 값이 채워진 판입니다.');
+  L.push('※ 이 폴더는 덮어쓰지 않습니다. 값이 바뀌면 날짜가 붙은 새 폴더로 다시 나갑니다.');
+  L.push('※ 조명 스위치 구수는 전기설계 확정 후 결정되므로 배치도에는 「L」로만 표기됩니다.');
+  return L.join('\r\n');
+}
+function saveAll4(btn){
+  var folder = 'KM_' + safeName(siteName()) + '_제안_' + fileStamp();
+  var old = G.kind, oldTxt = btn.textContent;
+  btn.textContent = '만드는 중…'; btn.disabled = true;
+
+  var files = [];
+  KINDS4.forEach(function(d){
+    G.kind = d.k;
+    var cv = document.createElement('canvas');
+    draw3(cv, 2400);
+    files.push({ name: folder + '_' + d.n + '.png', cv: cv });
+  });
+  G.kind = old; buildBtns3(); render3();
+  var txt = infoTxt(folder);
+
+  function done(msg){
+    btn.textContent = msg; btn.disabled = false;
+    setTimeout(function(){ btn.textContent = oldTxt; }, 2600);
+  }
+  function blobs(cb){
+    var out = [], i = 0;
+    (function nx(){
+      if(i >= files.length) return cb(out);
+      files[i].cv.toBlob(function(b){ out.push({ name:files[i].name, blob:b }); i++; nx(); }, 'image/png');
+    })();
+  }
+
+  blobs(function(list){
+    list.push({ name:'_현장카드.txt', blob:new Blob(['﻿' + txt], {type:'text/plain;charset=utf-8'}) });
+    if(DIR3){
+      DIR3.getDirectoryHandle(folder, {create:true}).then(function(sub){
+        var i = 0;
+        (function nx(){
+          if(i >= list.length){ done('폴더에 ' + list.length + '개 저장됨'); return; }
+          sub.getFileHandle(list[i].name, {create:true}).then(function(fh){
+            return fh.createWritable().then(function(w){
+              return w.write(list[i].blob).then(function(){ return w.close(); });
+            });
+          }).then(function(){ i++; nx(); })
+            .catch(function(e){ done('실패'); alert('저장 실패: ' + e.message); });
+        })();
+      }).catch(function(e){ done('실패'); alert('폴더를 만들지 못했습니다: ' + e.message); });
+    } else {
+      var i = 0;
+      (function nx(){
+        if(i >= list.length){ done(list.length + '개 내려받음'); return; }
+        var a = document.createElement('a');
+        a.download = list[i].name; a.href = URL.createObjectURL(list[i].blob);
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+        i++; setTimeout(nx, 420);
+      })();
+    }
+  });
+}
+
+/* 지난번 폴더 다시 잡기 · 카드 목록 */
+try{
+  idb3Get('dir').then(function(h){
+    if(!h || !h.queryPermission) return;
+    h.queryPermission({mode:'readwrite'}).then(function(p){
+      if(p === 'granted'){ DIR3 = h; syncDir3(); }
+    }).catch(function(){});
+  }).catch(function(){});
+}catch(e){}
 
 /* ===================== 시작 ===================== */
 buildBtns1(); syncFxText(); render1();
