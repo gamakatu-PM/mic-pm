@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>제안서 디자인 스튜디오 — 한국마이크로닉(주)</title>
+<style>
+:root{
+  --blue:#2A6099; --orange:#C77B2B; --purple:#6B4FA8; --red:#C0392B;
+  --gray:#8E99A4; --green:#2E7D5B;
+  --bg:#F2F4F7; --panel:#FFFFFF; --line:#DDE3EA; --ink:#1B2530; --ink2:#5A6675;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",sans-serif;
+  font-size:14px; line-height:1.5; -webkit-text-size-adjust:100%;
+}
+header{background:var(--ink); color:#fff; padding:10px 14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+header h1{font-size:15px; margin:0; font-weight:700; letter-spacing:-.2px}
+header .sub{font-size:11px; color:#A9B4C0}
+.tabs{display:flex; gap:0; background:var(--ink); padding:0 8px}
+.tabs button{
+  flex:1; background:none; border:0; border-bottom:3px solid transparent; color:#A9B4C0;
+  padding:11px 6px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.tabs button.on{color:#fff; border-bottom-color:var(--orange)}
+.warn{
+  background:#FDF3E7; border-bottom:1px solid #EBD5B6; color:#7A4E13;
+  padding:8px 14px; font-size:11.5px; line-height:1.45;
+}
+.warn b{color:var(--red)}
+.wrap{padding:12px; max-width:1180px; margin:0 auto}
+.grid{display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:12px; align-items:start}
+@media(max-width:900px){ .grid{grid-template-columns:1fr} }
+.card{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px}
+.card h2{font-size:12px; margin:0 0 8px; color:var(--ink2); letter-spacing:.3px; font-weight:700}
+.stage{
+  background:repeating-conic-gradient(#EDF0F4 0% 25%, #F7F9FB 0% 50%) 50%/18px 18px;
+  border:1px solid var(--line); border-radius:10px; padding:10px;
+  display:flex; align-items:center; justify-content:center; min-height:220px;
+}
+canvas.prev{max-width:100%; max-height:64vh; display:block; border-radius:4px; touch-action:none; cursor:grab}
+canvas.prev.mask{cursor:crosshair}
+.drop{
+  border:2px dashed #B9C4D0; border-radius:10px; padding:26px 14px; text-align:center;
+  color:var(--ink2); background:#FBFCFD; cursor:pointer;
+}
+.drop.hot{border-color:var(--blue); background:#EEF4FB}
+.drop b{display:block; font-size:15px; color:var(--ink); margin-bottom:4px}
+.drop span{font-size:11.5px}
+.row{margin-bottom:12px}
+.row:last-child{margin-bottom:0}
+.lab{font-size:11px; color:var(--ink2); font-weight:700; margin-bottom:5px; display:flex; justify-content:space-between}
+.lab i{font-style:normal; color:var(--blue); font-weight:700}
+.btns{display:flex; flex-wrap:wrap; gap:6px}
+.btns button{
+  flex:1 1 auto; min-width:62px; background:#fff; border:1px solid var(--line); border-radius:7px;
+  padding:9px 6px; font-size:12.5px; font-weight:700; color:var(--ink2); cursor:pointer; font-family:inherit;
+  transition:.12s;
+}
+.btns button:hover{border-color:var(--blue); color:var(--blue)}
+.btns button.on{background:var(--blue); border-color:var(--blue); color:#fff}
+.btns.sm button{padding:7px 5px; font-size:11.5px; min-width:0}
+.btns.warnb button.on{background:var(--red); border-color:var(--red)}
+input[type=range]{width:100%; accent-color:var(--blue)}
+input[type=text]{
+  width:100%; padding:8px 9px; border:1px solid var(--line); border-radius:7px;
+  font-family:inherit; font-size:13px; background:#FFFDF2;
+}
+textarea{
+  width:100%; padding:9px; border:1px solid var(--line); border-radius:7px;
+  font-family:inherit; font-size:13px; background:#FFFDF2; resize:vertical; line-height:1.5;
+}
+select{width:100%; padding:8px; border:1px solid var(--line); border-radius:7px; font-family:inherit; font-size:13px; background:#fff}
+.act{display:flex; gap:8px; margin-top:12px}
+.act button{
+  flex:1; border:0; border-radius:8px; padding:13px 8px; font-size:14px; font-weight:800;
+  cursor:pointer; font-family:inherit; color:#fff;
+}
+.act .save{background:var(--green)}
+.act .copy{background:var(--blue)}
+.act .reset{background:#fff; color:var(--ink2); border:1px solid var(--line); flex:0 0 84px}
+.hint{font-size:11px; color:var(--gray); margin-top:7px; line-height:1.45}
+.thumbs{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.thumb{position:relative; width:58px; height:58px; border-radius:6px; overflow:hidden; border:1px solid var(--line)}
+.thumb.on{border:2px solid var(--blue)}
+.thumb img{width:100%; height:100%; object-fit:cover; display:block}
+.thumb b{position:absolute; left:2px; top:1px; font-size:10px; color:#fff; text-shadow:0 1px 2px #000}
+.thumb i{
+  position:absolute; right:0; top:0; width:17px; height:17px; background:rgba(192,57,43,.92); color:#fff;
+  font-style:normal; font-size:11px; line-height:17px; text-align:center; cursor:pointer;
+}
+button.big4{
+  width:100%; border:0; border-radius:9px; padding:13px 10px; font-size:13.5px; font-weight:800;
+  cursor:pointer; font-family:inherit; color:#fff; background:var(--purple); line-height:1.4;
+}
+button.big4:active{opacity:.85}
+.pane{display:none}
+.pane.on{display:block}
+.tag{display:inline-block; background:#EEF2F7; color:var(--ink2); border-radius:4px; padding:1px 5px; font-size:10.5px; margin-left:4px}
+footer{padding:14px; text-align:center; color:var(--gray); font-size:11px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>제안서 디자인 스튜디오</h1>
+  <span class="sub">한국마이크로닉(주) · 캡쳐본 → 카탈로그급 이미지</span>
+</header>
+
+<div class="tabs">
+  <button id="tb1" class="on" onclick="tab(1)">① 낱장 가공기</button>
+  <button id="tb2" onclick="tab(2)">② 제안서 쪽 조판</button>
+  <button id="tb3" onclick="tab(3)">③ 프롬프트 작도</button>
+</div>
+
+<div class="warn">
+  <b>먼저 읽어주세요.</b> 사진을 자르는 것만으로 저작권이 해결되지는 않습니다. 자르기·마스킹은 <b>타사 로고·워터마크·URL이 그대로 노출되어 출처를 오인하게 만드는 상황</b>을 막는 용도입니다.
+  타사 제품 사진을 우리 제안서에 쓸 때는 ⓐ 우리 현장 촬영본으로 교체하거나 ⓑ 출처를 표기하거나 ⓒ 직접 작도한 구성도로 대체하는 것이 안전합니다.
+</div>
+
+<div class="wrap">
+
+<!-- ================= 탭 1 : 낱장 가공기 ================= -->
+<div class="pane on" id="pane1">
+<div class="grid">
+
+  <div>
+    <div class="card">
+      <h2>미리보기 <span class="tag" id="szTag">—</span></h2>
+      <div class="stage" id="stage1">
+        <div class="drop" id="drop1">
+          <b>캡쳐 사진을 여기에 놓으세요</b>
+          <span>클릭해서 고르기 · 붙여넣기(Ctrl+V)도 됩니다</span>
+        </div>
+        <canvas class="prev" id="prev" style="display:none"></canvas>
+      </div>
+      <div class="hint" id="hint1">사진 위를 끌면 <b>보이는 부위가 이동</b>합니다. 마스킹 모드에서는 끌어서 가릴 영역을 그립니다.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="lab">비율 · 방향 <i id="ratioNow">16:9 가로</i></div>
+      <div class="btns" id="ratioBtns"></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">자를 부위 <span id="zoomTxt">100%</span></div>
+      <input type="range" id="zoom" min="100" max="400" value="100">
+      <div class="btns sm" style="margin-top:6px" id="posBtns"></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">틀(프레임)</div>
+      <div class="btns sm" id="frameBtns"></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">보정 <span id="fxTxt">기본</span></div>
+      <div class="btns sm" id="fxBtns"></div>
+      <div style="margin-top:7px">
+        <div class="lab">밝기 <span id="bTxt">100</span></div><input type="range" id="bright" min="60" max="150" value="100">
+        <div class="lab">대비 <span id="cTxt">100</span></div><input type="range" id="contrast" min="60" max="160" value="100">
+        <div class="lab">채도 <span id="sTxt">100</span></div><input type="range" id="sat" min="0" max="180" value="100">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lab">보호 처리 <i id="maskCnt">가린 곳 0</i></div>
+      <div class="btns sm warnb" id="maskBtns"></div>
+      <div class="btns sm" style="margin-top:6px" id="cornerBtns"></div>
+      <div class="btns sm" style="margin-top:6px">
+        <button onclick="setMaskStyle('blur')" id="ms_blur" class="on">블러</button>
+        <button onclick="setMaskStyle('mosaic')" id="ms_mosaic">모자이크</button>
+        <button onclick="setMaskStyle('solid')" id="ms_solid">단색</button>
+        <button onclick="clearMasks()">가린 곳 지우기</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lab">라벨 <span style="color:var(--orange)">노란칸 = 직접 입력</span></div>
+      <input type="text" id="t1" placeholder="제목 (예: CB 제어분전함)" style="margin-bottom:6px">
+      <input type="text" id="t2" placeholder="부제 (예: RCU · 약전 결선 완료)" style="margin-bottom:6px">
+      <input type="text" id="t3" placeholder="출처·비고 (예: 참고 이미지)">
+      <div class="btns sm" style="margin-top:6px" id="labBtns"></div>
+    </div>
+
+    <div class="act">
+      <button class="save" onclick="savePNG()">PNG 저장</button>
+      <button class="copy" onclick="copyPNG(this)">복사</button>
+      <button class="reset" onclick="resetAll()">초기화</button>
+    </div>
+    <div class="hint">저장본은 긴 변 2000px입니다. <b>복사</b>를 누르면 PPT에 바로 붙여넣기(Ctrl+V)가 됩니다. 휴대폰에서는 미리보기 이미지를 길게 눌러 저장하세요.</div>
+  </div>
+
+</div>
+</div>
+
+<!-- ================= 탭 2 : 제안서 쪽 조판 ================= -->
+<div class="pane" id="pane2">
+<div class="grid">
+
+  <div>
+    <div class="card">
+      <h2>미리보기 <span class="tag" id="szTag2">—</span></h2>
+      <div class="stage" id="stage2">
+        <div class="drop" id="drop2">
+          <b>사진을 여러 장 놓으세요 (2~6장)</b>
+          <span>클릭해서 고르기 · 붙여넣기(Ctrl+V)도 됩니다</span>
+        </div>
+        <canvas class="prev" id="prev2" style="display:none"></canvas>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+      <div class="hint">칸을 끌면 그 칸의 <b>사진 위치</b>가 움직입니다. 아래 썸네일을 눌러 칸 순서를 고르고, 빨간 ×로 뺍니다.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="lab">쪽 비율 <i id="ratioNow2">16:9 (PPT)</i></div>
+      <div class="btns" id="ratioBtns2"></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">배치 <span id="layTxt">2분할</span></div>
+      <div class="btns sm" id="layBtns"></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">바탕</div>
+      <div class="btns sm" id="themeBtns"></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">제목 <span style="color:var(--orange)">노란칸 = 직접 입력</span></div>
+      <input type="text" id="pTitle" placeholder="제목 (예: 객실관리 시스템 구성)" style="margin-bottom:6px">
+      <input type="text" id="pSub" placeholder="부제 (예: SK하이닉스 2차공사 · 1,116실)" style="margin-bottom:6px">
+      <input type="text" id="pFoot" placeholder="꼬리말" value="한국마이크로닉(주)">
+    </div>
+
+    <div class="row">
+      <div class="lab">칸 설명 <span id="capWho">— 칸을 고르세요</span></div>
+      <input type="text" id="pCap" placeholder="선택한 칸의 설명 (예: CB 제어분전함)">
+      <div class="btns sm" style="margin-top:6px" id="numBtns"></div>
+    </div>
+
+    <div class="act">
+      <button class="save" onclick="savePNG2()">PNG 저장</button>
+      <button class="copy" onclick="copyPNG2(this)">복사</button>
+      <button class="reset" onclick="resetAll2()">초기화</button>
+    </div>
+    <div class="hint">저장본은 긴 변 2400px입니다. 탭①에서 <b>먼저 낱장을 다듬어 저장한 뒤</b> 그 PNG를 여기에 올리면 가장 깔끔합니다.</div>
+  </div>
+
+</div>
+</div>
+
+<!-- ================= 탭 ③ : 프롬프트 작도 ================= -->
+<div class="pane" id="pane3">
+<div class="grid">
+
+  <div>
+    <div class="card">
+      <h2>미리보기 <span class="tag" id="szTag3">—</span> <span class="tag" id="kindTag">계통·구성도</span></h2>
+      <div class="stage"><canvas class="prev" id="prev3" style="cursor:default"></canvas></div>
+      <div class="hint" id="readTag">읽은 것: —</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="lab">무엇을 그릴지 적으세요 <span style="color:var(--orange)">노란칸</span></div>
+      <textarea id="gp" rows="4" placeholder="예) 「쏠비치 양양」 5성급 320실, CB함 RCU 키센서 DM 챠임벨 온도조절기 조명스위치 BSP, 베란다 책상 있음, PMS 에어컨 바닥난방 연동"></textarea>
+      <div class="btns sm" style="margin-top:6px" id="exBtns"></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">그림 종류 <i id="kindNow">자동</i></div>
+      <div class="btns sm" id="kindBtns"></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">비율 · 방향 <i id="ratioNow3">16:9 (PPT)</i></div>
+      <div class="btns" id="ratioBtns3"></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">바탕</div>
+      <div class="btns sm" id="themeBtns3"></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">현장 조건 <span style="color:var(--orange)">노란칸 = 직접 입력</span></div>
+      <input type="text" id="gSite" placeholder="현장명 (예: 쏠비치 양양)" style="margin-bottom:6px">
+      <div style="display:flex; gap:6px">
+        <input type="text" id="gFloors" placeholder="층수 (예: 12)" style="flex:1">
+        <input type="text" id="gRooms" placeholder="실수 (예: 320)" style="flex:1">
+      </div>
+      <div style="display:flex; gap:6px; margin-top:6px">
+        <input type="text" id="gNetUp" placeholder="중앙↔층 통신 규격">
+        <input type="text" id="gNetDn" placeholder="층↔객실 통신 규격">
+      </div>
+      <div class="hint">통신 규격·수량은 <b>제가 정하지 않습니다.</b> 비워 두면 도면에 <b>[&nbsp;&nbsp;&nbsp;&nbsp;]</b> 빈칸으로 나가고, 맨 아래에 「미확정 n곳」이 찍힙니다.</div>
+    </div>
+
+    <div class="row">
+      <div class="lab">현장 카드 <i id="cardCnt">0개 저장됨</i></div>
+      <select id="cardSel"><option value="">— 저장된 현장을 고르세요 —</option></select>
+      <div class="btns sm" style="margin-top:6px">
+        <button onclick="cardLoad()">불러오기</button>
+        <button onclick="cardSave(this)">이 현장 저장</button>
+        <button onclick="cardDel()">삭제</button>
+      </div>
+      <div class="hint">한 번 넣은 값은 이 브라우저에 남습니다. 다음에 그 현장을 고르면 <b>다시 타이핑하지 않습니다.</b></div>
+    </div>
+
+    <div class="row">
+      <div class="lab">성급 <i id="starNow">자동</i></div>
+      <div class="btns sm" id="starBtns"></div>
+      <div class="hint">배치도에서 1~3성급과 4~5성급의 규칙이 다릅니다(DM·화장실·베란다·BSP).</div>
+    </div>
+
+    <div class="act">
+      <button class="save" onclick="draw3Go()">그려줘</button>
+      <button class="copy" onclick="savePNG3()">이 장만</button>
+      <button class="reset" onclick="copyPNG3(this)">복사</button>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <div class="lab">제안 4종 한 번에 <i id="dirNow3">폴더 미지정</i></div>
+      <div class="btns sm" style="margin-bottom:7px">
+        <button onclick="pickDir3()" id="dirBtn3">저장 폴더 정하기</button>
+      </div>
+      <button class="big4" onclick="saveAll4(this)">① 표지 ② 구성도 ③ 배치도 ④ 공사한계 — 한 번에 저장</button>
+      <div class="hint">폴더를 정하시면 <b>현장명 폴더를 만들어 4장 + 현장카드.txt</b> 를 한꺼번에 넣습니다(PC 크롬·엣지). 폴더를 안 정하시면 4장이 차례로 내려받아집니다. 같은 폴더에 덮어쓰지 않고 <b>날짜가 붙은 새 폴더</b>로 나갑니다.</div>
+    </div>
+
+    <div class="row" style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px">
+      <div class="lab">이 그림으로 안 되면 — 나에게 던지기</div>
+      <div class="btns sm">
+        <button onclick="copyBrief(this)">의뢰문 만들어 복사</button>
+      </div>
+      <div class="hint">위 내용을 Claude가 알아듣는 의뢰문으로 조립해 복사합니다. 대화창에 붙여넣으면 pptx·도면까지 제가 만들어 드립니다.</div>
+    </div>
+
+    <div class="row" style="margin-top:12px; border-top:1px solid var(--line); padding-top:12px">
+      <div class="lab">AI 실사 이미지 <span style="color:var(--red)">중계서버 필요</span></div>
+      <input type="text" id="aiUrl" placeholder="중계서버 주소 (예: https://내주소/gen)" style="margin-bottom:6px">
+      <input type="text" id="aiKey" placeholder="키 (중계서버가 요구할 때만)">
+      <div class="btns sm" style="margin-top:6px"><button onclick="aiGen(this)">AI로 만들기</button></div>
+      <div class="hint"><b>지금은 비어 있는 것이 정상입니다.</b> 브라우저에서 Gemini·OpenAI 이미지 API를 직접 부르면 CORS로 막혀서, 중계서버가 있어야만 동작합니다. 주소를 넣기 전까지는 위쪽 <b>그려줘</b>를 쓰세요.</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+</div><!-- /wrap -->
+
+<footer>제안서 디자인 스튜디오 v5 · 2026-09-20 · 모든 처리는 이 브라우저 안에서만 일어나며 사진은 어디로도 전송되지 않습니다.</footer>
+
+<script>
+/* ===================== 공통 ===================== */
+var $ = function(s){ return document.querySelector(s); };
+var RATIOS = {'16:9':16/9, '4:3':4/3, '1:1':1, '3:4':3/4, 'A4가로':297/210, 'A4세로':210/297};
+var RLABEL = {'16:9':'16:9 가로','4:3':'4:3 가로','1:1':'1:1 정사각','3:4':'3:4 세로','A4가로':'A4 가로','A4세로':'A4 세로'};
+var FONT = '"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",sans-serif';
+
+function outSize(key, longSide){
+  var ar = RATIOS[key], w, h;
+  if(ar >= 1){ w = longSide; h = Math.round(longSide/ar); }
+  else { h = longSide; w = Math.round(longSide*ar); }
+  return {w:w, h:h};
+}
+function rrect(ctx,x,y,w,h,r){
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+/* 글자를 폭에 맞춰 줄이기 */
+function fitText(ctx, text, maxW, startPx, weight){
+  var px = startPx;
+  while(px > 9){
+    ctx.font = weight+' '+px+'px '+FONT;
+    if(ctx.measureText(text).width <= maxW) break;
+    px -= 1;
+  }
+  return px;
+}
+function fileStamp(){
+  var d = new Date(), p = function(n){ return (n<10?'0':'')+n; };
+  return String(d.getFullYear()).slice(2)+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes());
+}
+function downloadCanvas(cv, name){
+  cv.toBlob(function(b){
+    var a = document.createElement('a');
+    a.download = name; a.href = URL.createObjectURL(b);
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+  }, 'image/png');
+}
+function copyCanvas(cv, btn){
+  if(!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write){
+    alert('이 브라우저는 복사를 지원하지 않습니다. PNG 저장을 쓰거나, 미리보기 이미지를 길게 눌러 저장하세요.');
+    return;
+  }
+  cv.toBlob(function(b){
+    navigator.clipboard.write([new ClipboardItem({'image/png': b})]).then(function(){
+      var old = btn.textContent; btn.textContent = '복사됨';
+      setTimeout(function(){ btn.textContent = old; }, 1400);
+    }).catch(function(){
+      alert('복사가 막혔습니다. PNG 저장을 쓰세요.');
+    });
+  }, 'image/png');
+}
+function mkBtns(box, list, cur, fn){
+  box.innerHTML = '';
+  list.forEach(function(it){
+    var b = document.createElement('button');
+    b.textContent = it.t;
+    if(it.k === cur) b.className = 'on';
+    b.onclick = function(){ fn(it.k); };
+    box.appendChild(b);
+  });
+}
+var curTab = 1;
+function tab(n){
+  curTab = n;
+  for(var i=1;i<=3;i++){
+    $('#pane'+i).className = 'pane' + (n===i?' on':'');
+    $('#tb'+i).className = (n===i?'on':'');
+  }
+}
+
+/* ===================== 탭 ① 낱장 가공기 ===================== */
+var S = {
+  img:null, ratio:'16:9', zoom:1, ox:.5, oy:.5,
+  bright:100, contrast:100, sat:100,
+  frame:'card', fade:false,
+  t1:'', t2:'', t3:'', showLabel:true,
+  masks:[], maskStyle:'blur', maskMode:false
+};
+var prev = $('#prev');
+
+function filterStr(){
+  return 'brightness('+S.bright+'%) contrast('+S.contrast+'%) saturate('+S.sat+'%)';
+}
+function layout1(W,H){
+  var m = Math.min(W,H);
+  var pad = (S.frame==='card'||S.frame==='dark') ? Math.round(m*0.048)
+          : (S.frame==='line' ? Math.round(m*0.022) : 0);
+  var hasLab = S.showLabel && (S.t1 || S.t2);
+  var labH = (hasLab && (S.frame==='card'||S.frame==='dark')) ? Math.round(m*0.135) : 0;
+  return { pad:pad, labH:labH, x:pad, y:pad, w:W-pad*2, h:H-pad*2-labH, hasLab:hasLab };
+}
+function cropRect(ar){
+  var iw = S.img.naturalWidth, ih = S.img.naturalHeight, cw, ch;
+  if(iw/ih > ar){ ch = ih; cw = ih*ar; } else { cw = iw; ch = iw/ar; }
+  cw /= S.zoom; ch /= S.zoom;
+  var x = S.ox*iw - cw/2, y = S.oy*ih - ch/2;
+  x = Math.max(0, Math.min(iw-cw, x));
+  y = Math.max(0, Math.min(ih-ch, y));
+  return {x:x, y:y, w:cw, h:ch};
+}
+function blurLayer(c, L){
+  /* 캔버스 filter:blur 는 그려진 그림의 가장자리에서 알파가 빠져 원본이 비쳐 나온다.
+     그래서 사진보다 큰 오프스크린에 가장자리를 채워 넣고 거기서 블러를 만든 뒤 잘라 쓴다. */
+  var bpx = Math.max(10, Math.round(Math.min(L.w, L.h)/18));
+  var pad = Math.ceil(bpx*2);
+  var W2 = Math.round(L.w) + pad*2, H2 = Math.round(L.h) + pad*2;
+  var a = document.createElement('canvas'); a.width = W2; a.height = H2;
+  var ac = a.getContext('2d');
+  ac.filter = filterStr();
+  ac.drawImage(S.img, c.x, c.y, c.w, c.h, 0, 0, W2, H2);
+  ac.drawImage(S.img, c.x, c.y, c.w, c.h, pad, pad, Math.round(L.w), Math.round(L.h));
+  var b = document.createElement('canvas'); b.width = W2; b.height = H2;
+  var bc = b.getContext('2d');
+  bc.filter = 'blur('+bpx+'px)';
+  bc.drawImage(a, 0, 0);
+  return { cv:b, pad:pad };
+}
+function drawMasks1(ctx, c, L){
+  if(!S.masks.length) return;
+  var iw = S.img.naturalWidth, ih = S.img.naturalHeight;
+  var kx = L.w/c.w, ky = L.h/c.h;
+  var bl = (S.maskStyle === 'blur') ? blurLayer(c, L) : null;
+  S.masks.forEach(function(m){
+    var x = L.x + (m.x*iw - c.x)*kx, y = L.y + (m.y*ih - c.y)*ky;
+    var w = m.w*iw*kx, h = m.h*ih*ky;
+    if(w < 2 || h < 2) return;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+    if(S.maskStyle === 'solid'){
+      ctx.fillStyle = '#0E1218'; ctx.fillRect(x,y,w,h);
+    } else if(S.maskStyle === 'mosaic'){
+      var cells = 9;
+      var tmp = document.createElement('canvas');
+      tmp.width = cells; tmp.height = Math.max(1, Math.round(cells*h/w));
+      tmp.getContext('2d').drawImage(S.img, m.x*iw, m.y*ih, m.w*iw, m.h*ih, 0, 0, tmp.width, tmp.height);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(tmp, x, y, w, h);
+      ctx.imageSmoothingEnabled = true;
+    } else {
+      ctx.drawImage(bl.cv, bl.pad, bl.pad, Math.round(L.w), Math.round(L.h), L.x, L.y, L.w, L.h);
+    }
+    ctx.restore();
+  });
+}
+function drawLabel1(ctx, W, H, L){
+  if(!L.hasLab) return;
+  var m = Math.min(W,H);
+  var padX = Math.round(m*0.035);
+  ctx.textBaseline = 'alphabetic';
+  if(S.frame === 'card' || S.frame === 'dark'){
+    var by = L.y + L.h, bh = L.labH;
+    var tx = L.x + Math.round(m*0.014);
+    var only = (S.t1 && !S.t2);
+    if(S.t1){
+      ctx.fillStyle = (S.frame==='dark') ? '#FFFFFF' : '#1B2530';
+      fitText(ctx, S.t1, L.w - m*0.05, Math.round(Math.min(m*0.050, bh*0.40)), '800');
+      ctx.fillText(S.t1, tx, by + bh*(only ? 0.62 : 0.44));
+    }
+    if(S.t2){
+      ctx.fillStyle = (S.frame==='dark') ? '#A9B4C0' : '#5A6675';
+      fitText(ctx, S.t2, L.w - m*0.05, Math.round(Math.min(m*0.030, bh*0.24)), '600');
+      ctx.fillText(S.t2, tx, by + bh*0.82);
+    }
+    if(S.t3){
+      ctx.fillStyle = (S.frame==='dark') ? 'rgba(169,180,192,.85)' : 'rgba(142,153,164,.95)';
+      ctx.font = '600 '+Math.max(9, Math.round(Math.min(m*0.021, bh*0.18)))+'px '+FONT;
+      ctx.textAlign = 'right';
+      ctx.fillText(S.t3, L.x + L.w - Math.round(m*0.014), by + bh*0.82);
+      ctx.textAlign = 'left';
+    }
+  } else {
+    var gh = Math.round(H*0.30);
+    var g = ctx.createLinearGradient(0, H-L.pad-gh, 0, H-L.pad);
+    g.addColorStop(0, 'rgba(10,14,20,0)'); g.addColorStop(1, 'rgba(10,14,20,.80)');
+    ctx.fillStyle = g; ctx.fillRect(L.x, H-L.pad-gh, L.w, gh);
+    var base = H - L.pad - Math.round(m*0.045);
+    if(S.t2){
+      ctx.fillStyle = 'rgba(255,255,255,.82)';
+      fitText(ctx, S.t2, L.w - padX*2, Math.round(m*0.033), '600');
+      ctx.fillText(S.t2, L.x + padX, base);
+      base -= Math.round(m*0.048);
+    }
+    if(S.t1){
+      ctx.fillStyle = '#FFFFFF';
+      fitText(ctx, S.t1, L.w - padX*2, Math.round(m*0.058), '800');
+      ctx.fillText(S.t1, L.x + padX, base);
+    }
+  }
+  if(S.t3 && S.frame !== 'card' && S.frame !== 'dark'){
+    ctx.fillStyle = 'rgba(255,255,255,.78)';
+    ctx.font = '600 '+Math.max(9, Math.round(m*0.021))+'px '+FONT;
+    ctx.textAlign = 'right';
+    ctx.fillText(S.t3, L.x + L.w - padX, H - L.pad - Math.round(m*0.022));
+    ctx.textAlign = 'left';
+  }
+}
+function draw1(cv, longSide){
+  var o = outSize(S.ratio, longSide), W = o.w, H = o.h;
+  cv.width = W; cv.height = H;
+  var ctx = cv.getContext('2d');
+  var L = layout1(W,H);
+  var dark = (S.frame === 'dark');
+  ctx.fillStyle = dark ? '#14181D' : '#FFFFFF';
+  ctx.fillRect(0,0,W,H);
+  if(!S.img) return;
+  var r = (S.frame==='card'||S.frame==='dark') ? Math.round(Math.min(W,H)*0.016) : 0;
+  if(S.frame === 'card' || S.frame === 'dark'){
+    ctx.save();
+    ctx.shadowColor = dark ? 'rgba(0,0,0,.6)' : 'rgba(27,37,48,.20)';
+    ctx.shadowBlur = Math.round(Math.min(W,H)*0.035);
+    ctx.shadowOffsetY = Math.round(Math.min(W,H)*0.010);
+    ctx.fillStyle = dark ? '#1E242B' : '#FFFFFF';
+    rrect(ctx, L.x, L.y, L.w, L.h + L.labH, r); ctx.fill();
+    ctx.restore();
+  }
+  var c = cropRect(L.w/L.h);
+  ctx.save();
+  if(r){ rrect(ctx, L.x, L.y, L.w, L.h, r); } else { ctx.beginPath(); ctx.rect(L.x, L.y, L.w, L.h); }
+  ctx.clip();
+  ctx.filter = filterStr();
+  ctx.drawImage(S.img, c.x, c.y, c.w, c.h, L.x, L.y, L.w, L.h);
+  ctx.filter = 'none';
+  drawMasks1(ctx, c, L);
+  if(S.fade){
+    var g = ctx.createRadialGradient(L.x+L.w/2, L.y+L.h/2, Math.min(L.w,L.h)*0.16,
+                                     L.x+L.w/2, L.y+L.h/2, Math.max(L.w,L.h)*0.80);
+    var cc = dark ? '20,24,29' : '255,255,255';
+    g.addColorStop(0, 'rgba('+cc+',0)');
+    g.addColorStop(.55, 'rgba('+cc+',.10)');
+    g.addColorStop(1, 'rgba('+cc+',.80)');
+    ctx.fillStyle = g; ctx.fillRect(L.x, L.y, L.w, L.h);
+  }
+  ctx.restore();
+  if(S.frame === 'line'){
+    ctx.strokeStyle = 'rgba(27,37,48,.22)'; ctx.lineWidth = Math.max(1, Math.round(Math.min(W,H)*0.0018));
+    ctx.strokeRect(L.x+.5, L.y+.5, L.w-1, L.h-1);
+  }
+  drawLabel1(ctx, W, H, L);
+}
+function render1(){
+  if(S.img){ $('#drop1').style.display='none'; prev.style.display='block'; }
+  else { $('#drop1').style.display='block'; prev.style.display='none'; }
+  draw1(prev, 1200);
+  var o = outSize(S.ratio, 2000);
+  $('#szTag').textContent = o.w+' × '+o.h+' px';
+  $('#ratioNow').textContent = RLABEL[S.ratio];
+  $('#maskCnt').textContent = '가린 곳 '+S.masks.length;
+  prev.className = 'prev' + (S.maskMode ? ' mask' : '');
+}
+
+/* ---- 탭① 버튼 ---- */
+var RLIST1 = [{k:'16:9',t:'16:9 가로'},{k:'4:3',t:'4:3 가로'},{k:'1:1',t:'1:1 정사각'},{k:'3:4',t:'3:4 세로'}];
+function setRatio(k){ S.ratio = k; buildBtns1(); render1(); }
+var POS = [{k:'c',t:'중앙'},{k:'l',t:'왼쪽'},{k:'r',t:'오른쪽'},{k:'t',t:'위'},{k:'b',t:'아래'}];
+function setPos(k){
+  if(k==='c'){ S.ox=.5; S.oy=.5; }
+  if(k==='l'){ S.ox=.18; }
+  if(k==='r'){ S.ox=.82; }
+  if(k==='t'){ S.oy=.18; }
+  if(k==='b'){ S.oy=.82; }
+  render1();
+}
+var FRAMES = [{k:'card',t:'흰 카드'},{k:'dark',t:'다크'},{k:'line',t:'선 테두리'},{k:'full',t:'꽉 채움'}];
+function setFrame(k){ S.frame = k; buildBtns1(); render1(); }
+var FX = [
+  {k:'none', t:'원본', v:[100,100,100]},
+  {k:'cat',  t:'카탈로그', v:[106,113,110]},
+  {k:'sharp',t:'또렷', v:[100,128,96]},
+  {k:'calm', t:'차분', v:[103,96,76]},
+  {k:'bw',   t:'흑백', v:[104,112,0]}
+];
+var fxCur = 'none';
+function setFx(k){
+  var f = FX.filter(function(x){ return x.k===k; })[0];
+  fxCur = k;
+  S.bright = f.v[0]; S.contrast = f.v[1]; S.sat = f.v[2];
+  $('#bright').value = S.bright; $('#contrast').value = S.contrast; $('#sat').value = S.sat;
+  syncFxText(); buildBtns1(); render1();
+}
+function syncFxText(){
+  $('#bTxt').textContent = S.bright; $('#cTxt').textContent = S.contrast; $('#sTxt').textContent = S.sat;
+  $('#fxTxt').textContent = (FX.filter(function(x){return x.k===fxCur;})[0]||{t:'직접'}).t;
+}
+var MASKB = [{k:'t',t:'끌어서 가리기'}];
+function setMaskMode(){ S.maskMode = !S.maskMode; buildBtns1(); render1(); }
+function setMaskStyle(k){
+  S.maskStyle = k;
+  ['blur','mosaic','solid'].forEach(function(x){ $('#ms_'+x).className = (x===k?'on':''); });
+  render1();
+}
+function clearMasks(){ S.masks = []; render1(); }
+var CORNERS = [
+  {k:'tl',t:'좌상 가림'},{k:'tr',t:'우상 가림'},{k:'bl',t:'좌하 가림'},{k:'br',t:'우하 가림'},{k:'bar',t:'하단 띠'}
+];
+function addCorner(k){
+  if(!S.img) return;
+  var w=.26, h=.13;
+  var m = {tl:{x:0,y:0,w:w,h:h}, tr:{x:1-w,y:0,w:w,h:h},
+           bl:{x:0,y:1-h,w:w,h:h}, br:{x:1-w,y:1-h,w:w,h:h},
+           bar:{x:0,y:.93,w:1,h:.07}}[k];
+  S.masks.push(m); render1();
+}
+var LABB = [{k:'on',t:'라벨 넣기'},{k:'off',t:'라벨 빼기'},{k:'fade',t:'가장자리 페이드'}];
+function setLab(k){
+  if(k==='on') S.showLabel = true;
+  if(k==='off') S.showLabel = false;
+  if(k==='fade') S.fade = !S.fade;
+  buildBtns1(); render1();
+}
+function buildBtns1(){
+  mkBtns($('#ratioBtns'), RLIST1, S.ratio, setRatio);
+  mkBtns($('#posBtns'), POS, null, setPos);
+  mkBtns($('#frameBtns'), FRAMES, S.frame, setFrame);
+  mkBtns($('#fxBtns'), FX, fxCur, setFx);
+  mkBtns($('#maskBtns'), MASKB, S.maskMode?'t':null, setMaskMode);
+  $('#maskBtns').children[0].textContent = S.maskMode ? '가리는 중 — 눌러서 끄기' : '끌어서 가리기';
+  mkBtns($('#cornerBtns'), CORNERS, null, addCorner);
+  mkBtns($('#labBtns'), LABB, S.showLabel?'on':'off', setLab);
+  if(S.fade) $('#labBtns').children[2].className = 'on';
+}
+
+/* ---- 탭① 슬라이더·입력 ---- */
+$('#zoom').oninput = function(){ S.zoom = this.value/100; $('#zoomTxt').textContent = this.value+'%'; render1(); };
+['bright','contrast','sat'].forEach(function(id){
+  $('#'+id).oninput = function(){ S[id] = +this.value; fxCur='custom'; syncFxText(); buildBtns1(); render1(); };
+});
+['t1','t2','t3'].forEach(function(id){
+  $('#'+id).oninput = function(){ S[id] = this.value; render1(); };
+});
+
+/* ---- 탭① 사진 불러오기 ---- */
+function loadFile1(f){
+  if(!f || !/^image\//.test(f.type)) return;
+  var im = new Image();
+  im.onload = function(){
+    S.img = im; S.zoom = 1; S.ox = .5; S.oy = .5; S.masks = [];
+    $('#zoom').value = 100; $('#zoomTxt').textContent = '100%';
+    render1();
+  };
+  im.src = URL.createObjectURL(f);
+}
+var fi1 = document.createElement('input'); fi1.type='file'; fi1.accept='image/*';
+fi1.onchange = function(){ loadFile1(this.files[0]); this.value=''; };
+$('#drop1').onclick = function(){ fi1.click(); };
+prev.ondblclick = function(){ fi1.click(); };
+['dragenter','dragover'].forEach(function(ev){
+  $('#stage1').addEventListener(ev, function(e){ e.preventDefault(); $('#drop1').className='drop hot'; });
+});
+$('#stage1').addEventListener('dragleave', function(){ $('#drop1').className='drop'; });
+$('#stage1').addEventListener('drop', function(e){
+  e.preventDefault(); $('#drop1').className='drop';
+  if(e.dataTransfer.files[0]) loadFile1(e.dataTransfer.files[0]);
+});
+window.addEventListener('paste', function(e){
+  var it = e.clipboardData && e.clipboardData.items; if(!it) return;
+  for(var i=0;i<it.length;i++){
+    if(it[i].type.indexOf('image')===0){
+      var f = it[i].getAsFile();
+      if(curTab===1) loadFile1(f); else addFile2(f);
+      break;
+    }
+  }
+});
+
+/* ---- 탭① 끌기: 이동 또는 마스크 그리기 ---- */
+(function(){
+  var drag=null;
+  function toCanvas(e){
+    var r = prev.getBoundingClientRect();
+    return { x:(e.clientX-r.left)*(prev.width/r.width), y:(e.clientY-r.top)*(prev.height/r.height) };
+  }
+  function toSrc(p){
+    var L = layout1(prev.width, prev.height), c = cropRect(L.w/L.h);
+    var iw = S.img.naturalWidth, ih = S.img.naturalHeight;
+    return { x:((p.x-L.x)/L.w*c.w + c.x)/iw, y:((p.y-L.y)/L.h*c.h + c.y)/ih };
+  }
+  prev.addEventListener('pointerdown', function(e){
+    if(!S.img) return;
+    prev.setPointerCapture(e.pointerId);
+    var p = toCanvas(e);
+    if(S.maskMode){ drag = {mode:'mask', a:toSrc(p)}; S.masks.push({x:drag.a.x,y:drag.a.y,w:0,h:0}); }
+    else { drag = {mode:'pan', p:p, ox:S.ox, oy:S.oy}; }
+  });
+  prev.addEventListener('pointermove', function(e){
+    if(!drag || !S.img) return;
+    var p = toCanvas(e);
+    var L = layout1(prev.width, prev.height), c = cropRect(L.w/L.h);
+    if(drag.mode === 'pan'){
+      var iw = S.img.naturalWidth, ih = S.img.naturalHeight;
+      S.ox = drag.ox - (p.x-drag.p.x)*(c.w/L.w)/iw;
+      S.oy = drag.oy - (p.y-drag.p.y)*(c.h/L.h)/ih;
+      S.ox = Math.max(0, Math.min(1, S.ox)); S.oy = Math.max(0, Math.min(1, S.oy));
+    } else {
+      var b = toSrc(p), m = S.masks[S.masks.length-1];
+      m.x = Math.min(drag.a.x, b.x); m.y = Math.min(drag.a.y, b.y);
+      m.w = Math.abs(b.x-drag.a.x); m.h = Math.abs(b.y-drag.a.y);
+    }
+    render1();
+  });
+  function end(){
+    if(drag && drag.mode==='mask'){
+      var m = S.masks[S.masks.length-1];
+      if(m.w < .01 || m.h < .01) S.masks.pop();
+    }
+    drag = null; render1();
+  }
+  prev.addEventListener('pointerup', end);
+  prev.addEventListener('pointercancel', end);
+})();
+
+function savePNG(){
+  if(!S.img){ alert('먼저 사진을 넣어주세요.'); return; }
+  var cv = document.createElement('canvas'); draw1(cv, 2000);
+  downloadCanvas(cv, 'KM_제안서이미지_'+S.ratio.replace(':','x')+'_'+fileStamp()+'.png');
+}
+function copyPNG(btn){
+  if(!S.img){ alert('먼저 사진을 넣어주세요.'); return; }
+  var cv = document.createElement('canvas'); draw1(cv, 2000);
+  copyCanvas(cv, btn);
+}
+function resetAll(){
+  S.zoom=1; S.ox=.5; S.oy=.5; S.masks=[]; S.fade=false; S.maskMode=false; S.showLabel=true;
+  $('#zoom').value=100; $('#zoomTxt').textContent='100%';
+  setFx('none');
+}
+
+/* ===================== 탭 ② 제안서 쪽 조판 ===================== */
+var P = { ratio:'16:9', lay:'2', theme:'light', items:[], sel:0,
+          title:'', sub:'', foot:'한국마이크로닉(주)', num:true };
+var prev2 = $('#prev2');
+var THEMES = {
+  light:{bg:'#FFFFFF', ink:'#1B2530', sub:'#5A6675', cell:'#E9EDF2', rule:'#DDE3EA'},
+  soft :{bg:'#F2F4F7', ink:'#1B2530', sub:'#5A6675', cell:'#E1E7EE', rule:'#CFD8E2'},
+  dark :{bg:'#14181D', ink:'#FFFFFF', sub:'#A9B4C0', cell:'#1E242B', rule:'#2C343D'},
+  blue :{bg:'#23527F', ink:'#FFFFFF', sub:'#CBDCEF', cell:'#1B4166', rule:'#35659A'}
+};
+var LAYS = {
+  '1':[[0,0,1,1]],
+  '2':[[0,0,.4925,1],[.5075,0,.4925,1]],
+  '2v':[[0,0,1,.4925],[0,.5075,1,.4925]],
+  '3':[[0,0,.662,1],[.677,0,.323,.4925],[.677,.5075,.323,.4925]],
+  '4':[[0,0,.4925,.4925],[.5075,0,.4925,.4925],[0,.5075,.4925,.4925],[.5075,.5075,.4925,.4925]],
+  '6':[[0,0,.3233,.4925],[.3383,0,.3233,.4925],[.6766,0,.3233,.4925],
+       [0,.5075,.3233,.4925],[.3383,.5075,.3233,.4925],[.6766,.5075,.3233,.4925]]
+};
+var LAYNAME = {'1':'전면 1장','2':'좌우 2분할','2v':'상하 2분할','3':'1대 + 2소','4':'4분할','6':'6분할'};
+var NUMS = ['①','②','③','④','⑤','⑥'];
+
+function coverCrop(img, ar, ox, oy){
+  var iw = img.naturalWidth, ih = img.naturalHeight, cw, ch;
+  if(iw/ih > ar){ ch = ih; cw = ih*ar; } else { cw = iw; ch = iw/ar; }
+  var x = ox*iw - cw/2, y = oy*ih - ch/2;
+  x = Math.max(0, Math.min(iw-cw, x)); y = Math.max(0, Math.min(ih-ch, y));
+  return {x:x, y:y, w:cw, h:ch};
+}
+function layout2(W,H){
+  var m = Math.min(W,H);
+  var pad = Math.round(m*0.052);
+  var hasT = !!(P.title || P.sub);
+  var titleH = hasT ? Math.round(m*0.145) : 0;
+  var footH = P.foot ? Math.round(m*0.055) : 0;
+  return { pad:pad, titleH:titleH, footH:footH, m:m,
+           x:pad, y:pad+titleH, w:W-pad*2, h:H-pad*2-titleH-footH };
+}
+function cells2(W,H){
+  var L = layout2(W,H), spec = LAYS[P.lay] || LAYS['2'], out = [];
+  spec.forEach(function(s){
+    out.push({ x:L.x+s[0]*L.w, y:L.y+s[1]*L.h, w:s[2]*L.w, h:s[3]*L.h });
+  });
+  return out;
+}
+function draw2(cv, longSide){
+  var o = outSize(P.ratio, longSide), W = o.w, H = o.h;
+  cv.width = W; cv.height = H;
+  var ctx = cv.getContext('2d'), T = THEMES[P.theme], L = layout2(W,H), m = L.m;
+  ctx.fillStyle = T.bg; ctx.fillRect(0,0,W,H);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+
+  if(P.title || P.sub){
+    ctx.fillStyle = '#C77B2B';
+    ctx.fillRect(L.x, L.pad, Math.round(m*0.075), Math.max(2, Math.round(m*0.007)));
+    if(P.title){
+      ctx.fillStyle = T.ink;
+      fitText(ctx, P.title, L.w, Math.round(m*0.056), '800');
+      ctx.fillText(P.title, L.x, L.pad + Math.round(m*0.072));
+    }
+    if(P.sub){
+      ctx.fillStyle = T.sub;
+      fitText(ctx, P.sub, L.w, Math.round(m*0.030), '600');
+      ctx.fillText(P.sub, L.x, L.pad + Math.round(m*0.115));
+    }
+  }
+
+  var cs = cells2(W,H), r = Math.round(m*0.012);
+  cs.forEach(function(c, i){
+    ctx.save();
+    rrect(ctx, c.x, c.y, c.w, c.h, r); ctx.clip();
+    ctx.fillStyle = T.cell; ctx.fillRect(c.x, c.y, c.w, c.h);
+    var it = P.items[i];
+    if(it){
+      var cr = coverCrop(it.img, c.w/c.h, it.ox, it.oy);
+      ctx.drawImage(it.img, cr.x, cr.y, cr.w, cr.h, c.x, c.y, c.w, c.h);
+      if(it.cap){
+        var gh = Math.min(c.h, Math.round(c.h*0.42));
+        var g = ctx.createLinearGradient(0, c.y+c.h-gh, 0, c.y+c.h);
+        g.addColorStop(0,'rgba(10,14,20,0)'); g.addColorStop(1,'rgba(10,14,20,.82)');
+        ctx.fillStyle = g; ctx.fillRect(c.x, c.y+c.h-gh, c.w, gh);
+        ctx.fillStyle = '#FFFFFF';
+        var cp = Math.max(10, Math.round(Math.min(Math.min(c.w,c.h)*0.075, m*0.030)));
+        fitText(ctx, it.cap, c.w - m*0.05, cp, '700');
+        ctx.fillText(it.cap, c.x + Math.round(m*0.025), c.y + c.h - Math.round(m*0.028));
+      }
+    } else {
+      ctx.fillStyle = T.sub;
+      ctx.font = '700 '+Math.round(m*0.028)+'px '+FONT;
+      ctx.textAlign = 'center';
+      ctx.fillText('사진 '+(i+1), c.x+c.w/2, c.y+c.h/2);
+      ctx.textAlign = 'left';
+    }
+    ctx.restore();
+    if(P.num && P.items[i]){
+      var br = Math.round(m*0.030), bx = c.x + Math.round(m*0.022), by = c.y + Math.round(m*0.022);
+      ctx.fillStyle = 'rgba(27,37,48,.72)';
+      ctx.beginPath(); ctx.arc(bx+br, by+br, br, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '800 '+Math.round(br*1.35)+'px '+FONT;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(NUMS[i] || String(i+1), bx+br, by+br+br*0.06);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    }
+  });
+
+  if(P.foot){
+    ctx.fillStyle = T.rule;
+    ctx.fillRect(L.x, H - L.pad - Math.round(m*0.030), L.w, Math.max(1, Math.round(m*0.002)));
+    ctx.fillStyle = T.sub;
+    ctx.font = '700 '+Math.max(9, Math.round(m*0.024))+'px '+FONT;
+    ctx.textAlign = 'right';
+    ctx.fillText(P.foot, L.x + L.w, H - L.pad + Math.round(m*0.006));
+    ctx.textAlign = 'left';
+  }
+}
+function render2(){
+  if(P.items.length){ $('#drop2').style.display='none'; prev2.style.display='block'; }
+  else { $('#drop2').style.display='block'; prev2.style.display='none'; }
+  draw2(prev2, 1400);
+  var o = outSize(P.ratio, 2400);
+  $('#szTag2').textContent = o.w+' × '+o.h+' px';
+  $('#ratioNow2').textContent = RLABEL[P.ratio] + (P.ratio==='16:9' ? ' (PPT)' : '');
+  $('#layTxt').textContent = LAYNAME[P.lay];
+  drawThumbs();
+  var it = P.items[P.sel];
+  $('#capWho').textContent = it ? ((NUMS[P.sel]||'')+'번 칸') : '— 칸을 고르세요';
+  $('#pCap').value = it ? (it.cap||'') : '';
+}
+function drawThumbs(){
+  var box = $('#thumbs'); box.innerHTML = '';
+  P.items.forEach(function(it, i){
+    var d = document.createElement('div');
+    d.className = 'thumb' + (i===P.sel ? ' on' : '');
+    d.innerHTML = '<b>'+(NUMS[i]||(i+1))+'</b><i>×</i>';
+    var im = document.createElement('img'); im.src = it.img.src;
+    d.insertBefore(im, d.firstChild);
+    d.onclick = function(e){
+      if(e.target.tagName === 'I'){ P.items.splice(i,1); if(P.sel>=P.items.length) P.sel=Math.max(0,P.items.length-1); }
+      else P.sel = i;
+      render2();
+    };
+    box.appendChild(d);
+  });
+}
+
+/* ---- 탭② 버튼 ---- */
+var RLIST2 = [{k:'16:9',t:'16:9 (PPT)'},{k:'4:3',t:'4:3'},{k:'A4가로',t:'A4 가로'},{k:'A4세로',t:'A4 세로'}];
+function setRatio2(k){ P.ratio = k; buildBtns2(); render2(); }
+var LAYB = [{k:'1',t:'1장'},{k:'2',t:'좌우 2'},{k:'2v',t:'상하 2'},{k:'3',t:'1대+2소'},{k:'4',t:'4분할'},{k:'6',t:'6분할'}];
+function setLay(k){ P.lay = k; buildBtns2(); render2(); }
+var THB = [{k:'light',t:'흰색'},{k:'soft',t:'연회색'},{k:'dark',t:'다크'},{k:'blue',t:'KM 블루'}];
+function setTheme(k){ P.theme = k; buildBtns2(); render2(); }
+var NUMB = [{k:'on',t:'번호 넣기'},{k:'off',t:'번호 빼기'}];
+function setNum(k){ P.num = (k==='on'); buildBtns2(); render2(); }
+function buildBtns2(){
+  mkBtns($('#ratioBtns2'), RLIST2, P.ratio, setRatio2);
+  mkBtns($('#layBtns'), LAYB, P.lay, setLay);
+  mkBtns($('#themeBtns'), THB, P.theme, setTheme);
+  mkBtns($('#numBtns'), NUMB, P.num?'on':'off', setNum);
+}
+$('#pTitle').oninput = function(){ P.title = this.value; render2(); };
+$('#pSub').oninput   = function(){ P.sub   = this.value; render2(); };
+$('#pFoot').oninput  = function(){ P.foot  = this.value; render2(); };
+$('#pCap').oninput   = function(){ if(P.items[P.sel]){ P.items[P.sel].cap = this.value; render2(); } };
+
+/* ---- 탭② 사진 불러오기 ---- */
+function addFile2(f){
+  if(!f || !/^image\//.test(f.type)) return;
+  if(P.items.length >= 6){ alert('한 쪽에는 6장까지 들어갑니다.'); return; }
+  var im = new Image();
+  im.onload = function(){
+    P.items.push({img:im, ox:.5, oy:.5, cap:''});
+    var n = P.items.length;
+    if(n >= 2 && LAYS[P.lay].length < n){ P.lay = (n<=2?'2':(n===3?'3':(n<=4?'4':'6'))); buildBtns2(); }
+    P.sel = n-1;
+    render2();
+  };
+  im.src = URL.createObjectURL(f);
+}
+var fi2 = document.createElement('input'); fi2.type='file'; fi2.accept='image/*'; fi2.multiple = true;
+fi2.onchange = function(){ for(var i=0;i<this.files.length;i++) addFile2(this.files[i]); this.value=''; };
+$('#drop2').onclick = function(){ fi2.click(); };
+['dragenter','dragover'].forEach(function(ev){
+  $('#stage2').addEventListener(ev, function(e){ e.preventDefault(); $('#drop2').className='drop hot'; });
+});
+$('#stage2').addEventListener('dragleave', function(){ $('#drop2').className='drop'; });
+$('#stage2').addEventListener('drop', function(e){
+  e.preventDefault(); $('#drop2').className='drop';
+  for(var i=0;i<e.dataTransfer.files.length;i++) addFile2(e.dataTransfer.files[i]);
+});
+
+/* ---- 탭② 칸 안에서 사진 위치 끌기 ---- */
+(function(){
+  var drag = null;
+  function toCanvas(e){
+    var r = prev2.getBoundingClientRect();
+    return { x:(e.clientX-r.left)*(prev2.width/r.width), y:(e.clientY-r.top)*(prev2.height/r.height) };
+  }
+  prev2.addEventListener('pointerdown', function(e){
+    if(!P.items.length) return;
+    var p = toCanvas(e), cs = cells2(prev2.width, prev2.height);
+    for(var i=0;i<cs.length;i++){
+      var c = cs[i];
+      if(p.x>=c.x && p.x<=c.x+c.w && p.y>=c.y && p.y<=c.y+c.h && P.items[i]){
+        prev2.setPointerCapture(e.pointerId);
+        P.sel = i;
+        drag = {i:i, p:p, c:c, ox:P.items[i].ox, oy:P.items[i].oy};
+        render2(); return;
+      }
+    }
+  });
+  prev2.addEventListener('pointermove', function(e){
+    if(!drag) return;
+    var p = toCanvas(e), it = P.items[drag.i];
+    var cr = coverCrop(it.img, drag.c.w/drag.c.h, drag.ox, drag.oy);
+    var iw = it.img.naturalWidth, ih = it.img.naturalHeight;
+    it.ox = Math.max(0, Math.min(1, drag.ox - (p.x-drag.p.x)*(cr.w/drag.c.w)/iw));
+    it.oy = Math.max(0, Math.min(1, drag.oy - (p.y-drag.p.y)*(cr.h/drag.c.h)/ih));
+    render2();
+  });
+  function end2(){ drag = null; }
+  prev2.addEventListener('pointerup', end2);
+  prev2.addEventListener('pointercancel', end2);
+})();
+
+function savePNG2(){
+  if(!P.items.length){ alert('먼저 사진을 넣어주세요.'); return; }
+  var cv = document.createElement('canvas'); draw2(cv, 2400);
+  downloadCanvas(cv, 'KM_제안서쪽_'+P.ratio.replace(':','x')+'_'+fileStamp()+'.png');
+}
+function copyPNG2(btn){
+  if(!P.items.length){ alert('먼저 사진을 넣어주세요.'); return; }
+  var cv = document.createElement('canvas'); draw2(cv, 2400);
+  copyCanvas(cv, btn);
+}
+function resetAll2(){
+  P.items = []; P.sel = 0; P.title=''; P.sub=''; P.lay='2'; P.theme='light'; P.num=true;
+  $('#pTitle').value=''; $('#pSub').value=''; $('#pCap').value='';
+  buildBtns2(); render2();
+}
+
+/* ===================== 탭 ③ 프롬프트 작도 ===================== */
+var COL = { pow:'#C0392B', low:'#C77B2B', net:'#6B4FA8', km:'#2A6099', ok:'#2E7D5B', gray:'#8E99A4' };
+
+/* 말 → 기구물 사전 */
+var DICT = [
+  {k:'PC',   re:/방재실|중앙\s*관제|관제\s*PC|서버실|\bPC\b/i,            t:'중앙 PC',        g:'center'},
+  {k:'PMS',  re:/\bPMS\b|프론트\s*연동/i,                                  t:'PMS 서버',       g:'center'},
+  {k:'FIP',  re:/\bFIP\b|린넨|층\s*제어반/i,                               t:'FIP (층 제어반)', g:'floor'},
+  {k:'CB',   re:/CB\s*함|CB외함|제어\s*분전함|제어분전함|\bCB\b/i,          t:'CB 제어분전함',   g:'main'},
+  {k:'RCU',  re:/\bRCU\b|객실\s*제어기/i,                                  t:'RCU',            g:'main'},
+  {k:'KEY',  re:/키\s*센서|키센서|KEY\s*SENSOR|카드\s*키|\bK\b(?!M)/i,      t:'키센서 (K)',      g:'room'},
+  {k:'DM',   re:/\bDM\b|도어\s*모니터|도어모니터/i,                         t:'DM (도어모니터)', g:'room'},
+  {k:'CHIME',re:/챠임|차임|초인종|\bCHIME\b/i,                              t:'챠임벨',          g:'room'},
+  {k:'TEMP', re:/온도\s*조절기|온도조절기|온조기|\bTHERMO\b|온도/i,          t:'온도조절기',      g:'room'},
+  {k:'LSW',  re:/조명\s*스위치|전등\s*스위치|조명스위치|LIGHT\s*S\/?W/i,     t:'조명스위치 (L)',  g:'room'},
+  {k:'BSP',  re:/\bBSP\b/i,                                                t:'BSP',            g:'room'},
+  {k:'MMO',  re:/\bMMO\b/i,                                                t:'MMO',            g:'room'},
+  {k:'OUT',  re:/멀티\s*아울렛|멀티아울렛|유니버셜|콘센트|\bUSB\b/i,         t:'멀티아울렛',      g:'room'},
+  {k:'LOCK', re:/도어락|도어록|DOOR\s*LOCK|\bRFID\b/i,                      t:'RFID 도어락',     g:'room'},
+  {k:'AIR',  re:/에어컨|\bFCU\b|공조|냉난방/i,                              t:'에어컨 (FCU)',    g:'ext'},
+  {k:'HEAT', re:/바닥\s*난방|바닥난방|온돌/i,                               t:'바닥난방',        g:'ext'},
+  {k:'EMG',  re:/비상\s*호출|비상호출|\bSOS\b/i,                            t:'비상호출',        g:'room'}
+];
+var DEFAULTS = ['CB','RCU','KEY','CHIME','TEMP','LSW'];
+
+var G = { prompt:'', kind:'auto', ratio:'16:9', theme:'light', star:0,
+          site:'', rooms:'', floors:'', items:[], flags:{}, foot:'한국마이크로닉(주)',
+          floorsIn:'', roomsIn:'', netUp:'', netDn:'', siteIn:'' };
+
+function parsePrompt(){
+  var p = G.prompt || '';
+  var found = [];
+  DICT.forEach(function(d){ if(d.re.test(p)) found.push(d); });
+  if(!found.length) found = DICT.filter(function(d){ return DEFAULTS.indexOf(d.k) >= 0; });
+  G.items = found;
+
+  var st = p.match(/([1-5])\s*성/);
+  G.star = G.starLock ? G.starLock : (st ? +st[1] : (/리조트|레지던스|생활\s*숙박/.test(p) ? 3 : 4));
+
+  var rm = p.match(/([\d][\d,]*)\s*(실|객실|세대|room)/i);
+  G.rooms = rm ? rm[1] : '';
+  var fl = p.match(/지상\s*([\d]+)\s*층/) || p.match(/([\d]+)\s*개\s*층/) || p.match(/([\d]+)\s*개층/);
+  G.floors = fl ? fl[1] : '';
+
+  var q = p.match(/[「『"'“‘]([^」』"'”’]{2,30})[」』"'”’]/);
+  if(q) G.site = q[1];
+  else {
+    var n = p.match(/([가-힣A-Za-z0-9\s]{2,20}?(?:호텔|리조트|레지던스|연수원|기숙사|생활숙박시설|콘도|스테이))/);
+    G.site = n ? n[1].trim() : '';
+  }
+  if(G.site){
+    G.site = G.site.replace(/^[1-5]\s*성급?\s*/, '').replace(/^(신축|증축|리모델링)\s*/, '').trim();
+    if(/^(호텔|리조트|레지던스|연수원|기숙사|콘도|스테이|생활숙박시설)$/.test(G.site)) G.site = '';
+  }
+  G.flags = {
+    veranda: /베란다|발코니|테라스/.test(p),
+    living:  /거실|리빙|스위트/.test(p),
+    desk:    /책상|데스크|멀티\s*아울렛|멀티아울렛/.test(p),
+    bath:    !/화장실\s*없|욕실\s*없/.test(p)
+  };
+  if(G.kind === 'auto'){
+    if(/배치도|기구물\s*배치|객실\s*배치|평면도|평면\s*도면|단위\s*세대|어디에\s*몇|배치\s*해|배치를/.test(p)) G.auto = 'layout';
+    else if(/공사\s*한계|공사한계|스코프|scope|업무\s*범위|업무\s*스코프|누가\s*하/.test(p)) G.auto = 'scope';
+    else if(/표지|배너|커버|타이틀|제목\s*장|첫\s*장/.test(p)) G.auto = 'cover';
+    else G.auto = 'system';
+  }
+  return G.kind === 'auto' ? G.auto : G.kind;
+}
+
+/* ---- 작도 도구 ---- */
+function box(ctx, x, y, w, h, o){
+  o = o || {};
+  ctx.save();
+  if(o.shadow){ ctx.shadowColor='rgba(20,26,34,.16)'; ctx.shadowBlur=o.shadow; ctx.shadowOffsetY=o.shadow*0.3; }
+  rrect(ctx, x, y, w, h, o.r || 6);
+  ctx.fillStyle = o.fill || '#FFFFFF'; ctx.fill();
+  ctx.restore();
+  if(o.stroke){ rrect(ctx, x, y, w, h, o.r || 6); ctx.strokeStyle = o.stroke; ctx.lineWidth = o.lw || 2; ctx.stroke(); }
+  if(o.bar){ ctx.save(); rrect(ctx, x, y, w, h, o.r || 6); ctx.clip();
+             ctx.fillStyle = o.bar; ctx.fillRect(x, y, w, Math.max(3, h*0.09)); ctx.restore(); }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  if(o.t){
+    ctx.fillStyle = o.tcol || '#1B2530';
+    fitText(ctx, o.t, w - 10, o.ts || 15, '800');
+    ctx.fillText(o.t, x + w/2, y + h/2 + (o.s ? -(o.ts||15)*0.12 : (o.ts||15)*0.36));
+  }
+  if(o.s){
+    ctx.fillStyle = o.scol || '#5A6675';
+    fitText(ctx, o.s, w - 10, o.ss || 11, '600');
+    ctx.fillText(o.s, x + w/2, y + h/2 + (o.ss || 11)*1.35);
+  }
+  ctx.textAlign = 'left';
+}
+function line(ctx, x1, y1, x2, y2, col, lw, dash){
+  ctx.save();
+  ctx.strokeStyle = col; ctx.lineWidth = lw || 2;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.restore();
+}
+function elbow(ctx, x1, y1, x2, y2, col, lw, dash){
+  ctx.save();
+  ctx.strokeStyle = col; ctx.lineWidth = lw || 2; if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1,(y1+y2)/2); ctx.lineTo(x2,(y1+y2)/2); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.restore();
+  head(ctx, x2, y2, col, lw||2);
+}
+function head(ctx, x, y, col, lw, ang){
+  var a = Math.max(4, lw*2.6);
+  ctx.save(); ctx.fillStyle = col;
+  ctx.translate(x, y); ctx.rotate((ang === undefined ? Math.PI/2 : ang) - Math.PI/2);
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-a*0.7, -a); ctx.lineTo(a*0.7, -a); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function legendH(ctx, x, y, rows, T, fs){
+  var cx = x;
+  rows.forEach(function(r){
+    line(ctx, cx, y, cx+fs*2.0, y, r.c, Math.max(2, fs*0.16), r.dash ? [fs*0.5, fs*0.4] : null);
+    ctx.fillStyle = T.sub; ctx.font = '700 '+fs+'px '+FONT; ctx.textAlign = 'left';
+    ctx.fillText(r.t, cx+fs*2.6, y+fs*0.36);
+    cx += fs*2.6 + ctx.measureText(r.t).width + fs*2.4;
+  });
+}
+function chip(ctx, x, y, w, h, txt, col, fs){
+  rrect(ctx, x, y, w, h, h/2); ctx.fillStyle = col; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+  fitText(ctx, txt, w-8, fs, '700');
+  ctx.fillText(txt, x+w/2, y+h/2+fs*0.36); ctx.textAlign = 'left';
+}
+function frame3(ctx, W, H, T, sub){
+  var m = Math.min(W,H), L = { pad: Math.round(m*0.052), m:m };
+  ctx.fillStyle = T.bg; ctx.fillRect(0,0,W,H);
+  var title = G.title3 || '';
+  L.titleH = Math.round(m*0.145);
+  ctx.fillStyle = '#C77B2B';
+  ctx.fillRect(L.pad, L.pad, Math.round(m*0.075), Math.max(2, Math.round(m*0.007)));
+  ctx.fillStyle = T.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  fitText(ctx, title, W-L.pad*2, Math.round(m*0.050), '800');
+  ctx.fillText(title, L.pad, L.pad + Math.round(m*0.068));
+  if(sub){
+    ctx.fillStyle = T.sub;
+    fitText(ctx, sub, W-L.pad*2, Math.round(m*0.028), '600');
+    ctx.fillText(sub, L.pad, L.pad + Math.round(m*0.108));
+  }
+  L.footH = Math.round(m*0.055);
+  ctx.fillStyle = T.rule; ctx.fillRect(L.pad, H-L.pad-Math.round(m*0.030), W-L.pad*2, Math.max(1, Math.round(m*0.002)));
+  ctx.fillStyle = T.sub; ctx.font = '700 '+Math.max(9, Math.round(m*0.022))+'px '+FONT;
+  ctx.textAlign = 'right'; ctx.fillText(G.foot, W-L.pad, H-L.pad+Math.round(m*0.005));
+  ctx.textAlign = 'left';
+  L.x = L.pad; L.y = L.pad + L.titleH; L.w = W-L.pad*2; L.h = H-L.pad*2-L.titleH-L.footH;
+  return L;
+}
+function legend(ctx, x, y, w, rows, T, fs){
+  rows.forEach(function(r, i){
+    var yy = y + i*fs*1.9;
+    if(r.dash){ line(ctx, x, yy, x+fs*2.2, yy, r.c, Math.max(2,fs*0.16), [fs*0.5, fs*0.4]); }
+    else { line(ctx, x, yy, x+fs*2.2, yy, r.c, Math.max(2,fs*0.16)); }
+    ctx.fillStyle = T.sub; ctx.font = '700 '+fs+'px '+FONT;
+    ctx.fillText(r.t, x+fs*2.9, yy+fs*0.36);
+  });
+}
+
+/* ---- ① 계통·구성도 (v2 — 구역·수량·공사한계·규격 빈칸) ---- */
+function grpBox(ctx, x, y, w, h, title, qty, col, T, m){
+  var r = m*0.011, hh = Math.max(m*0.026, m*0.030);
+  ctx.save();
+  ctx.shadowColor = 'rgba(20,26,34,.12)'; ctx.shadowBlur = m*0.014; ctx.shadowOffsetY = m*0.004;
+  rrect(ctx, x, y, w, h, r); ctx.fillStyle = T.cell; ctx.fill(); ctx.restore();
+  ctx.save(); rrect(ctx, x, y, w, h, r); ctx.clip();
+  ctx.fillStyle = col; ctx.fillRect(x, y, w, hh); ctx.restore();
+  rrect(ctx, x, y, w, h, r);
+  ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.2, m*0.0022); ctx.stroke();
+  ctx.fillStyle = '#FFFFFF'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  fitText(ctx, title, w*0.62, Math.round(hh*0.52), '800');
+  ctx.fillText(title, x + m*0.013, y + hh*0.53);
+  if(qty){
+    ctx.textAlign = 'right'; ctx.globalAlpha = .92;
+    fitText(ctx, qty, w*0.36, Math.round(hh*0.48), '700');
+    ctx.fillText(qty, x + w - m*0.013, y + hh*0.53);
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return {x:x, y:y + hh, w:w, h:h - hh};
+}
+function trunk(ctx, x, y1, y2, col, label, m, T){
+  var lw = Math.max(2.4, m*0.0042);
+  line(ctx, x, y1, x, y2 - m*0.007, col, lw);
+  head(ctx, x, y2, col, lw);
+  if(!label) return;
+  var fs = Math.round(m*0.018);
+  ctx.font = '700 ' + fs + 'px ' + FONT;
+  var tw = ctx.measureText(label).width + m*0.020, yy = (y1 + y2)/2;
+  rrect(ctx, x + m*0.012, yy - fs*0.92, tw, fs*1.84, fs*0.6);
+  ctx.fillStyle = T.bg; ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = Math.max(1, m*0.0016); ctx.stroke();
+  ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + m*0.022, yy);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+function drawSystem(ctx, W, H, T, L){
+  var m = L.m, fs = Math.round(m*0.020);
+  var ext  = G.items.filter(function(d){ return d.g === 'ext'; });
+  var cen  = G.items.filter(function(d){ return d.g === 'center'; });
+  var room = G.items.filter(function(d){ return d.g === 'room'; });
+  if(!cen.length) cen = [{t:'중앙 관제 PC'}];
+  if(!room.length) room = DICT.filter(function(d){ return ['KEY','CHIME','TEMP','LSW'].indexOf(d.k) >= 0; });
+  var hasFIP = G.items.some(function(d){ return d.k === 'FIP'; });
+
+  var blanks = 0;
+  function V(v){ if(v) return v; blanks++; return '[      ]'; }
+  var floors = G.floorsIn || G.floors || '';
+  var rooms  = G.roomsIn  || G.rooms  || '';
+
+  var gut = L.w*0.105;                                   /* 강전 인입 자리 */
+  var extW = ext.length ? L.w*0.205 : 0;
+  var mainW = L.w - gut - (extW ? extW + L.w*0.034 : 0);
+  var MX = L.x + gut, cx = MX + mainW/2;
+  var gapY = L.h*0.050;
+  var hA = L.h*0.175, hB = L.h*0.150, hC = L.h*0.375;
+  var yA = L.y + L.h*0.052, yB = yA + hA + gapY, yC = yB + hB + gapY;
+
+  /* ── 공사 한계: 당사 범위를 점선으로 감싼다 ── */
+  var pad = m*0.020;
+  ctx.save();
+  ctx.setLineDash([m*0.012, m*0.009]);
+  ctx.strokeStyle = COL.km; ctx.lineWidth = Math.max(1.4, m*0.0026); ctx.globalAlpha = .75;
+  rrect(ctx, MX - pad, yA - pad*1.6, mainW + pad*2, (yC + hC) - yA + pad*2.4, m*0.014);
+  ctx.stroke(); ctx.restore();
+  var tagFs = Math.round(m*0.017);
+  ctx.font = '800 ' + tagFs + 'px ' + FONT;
+  var tagT = '당사(객실관리) 공급 · 시공 범위';
+  var tagW = ctx.measureText(tagT).width + m*0.020;
+  rrect(ctx, MX - pad + m*0.010, yA - pad*1.6 - tagFs*0.95, tagW, tagFs*1.9, tagFs*0.6);
+  ctx.fillStyle = COL.km; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
+  ctx.fillText(tagT, MX - pad + m*0.020, yA - pad*1.6 + tagFs*0.02);
+  ctx.textBaseline = 'alphabetic';
+
+  /* ── 중앙 (방재실) ── */
+  var aw = Math.min(mainW*0.66, mainW);
+  var A = grpBox(ctx, cx - aw/2, yA, aw, hA, '중앙  ·  방재실', '1식', COL.net, T, m);
+  var cw = (A.w - m*0.014*(cen.length + 1))/cen.length;
+  cen.forEach(function(d, i){
+    box(ctx, A.x + m*0.014 + i*(cw + m*0.014), A.y + A.h*0.16, cw, A.h*0.68,
+        {fill:T.bg, stroke:COL.net, t:d.t, s:'1 EA', ts:fs*0.95, ss:fs*0.74, tcol:T.ink, scol:T.sub, r:6, lw:1.6});
+  });
+  trunk(ctx, cx, yA + hA, yB - 2, COL.net, '중앙 ↔ 층  ' + V(G.netUp), m, T);
+
+  /* ── 층 (각 층 린넨실) ── */
+  var bw = mainW*0.56;
+  var qtyB = floors ? ('각 층 1EA  ·  총 ' + floors + ' EA') : '각 층 1 EA';
+  if(!floors) blanks++;
+  var B = grpBox(ctx, cx - bw/2, yB, bw, hB, '층  ·  각 층 린넨실', qtyB, COL.net, T, m);
+  box(ctx, B.x + m*0.014, B.y + B.h*0.16, B.w - m*0.028, B.h*0.68,
+      {fill:T.bg, stroke:COL.net, t: hasFIP ? 'FIP (층 제어반)' : '층 분배반',
+       s:'객실 ↔ 중앙 중계', ts:fs*1.0, ss:fs*0.74, tcol:T.ink, scol:T.sub, r:6, lw:1.6});
+  trunk(ctx, cx, yB + hB, yC - 2, COL.net, '층 ↔ 객실  ' + V(G.netDn), m, T);
+
+  /* ── 객실 (N실 · 1실 1세트 반복) ── */
+  var qtyC = (rooms ? rooms + '실' : '[      ]실') + '  ·  1실 1세트 동일 구성';
+  if(!rooms) blanks++;
+  var C = grpBox(ctx, MX, yC, mainW, hC, '객실', qtyC, COL.km, T, m);
+  var cbW = C.w*0.50, cbH = C.h*0.40, cbX = C.x + (C.w - cbW)/2, cbY = C.y + C.h*0.06;
+  box(ctx, cbX, cbY, cbW, cbH, {fill:T.bg, stroke:COL.km, bar:COL.km, r:8,
+      t:'CB 제어분전함', s:'RCU · 차단기 · 릴레이 내장  ·  1 EA', ts:fs*1.12, ss:fs*0.76,
+      tcol:T.ink, scol:T.sub, shadow:m*0.018});
+
+  /* 강전 인입 — 경계를 넘어 들어온다 */
+  var py = cbY + cbH*0.52, px = L.x + m*0.004;
+  line(ctx, px, py, cbX - m*0.006, py, COL.pow, Math.max(2.2, m*0.0038));
+  head(ctx, cbX - m*0.002, py, COL.pow, Math.max(2.2, m*0.0038), 0);
+  ctx.fillStyle = COL.pow; ctx.textAlign = 'left';
+  ctx.font = '800 ' + Math.round(fs*0.80) + 'px ' + FONT;
+  ctx.fillText('강전 인입', px, py - fs*0.62);
+  ctx.font = '700 ' + Math.round(fs*0.68) + 'px ' + FONT;
+  ctx.fillText('전기업체 시공', px, py + fs*1.30);
+  ctx.beginPath(); ctx.arc(MX - pad, py, m*0.0095, 0, Math.PI*2);
+  ctx.fillStyle = T.bg; ctx.fill();
+  ctx.strokeStyle = COL.pow; ctx.lineWidth = Math.max(1.6, m*0.0028); ctx.stroke();
+  ctx.fillStyle = COL.pow; ctx.font = '800 ' + Math.round(fs*0.66) + 'px ' + FONT;
+  ctx.textAlign = 'center'; ctx.fillText('인계점', MX - pad, py - m*0.020); ctx.textAlign = 'left';
+
+  /* 기구물 */
+  var MAXR = 7, over = Math.max(0, room.length - MAXR);
+  var show = room.slice(0, MAXR).map(function(d){ return d.t; });
+  if(over) show.push('외 ' + over + '종');
+  var gp = m*0.009, iw = (C.w - m*0.028 - gp*(show.length - 1))/show.length;
+  var iy = C.y + C.h*0.62, ih = C.h*0.30;
+  show.forEach(function(t, i){
+    var x = C.x + m*0.014 + i*(iw + gp);
+    box(ctx, x, iy, iw, ih, {fill:T.cell, stroke:COL.low, t:t, ts:fs*0.86, tcol:T.ink, r:6, lw:1.6});
+    elbow(ctx, cx, cbY + cbH, x + iw/2, iy - 2, COL.low, Math.max(1.6, m*0.0026));
+  });
+
+  /* ── 외부 연동 (경계 밖) ── */
+  if(ext.length){
+    var ew = extW, ex = L.x + L.w - ew;
+    var eh = Math.min(L.h*0.115, (L.h*0.52)/ext.length - m*0.014);
+    var eTot = eh*ext.length + m*0.030 + m*0.014*(ext.length + 1);
+    var eY = Math.max(yA, Math.min(cbY + cbH*0.5 - eTot/2, L.y + L.h*0.86 - eTot));
+    var E = grpBox(ctx, ex, eY, ew, eTot, '외부 연동', '타 설비', '#4A5460', T, m);
+    ext.forEach(function(d, i){
+      var y = E.y + m*0.014 + i*(eh + m*0.014);
+      box(ctx, E.x + m*0.012, y, E.w - m*0.024, eh,
+          {fill:T.bg, stroke:COL.net, t:d.t, ts:fs*0.86, tcol:T.ink, r:6, lw:1.6});
+      line(ctx, cbX + cbW, cbY + cbH*0.30, E.x - 2, y + eh/2, COL.net, Math.max(1.5, m*0.0024), [fs*0.45, fs*0.40]);
+    });
+  }
+
+  /* ── 범례 + 미확정 표기 ── */
+  legendH(ctx, L.x, L.y + L.h*0.946, [
+    {c:COL.pow, t:'강전 — 전기업체'},
+    {c:COL.low, t:'약전 — 당사'},
+    {c:COL.net, t:'통신 — 당사'},
+    {c:COL.net, t:'타 설비 연동', dash:true},
+    {c:COL.km,  t:'당사 공사 범위', dash:true}
+  ], T, Math.round(fs*0.76));
+  if(blanks){
+    ctx.fillStyle = COL.pow; ctx.font = '700 ' + Math.round(fs*0.72) + 'px ' + FONT;
+    ctx.fillText('※ [      ] 은 미확정 항목입니다 — ' + blanks + '곳 (확정되면 채워 재발행)',
+                 L.x, L.y + L.h*1.002);
+  }
+}
+
+/* ---- ② 객실 기구물 배치도 ---- */
+function drawLayout(ctx, W, H, T, L){
+  var m = L.m, fs = Math.round(m*0.020), hi = (G.star >= 4);
+  var F = G.flags;
+  var pw = L.w*0.60, ph = L.h*0.80, px = L.x, py = L.y + L.h*0.04;
+
+  var rx = F.veranda ? 0.84 : 1.0;
+  var Z = [];
+  Z.push({x:0, y:0, w:0.30, h:0.44, n:'화장실'});
+  Z.push({x:0, y:0.44, w:0.30, h:0.56, n:'현관 · 복도'});
+  var bedX = 0.30, bedW = rx - 0.30;
+  if(F.living){
+    Z.push({x:0.30, y:0, w:bedW*0.42, h:1, n:'거실'});
+    bedX = 0.30 + bedW*0.42; bedW = bedW*0.58;
+  }
+  Z.push({x:bedX, y:0, w:bedW, h:1, n:'침실'});
+  if(F.veranda) Z.push({x:rx, y:0, w:1-rx, h:1, n:'베란다'});
+
+  function PX(u){ return px + u*pw; }
+  function PY(u){ return py + u*ph; }
+
+  box(ctx, px, py, pw, ph, {fill:T.cell, stroke:T.rule, r:4, lw:2});
+  ctx.font = '700 '+Math.round(fs*0.82)+'px '+FONT;
+  Z.forEach(function(z){
+    ctx.save(); ctx.strokeStyle = T.rule; ctx.lineWidth = 1.5; ctx.setLineDash([4,4]);
+    ctx.strokeRect(PX(z.x), PY(z.y), z.w*pw, z.h*ph); ctx.restore();
+    ctx.fillStyle = T.sub; ctx.textAlign = 'center';
+    ctx.fillText(z.n, PX(z.x + z.w/2), PY(z.y) + fs*1.5);
+    ctx.textAlign = 'left';
+  });
+  /* 침대 */
+  var bed = Z.filter(function(z){ return z.n === '침실'; })[0];
+  box(ctx, PX(bed.x + bed.w*0.22), PY(0.32), bed.w*pw*0.60, ph*0.44,
+      {fill:T.bg, stroke:T.rule, r:4, lw:1.5, t:'침대', ts:fs*0.85, tcol:T.sub});
+  /* 출입문 */
+  var dx = PX(0.05), dw = pw*0.16;
+  ctx.save(); ctx.strokeStyle = COL.low; ctx.lineWidth = Math.max(3, m*0.006);
+  ctx.beginPath(); ctx.moveTo(dx, py+ph); ctx.lineTo(dx+dw, py+ph); ctx.stroke(); ctx.restore();
+  ctx.fillStyle = T.ink; ctx.font = '800 '+Math.round(fs*0.78)+'px '+FONT;
+  ctx.fillText('출입문', dx, py+ph+fs*2.9);
+  line(ctx, dx+dw, py+ph, PX(0.22), PY(1.06), COL.low, 1.5, [4,3]);
+
+  /* 심볼 배치 규칙 */
+  var SY = [];
+  SY.push({x:0.22, y:1.06, c:'C', t:'챠임벨', n:'복도측 · 도어락 손잡이쪽', col:COL.low});
+  SY.push({x:0.265, y:0.72, c:hi?'K+D':'K', t:hi?'키센서 + DM':'키센서 (K)',
+           n:hi?'문 입구':'문 입구 · '+G.star+'성급은 DM 제외', col:COL.km});
+  if(F.bath) SY.push({x:0.265, y:0.20, c:hi?'L':'—', t:hi?'화장실 조명 L':'화장실 = 전기 텀블러',
+           n:hi?'4~5성급은 객실관리 제어':'1~3성급은 전기업체 공사 · 객실관리 제외', col:hi?COL.low:COL.gray});
+  SY.push({x:bed.x+0.022, y:0.42, c:hi?'BSP':'T+L', t:hi?'BSP (온도+조명+USB+유니버셜)':'온도조절기 + 조명스위치 L',
+           n:'침대 옆', col:COL.km});
+  if(F.desk) SY.push({x:bed.x+bed.w-0.05, y:0.14, c:'O', t:'멀티아울렛', n:'유니버셜 + 콘센트 2 + USB', col:COL.low});
+  if(F.veranda) SY.push({x:rx-0.035, y:0.55, c:hi?'L':'—', t:hi?'베란다 조명 L (별도)':'베란다 = 침대 L에서 제어',
+           n:hi?'베란다 문 옆':'1~3성급은 별도 스위치 없음', col:hi?COL.low:COL.gray});
+  if(F.living) SY.push({x:0.32, y:0.80, c:'T+L', t:'거실 온도조절기 + L', n:'거실 입구 · 성급 공통', col:COL.km});
+
+  var sz = Math.max(14, m*0.030);
+  SY.forEach(function(s, i){
+    var X = PX(s.x) - sz/2, Y = PY(s.y) - sz/2;
+    rrect(ctx, X, Y, sz*1.5, sz, 4); ctx.fillStyle = s.col; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    fitText(ctx, s.c, sz*1.4, Math.round(sz*0.52), '800');
+    ctx.fillText(s.c, X+sz*0.75, Y+sz*0.66); ctx.textAlign = 'left';
+    ctx.fillStyle = T.ink; ctx.font = '800 '+Math.round(fs*0.72)+'px '+FONT;
+    ctx.fillText(String(i+1), X-fs*0.75, Y+sz*0.62);
+  });
+
+  /* 오른쪽 범례 */
+  var lx = L.x + L.w*0.645, ly = L.y + L.h*0.03, lw = L.w - (lx - L.x);
+  ctx.fillStyle = T.ink; ctx.font = '800 '+Math.round(fs*0.95)+'px '+FONT;
+  ctx.fillText(G.star+'성급 표준 배치', lx, ly);
+  var yy = ly + fs*1.9;
+  SY.forEach(function(s, i){
+    rrect(ctx, lx, yy-fs*0.85, fs*1.15, fs*1.15, 3); ctx.fillStyle = s.col; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '800 '+Math.round(fs*0.7)+'px '+FONT;
+    ctx.fillText(String(i+1), lx+fs*0.58, yy+fs*0.12); ctx.textAlign = 'left';
+    ctx.fillStyle = T.ink; fitText(ctx, s.t, lw-fs*1.8, Math.round(fs*0.85), '700');
+    ctx.fillText(s.t, lx+fs*1.7, yy+fs*0.10);
+    ctx.fillStyle = T.sub; fitText(ctx, s.n, lw-fs*1.8, Math.round(fs*0.72), '600');
+    ctx.fillText(s.n, lx+fs*1.7, yy+fs*1.05);
+    yy += fs*2.5;
+  });
+  ctx.fillStyle = T.sub; ctx.font = '600 '+Math.round(fs*0.70)+'px '+FONT;
+  ctx.fillText('※ 축척 없음 — 위치 개념도입니다.', lx, L.y + L.h - fs*1.6);
+  ctx.fillText('※ 조명 구수(1~6구)는 전기설계 확정 후 결정 — 여기서는 L 표기만.', lx, L.y + L.h - fs*0.3);
+}
+
+/* ---- ③ 제품 소개 배너 · 표지 ---- */
+function drawCover(ctx, W, H, T, L){
+  var m = Math.min(W,H), pad = Math.round(m*0.075);
+  ctx.fillStyle = T.bg; ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(W, 0); ctx.lineTo(W, H); ctx.lineTo(W-m*0.55, H); ctx.closePath();
+  ctx.fillStyle = (T.bg === '#FFFFFF' || T.bg === '#F2F4F7') ? 'rgba(42,96,153,.07)' : 'rgba(255,255,255,.05)';
+  ctx.fill(); ctx.restore();
+
+  ctx.fillStyle = '#C77B2B'; ctx.fillRect(pad, pad, Math.round(m*0.10), Math.max(3, Math.round(m*0.009)));
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  var ts = fitText(ctx, G.title3, W-pad*2, Math.round(m*0.098), '800');
+  var yT = Math.round(H*0.44);
+  var RM = G.roomsIn || G.rooms;
+  if(siteName()){
+    var head = [((G.roomsIn||G.rooms) ? (G.roomsIn||G.rooms) + '실' : ''), (G.star ? G.star + '성급' : '')]
+                 .filter(Boolean).join('   ·   ') || siteName();
+    ctx.fillStyle = T.sub;
+    fitText(ctx, head, W-pad*2, Math.round(m*0.034), '700');
+    ctx.fillText(head, pad, yT - Math.round(ts*1.00));
+  }
+  ctx.fillStyle = T.ink;
+  ctx.font = '800 ' + ts + 'px ' + FONT;
+  ctx.fillText(G.title3, pad, yT);
+  if(G.sub3){
+    ctx.fillStyle = T.sub;
+    fitText(ctx, G.sub3, W-pad*2, Math.round(m*0.034), '600');
+    ctx.fillText(G.sub3, pad, yT + Math.round(m*0.068));
+  }
+
+  /* 제품 칩 */
+  var chips = G.items.filter(function(d){ return d.g !== 'ext' && d.g !== 'center'; });
+  if(!chips.length) chips = G.items;
+  var ch = Math.round(m*0.058), cy = H - pad - Math.round(m*0.085), cx0 = pad;
+  ctx.font = '700 '+Math.round(m*0.026)+'px '+FONT;
+  chips.slice(0,7).forEach(function(d){
+    var tw = ctx.measureText(d.t).width + m*0.055;
+    if(cx0 + tw > W - pad){ return; }
+    chip(ctx, cx0, cy, tw, ch, d.t, (d.g === 'main') ? COL.km : COL.low, Math.round(m*0.026));
+    cx0 += tw + m*0.014;
+  });
+  ctx.fillStyle = T.sub; ctx.font = '700 '+Math.round(m*0.026)+'px '+FONT;
+  ctx.textAlign = 'right';
+  ctx.fillText(G.foot, W-pad, H-pad);
+  ctx.textAlign = 'left';
+}
+
+/* ---- ④ 공사 한계 구분도 ---- */
+var SCOPE_ROWS = [
+  {t:'CB 외함 제작 · 납품',                 w:['KM']},
+  {t:'CB 외함 설치 (벽체 고정 · 매립)',      w:['ELEC','TEL']},
+  {t:'CB 제어분전함(속판) 납품 · 설치',      w:['KM']},
+  {t:'CB 강전 결선',                        w:['ELEC']},
+  {t:'CB 약전 결선',                        w:['KM']},
+  {t:'CB 외함 커버 설치',                   w:['KM']},
+  {t:'벽지 · 페인트 완료',                  w:['ARCH']},
+  {t:'기구물 제작 (챠임벨·키센서·온도·조명)', w:['KM']},
+  {t:'기구물 설치',                         w:['KM']},
+  {t:'객실 전원 공급',                      w:['ELEC']},
+  {t:'시운전 · 시험조정',                   w:['KM']}
+];
+var SCOPE_COLS = [
+  {k:'ARCH', t:'건축',     c:COL.gray},
+  {k:'ELEC', t:'전기',     c:COL.pow},
+  {k:'TEL',  t:'통신',     c:COL.net},
+  {k:'KM',   t:'객실관리', c:COL.km}
+];
+function drawScope(ctx, W, H, T, L){
+  var m = L.m, fs = Math.round(m*0.020);
+  var labW = L.w*0.46, colW = (L.w - labW)/SCOPE_COLS.length;
+  var headH = L.h*0.085, rowH = (L.h - headH - m*0.085)/SCOPE_ROWS.length;
+
+  SCOPE_COLS.forEach(function(c, i){
+    var x = L.x + labW + i*colW;
+    box(ctx, x+2, L.y, colW-4, headH, {fill:c.c, r:5, t:c.t, ts:Math.round(fs*0.95), tcol:'#fff'});
+  });
+  SCOPE_ROWS.forEach(function(r, ri){
+    var y = L.y + headH + m*0.012 + ri*rowH;
+    if(ri % 2 === 0){ ctx.fillStyle = T.cell; ctx.fillRect(L.x, y, L.w, rowH-2); }
+    ctx.fillStyle = T.ink; ctx.textAlign = 'left';
+    fitText(ctx, r.t, labW-m*0.02, Math.round(fs*0.88), '700');
+    ctx.fillText(r.t, L.x + m*0.012, y + rowH*0.5 + fs*0.30);
+    SCOPE_COLS.forEach(function(c, ci){
+      var x = L.x + labW + ci*colW, on = r.w.indexOf(c.k) >= 0;
+      if(!on) return;
+      var rr = Math.min(rowH*0.30, colW*0.14);
+      ctx.beginPath(); ctx.arc(x+colW/2, y+rowH*0.5, rr, 0, Math.PI*2);
+      ctx.fillStyle = c.c; ctx.fill();
+      if(r.w.length > 1){
+        ctx.beginPath(); ctx.arc(x+colW/2, y+rowH*0.5, rr*0.45, 0, Math.PI*2);
+        ctx.fillStyle = T.bg; ctx.fill();
+      }
+    });
+  });
+  ctx.textAlign = 'left'; ctx.fillStyle = T.sub; ctx.font = '600 '+Math.round(fs*0.72)+'px '+FONT;
+  ctx.fillText('● 단독 책임    ◉ 현장 협의 (전기 또는 통신 공사에 포함)', L.x, L.y + L.h - m*0.008);
+}
+
+/* ---- 탭③ 제목 만들기 · 그리기 ---- */
+var KINDNAME = {system:'계통·구성도', layout:'객실 기구물 배치도', cover:'제품 소개 배너·표지', scope:'공사 한계 구분도'};
+function titles(kind){
+  var parts = [];
+  if(siteName()) parts.push(siteName());
+  if(G.roomsIn || G.rooms) parts.push((G.roomsIn || G.rooms) + '실');
+  if(G.floorsIn || G.floors) parts.push('지상 ' + (G.floorsIn || G.floors) + '층');
+  if(G.star) parts.push(G.star + '성급');
+  G.sub3 = parts.join('  ·  ');
+  if(kind === 'system') G.title3 = '객실관리 시스템 계통 구성도';
+  else if(kind === 'layout') G.title3 = '객실 기구물 배치도';
+  else if(kind === 'scope') G.title3 = '공사 한계 구분표';
+  else {
+    G.title3 = (siteName() ? siteName() + ' ' : '') + '객실관리 시스템';
+    G.sub3 = 'RCU · CB 제어분전함 · 객실 기구물 일괄 공급';
+  }
+}
+function draw3(cv, longSide){
+  var kind = parsePrompt();
+  titles(kind);
+  var o = outSize(G.ratio, longSide), W = o.w, H = o.h;
+  cv.width = W; cv.height = H;
+  var ctx = cv.getContext('2d'), T = THEMES[G.theme];
+  ctx.fillStyle = T.bg; ctx.fillRect(0,0,W,H);
+  if(kind === 'cover'){ drawCover(ctx, W, H, T, null); return kind; }
+  var L = frame3(ctx, W, H, T, G.sub3);
+  if(kind === 'system') drawSystem(ctx, W, H, T, L);
+  else if(kind === 'layout') drawLayout(ctx, W, H, T, L);
+  else drawScope(ctx, W, H, T, L);
+  return kind;
+}
+function render3(){
+  var kind = draw3($('#prev3'), 1400);
+  var o = outSize(G.ratio, 2400);
+  $('#szTag3').textContent = o.w + ' × ' + o.h + ' px';
+  $('#kindTag').textContent = KINDNAME[kind];
+  $('#kindNow').textContent = (G.kind === 'auto') ? '자동 → ' + KINDNAME[kind] : KINDNAME[kind];
+  $('#ratioNow3').textContent = RLABEL[G.ratio] + (G.ratio === '16:9' ? ' (PPT)' : '');
+  $('#starNow').textContent = G.starLock ? (G.starLock >= 4 ? '4~5성급' : '1~3성급') : ('자동 → ' + G.star + '성급');
+  var got = G.items.map(function(d){ return d.t; }).join(', ');
+  var fl = [];
+  if(G.flags.veranda) fl.push('베란다'); if(G.flags.living) fl.push('거실'); if(G.flags.desk) fl.push('책상');
+  $('#readTag').innerHTML = '읽은 것: <b>' + (siteName() || '현장명 없음') + '</b>'
+    + ((G.roomsIn||G.rooms) ? ' · ' + (G.roomsIn||G.rooms) + '실' : '')
+    + ((G.floorsIn||G.floors) ? ' · ' + (G.floorsIn||G.floors) + '층' : '') + ' · ' + G.star + '성급'
+    + (fl.length ? ' · ' + fl.join('/') : '') + '<br>기구물: ' + (got || '—');
+}
+function draw3Go(){ G.prompt = $('#gp').value; render3(); }
+$('#gp').oninput = function(){ G.prompt = this.value; render3(); };
+[['gSite','siteIn'], ['gFloors','floorsIn'], ['gRooms','roomsIn'], ['gNetUp','netUp'], ['gNetDn','netDn']].forEach(function(a){
+  $('#'+a[0]).oninput = function(){ G[a[1]] = this.value.trim(); render3(); };
+});
+
+/* ---- 탭③ 버튼 ---- */
+var KINDB = [{k:'auto',t:'자동'},{k:'system',t:'계통도'},{k:'layout',t:'배치도'},{k:'cover',t:'배너·표지'},{k:'scope',t:'공사한계'}];
+function setKind(k){ G.kind = k; buildBtns3(); render3(); }
+function setRatio3(k){ G.ratio = k; buildBtns3(); render3(); }
+function setTheme3(k){ G.theme = k; buildBtns3(); render3(); }
+var STARB = [{k:0,t:'자동'},{k:3,t:'1~3성급'},{k:5,t:'4~5성급'}];
+function setStar(k){ G.starLock = k || 0; buildBtns3(); render3(); }
+var EXAMPLES = [
+  {t:'계통도 예시', v:'「쏠비치 양양」 5성급 320실, 방재실 PC, 각 층 FIP, 객실 CB 제어분전함 RCU, 키센서 DM 챠임벨 온도조절기 조명스위치 BSP, PMS 에어컨 바닥난방 연동'},
+  {t:'배치도 예시', v:'5성급 객실 배치, 챠임벨 키센서 DM 온도조절기 조명스위치 BSP 멀티아울렛, 베란다 있음, 책상 있음'},
+  {t:'배치도(3성급)', v:'3성급 호텔 객실 배치도, 키센서 챠임벨 온도조절기 조명스위치, 베란다 있음'},
+  {t:'공사한계 예시', v:'공사 한계 구분 — 전기 통신 건축 객실관리 업무 범위'},
+  {t:'표지 예시', v:'「SK하이닉스 기숙사」 1,116실 표지, CB 제어분전함 RCU 키센서 온도조절기 조명스위치'}
+];
+function useEx(k){ $('#gp').value = EXAMPLES[k].v; G.prompt = EXAMPLES[k].v; G.kind='auto'; buildBtns3(); render3(); }
+function buildBtns3(){
+  mkBtns($('#kindBtns'), KINDB, G.kind, setKind);
+  mkBtns($('#ratioBtns3'), RLIST2, G.ratio, setRatio3);
+  mkBtns($('#themeBtns3'), THB, G.theme, setTheme3);
+  mkBtns($('#starBtns'), STARB, G.starLock || 0, setStar);
+  mkBtns($('#exBtns'), EXAMPLES.map(function(e,i){ return {k:i, t:e.t}; }), null, useEx);
+}
+function savePNG3(){
+  var cv = document.createElement('canvas'); draw3(cv, 2400);
+  downloadCanvas(cv, 'KM_' + KINDNAME[parsePrompt()].replace(/[·\s]/g,'') + '_' + fileStamp() + '.png');
+}
+function copyPNG3(btn){
+  var cv = document.createElement('canvas'); draw3(cv, 2400);
+  copyCanvas(cv, btn);
+}
+
+/* ---- 의뢰문 조립 (Claude에게 던지기) ---- */
+function copyBrief(btn){
+  var kind = parsePrompt(); titles(kind);
+  var L = [];
+  L.push('[한국마이크로닉(주) 배성윤 차장] ' + KINDNAME[kind] + ' 의뢰');
+  L.push('');
+  L.push('· 현장: ' + (G.site || '(미정)'));
+  L.push('· 규모: ' + (G.rooms ? G.rooms + '실' : '(미정)') + ' / ' + G.star + '성급');
+  L.push('· 들어가는 것: ' + G.items.map(function(d){ return d.t; }).join(', '));
+  var fl = [];
+  if(G.flags.veranda) fl.push('베란다 있음');
+  if(G.flags.living) fl.push('거실 있음');
+  if(G.flags.desk) fl.push('책상(멀티아울렛) 있음');
+  if(fl.length) L.push('· 객실 조건: ' + fl.join(', '));
+  L.push('· 산출 규격: ' + RLABEL[G.ratio] + ' / 바탕 ' + ({light:'흰색',soft:'연회색',dark:'다크',blue:'KM 블루'}[G.theme]));
+  L.push('');
+  L.push('원문: ' + (G.prompt || '(없음)'));
+  L.push('');
+  L.push('※ 성급 배치 규칙은 km-room-layout 기준으로, 조명 구수는 정하지 말고 L 표기만 할 것.');
+  L.push('※ 요율·금액은 정하지 말고 입력칸으로 남길 것.');
+  var txt = L.join('\n');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){
+      var o = btn.textContent; btn.textContent = '복사됨 — 대화창에 붙여넣으세요';
+      setTimeout(function(){ btn.textContent = o; }, 2200);
+    }).catch(function(){ prompt('아래를 복사하세요', txt); });
+  } else prompt('아래를 복사하세요', txt);
+}
+
+/* ---- AI 실사 이미지 (중계서버가 있을 때만) ---- */
+function aiGen(btn){
+  var url = $('#aiUrl').value.trim();
+  if(!url){
+    alert('중계서버 주소가 비어 있습니다.\n\n브라우저에서 Gemini·OpenAI 이미지 API를 직접 부르면 CORS로 막힙니다.\n중계서버(프록시)를 만든 뒤 그 주소를 넣어야 동작합니다.\n\n지금은 위쪽 「그려줘」로 구성도·배치도를 만드세요.');
+    return;
+  }
+  var body = { prompt: $('#gp').value, size: outSize(G.ratio, 1536) };
+  var hd = { 'Content-Type':'application/json' };
+  if($('#aiKey').value.trim()) hd['Authorization'] = 'Bearer ' + $('#aiKey').value.trim();
+  var o = btn.textContent; btn.textContent = '만드는 중…';
+  fetch(url, { method:'POST', headers:hd, body:JSON.stringify(body) })
+    .then(function(r){ if(!r.ok) throw new Error('서버 응답 ' + r.status); return r.json(); })
+    .then(function(j){
+      var d = j.image || j.dataUrl || (j.b64 ? 'data:image/png;base64,' + j.b64 : null);
+      if(!d) throw new Error('응답에 image / dataUrl / b64 가 없습니다');
+      var im = new Image();
+      im.onload = function(){
+        tab(1); S.img = im; S.zoom = 1; S.ox = .5; S.oy = .5; S.masks = [];
+        render1();
+        alert('AI 이미지를 탭① 낱장 가공기로 보냈습니다. 여기서 비율·틀·라벨을 입히세요.');
+      };
+      im.src = d;
+    })
+    .catch(function(e){ alert('실패: ' + e.message); })
+    .then(function(){ btn.textContent = o; });
+}
+
+/* ===================== 현장 카드 + 제안 4종 한 번에 ===================== */
+function siteName(){ return (G.siteIn || G.site || '').trim(); }
+function safeName(t){ return (t || '현장').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '').slice(0, 30); }
+
+/* ---- 현장 카드 (이 브라우저에 남는다) ---- */
+var CKEY = 'km-proposal-sites';
+function cardsGet(){ try{ return JSON.parse(localStorage.getItem(CKEY) || '[]'); }catch(e){ return []; } }
+function cardsPut(a){ try{ localStorage.setItem(CKEY, JSON.stringify(a)); }catch(e){ alert('이 브라우저에 저장할 수 없습니다(비공개 모드일 수 있습니다).'); } }
+function cardNow(){
+  return { name:siteName(), prompt:G.prompt, star:G.starLock || 0, ratio:G.ratio, theme:G.theme,
+           floors:G.floorsIn, rooms:G.roomsIn, netUp:G.netUp, netDn:G.netDn,
+           at:(new Date()).toISOString().slice(0,10) };
+}
+function cardsSync(){
+  var a = cardsGet(), sel = $('#cardSel');
+  sel.innerHTML = '<option value="">— 저장된 현장을 고르세요 —</option>';
+  a.forEach(function(c, i){
+    var o = document.createElement('option');
+    o.value = i;
+    o.textContent = c.name + (c.rooms ? '  ·  ' + c.rooms + '실' : '') + (c.floors ? '·' + c.floors + '층' : '') + '   (' + c.at + ')';
+    sel.appendChild(o);
+  });
+  $('#cardCnt').textContent = a.length + '개 저장됨';
+}
+function cardSave(btn){
+  if(!siteName()){ alert('현장명을 먼저 넣어주세요.\n(현장 조건 첫 칸)'); $('#gSite').focus(); return; }
+  var a = cardsGet(), c = cardNow();
+  var i = a.findIndex(function(x){ return x.name === c.name; });
+  if(i >= 0) a[i] = c; else a.push(c);
+  cardsPut(a); cardsSync();
+  var o = btn.textContent; btn.textContent = (i >= 0 ? '갱신됨' : '저장됨');
+  setTimeout(function(){ btn.textContent = o; }, 1400);
+}
+function cardLoad(){
+  var v = $('#cardSel').value; if(v === '') return;
+  var c = cardsGet()[+v]; if(!c) return;
+  G.siteIn = c.name;   $('#gSite').value = c.name;
+  G.prompt = c.prompt || ''; $('#gp').value = G.prompt;
+  G.floorsIn = c.floors || ''; $('#gFloors').value = G.floorsIn;
+  G.roomsIn = c.rooms || '';   $('#gRooms').value = G.roomsIn;
+  G.netUp = c.netUp || '';     $('#gNetUp').value = G.netUp;
+  G.netDn = c.netDn || '';     $('#gNetDn').value = G.netDn;
+  G.starLock = c.star || 0; G.ratio = c.ratio || '16:9'; G.theme = c.theme || 'light';
+  buildBtns3(); render3(); cardsSync(); syncDir3();
+}
+function cardDel(){
+  var v = $('#cardSel').value; if(v === '') return;
+  var a = cardsGet(), c = a[+v]; if(!c) return;
+  if(!confirm('「' + c.name + '」 카드를 지웁니다.\n저장해 둔 PNG 파일은 지워지지 않습니다.')) return;
+  a.splice(+v, 1); cardsPut(a); cardsSync();
+}
+
+/* ---- 저장 폴더 (PC 크롬·엣지) ---- */
+var DIR3 = null;
+function idb3(){ return new Promise(function(res, rej){
+  var q = indexedDB.open('kmProposal', 1);
+  q.onupgradeneeded = function(){ q.result.createObjectStore('kv'); };
+  q.onsuccess = function(){ res(q.result); }; q.onerror = function(){ rej(q.error); };
+}); }
+function idb3Put(k, v){ return idb3().then(function(db){ return new Promise(function(res, rej){
+  var t = db.transaction('kv','readwrite'); t.objectStore('kv').put(v, k);
+  t.oncomplete = function(){ res(); }; t.onerror = function(){ rej(t.error); }; }); }); }
+function idb3Get(k){ return idb3().then(function(db){ return new Promise(function(res, rej){
+  var t = db.transaction('kv','readonly'), q = t.objectStore('kv').get(k);
+  q.onsuccess = function(){ res(q.result); }; q.onerror = function(){ rej(q.error); }; }); }); }
+function syncDir3(){
+  $('#dirNow3').textContent = DIR3 ? DIR3.name : '폴더 미지정';
+  $('#dirBtn3').textContent = DIR3 ? '폴더 바꾸기' : '저장 폴더 정하기';
+  $('#dirBtn3').className = DIR3 ? 'on' : '';
+}
+function pickDir3(){
+  if(!window.showDirectoryPicker){
+    alert('이 브라우저는 폴더 저장을 지원하지 않습니다.\n\nPC의 크롬 또는 엣지에서 열어주세요.\n휴대폰에서는 4장이 차례로 내려받아집니다.');
+    return;
+  }
+  window.showDirectoryPicker({ mode:'readwrite', id:'km-proposal', startIn:'documents' }).then(function(h){
+    DIR3 = h; idb3Put('dir', h).catch(function(){}); syncDir3();
+  }).catch(function(){});
+}
+
+/* ---- 제안 4종 한 번에 ---- */
+var KINDS4 = [
+  {k:'cover',  n:'1_표지'},
+  {k:'system', n:'2_계통구성도'},
+  {k:'layout', n:'3_객실배치도'},
+  {k:'scope',  n:'4_공사한계표'}
+];
+function infoTxt(folder){
+  var miss = [];
+  if(!(G.floorsIn || G.floors)) miss.push('층수');
+  if(!(G.roomsIn  || G.rooms))  miss.push('실수');
+  if(!G.netUp) miss.push('중앙↔층 통신 규격');
+  if(!G.netDn) miss.push('층↔객실 통신 규격');
+  var L = [];
+  L.push('KM 제안 4종 — 현장 카드');
+  L.push('='.repeat(46));
+  L.push('폴더      : ' + folder);
+  L.push('만든 날   : ' + (new Date()).toLocaleString('ko-KR'));
+  L.push('');
+  L.push('현장명    : ' + (siteName() || '(없음)'));
+  L.push('성급      : ' + G.star + '성급' + (G.starLock ? ' (지정)' : ' (프롬프트에서 판정)'));
+  L.push('실수      : ' + ((G.roomsIn || G.rooms) ? (G.roomsIn || G.rooms) + '실' : '[ 미확정 ]'));
+  L.push('층수      : ' + ((G.floorsIn || G.floors) ? (G.floorsIn || G.floors) + '층' : '[ 미확정 ]'));
+  L.push('중앙↔층   : ' + (G.netUp || '[ 미확정 ]'));
+  L.push('층↔객실   : ' + (G.netDn || '[ 미확정 ]'));
+  L.push('객실 조건 : ' + ([G.flags.veranda && '베란다', G.flags.living && '거실', G.flags.desk && '책상']
+          .filter(Boolean).join(', ') || '없음'));
+  L.push('');
+  L.push('비율      : ' + RLABEL[G.ratio]);
+  L.push('바탕      : ' + ({light:'흰색', soft:'연회색', dark:'다크', blue:'KM 블루'}[G.theme]));
+  L.push('기구물    : ' + G.items.map(function(d){ return d.t; }).join(', '));
+  L.push('');
+  L.push('원문      : ' + (G.prompt || '(없음)'));
+  L.push('');
+  L.push('-'.repeat(46));
+  L.push(miss.length
+    ? '※ 미확정 ' + miss.length + '곳 : ' + miss.join(' / ') + '\r\n  → 도면에 [    ] 로 나갑니다. 확정되면 값을 넣고 다시 뽑으십시오.'
+    : '※ 미확정 없음 — 4장 모두 값이 채워진 판입니다.');
+  L.push('※ 이 폴더는 덮어쓰지 않습니다. 값이 바뀌면 날짜가 붙은 새 폴더로 다시 나갑니다.');
+  L.push('※ 조명 스위치 구수는 전기설계 확정 후 결정되므로 배치도에는 「L」로만 표기됩니다.');
+  return L.join('\r\n');
+}
+function saveAll4(btn){
+  var folder = 'KM_' + safeName(siteName()) + '_제안_' + fileStamp();
+  var old = G.kind, oldTxt = btn.textContent;
+  btn.textContent = '만드는 중…'; btn.disabled = true;
+
+  var files = [];
+  KINDS4.forEach(function(d){
+    G.kind = d.k;
+    var cv = document.createElement('canvas');
+    draw3(cv, 2400);
+    files.push({ name: folder + '_' + d.n + '.png', cv: cv });
+  });
+  G.kind = old; buildBtns3(); render3();
+  var txt = infoTxt(folder);
+
+  function done(msg){
+    btn.textContent = msg; btn.disabled = false;
+    setTimeout(function(){ btn.textContent = oldTxt; }, 2600);
+  }
+  function blobs(cb){
+    var out = [], i = 0;
+    (function nx(){
+      if(i >= files.length) return cb(out);
+      files[i].cv.toBlob(function(b){ out.push({ name:files[i].name, blob:b }); i++; nx(); }, 'image/png');
+    })();
+  }
+
+  blobs(function(list){
+    list.push({ name:'_현장카드.txt', blob:new Blob(['﻿' + txt], {type:'text/plain;charset=utf-8'}) });
+    if(DIR3){
+      DIR3.getDirectoryHandle(folder, {create:true}).then(function(sub){
+        var i = 0;
+        (function nx(){
+          if(i >= list.length){ done('폴더에 ' + list.length + '개 저장됨'); return; }
+          sub.getFileHandle(list[i].name, {create:true}).then(function(fh){
+            return fh.createWritable().then(function(w){
+              return w.write(list[i].blob).then(function(){ return w.close(); });
+            });
+          }).then(function(){ i++; nx(); })
+            .catch(function(e){ done('실패'); alert('저장 실패: ' + e.message); });
+        })();
+      }).catch(function(e){ done('실패'); alert('폴더를 만들지 못했습니다: ' + e.message); });
+    } else {
+      var i = 0;
+      (function nx(){
+        if(i >= list.length){ done(list.length + '개 내려받음'); return; }
+        var a = document.createElement('a');
+        a.download = list[i].name; a.href = URL.createObjectURL(list[i].blob);
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+        i++; setTimeout(nx, 420);
+      })();
+    }
+  });
+}
+
+/* 지난번 폴더 다시 잡기 · 카드 목록 */
+try{
+  idb3Get('dir').then(function(h){
+    if(!h || !h.queryPermission) return;
+    h.queryPermission({mode:'readwrite'}).then(function(p){
+      if(p === 'granted'){ DIR3 = h; syncDir3(); }
+    }).catch(function(){});
+  }).catch(function(){});
+}catch(e){}
+
+/* ===================== 시작 ===================== */
+buildBtns1(); syncFxText(); render1();
+buildBtns2(); render2();
+buildBtns3(); render3();
+</script>
+</body>
+</html>
