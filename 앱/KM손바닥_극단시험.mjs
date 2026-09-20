@@ -1,5 +1,6 @@
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import fs from 'fs';
+const TARGET=process.argv[2]||'split/index.html';
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const errsAll=[];
 async function run(name,state,fn){
@@ -8,17 +9,18 @@ async function run(name,state,fn){
   const errs=[];p.on('pageerror',e=>errs.push(e.message.split('\n')[0]));
   p.on('console',m=>{if(m.type()==='error'&&!/ERR_CERT|Failed to load resource/.test(m.text()))errs.push('콘솔 '+m.text().slice(0,100))});
   p.on('dialog',d=>d.accept());
-  await p.goto('file://'+process.cwd()+'/split/index.html',{waitUntil:'load'});await p.waitForTimeout(500);
+  await p.goto('file://'+process.cwd()+'/'+TARGET,{waitUntil:'load'});await p.waitForTimeout(500);
   try{await fn(p)}catch(e){errs.push('시험 '+e.message.split('\n')[0].slice(0,100))}
   console.log((errs.length?'✗ ':'✓ ')+name,errs.length?'\n     '+errs.join('\n     '):'');
   errsAll.push(...errs.map(e=>name+': '+e));await p.context().close();
 }
 const tabs=['map','today','sites','ask','meet','set'];
 const walk=async p=>{for(const v of tabs){await p.click(`nav.tabbar button[data-v="${v}"]`);await p.waitForTimeout(200)}};
+const toList=async p=>{const t=await p.$('#mapBody .b.ghost');if(t&&/현장 지도/.test(await t.textContent()))await t.click();await p.waitForTimeout(250)};
 const S0=JSON.parse(fs.readFileSync('state.json','utf8'));
 
 await run('1 완전 빈 상태(첫 설치)',null,async p=>{await walk(p);await p.click('nav.tabbar button[data-v="sites"]');await p.click('#btnAddSite');await p.fill('#nsName','시험현장');await p.click('#nsOk');await p.waitForTimeout(300);
-  await p.click('nav.tabbar button[data-v="map"]');await p.waitForTimeout(200);await p.click('.jcard');await p.waitForTimeout(200);await p.click('.qn >> nth=0');await p.waitForTimeout(200)});
+  await p.click('nav.tabbar button[data-v="map"]');await p.waitForTimeout(250);await toList(p);await p.click('.jcard');await p.waitForTimeout(250);await p.click('.qn >> nth=0');await p.waitForTimeout(200)});
 await run('2 현장 있고 할 일 0',JSON.stringify({...S0,items:{},asks:{}}),async p=>{await walk(p)});
 await run('3 회의 시작 → 아무것도 안 찍고 끝',JSON.stringify(S0),async p=>{await p.click('nav.tabbar button[data-v="meet"]');await p.click('#mtStart');await p.waitForTimeout(200);await p.click('text=회의 끝');await p.waitForTimeout(400)});
 await run('4 열쇠를 지운 설정(판)이 들어온 뒤',(()=>{const s=JSON.parse(JSON.stringify(S0));
@@ -50,6 +52,6 @@ await run('9 경계를 확정으로 → 결론 대장에 남나',JSON.stringify(
   const n=await p.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('km6_state')).decisions||{}).filter(d=>d.source==='경계').length);
   if(!n)throw new Error('경계를 확정했는데 결론 대장에 없음')});
 await run('10 현장 이름에 따옴표·꺾쇠',JSON.stringify(S0),async p=>{await p.click('nav.tabbar button[data-v="sites"]');await p.click('#btnAddSite');await p.fill('#nsName',`이상한"현장'<b>`);await p.click('#nsOk');await p.waitForTimeout(300);
-  await p.click('nav.tabbar button[data-v="map"]');await p.waitForTimeout(200);await p.click('.jcard:has-text("이상한")');await p.waitForTimeout(200);await p.click('.qn >> nth=0');await p.waitForTimeout(200);await p.click('#sheetBox .row.rq >> nth=0');await p.waitForTimeout(200)});
+  await p.click('nav.tabbar button[data-v="map"]');await p.waitForTimeout(250);await toList(p);await p.click('.jcard:has-text("이상한")');await p.waitForTimeout(200);await p.click('.qn >> nth=0');await p.waitForTimeout(200);await p.click('#sheetBox .row.rq >> nth=0');await p.waitForTimeout(200)});
 console.log('\n오류 합계',errsAll.length);
 await b.close();
