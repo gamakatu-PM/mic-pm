@@ -288,6 +288,19 @@ footer{padding:14px; text-align:center; color:var(--gray); font-size:11px}
     </div>
 
     <div class="row">
+      <div class="lab">현장 조건 <span style="color:var(--orange)">노란칸 = 직접 입력</span></div>
+      <div style="display:flex; gap:6px">
+        <input type="text" id="gFloors" placeholder="층수 (예: 12)" style="flex:1">
+        <input type="text" id="gRooms" placeholder="실수 (예: 320)" style="flex:1">
+      </div>
+      <div style="display:flex; gap:6px; margin-top:6px">
+        <input type="text" id="gNetUp" placeholder="중앙↔층 통신 규격">
+        <input type="text" id="gNetDn" placeholder="층↔객실 통신 규격">
+      </div>
+      <div class="hint">통신 규격·수량은 <b>제가 정하지 않습니다.</b> 비워 두면 도면에 <b>[&nbsp;&nbsp;&nbsp;&nbsp;]</b> 빈칸으로 나가고, 맨 아래에 「미확정 n곳」이 찍힙니다.</div>
+    </div>
+
+    <div class="row">
       <div class="lab">성급 <i id="starNow">자동</i></div>
       <div class="btns sm" id="starBtns"></div>
       <div class="hint">배치도에서 1~3성급과 4~5성급의 규칙이 다릅니다(DM·화장실·베란다·BSP).</div>
@@ -1023,7 +1036,8 @@ var DICT = [
 var DEFAULTS = ['CB','RCU','KEY','CHIME','TEMP','LSW'];
 
 var G = { prompt:'', kind:'auto', ratio:'16:9', theme:'light', star:0,
-          site:'', rooms:'', items:[], flags:{}, foot:'한국마이크로닉(주)' };
+          site:'', rooms:'', floors:'', items:[], flags:{}, foot:'한국마이크로닉(주)',
+          floorsIn:'', roomsIn:'', netUp:'', netDn:'' };
 
 function parsePrompt(){
   var p = G.prompt || '';
@@ -1037,6 +1051,8 @@ function parsePrompt(){
 
   var rm = p.match(/([\d][\d,]*)\s*(실|객실|세대|room)/i);
   G.rooms = rm ? rm[1] : '';
+  var fl = p.match(/지상\s*([\d]+)\s*층/) || p.match(/([\d]+)\s*개\s*층/) || p.match(/([\d]+)\s*개층/);
+  G.floors = fl ? fl[1] : '';
 
   var q = p.match(/[「『"'“‘]([^」』"'”’]{2,30})[」』"'”’]/);
   if(q) G.site = q[1];
@@ -1156,80 +1172,166 @@ function legend(ctx, x, y, w, rows, T, fs){
   });
 }
 
-/* ---- ① 계통·구성도 ---- */
+/* ---- ① 계통·구성도 (v2 — 구역·수량·공사한계·규격 빈칸) ---- */
+function grpBox(ctx, x, y, w, h, title, qty, col, T, m){
+  var r = m*0.011, hh = Math.max(m*0.026, m*0.030);
+  ctx.save();
+  ctx.shadowColor = 'rgba(20,26,34,.12)'; ctx.shadowBlur = m*0.014; ctx.shadowOffsetY = m*0.004;
+  rrect(ctx, x, y, w, h, r); ctx.fillStyle = T.cell; ctx.fill(); ctx.restore();
+  ctx.save(); rrect(ctx, x, y, w, h, r); ctx.clip();
+  ctx.fillStyle = col; ctx.fillRect(x, y, w, hh); ctx.restore();
+  rrect(ctx, x, y, w, h, r);
+  ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.2, m*0.0022); ctx.stroke();
+  ctx.fillStyle = '#FFFFFF'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  fitText(ctx, title, w*0.62, Math.round(hh*0.52), '800');
+  ctx.fillText(title, x + m*0.013, y + hh*0.53);
+  if(qty){
+    ctx.textAlign = 'right'; ctx.globalAlpha = .92;
+    fitText(ctx, qty, w*0.36, Math.round(hh*0.48), '700');
+    ctx.fillText(qty, x + w - m*0.013, y + hh*0.53);
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return {x:x, y:y + hh, w:w, h:h - hh};
+}
+function trunk(ctx, x, y1, y2, col, label, m, T){
+  var lw = Math.max(2.4, m*0.0042);
+  line(ctx, x, y1, x, y2 - m*0.007, col, lw);
+  head(ctx, x, y2, col, lw);
+  if(!label) return;
+  var fs = Math.round(m*0.018);
+  ctx.font = '700 ' + fs + 'px ' + FONT;
+  var tw = ctx.measureText(label).width + m*0.020, yy = (y1 + y2)/2;
+  rrect(ctx, x + m*0.012, yy - fs*0.92, tw, fs*1.84, fs*0.6);
+  ctx.fillStyle = T.bg; ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = Math.max(1, m*0.0016); ctx.stroke();
+  ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + m*0.022, yy);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
 function drawSystem(ctx, W, H, T, L){
-  var m = L.m, fs = Math.round(m*0.021);
+  var m = L.m, fs = Math.round(m*0.020);
   var ext  = G.items.filter(function(d){ return d.g === 'ext'; });
   var cen  = G.items.filter(function(d){ return d.g === 'center'; });
   var room = G.items.filter(function(d){ return d.g === 'room'; });
-  if(!cen.length) cen = [{t:'중앙 PC', k:'PC'}];
+  if(!cen.length) cen = [{t:'중앙 관제 PC'}];
   if(!room.length) room = DICT.filter(function(d){ return ['KEY','CHIME','TEMP','LSW'].indexOf(d.k) >= 0; });
   var hasFIP = G.items.some(function(d){ return d.k === 'FIP'; });
 
-  var mainW = ext.length ? L.w*0.70 : L.w;
-  var cx = L.x + mainW/2;
-  var yA = L.y,                 hA = L.h*0.145;
-  var yB = L.y + L.h*0.225,     hB = L.h*0.145;
-  var yC = L.y + L.h*0.445,     hC = L.h*0.185;
-  var yD = L.y + L.h*0.705,     hD = L.h*0.165;
+  var blanks = 0;
+  function V(v){ if(v) return v; blanks++; return '[      ]'; }
+  var floors = G.floorsIn || G.floors || '';
+  var rooms  = G.roomsIn  || G.rooms  || '';
 
-  /* 중앙 */
-  var cw = Math.min(mainW*0.26, mainW/cen.length - 12);
+  var gut = L.w*0.105;                                   /* 강전 인입 자리 */
+  var extW = ext.length ? L.w*0.205 : 0;
+  var mainW = L.w - gut - (extW ? extW + L.w*0.034 : 0);
+  var MX = L.x + gut, cx = MX + mainW/2;
+  var gapY = L.h*0.050;
+  var hA = L.h*0.175, hB = L.h*0.150, hC = L.h*0.375;
+  var yA = L.y + L.h*0.052, yB = yA + hA + gapY, yC = yB + hB + gapY;
+
+  /* ── 공사 한계: 당사 범위를 점선으로 감싼다 ── */
+  var pad = m*0.020;
+  ctx.save();
+  ctx.setLineDash([m*0.012, m*0.009]);
+  ctx.strokeStyle = COL.km; ctx.lineWidth = Math.max(1.4, m*0.0026); ctx.globalAlpha = .75;
+  rrect(ctx, MX - pad, yA - pad*1.6, mainW + pad*2, (yC + hC) - yA + pad*2.4, m*0.014);
+  ctx.stroke(); ctx.restore();
+  var tagFs = Math.round(m*0.017);
+  ctx.font = '800 ' + tagFs + 'px ' + FONT;
+  var tagT = '당사(객실관리) 공급 · 시공 범위';
+  var tagW = ctx.measureText(tagT).width + m*0.020;
+  rrect(ctx, MX - pad + m*0.010, yA - pad*1.6 - tagFs*0.95, tagW, tagFs*1.9, tagFs*0.6);
+  ctx.fillStyle = COL.km; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
+  ctx.fillText(tagT, MX - pad + m*0.020, yA - pad*1.6 + tagFs*0.02);
+  ctx.textBaseline = 'alphabetic';
+
+  /* ── 중앙 (방재실) ── */
+  var aw = Math.min(mainW*0.66, mainW);
+  var A = grpBox(ctx, cx - aw/2, yA, aw, hA, '중앙  ·  방재실', '1식', COL.net, T, m);
+  var cw = (A.w - m*0.014*(cen.length + 1))/cen.length;
   cen.forEach(function(d, i){
-    var x = cx - (cen.length*cw + (cen.length-1)*12)/2 + i*(cw+12);
-    box(ctx, x, yA, cw, hA, {fill:T.cell, stroke:COL.net, bar:COL.net, t:d.t, s:'방재실', ts:fs*1.05, ss:fs*0.82,
-                             tcol:T.ink, scol:T.sub, shadow:m*0.02});
-    elbow(ctx, x+cw/2, yA+hA, cx, yB - 2, COL.net, Math.max(2,m*0.0035));
+    box(ctx, A.x + m*0.014 + i*(cw + m*0.014), A.y + A.h*0.16, cw, A.h*0.68,
+        {fill:T.bg, stroke:COL.net, t:d.t, s:'1 EA', ts:fs*0.95, ss:fs*0.74, tcol:T.ink, scol:T.sub, r:6, lw:1.6});
   });
+  trunk(ctx, cx, yA + hA, yB - 2, COL.net, '중앙 ↔ 층  ' + V(G.netUp), m, T);
 
-  /* 층 */
-  var fw = mainW*0.30;
-  box(ctx, cx-fw/2, yB, fw, hB, {fill:T.cell, stroke:COL.net, bar:COL.net,
-      t: hasFIP ? 'FIP (층 제어반)' : '층 분배 (각 층)', s:'각 층 린넨실 1EA', ts:fs*1.05, ss:fs*0.82,
-      tcol:T.ink, scol:T.sub, shadow:m*0.02});
-  elbow(ctx, cx, yB+hB, cx, yC-2, COL.net, Math.max(2,m*0.0035));
+  /* ── 층 (각 층 린넨실) ── */
+  var bw = mainW*0.56;
+  var qtyB = floors ? ('각 층 1EA  ·  총 ' + floors + ' EA') : '각 층 1 EA';
+  if(!floors) blanks++;
+  var B = grpBox(ctx, cx - bw/2, yB, bw, hB, '층  ·  각 층 린넨실', qtyB, COL.net, T, m);
+  box(ctx, B.x + m*0.014, B.y + B.h*0.16, B.w - m*0.028, B.h*0.68,
+      {fill:T.bg, stroke:COL.net, t: hasFIP ? 'FIP (층 제어반)' : '층 분배반',
+       s:'객실 ↔ 중앙 중계', ts:fs*1.0, ss:fs*0.74, tcol:T.ink, scol:T.sub, r:6, lw:1.6});
+  trunk(ctx, cx, yB + hB, yC - 2, COL.net, '층 ↔ 객실  ' + V(G.netDn), m, T);
 
-  /* 객실 CB */
-  var bw = mainW*0.52;
-  box(ctx, cx-bw/2, yC, bw, hC, {fill:T.cell, stroke:COL.km, bar:COL.km, r:8,
-      t:'CB 제어분전함', s:'객실 내 · RCU 내장', ts:fs*1.2, ss:fs*0.82, tcol:T.ink, scol:T.sub, shadow:m*0.025});
-  /* 강전 입력 */
-  var px = L.x + (mainW*0.02);
-  line(ctx, px, yC+hC*0.5, cx-bw/2-6, yC+hC*0.5, COL.pow, Math.max(2,m*0.0035));
-  head(ctx, cx-bw/2-2, yC+hC*0.5, COL.pow, Math.max(2,m*0.0035), 0);
-  ctx.fillStyle = COL.pow; ctx.font = '700 '+Math.round(fs*0.82)+'px '+FONT;
-  ctx.fillText('강전 (전기업체)', px, yC+hC*0.5 - fs*0.5);
+  /* ── 객실 (N실 · 1실 1세트 반복) ── */
+  var qtyC = (rooms ? rooms + '실' : '[      ]실') + '  ·  1실 1세트 동일 구성';
+  if(!rooms) blanks++;
+  var C = grpBox(ctx, MX, yC, mainW, hC, '객실', qtyC, COL.km, T, m);
+  var cbW = C.w*0.50, cbH = C.h*0.40, cbX = C.x + (C.w - cbW)/2, cbY = C.y + C.h*0.06;
+  box(ctx, cbX, cbY, cbW, cbH, {fill:T.bg, stroke:COL.km, bar:COL.km, r:8,
+      t:'CB 제어분전함', s:'RCU · 차단기 · 릴레이 내장  ·  1 EA', ts:fs*1.12, ss:fs*0.76,
+      tcol:T.ink, scol:T.sub, shadow:m*0.018});
+
+  /* 강전 인입 — 경계를 넘어 들어온다 */
+  var py = cbY + cbH*0.52, px = L.x + m*0.004;
+  line(ctx, px, py, cbX - m*0.006, py, COL.pow, Math.max(2.2, m*0.0038));
+  head(ctx, cbX - m*0.002, py, COL.pow, Math.max(2.2, m*0.0038), 0);
+  ctx.fillStyle = COL.pow; ctx.textAlign = 'left';
+  ctx.font = '800 ' + Math.round(fs*0.80) + 'px ' + FONT;
+  ctx.fillText('강전 인입', px, py - fs*0.62);
+  ctx.font = '700 ' + Math.round(fs*0.68) + 'px ' + FONT;
+  ctx.fillText('전기업체 시공', px, py + fs*1.30);
+  ctx.beginPath(); ctx.arc(MX - pad, py, m*0.0095, 0, Math.PI*2);
+  ctx.fillStyle = T.bg; ctx.fill();
+  ctx.strokeStyle = COL.pow; ctx.lineWidth = Math.max(1.6, m*0.0028); ctx.stroke();
+  ctx.fillStyle = COL.pow; ctx.font = '800 ' + Math.round(fs*0.66) + 'px ' + FONT;
+  ctx.textAlign = 'center'; ctx.fillText('인계점', MX - pad, py - m*0.020); ctx.textAlign = 'left';
 
   /* 기구물 */
   var MAXR = 7, over = Math.max(0, room.length - MAXR);
   var show = room.slice(0, MAXR).map(function(d){ return d.t; });
   if(over) show.push('외 ' + over + '종');
-  var gap = m*0.010, iw = (mainW - gap*(show.length-1))/show.length;
+  var gp = m*0.009, iw = (C.w - m*0.028 - gp*(show.length - 1))/show.length;
+  var iy = C.y + C.h*0.62, ih = C.h*0.30;
   show.forEach(function(t, i){
-    var x = L.x + i*(iw+gap);
-    box(ctx, x, yD, iw, hD, {fill:T.bg, stroke:COL.low, t:t, ts:fs*0.90, tcol:T.ink, r:6, lw:1.8});
-    elbow(ctx, cx, yC+hC, x+iw/2, yD-2, COL.low, Math.max(1.6, m*0.0026));
+    var x = C.x + m*0.014 + i*(iw + gp);
+    box(ctx, x, iy, iw, ih, {fill:T.cell, stroke:COL.low, t:t, ts:fs*0.86, tcol:T.ink, r:6, lw:1.6});
+    elbow(ctx, cx, cbY + cbH, x + iw/2, iy - 2, COL.low, Math.max(1.6, m*0.0026));
   });
 
-  /* 외부 연동 */
+  /* ── 외부 연동 (경계 밖) ── */
   if(ext.length){
-    var ex = L.x + L.w - L.w*0.26, ew = L.w*0.26, eh = Math.min(hC*0.78, (L.h*0.42)/ext.length - m*0.01);
-    var ey0 = yB + (yC + hC - yB)/2 - (ext.length*eh + (ext.length-1)*m*0.012)/2;
-    ctx.fillStyle = T.sub; ctx.font = '800 '+Math.round(fs*0.85)+'px '+FONT;
-    ctx.fillText('외부 연동', ex, ey0 - m*0.016);
+    var ew = extW, ex = L.x + L.w - ew;
+    var eh = Math.min(L.h*0.115, (L.h*0.52)/ext.length - m*0.014);
+    var eTot = eh*ext.length + m*0.030 + m*0.014*(ext.length + 1);
+    var eY = Math.max(yA, Math.min(cbY + cbH*0.5 - eTot/2, L.y + L.h*0.86 - eTot));
+    var E = grpBox(ctx, ex, eY, ew, eTot, '외부 연동', '타 설비', '#4A5460', T, m);
     ext.forEach(function(d, i){
-      var y = ey0 + i*(eh + m*0.012);
-      box(ctx, ex, y, ew, eh, {fill:T.cell, stroke:COL.net, t:d.t, ts:fs*0.92, tcol:T.ink, r:6, lw:1.8});
-      line(ctx, cx+bw/2, yC+hC*0.42, ex-2, y+eh/2, COL.net, Math.max(1.6,m*0.0026), [fs*0.45, fs*0.4]);
+      var y = E.y + m*0.014 + i*(eh + m*0.014);
+      box(ctx, E.x + m*0.012, y, E.w - m*0.024, eh,
+          {fill:T.bg, stroke:COL.net, t:d.t, ts:fs*0.86, tcol:T.ink, r:6, lw:1.6});
+      line(ctx, cbX + cbW, cbY + cbH*0.30, E.x - 2, y + eh/2, COL.net, Math.max(1.5, m*0.0024), [fs*0.45, fs*0.40]);
     });
   }
 
-  legendH(ctx, L.x, L.y + L.h*0.965, [
+  /* ── 범례 + 미확정 표기 ── */
+  legendH(ctx, L.x, L.y + L.h*0.946, [
     {c:COL.pow, t:'강전 — 전기업체'},
-    {c:COL.low, t:'약전 — 객실관리(당사)'},
+    {c:COL.low, t:'약전 — 당사'},
     {c:COL.net, t:'통신 — 당사'},
-    {c:COL.net, t:'타 설비 연동', dash:true}
-  ], T, Math.round(fs*0.80));
+    {c:COL.net, t:'타 설비 연동', dash:true},
+    {c:COL.km,  t:'당사 공사 범위', dash:true}
+  ], T, Math.round(fs*0.76));
+  if(blanks){
+    ctx.fillStyle = COL.pow; ctx.font = '700 ' + Math.round(fs*0.72) + 'px ' + FONT;
+    ctx.fillText('※ [      ] 은 미확정 항목입니다 — ' + blanks + '곳 (확정되면 채워 재발행)',
+                 L.x, L.y + L.h*1.002);
+  }
 }
 
 /* ---- ② 객실 기구물 배치도 ---- */
@@ -1332,8 +1434,9 @@ function drawCover(ctx, W, H, T, L){
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   var ts = fitText(ctx, G.title3, W-pad*2, Math.round(m*0.098), '800');
   var yT = Math.round(H*0.44);
+  var RM = G.roomsIn || G.rooms;
   if(G.site){
-    var head = [(G.rooms ? G.rooms + '실' : ''), (G.star ? G.star + '성급' : '')]
+    var head = [((G.roomsIn||G.rooms) ? (G.roomsIn||G.rooms) + '실' : ''), (G.star ? G.star + '성급' : '')]
                  .filter(Boolean).join('   ·   ') || G.site;
     ctx.fillStyle = T.sub;
     fitText(ctx, head, W-pad*2, Math.round(m*0.034), '700');
@@ -1421,7 +1524,8 @@ var KINDNAME = {system:'계통·구성도', layout:'객실 기구물 배치도',
 function titles(kind){
   var parts = [];
   if(G.site) parts.push(G.site);
-  if(G.rooms) parts.push(G.rooms + '실');
+  if(G.roomsIn || G.rooms) parts.push((G.roomsIn || G.rooms) + '실');
+  if(G.floorsIn || G.floors) parts.push('지상 ' + (G.floorsIn || G.floors) + '층');
   if(G.star) parts.push(G.star + '성급');
   G.sub3 = parts.join('  ·  ');
   if(kind === 'system') G.title3 = '객실관리 시스템 계통 구성도';
@@ -1458,11 +1562,15 @@ function render3(){
   var fl = [];
   if(G.flags.veranda) fl.push('베란다'); if(G.flags.living) fl.push('거실'); if(G.flags.desk) fl.push('책상');
   $('#readTag').innerHTML = '읽은 것: <b>' + (G.site || '현장명 없음') + '</b>'
-    + (G.rooms ? ' · ' + G.rooms + '실' : '') + ' · ' + G.star + '성급'
+    + ((G.roomsIn||G.rooms) ? ' · ' + (G.roomsIn||G.rooms) + '실' : '')
+    + ((G.floorsIn||G.floors) ? ' · ' + (G.floorsIn||G.floors) + '층' : '') + ' · ' + G.star + '성급'
     + (fl.length ? ' · ' + fl.join('/') : '') + '<br>기구물: ' + (got || '—');
 }
 function draw3Go(){ G.prompt = $('#gp').value; render3(); }
 $('#gp').oninput = function(){ G.prompt = this.value; render3(); };
+[['gFloors','floorsIn'], ['gRooms','roomsIn'], ['gNetUp','netUp'], ['gNetDn','netDn']].forEach(function(a){
+  $('#'+a[0]).oninput = function(){ G[a[1]] = this.value.trim(); render3(); };
+});
 
 /* ---- 탭③ 버튼 ---- */
 var KINDB = [{k:'auto',t:'자동'},{k:'system',t:'계통도'},{k:'layout',t:'배치도'},{k:'cover',t:'배너·표지'},{k:'scope',t:'공사한계'}];
