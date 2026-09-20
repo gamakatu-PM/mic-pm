@@ -36,7 +36,8 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .label{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);font-weight:500;font-family:var(--f-body)}
 
 /* header */
-.top{position:sticky;top:0;z-index:30;background:var(--paper);border-bottom:1px solid var(--line)}
+.top{position:sticky;top:0;z-index:30;background:var(--paper);border-bottom:1px solid var(--line);transition:box-shadow .18s}
+.top.stuck{box-shadow:0 6px 20px rgba(16,28,43,.09)}
 .top .wrap{display:flex;align-items:center;gap:20px;min-height:62px;flex-wrap:wrap;padding-block:9px}
 .brand{margin-right:auto;display:flex;align-items:baseline;gap:10px}
 .brand b{font-family:var(--f-disp);font-size:20px;font-weight:700;letter-spacing:.04em}
@@ -71,6 +72,9 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .factbox dd{margin:0;font-size:14px}
 .factbox .fh{padding:16px 20px 0}
 .factbox .fh b{font-family:var(--f-disp);font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font-size:12px;padding:4px 9px;border:1px solid var(--line);background:var(--band);border-radius:2px;white-space:nowrap}
+.chips b{font-family:var(--f-num);font-weight:500;color:var(--brass)}
 
 /* sections */
 section{padding-block:66px;border-bottom:1px solid var(--line)}
@@ -206,11 +210,16 @@ footer .fr{text-align:right;font-family:var(--f-num);font-size:12px;color:rgba(2
 
 /* print center */
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px}
-.tab{font-size:13px;padding:9px 16px;border:1px solid var(--line);background:var(--paper);color:var(--ink2);cursor:pointer;border-radius:2px;font-family:var(--f-body)}
+.tab{font-size:13px;padding:9px 16px;display:inline-flex;align-items:baseline;gap:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink2);cursor:pointer;border-radius:2px;font-family:var(--f-body)}
 .tab[aria-selected="true"]{background:var(--navy2);border-color:var(--navy2);color:#fff}
 .tab:hover{border-color:var(--brass-l)}
+.tab::after{content:attr(data-size);font-family:var(--f-num);font-size:10px;opacity:.55}
+.pnote{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6;border-top:1px solid var(--hair);padding-top:12px}
+.warn{margin-top:12px;font-size:12px;color:#8a5a1e;background:#fbf3e2;border:1px solid #e3cb96;padding:9px 11px;border-radius:2px;line-height:1.6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .warn{color:#e9cf9a;background:#2b2413;border-color:#6d5726}}
+:root[data-theme="dark"] .warn{color:#e9cf9a;background:#2b2413;border-color:#6d5726}
 .pwrap{display:grid;grid-template-columns:1fr 250px;gap:28px;align-items:start}
-.mini{overflow:hidden;border:1px solid var(--line);background:#fff;position:relative}
+.mini{overflow:hidden;border:1px solid var(--line);background:var(--band);position:relative;background-image:linear-gradient(45deg,rgba(0,0,0,.02) 25%,transparent 25%,transparent 75%,rgba(0,0,0,.02) 75%),linear-gradient(45deg,rgba(0,0,0,.02) 25%,transparent 25%,transparent 75%,rgba(0,0,0,.02) 75%);background-size:18px 18px;background-position:0 0,9px 9px}
 .mini .psheet{transform-origin:top left}
 .mini{display:block}
 .pinfo{border:1px solid var(--line);padding:20px;background:var(--card)}
@@ -220,7 +229,8 @@ footer .fr{text-align:right;font-family:var(--f-num);font-size:12px;color:rgba(2
 .pinfo dt{color:var(--muted)}
 .pinfo dd{margin:0;font-family:var(--f-num);font-size:12px}
 .pinfo .btn{width:100%;margin-top:16px}
-.psheet{background:#fff;color:#131c26;box-sizing:border-box}
+.psheet{background:#fff;color:#131c26;box-sizing:border-box;box-shadow:0 2px 18px rgba(16,28,43,.16)}
+.qr-fail{display:flex;align-items:center;justify-content:center;border:1px dashed #b9c0ca;color:#8a94a1;font-size:10px;font-family:var(--f-num)}
 .psheet .qr img,.psheet .qr canvas{display:block}
 /* A4 엘리베이터 */
 .p-a4{width:210mm;height:297mm;padding:22mm 20mm;display:flex;flex-direction:column}
@@ -286,14 +296,17 @@ footer .fr{text-align:right;font-family:var(--f-num);font-size:12px;color:rgba(2
 .setup .sbody p.hint{font-size:12.5px;color:var(--muted);margin:14px 0 16px}
 .setup .fields{grid-template-columns:repeat(3,1fr)}
 .setup .sact{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
-@media (max-width:900px){.pwrap{grid-template-columns:1fr}.setup .fields{grid-template-columns:1fr}}
+@media (max-width:900px){.pwrap{grid-template-columns:1fr}.setup .fields{grid-template-columns:1fr}
+  .pmobile{display:block}}
+.pmobile{display:none;font-size:12.5px;color:var(--muted);border-left:2px solid var(--brass-l);padding-left:12px;margin-bottom:18px}
 
 @media print{
   body{background:#fff}
   body *{visibility:hidden!important}
   .psheet.printing,.psheet.printing *{visibility:visible!important}
   .psheet.printing{position:absolute;left:0;top:0;transform:none!important;box-shadow:none;border:0}
-  .mini{overflow:visible!important;border:0!important}
+  .mini{overflow:visible!important;border:0!important;height:auto!important;background:none!important}
+  .psheet.printing{box-shadow:none!important}
 }
 </style>
 
@@ -329,7 +342,7 @@ footer .fr{text-align:right;font-family:var(--f-num);font-size:12px;color:rgba(2
         <div><dt>위치</dt><dd>지식산업센터 RB104<br><span class="num" style="color:var(--muted);font-size:12.5px">도로 기준 2F · 화단 통로 이용</span></dd></div>
         <div><dt>주문</dt><dd class="num">010-4668-1679</dd></div>
         <div><dt>단체주문</dt><dd>회의·야근 간식, 사무실 배달</dd></div>
-        <div><dt>대표 가격</dt><dd class="num">커피 1,500 · 김밥 3,500 · 덮밥 5,500</dd></div>
+        <div><dt>대표 가격</dt><dd class="chips"><span>커피 <b>1,500</b></span><span>김밥 <b>3,500</b></span><span>덮밥 <b>5,500</b></span></dd></div>
         <div id="hoursRow" hidden><dt>영업시간</dt><dd class="num" id="hoursVal"></dd></div>
       </dl>
     </div>
@@ -453,6 +466,7 @@ footer .fr{text-align:right;font-family:var(--f-num);font-size:12px;color:rgba(2
           <a class="btn o" href="tel:01046681679">전화</a>
         </div>
         <p class="toast" id="toast"></p>
+        <p style="font-size:11.5px;color:rgba(238,241,245,.55);margin-top:2px;line-height:1.6">휴대폰에서는 「문자로 보내기」, 컴퓨터에서는 「복사」 후 붙여넣어 보내 주십시오.</p>
       </div>
     </div>
   </div>
@@ -530,11 +544,12 @@ footer .fr{text-align:right;font-family:var(--f-num);font-size:12px;color:rgba(2
       <p class="note">인쇄소에 그대로 넘길 수 있는 실제 규격입니다. 종류를 고르고 「인쇄」를 누르면 그 한 장만 출력되며, QR은 이 페이지 주소로 자동 생성됩니다.</p>
     </div>
 
+    <p class="pmobile">인쇄물은 컴퓨터에서 인쇄하시는 것이 정확합니다. 휴대폰에서는 미리보기만 확인해 주십시오.</p>
     <div class="tabs no-print" role="tablist">
-      <button type="button" class="tab" role="tab" data-p="p-a4" aria-selected="true">엘리베이터 A4</button>
-      <button type="button" class="tab" role="tab" data-p="p-a1" aria-selected="false">로비 입간판 A1</button>
-      <button type="button" class="tab" role="tab" data-p="p-b1" aria-selected="false">도로가 X배너</button>
-      <button type="button" class="tab" role="tab" data-p="p-b2" aria-selected="false">화단 계단 X배너</button>
+      <button type="button" class="tab" role="tab" data-p="p-a4" data-size="210×297" aria-selected="true">엘리베이터 A4</button>
+      <button type="button" class="tab" role="tab" data-p="p-a1" data-size="594×841" aria-selected="false">로비 입간판 A1</button>
+      <button type="button" class="tab" role="tab" data-p="p-b1" data-size="600×1800" aria-selected="false">도로가 X배너</button>
+      <button type="button" class="tab" role="tab" data-p="p-b2" data-size="600×1800" aria-selected="false">화단 계단 X배너</button>
       <button type="button" class="tab" role="tab" data-p="p-qt" aria-selected="false">단체 견적서</button>
     </div>
 
@@ -637,6 +652,9 @@ footer .fr{text-align:right;font-family:var(--f-num);font-size:12px;color:rgba(2
         </dl>
         <button type="button" class="btn" id="printBtn">인쇄</button>
         <button type="button" class="btn o" id="qtFill" style="margin-top:8px;width:100%">견적서에 계산값 넣기</button>
+        <p class="toast" id="pToast"></p>
+        <p class="pnote">인쇄 창에서 <b>배율 100%</b>, 여백 없음으로 두십시오. 배너·입간판은 파일로 저장해 인쇄소에 넘기셔도 됩니다.</p>
+        <p class="warn" id="qrWarn" hidden>QR을 만들지 못했습니다. 인터넷 연결 후 새로 고치면 다시 생깁니다.</p>
       </aside>
     </div>
   </div>
@@ -805,9 +823,8 @@ $("addrCopy").addEventListener("click", () => copy(ADDR, "주소를 복사했습
 
 /* 확정된 값만 화면에 올린다 */
 function show(rowId, valId, val){
-  if(!val) return;
-  $(valId).textContent = val;
-  $(rowId).hidden = false;
+  $(rowId).hidden = !val;
+  $(valId).textContent = val || "";
 }
 show("hoursRow","hoursVal",STORE.hours);
 show("cutRow","cutVal",STORE.cutoff);
@@ -841,6 +858,7 @@ function selectSheet(id){
   $("pSize").textContent = el.dataset.w + " × " + el.dataset.h + " mm";
   $("pHow").textContent = (+el.dataset.w > 300) ? "실물 크기 · 인쇄소 출력용" : "A4 · 100% 배율";
   $("qtFill").hidden = (id !== "p-qt");
+  setPageSize(el);
   fitMini();
 }
 document.querySelector(".tabs").addEventListener("click", e => {
@@ -848,10 +866,13 @@ document.querySelector(".tabs").addEventListener("click", e => {
 });
 addEventListener("resize", fitMini);
 
+function setPageSize(el){
+  $("pagesize").textContent = "@page{size:" + el.dataset.w + "mm " + el.dataset.h + "mm;margin:0}";
+}
 $("printBtn").addEventListener("click", () => {
   const el = $(current);
   el.style.transform = "";
-  $("pagesize").textContent = "@page{size:" + el.dataset.w + "mm " + el.dataset.h + "mm;margin:0}";
+  setPageSize(el);
   sheets.forEach(x => x.classList.remove("printing"));
   el.classList.add("printing");
   window.print();
@@ -887,7 +908,8 @@ function fillQuote(){
     "· 구성·수량·배달 시간은 통화로 확정합니다."
   ].filter(Boolean).join("<br>");
 }
-$("qtFill").addEventListener("click", () => { fillQuote(); toast("견적서에 계산값을 넣었습니다."); });
+function ptoast(m){ $("pToast").textContent = m; clearTimeout(ptoast.t); ptoast.t = setTimeout(() => { $("pToast").textContent = ""; }, 2600); }
+$("qtFill").addEventListener("click", () => { fillQuote(); ptoast("계산한 품목을 견적서에 넣었습니다."); });
 $("toQuote").addEventListener("click", () => { fillQuote(); selectSheet("p-qt"); });
 
 /* ── 사장님 설정 (이 기기 미리보기) ───────────────────────────── */
@@ -897,10 +919,10 @@ function applySetup(cfg){
   show("cutRow","cutVal",cfg.cutoff);
   show("timeRow","timeVal",cfg.delivery);
   show("minRow","minVal",cfg.minPeople);
-  if(cfg.hours) $("footHours").innerHTML = "<br>영업시간 " + cfg.hours;
+  $("footHours").innerHTML = cfg.hours ? "<br>영업시간 " + cfg.hours : "";
   [["A",cfg.pa],["B",cfg.pb],["C",cfg.pc]].forEach(([k,v]) => {
     const card = [...document.querySelectorAll(".set")].find(c => c.querySelector(".sn").textContent.trim() === "SET " + k);
-    if(card && v) card.querySelector(".sp .v").textContent = won(+v);
+    if(card) card.querySelector(".sp .v").textContent = v ? won(+v) : "통화로 안내";
   });
 }
 function readSetupForm(){
@@ -936,24 +958,32 @@ $("sClear").addEventListener("click", () => {
 });
 
 /* ── QR (인쇄물마다 1개) ──────────────────────────────────────── */
-(function(){
+function buildQR(){
   const url = location.href.split("#")[0];
+  let ok = 0;
   document.querySelectorAll("[data-qr]").forEach(box => {
-    const side = Math.round(box.getBoundingClientRect().width) || 120;
+    box.innerHTML = "";
     if(window.QRCode){
       try{
-        new QRCode(box, { text:url, width:Math.max(96,side), height:Math.max(96,side),
+        /* 배너·입간판까지 선명하도록 항상 512px 로 만들고 CSS 로 줄인다 */
+        new QRCode(box, { text:url, width:512, height:512,
                           colorDark:"#101c2b", colorLight:"#ffffff", correctLevel:QRCode.CorrectLevel.M });
         const img = box.querySelector("img,canvas");
         if(img){ img.style.width = "100%"; img.style.height = "100%"; }
+        ok++;
         return;
       }catch(e){}
     }
-    box.textContent = url;
-    box.style.fontSize = "10px"; box.style.wordBreak = "break-all"; box.style.color = "#6a7482";
+    box.classList.add("qr-fail");
+    box.textContent = "QR";
   });
-})();
+  const warn = $("qrWarn");
+  if(warn) warn.hidden = ok > 0;
+}
+if(window.QRCode){ buildQR(); }
+else { addEventListener("load", buildQR); setTimeout(buildQR, 2500); }
 
+addEventListener("scroll", () => { document.querySelector(".top").classList.toggle("stuck", scrollY > 8); }, {passive:true});
 selectSheet("p-a4");
 fillQuote();
 
