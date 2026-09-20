@@ -137,9 +137,14 @@ def ensure_ini():
     if not c.has_section('산군메일'):
         c.add_section('산군메일'); changed = True
     for k, v in (('to', ''), ('다시찾기일수', '7'), ('출발지', ''), ('kakao_key', ''), ('본문읽기', '예'),
-                 ('한번에', '60'), ('메일에펼칠곳', '25'), ('서식', 'v2')):
+                 ('한번에', '60'), ('메일에펼칠곳', '25'), ('서식', 'v3')):
         if not c.has_option('산군메일', k):
             c.set('산군메일', k, v); changed = True
+    # 어제 깔린 v2 를 v3 로 한 번만 올립니다. 프로님이 다시 v2/v1 로 적으시면 그대로 둡니다.
+    if not c.has_option('산군메일', '서식v3올림'):
+        if (c.get('산군메일', '서식', fallback='') or '').strip().lower() == 'v2':
+            c.set('산군메일', '서식', 'v3')
+        c.set('산군메일', '서식v3올림', '예'); changed = True
     if not c.has_section('역산'):
         c.add_section('역산'); changed = True
         c.set('역산', '실당단가', '')      # 비우면 예상 금액을 안 적습니다 (규칙 19)
@@ -606,17 +611,23 @@ def card(rec, res):
 
 
 def build_html(groups, src, err_n, cards=None, jsonname=''):
-    """설정.ini [산군메일] 서식 = v2(기본) / v1. v1 은 아래 build_html_v1 그대로입니다."""
+    """설정.ini [산군메일] 서식 = v3(기본) / v2 / v1.
+
+    v3 = PC 화면을 쓰는 폭 920px · 맨 위 한눈 목록 · 카드 속을 표 2열로 (2026-09-20)
+    v2 = 카드를 세로로 길게 (2026-09-19)
+    v1 = 표 위주 (맨 처음)
+    """
     cards = cards or []
     c0 = conf()
-    style = opt(c0, '서식', 'v2') or 'v2'
-    if style != 'v1':
-        return SM.build(groups, cards, src, err_n, jsonname,
-                        today().isoformat(), wide=num(c0, '메일에펼칠곳', 25),
-                        top3=(SC.top3(cards) if cards else []),
-                        routes=(SC.routes(cards) if cards else []),
-                        basename=os.path.basename)
-    return build_html_v1(groups, src, err_n, cards, jsonname)
+    style = (opt(c0, '서식', 'v3') or 'v3').strip().lower()
+    if style == 'v1':
+        return build_html_v1(groups, src, err_n, cards, jsonname)
+    fn = SM.build_v2 if style == 'v2' else SM.build
+    return fn(groups, cards, src, err_n, jsonname,
+              today().isoformat(), wide=num(c0, '메일에펼칠곳', 25),
+              top3=(SC.top3(cards) if cards else []),
+              routes=(SC.routes(cards) if cards else []),
+              basename=os.path.basename)
 
 
 def build_html_v1(groups, src, err_n, cards=None, jsonname=''):
