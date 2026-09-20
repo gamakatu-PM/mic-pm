@@ -34,7 +34,7 @@ v2 를 재 보니 진짜 단점이 셋이었습니다. 길이는 손대지 않�
 C = {
     '🔴': ('#C0392B', '#FDECEA'),
     '🟠': ('#C77B2B', '#FEF3E2'),
-    '🟡': ('#2A6099', '#EAF1FB'),
+    '🟡': ('#8A6E00', '#FFF7DC'),   # 이모지가 노란데 파랑이라 어긋나 있었습니다 (v3에서 고침)
     '⚪': ('#8E99A4', '#F5F6F7'),
     '⚫': ('#6B4FA8', '#F1ECFA'),
     '⛔': ('#8E99A4', '#F5F6F7'),
@@ -319,14 +319,33 @@ font-size:15px;line-height:1.55;color:#333}
 border:2px solid #2A6099;border-radius:8px;color:#2A6099;font-size:15px;font-weight:700;text-decoration:none}
 .km .btn.g{border-color:#1a7a4c;color:#1a7a4c}
 .km .row{margin:5px 0;padding:9px 11px;background:#F7F8FA;border-radius:6px;font-size:15px;line-height:1.5}
+.km .chip{display:inline-block;padding:3px 9px;border-radius:12px;font-size:14px;font-weight:800;white-space:nowrap}
+.km .none{color:#9aa0a6;font-weight:400}
+.km td.d{text-align:right;vertical-align:top;padding:6px 0 6px 8px;white-space:nowrap}
 .km .foot{margin-top:20px;padding-top:12px;border-top:1px solid #E5E7EB;font-size:13px;color:#9aa0a6;line-height:1.7}
 </style>"""
 
 
-def kv(label, value):
+def kv(label, value, none=''):
+    """값이 없으면 회색 보통 글씨로 「확인 필요」 라고 적는다 (규칙 12.3 : 빈 항목도 이름을 불러 준다)"""
     if not value:
-        return ''
+        if not none:
+            return ''
+        return '<tr><td class="k">%s</td><td class="v none">%s</td></tr>' % (esc(label), esc(none))
     return '<tr><td class="k">%s</td><td class="v">%s</td></tr>' % (esc(label), esc(value))
+
+
+def chip(D):
+    """납기까지 남은 날을 색 칩 하나로. 지난 것은 빨강, 석 달 안은 주황, 그 밖은 회색"""
+    if D is None or D >= 9999:
+        return ''
+    if D < 0:
+        return '<span class="chip" style="background:#FDECEA;color:#C0392B">%d일 지남</span>' % -D
+    if D <= 30:
+        return '<span class="chip" style="background:#FDECEA;color:#C0392B">D-%d</span>' % D
+    if D <= 90:
+        return '<span class="chip" style="background:#FEF3E2;color:#C77B2B">D-%d</span>' % D
+    return '<span class="chip" style="background:#F1F3F5;color:#5F6B76">D-%d</span>' % D
 
 
 def card3(i, rec, res):
@@ -354,28 +373,28 @@ def card3(i, rec, res):
     h.append(kv('규모', ' · '.join(size)))
     h.append(kv('예상', cd.get('규모금액')))
     h.append(kv('때', ' / '.join(when)))
-    h.append(kv('설계', rec.get('건축설계') or '안 나옴'))
-    h.append(kv('시공', rec.get('시공사') or '안 나옴'))
+    h.append(kv('설계', rec.get('건축설계'), '확인 필요 — 산군에 설계사가 안 나옵니다'))
+    h.append(kv('시공', rec.get('시공사'), '확인 필요 — 아직 시공사가 안 정해졌을 수 있습니다'))
     h.append(kv('건축주', rec.get('건축주')))
     h.append('</table>')
 
     h.append('<div class="note">%s</div>' % esc(res.get('한줄')))
     if cd.get('급한것'):
         h.append('<div class="urg"><div class="sm" style="color:#C0392B;font-weight:800">가장 급한 것</div>'
-                 '<div style="font-size:16px;margin-top:4px;line-height:1.5">%s</div></div>' % esc(cd['급한것']))
+                 '<div style="font-size:16px;margin-top:4px;line-height:1.5">%s %s <b>%s</b></div></div>'
+                 % (chip(cd.get('급한D')), esc(cd.get('급한무엇') or cd['급한것']),
+                    esc(cd.get('급한날') or '')))
     if cd.get('역산'):
         h.append('<div style="margin:12px 0 0"><div class="sm dim" style="font-weight:700">'
                  '언제까지 무엇을 <span style="font-weight:400">(준공 %s 에서 거꾸로 · 추정)</span></div>'
                  % esc(cd.get('준공예정')))
         for x in sorted(cd['역산'], key=lambda x: x['D']):   # 날짜 빠른 것부터 (v3)
-            late = x['D'] < 0
-            h.append('<div class="due%s">%s<div style="margin-top:2px;font-weight:800;color:%s">%s '
-                     '<span style="font-weight:400;color:#777">%s</span></div></div>'
-                     % (' late' if late else '', esc(x['무엇']), '#C0392B' if late else '#111',
-                        esc(x['언제까지']), esc(('이미 %d일 지남' % -x['D']) if late else ('D-%d' % x['D']))))
+            h.append('<div class="due%s">%s<div style="margin-top:2px"><b>%s</b> %s</div></div>'
+                     % (' late' if x['D'] < 0 else '', esc(x['무엇']), esc(x['언제까지']), chip(x['D'])))
         if cd.get('외함의뢰'):
-            h.append('<div class="due">CB외함 작업의뢰서<div style="margin-top:2px;font-weight:800">%s '
-                     '<span style="font-weight:400;color:#777">착공 기준 어림</span></div></div>' % esc(cd['외함의뢰']))
+            h.append('<div class="due">CB외함 작업의뢰서<div style="margin-top:2px"><b>%s</b> %s '
+                     '<span class="sm dim">착공 기준 어림</span></div></div>'
+                     % (esc(cd['외함의뢰']), chip(cd.get('급한D') if cd.get('급한무엇', '').startswith('CB외함') else None)))
         h.append('</div>')
     elif cd.get('외함의뢰'):
         h.append('<div class="due"><span class="dim sm">CB외함 작업의뢰서 (착공 기준 어림)</span>'
@@ -417,24 +436,38 @@ def build(groups, cards, src, err_n, jsonname, today_s, wide=25, top3=None, rout
     h.append('<table width="100%" cellpadding="0" cellspacing="6" style="border-collapse:separate"><tr>')
     for cnt, lab, gg in ((n.get(G[0], 0), '빨리 갈 곳', '🔴'), (n.get(G[1], 0), '물어볼 곳', '🟠'),
                          (n.get(G[2], 0), '아직 이른 곳', '🟡'),
-                         (n.get(G[3], 0) + n.get(G[4], 0) + n.get(G[5], 0), '그 밖', '⚪')):
+                         (n.get(G[3], 0) + n.get(G[4], 0) + n.get(G[5], 0), '흔적 없음·끝남', '⚪')):
         fg, bg = color(gg)
         h.append('<td width="25%%" class="tile" style="background:%s;border:1px solid %s">'
                  '<b style="color:%s">%d</b><span class="sm">%s</span></td>' % (bg, fg, fg, cnt, esc(lab)))
     h.append('</tr></table>')
 
-    if top3:
-        h.append('<div class="box" style="border:3px solid #E8B93B">'
-                 '<div class="hd" style="background:#FFF7DF">오늘 이것만 하십시오</div><div class="pad">')
-        for t in top3:
-            h.append('<div class="line">%s</div>' % esc(t))
-        h.append('</div></div>')
-
-    # ── 한눈 목록 (v1 의 장점을 되살린 것) ──
+    # ── 한눈 목록을 먼저 만듭니다. 「오늘 이것만」 에 카드 번호를 붙여야 해서입니다 ──
     wide_list = []
     for g in G[:3]:
         wide_list += [(g, rec, res) for rec, res in (groups.get(g) or [])]
     shown = wide_list[:wide]
+    no = {}
+    for i, (g, rec, res) in enumerate(shown, 1):
+        no.setdefault(rec.get('현장명'), (i, color(g)[0]))
+
+    if top3:
+        h.append('<div class="box" style="border:3px solid #E8B93B">'
+                 '<div class="hd" style="background:#FFF7DF">오늘 이것만 하십시오</div><div class="pad">')
+        for t in top3:
+            name, text = t if isinstance(t, (tuple, list)) else ('', t)
+            mark = ''
+            if name:
+                if name in no:
+                    i, fg = no[name]
+                    mark = ('<span class="idx" style="background:%s;margin-left:6px">%d</span>'
+                            '<span class="sm dim">번 카드</span>' % (fg, i))
+                else:
+                    # 카드가 없는 현장을 「오늘 이것만」 에 적으면 프로님이 아래에서 못 찾습니다
+                    mark = '<span class="sm dim" style="margin-left:6px">(아래 카드에 없습니다 — 붙임 파일)</span>'
+            h.append('<div class="line">%s%s</div>' % (esc(text), mark))
+        h.append('</div></div>')
+
     if shown:
         h.append('<div class="box" style="border:2px solid #DDD"><div class="hd" style="background:#F4F6F8">'
                  '한눈에 보기 <span class="sm dim" style="font-weight:400">아래 카드와 번호가 같습니다</span></div>'
@@ -442,11 +475,16 @@ def build(groups, cards, src, err_n, jsonname, today_s, wide=25, top3=None, rout
         for i, (g, rec, res) in enumerate(shown, 1):
             cd = res.get('카드') or {}
             fg, _ = color(g)
-            tail = cd.get('급한것') or ''
+            what = (cd.get('급한무엇') or '').replace('(착공 기준 어림)', '')
+            day = cd.get('급한날') or ''
+            D = cd.get('급한D', 9999)
             h.append('<tr><td class="k" style="padding:6px 8px 6px 0"><span class="idx" style="background:%s">%d</span></td>'
-                     '<td class="v" style="padding:6px 0">%s<div class="sm dim" style="font-weight:400;margin-top:2px">%s%s</div></td></tr>'
+                     '<td class="v" style="padding:6px 0">%s'
+                     '<div class="sm dim" style="font-weight:400;margin-top:2px">%s%s</div></td>'
+                     '<td class="d">%s%s</td></tr>'
                      % (fg, i, esc(rec.get('현장명')), esc(rec.get('소재지')),
-                        (' · ' + esc(tail)) if tail else ''))
+                        (' · ' + esc(what)) if what else ' · 착공일이 없어 납기를 못 셌습니다', chip(D),
+                        ('<div class="sm dim" style="margin-top:2px">%s</div>' % esc(day)) if day else ''))
         h.append('</table></div></div>')
 
     if routes:
@@ -463,12 +501,20 @@ def build(groups, cards, src, err_n, jsonname, today_s, wide=25, top3=None, rout
     if due:
         h.append('<div style="margin:16px 0"><div style="font-size:16px;font-weight:800;margin-bottom:6px">'
                  '작업의뢰서 — 급한 순서</div>')
+        h.append('<table cellpadding="0" cellspacing="0" style="width:100%">')
         for c in due[:8]:
-            late = c.get('급한D', 9999) < 0
-            h.append('<div class="row" style="border-left:5px solid %s;background:%s"><b>%s</b><br>'
-                     '<span style="color:#444">%s</span></div>'
+            D = c.get('급한D', 9999)
+            late = D < 0
+            h.append('<tr><td class="v" style="padding:6px 0;border-left:5px solid %s;'
+                     'background:%s;padding-left:9px">%s'
+                     '<div class="sm dim" style="font-weight:400;margin-top:2px">%s%s</div></td>'
+                     '<td class="d" style="background:%s">%s</td></tr>'
                      % ('#C0392B' if late else '#8E99A4', '#FFF4F2' if late else '#F7F8FA',
-                        esc(c['현장명']), esc(c['급한것'])))
+                        esc(c['현장명']),
+                        esc(c.get('급한무엇') or c.get('급한것')),
+                        (' · ' + esc(c.get('급한날'))) if c.get('급한날') else '',
+                        '#FFF4F2' if late else '#F7F8FA', chip(D)))
+        h.append('</table>')
         h.append('<div class="sm dim" style="margin-top:4px">기사에 적힌 준공 예정에서 거꾸로 계산한 추정입니다. '
                  '현장에 확인하시고 쓰십시오.</div></div>')
 

@@ -623,9 +623,13 @@ def build_html(groups, src, err_n, cards=None, jsonname=''):
     if style == 'v1':
         return build_html_v1(groups, src, err_n, cards, jsonname)
     fn = SM.build_v2 if style == 'v2' else SM.build
+    # v3 는 「오늘 이것만」 줄에 카드 번호를 붙이려고 (현장명, 문구) 로 받습니다
+    tops = []
+    if cards:
+        tops = SC.top3(cards) if fn is SM.build_v2 else SC.top3_rows(cards)
     return fn(groups, cards, src, err_n, jsonname,
               today().isoformat(), wide=num(c0, '메일에펼칠곳', 25),
-              top3=(SC.top3(cards) if cards else []),
+              top3=tops,
               routes=(SC.routes(cards) if cards else []),
               basename=os.path.basename)
 

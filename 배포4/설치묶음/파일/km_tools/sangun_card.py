@@ -129,14 +129,22 @@ def rooms(area):
     return int(a / 60.0), int(a / 40.0)
 
 
+def won_eok(manwon):
+    """23,450(만원) → 「2억 3,450만원」. 1억 미만이면 「8,700만원」 그대로."""
+    m = int(manwon)
+    if m >= 10000:
+        eok, rest = divmod(m, 10000)
+        return '%d억%s' % (eok, (' %s만원' % format(rest, ',')) if rest else '원')
+    return '%s만원' % format(m, ',')
+
+
 def money(lo, hi, per):
     """실당 단가는 프로님이 설정.ini [역산] 실당단가 에 넣으신 값만 쓴다. 비면 '' """
     p = to_f(per)
     if not p or not hi:
         return ''
-    return '예상 %s~%s만원 (실당 %s원 × %d~%d실, 프로님 입력값)' % (
-        format(int(lo * p / 10000), ','), format(int(hi * p / 10000), ','),
-        format(int(p), ','), lo, hi)
+    return '예상 %s ~ %s (실당 %s원 × %d~%d실, 프로님 입력값)' % (
+        won_eok(lo * p / 10000), won_eok(hi * p / 10000), format(int(p), ','), lo, hi)
 
 
 SIDO = [('서울', '서울'), ('부산', '부산'), ('대구', '대구'), ('인천', '인천'), ('광주', '광주'),
@@ -190,6 +198,8 @@ def build(rec, res, c, days=None):
         '역산': [],
         '외함의뢰': '',
         '급한것': '',
+        '급한무엇': '',
+        '급한날': '',
         '급한D': 9999,
     }
 
@@ -211,37 +221,68 @@ def build(rec, res, c, days=None):
         cand.sort(key=lambda x: x['D'])
         x = cand[0]
         card['급한D'] = x['D']
+        card['급한무엇'] = x['무엇']      # 메일에서 따로 쓰려고 나눠 둔 것
+        card['급한날'] = x['언제까지']
         card['급한것'] = ('%s — %s (%s)' %
                         (x['무엇'], x['언제까지'],
                          ('이미 %d일 지났습니다' % -x['D']) if x['D'] < 0 else 'D-%d' % x['D']))
     return card
 
 
-def top3(cards):
-    """오늘 딱 할 것 세 줄 — 비서가 맨 위에 적어 드리는 것"""
-    out = []
+def hit_word(c):
+    """한줄 「착공·기공」 에서 기사에 실제로 있던 낱말만 꺼낸다. 없으면 '' """
+    m = re.search('\u300c(.+?)\u300d', c.get('한줄') or '')
+    return m.group(1) if m else ''
+
+
+def cut(s, n):
+    """자를 때는 말줄임표를 붙인다 (전에는 말이 중간에서 끊겼습니다)"""
+    s = (s or '').strip()
+    return s if len(s) <= n else (s[:n].rstrip() + '…')
+
+
+def top3_rows(cards):
+    """오늘 딱 할 것 세 줄 — (현장명, 문구). 세 줄이 서로 다른 현장이 되게 한다.
+    ①은 기사에 실제로 있던 낱말만 적는다(GO 에는 「실시설계·수주」도 들어 있어
+    무조건 「착공했습니다」 라고 적으면 틀립니다)."""
+    out, used = [], set()
     red = [c for c in cards if c['등급'].startswith('🔴')]
     orange = [c for c in cards if c['등급'].startswith('🟠')]
     late = sorted([c for c in cards if c.get('급한D', 9999) < 90], key=lambda c: c['급한D'])
     if red:
         c = red[0]
-        out.append('① %s — 착공했습니다. %s 에 오늘 전화하십시오.%s'
-                   % (c['현장명'], c['설계사'] or c['시공사'] or '설계사',
-                      (' ' + c['급한것']) if c['급한것'] else ''))
+        w = hit_word(c)
+        out.append((c['현장명'], '%s — 기사에 %s 가 떴습니다. %s 에 오늘 전화하십시오.%s'
+                    % (c['현장명'], ('\u300c%s\u300d' % w) if w else '공사 시작 낱말',
+                       c['설계사'] or c['시공사'] or '설계사',
+                       (' ' + c['급한것']) if c['급한것'] else '')))
+        used.add(c['현장명'])
     for c in late:
-        if red and c['현장명'] == red[0]['현장명']:
+        if c['현장명'] in used:
             continue
-        head = '② %s — %s' % (c['현장명'], c['급한것'] or '납기가 가깝습니다')
+        head = '%s — %s' % (c['현장명'], c['급한것'] or '납기가 가깝습니다')
         if c['급한D'] < 0:
             head += ' 이미 늦었는지 현장에 확인하십시오.'
-        out.append(head)
+        out.append((c['현장명'], head))
+        used.add(c['현장명'])
         break
-    if orange:
-        c = orange[0]
-        out.append('③ %s — 상황을 물어보셔야 합니다. %s' % (c['현장명'], c['한줄'][:60]))
-    while len(out) < 1:
-        out.append('오늘 급한 것은 없습니다. 아래 목록만 훑어보십시오.')
-    return out[:3]
+    for c in orange:
+        if c['현장명'] in used:
+            continue
+        out.append((c['현장명'], '%s — 상황을 물어보셔야 합니다. %s'
+                    % (c['현장명'], cut(c['한줄'], 60))))
+        used.add(c['현장명'])
+        break
+    if not out:
+        out.append(('', '오늘 급한 것은 없습니다. 아래 목록만 훑어보십시오.'))
+    # 번호는 마지막에 붙인다 (빨간 현장이 없는 날 \u2460 이 빠져 보이던 것)
+    n = ['\u2460', '\u2461', '\u2462']
+    return [(nm, '%s %s' % (n[i], t)) for i, (nm, t) in enumerate(out[:3])]
+
+
+def top3(cards):
+    """예전 서식(v1·v2)이 쓰는 글자만 돌려주는 것"""
+    return [t for _, t in top3_rows(cards)]
 
 
 def routes(cards):
