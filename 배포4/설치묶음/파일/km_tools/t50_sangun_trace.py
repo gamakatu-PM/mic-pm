@@ -75,6 +75,7 @@ from common import (INI, HERE, cfg, title, ask, pause, today, ymd6, outdir,
                     write_csv, won, log, open_file)
 import common
 import sangun_card as SC
+import sangun_mail as SM
 
 TOOL = '산군흔적'
 TASK = 'KM_산군메일_주1회'
@@ -136,7 +137,7 @@ def ensure_ini():
     if not c.has_section('산군메일'):
         c.add_section('산군메일'); changed = True
     for k, v in (('to', ''), ('다시찾기일수', '7'), ('출발지', ''), ('kakao_key', ''), ('본문읽기', '예'),
-                 ('한번에', '60'), ('메일에펼칠곳', '25')):
+                 ('한번에', '60'), ('메일에펼칠곳', '25'), ('서식', 'v2')):
         if not c.has_option('산군메일', k):
             c.set('산군메일', k, v); changed = True
     if not c.has_section('역산'):
@@ -605,6 +606,20 @@ def card(rec, res):
 
 
 def build_html(groups, src, err_n, cards=None, jsonname=''):
+    """설정.ini [산군메일] 서식 = v2(기본) / v1. v1 은 아래 build_html_v1 그대로입니다."""
+    cards = cards or []
+    c0 = conf()
+    style = opt(c0, '서식', 'v2') or 'v2'
+    if style != 'v1':
+        return SM.build(groups, cards, src, err_n, jsonname,
+                        today().isoformat(), wide=num(c0, '메일에펼칠곳', 25),
+                        top3=(SC.top3(cards) if cards else []),
+                        routes=(SC.routes(cards) if cards else []),
+                        basename=os.path.basename)
+    return build_html_v1(groups, src, err_n, cards, jsonname)
+
+
+def build_html_v1(groups, src, err_n, cards=None, jsonname=''):
     cards = cards or []
     n = {k: len(v) for k, v in groups.items()}
     h = ['<div style="font-family:맑은 고딕,system-ui;font-size:14px;line-height:1.5">']
