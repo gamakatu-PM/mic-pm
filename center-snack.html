@@ -9,14 +9,56 @@
 <meta property="og:title" content="센터간식 — 같은 건물 안에서 해결하는 점심">
 <meta property="og:description" content="회의·야근 간식 단체주문. 5인부터 사무실로 가져다드립니다.">
 <meta property="og:type" content="restaurant.restaurant">
+<meta property="og:image" content="center-snack-og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="center-snack-og.png">
+<link rel="icon" type="image/png" sizes="512x512" href="center-snack-icon-512.png">
+<link rel="apple-touch-icon" href="center-snack-icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@400;500;600;700&family=IBM+Plex+Sans+KR:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"Restaurant",
+  "name":"센터간식",
+  "alternateName":"CENTER SNACK",
+  "image":"center-snack-og.png",
+  "telephone":"+82-10-4668-1679",
+  "servesCuisine":["한식","분식","샌드위치","커피"],
+  "priceRange":"₩1,000-6,500",
+  "address":{
+    "@type":"PostalAddress",
+    "streetAddress":"사기막골로62번길 33 지하1층 RB104호",
+    "addressLocality":"성남시 중원구",
+    "addressRegion":"경기도",
+    "addressCountry":"KR"
+  },
+  "hasMenu":{
+    "@type":"Menu",
+    "hasMenuSection":[{
+      "@type":"MenuSection","name":"자주 나가는 메뉴",
+      "hasMenuItem":[
+        {"@type":"MenuItem","name":"진라면 세트","offers":{"@type":"Offer","price":"5500","priceCurrency":"KRW"}},
+        {"@type":"MenuItem","name":"짜파게티 세트","offers":{"@type":"Offer","price":"6000","priceCurrency":"KRW"}},
+        {"@type":"MenuItem","name":"제육덮밥","offers":{"@type":"Offer","price":"5500","priceCurrency":"KRW"}},
+        {"@type":"MenuItem","name":"클럽샌드위치","offers":{"@type":"Offer","price":"3500","priceCurrency":"KRW"}},
+        {"@type":"MenuItem","name":"센터김밥","offers":{"@type":"Offer","price":"3500","priceCurrency":"KRW"}},
+        {"@type":"MenuItem","name":"커피","offers":{"@type":"Offer","price":"1500","priceCurrency":"KRW"}}
+      ]
+    }]
+  }
+}
+</script>
 <style>
 :root{
   --ink:#0B0F14; --ink2:#111820; --gold:#C6A16A; --cream:#F4F1EA;
   --fg:#F2F0EC; --fg2:#9AA2AC; --fg3:#6E7680; --fg4:#5E656E;
   --line:rgba(198,161,106,.16); --line2:rgba(198,161,106,.3);
+  --fg5:#7A828C;
   --pad:22px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -26,6 +68,14 @@ body{background:var(--ink);color:var(--fg);font-family:'IBM Plex Sans KR',-apple
 img{max-width:100%;display:block}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.btn,.lnk,.slot,.pset,.step,.callpill,.callbtn,.dock a{transition:background .16s ease,box-shadow .16s ease,color .16s ease}
+.btn-g:hover{background:#D8B478}
+.btn-o:hover,.lnk:hover,.slot:hover,.pset:hover{box-shadow:inset 0 0 0 1px var(--gold);color:var(--fg)}
+.step:hover{background:rgba(198,161,106,.12)}
+.reveal{opacity:0;transform:translateY(18px)}
+.reveal.in{opacity:1;transform:none;transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}
+@media (prefers-reduced-motion: reduce){.reveal{opacity:1;transform:none}}
 .d{font-family:'Hahmlet','IBM Plex Sans KR',serif}
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 .kicker{font-size:9.5px;font-weight:600;letter-spacing:3.8px;text-transform:uppercase}
@@ -49,9 +99,9 @@ header{position:sticky;top:0;z-index:50;background:rgba(11,15,20,.92);backdrop-f
 .wordmark{font-size:16.5px;font-weight:600;letter-spacing:3px;line-height:1}
 .sub{font-size:7.5px;font-weight:500;letter-spacing:3.4px;color:var(--fg3);padding-top:4px}
 .nav{display:none;gap:22px;align-items:center}
-.nav a{font-size:13.5px;font-weight:400;color:#B9C0C9}
+.nav a{font-size:13.5px;font-weight:400;color:#B9C0C9;padding:12px 2px}
 .nav a:hover{color:var(--gold)}
-.callbtn{display:grid;place-items:center;width:38px;height:38px;box-shadow:inset 0 0 0 1px var(--line2)}
+.callbtn{display:grid;place-items:center;width:44px;height:44px;box-shadow:inset 0 0 0 1px var(--line2)}
 .callpill{display:none;font-size:13.5px;font-weight:600;color:var(--ink);background:var(--gold);padding:11px 22px}
 
 /* 히어로 */
@@ -59,6 +109,12 @@ header{position:sticky;top:0;z-index:50;background:rgba(11,15,20,.92);backdrop-f
 .hero .glow{position:absolute;left:0;right:0;top:0;height:320px;
   background:radial-gradient(90% 70% at 12% 0%,rgba(198,161,106,.10),transparent 70%);pointer-events:none}
 .hero .wm{position:absolute;right:-128px;top:-34px;opacity:.05;pointer-events:none}
+.pane{display:none}
+.pcard{background:var(--ink2);box-shadow:inset 0 0 0 1px var(--line);padding:26px 28px}
+.prow{display:flex;align-items:baseline;gap:14px;padding:13px 0;border-bottom:1px solid rgba(198,161,106,.12)}
+.prow:last-child{border-bottom:0}
+.pn{font-size:16px;font-weight:400}
+.pp{font-size:18px;font-weight:600;color:var(--gold);margin-left:auto}
 .h1{font-size:clamp(40px,11.5vw,50px);font-weight:600;line-height:1.22;letter-spacing:-2.4px}
 .h1 em{font-style:normal;color:var(--gold)}
 .rule{height:1px;background:var(--line2)}
@@ -89,7 +145,7 @@ header{position:sticky;top:0;z-index:50;background:rgba(11,15,20,.92);backdrop-f
 .set .nm{font-size:17px;font-weight:500;letter-spacing:-.4px}
 .set .pr{font-size:16px;font-weight:600;color:var(--gold);margin-left:auto}
 .set .de{font-size:13px;font-weight:300;line-height:1.9;color:#8A9099;padding:9px 0 0 28px}
-.set .no{font-size:11px;color:var(--fg4);padding:3px 0 0 28px;letter-spacing:.2px}
+.set .no{font-size:11px;color:var(--fg5);padding:3px 0 0 28px;letter-spacing:.2px}
 .tag{font-size:9px;font-weight:600;letter-spacing:1.6px;color:var(--ink);background:var(--gold);padding:3px 7px}
 
 .rules{box-shadow:inset 0 0 0 1px rgba(198,161,106,.2)}
@@ -99,15 +155,15 @@ header{position:sticky;top:0;z-index:50;background:rgba(11,15,20,.92);backdrop-f
 
 /* 주문서 */
 .order{box-shadow:inset 0 0 0 1px rgba(198,161,106,.24)}
-.orow{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(198,161,106,.12)}
+.orow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(198,161,106,.12)}
 .orow:last-child{border-bottom:0}
-.step{width:32px;height:32px;display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--line2);color:var(--gold);font-size:16px}
+.step{width:44px;height:44px;display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--line2);color:var(--gold);font-size:17px}
 .step:active{background:rgba(198,161,106,.14)}
-.qty{font-size:15px;font-weight:600;width:22px;text-align:center;color:var(--fg4)}
+.qty{font-size:15px;font-weight:600;width:26px;text-align:center;color:var(--fg5)}
 .qty.on{color:var(--gold)}
-.pset{padding:14px 8px;box-shadow:inset 0 0 0 1px rgba(198,161,106,.22);text-align:left}
+.pset{padding:14px 9px;min-height:44px;box-shadow:inset 0 0 0 1px rgba(198,161,106,.22);text-align:left}
 .pset.on{box-shadow:inset 0 0 0 1px var(--gold)}
-.slot{padding:15px 0;box-shadow:inset 0 0 0 1px rgba(198,161,106,.22);font-size:14px;font-weight:500;color:#8A9099}
+.slot{padding:16px 0;min-height:44px;box-shadow:inset 0 0 0 1px rgba(198,161,106,.22);font-size:14px;font-weight:500;color:#8A9099}
 .slot.on{box-shadow:inset 0 0 0 1px var(--gold);color:var(--gold)}
 .total{background:var(--cream);color:#14181D;padding:22px 20px}
 .total .big{font-family:'Hahmlet',serif;font-size:40px;font-weight:700;letter-spacing:-2px;line-height:1}
@@ -146,8 +202,8 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
   .bar .callbtn{display:none}
   .wordmark{font-size:18px;letter-spacing:3.4px}
   .hero{padding:96px var(--pad) 96px;display:grid;grid-template-columns:1.2fr 1fr;gap:0;align-items:center}
-  .hero .pane{background:var(--ink2);box-shadow:inset 1px 0 0 var(--line);min-height:520px;
-    display:flex;flex-direction:column;justify-content:flex-end;padding:32px;margin:-96px calc(var(--pad) * -1) -96px 0}
+  .pane{display:flex;flex-direction:column;justify-content:center;padding:0 0 0 56px;
+    border-left:1px solid var(--line);min-height:460px}
   .h1{font-size:72px;letter-spacing:-4px;line-height:1.17}
   .cta{flex-direction:row}
   .btn{padding:19px 32px;font-size:16px}
@@ -169,6 +225,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
   .map{height:340px}
   .dock{display:none}
   .ordergrid{display:grid;grid-template-columns:1.25fr 1fr;gap:48px;align-items:start}
+  .ordergrid > div:last-child{position:sticky;top:104px}
 }
 </style>
 </head>
@@ -230,10 +287,22 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E7680" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     </div>
   </div>
-  <div class="pane" style="display:none">
-    <div style="font-size:10.5px;font-weight:500;letter-spacing:2.6px;color:#4E5761">사진 자리</div>
-    <div style="font-size:12.5px;font-weight:300;color:#616B77;padding-top:8px;line-height:1.8">매장 또는 단체 도시락 한 상 · 세로 4:5</div>
-  </div>
+  <aside class="pane">
+    <div class="kicker" style="color:var(--gold)">오늘의 점심</div>
+    <div style="height:18px"></div>
+    <div class="pcard">
+      <div class="prow"><span class="pn">제육덮밥</span><span class="d num pp">5,500</span></div>
+      <div class="prow"><span class="pn">센터김밥</span><span class="d num pp">3,500</span></div>
+      <div class="prow"><span class="pn">진라면 세트</span><span class="d num pp">5,500</span></div>
+      <div class="prow"><span class="pn">클럽샌드위치</span><span class="d num pp">3,500</span></div>
+      <div class="prow"><span class="pn">커피 <span style="font-size:11.5px;font-weight:300;color:var(--fg3)">HOT · ICE</span></span><span class="d num pp">1,500</span></div>
+    </div>
+    <div style="height:18px"></div>
+    <div style="display:flex;align-items:center;gap:9px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C6A16A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+      <span style="font-size:11.5px;font-weight:300;color:var(--fg5);letter-spacing:.3px">이 밖에 약 30가지 · 아래 메뉴에서 전부 보실 수 있습니다</span>
+    </div>
+  </aside>
 </section>
 </div>
 
@@ -248,7 +317,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
 
 <!-- 01 단체주문 -->
 <section class="sec" id="order">
-  <div class="shead">
+  <div class="shead reveal">
     <div class="ord num">01</div>
     <div style="padding-top:4px">
       <div class="kicker" style="color:var(--gold)">GROUP ORDER</div>
@@ -260,7 +329,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
   <p class="body" style="font-size:13.5px">5인부터 사무실로 가져다드립니다. 인원은 한 명 단위로 조정됩니다.</p>
   <div style="height:30px"></div>
 
-  <div class="setgrid">
+  <div class="setgrid reveal">
     <div class="sets">
       <div class="set">
         <div class="row"><span class="d ab">A</span><span class="nm">가볍게</span><span class="num pr">30,000</span></div>
@@ -290,17 +359,17 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
   </p>
 
   <div style="height:26px"></div>
-  <div class="rules">
+  <div class="rules reveal">
     <div class="r2"><span class="kicker" style="color:var(--fg3);font-size:9px">주문 마감</span><span class="v">전날 오후 3시</span></div>
     <div class="r2"><span class="kicker" style="color:var(--fg3);font-size:9px">배달 시간</span><span class="v num">오전 11시 · 오후 3시</span></div>
     <div class="r2"><span class="kicker" style="color:var(--fg3);font-size:9px">최소 인원</span><span class="v num">5인</span></div>
   </div>
-  <p style="font-size:10.5px;font-weight:300;color:var(--fg4);padding-top:9px;letter-spacing:.3px">※ 위 세 가지는 아직 확정 전입니다</p>
+  <p style="font-size:10.5px;font-weight:300;color:var(--fg5);padding-top:9px;letter-spacing:.3px">※ 위 세 가지는 아직 확정 전입니다</p>
 </section>
 
 <!-- 주문서 -->
 <section class="sec" id="sheet" style="padding-top:44px">
-  <div class="ordergrid">
+  <div class="ordergrid reveal">
     <div>
       <div class="kicker" style="color:var(--gold)">ORDER SHEET</div>
       <div style="height:12px"></div>
@@ -328,6 +397,12 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
       <div class="kicker" style="color:var(--fg3);font-size:9px">품목 · 가격은 매장 정가입니다</div>
       <div style="height:14px"></div>
       <div id="items" style="border-top:1px solid var(--line2)"></div>
+      <noscript>
+        <div style="padding:18px;box-shadow:inset 0 0 0 1px var(--line2);font-size:13.5px;line-height:1.9;color:var(--fg2)">
+          자동 계산이 동작하지 않는 환경입니다. 아래로 전화 주시면 바로 안내드립니다.<br>
+          <a href="tel:01046681679" class="num" style="color:var(--gold);font-weight:600">010-4668-1679</a>
+        </div>
+      </noscript>
 
       <div style="height:26px"></div>
       <div class="kicker" style="color:var(--fg3);font-size:9px">받는 시간</div>
@@ -370,7 +445,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
       <div style="height:9px"></div>
       <button class="btn btn-o" id="copyBtn" style="width:100%;justify-content:center">주문 내용 복사</button>
       <div style="height:14px"></div>
-      <p style="font-size:11px;font-weight:300;color:var(--fg4);line-height:1.95">
+      <p style="font-size:11px;font-weight:300;color:var(--fg5);line-height:1.95">
         회사명·호실·연락처는 문자에서 직접 적어 주세요. 메뉴는 이 밖에도 약 30가지가 있습니다.
       </p>
     </div>
@@ -382,7 +457,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
 <!-- 02 메뉴 -->
 <div class="cream" id="menu">
 <div class="wrap">
-  <div class="shead">
+  <div class="shead reveal">
     <div class="ord num">02</div>
     <div style="padding-top:4px">
       <div class="kicker">MENU</div>
@@ -391,7 +466,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
     </div>
   </div>
   <div style="height:32px"></div>
-  <div class="twocol">
+  <div class="twocol reveal">
     <div>
       <div class="mrow"><span class="n">진라면 세트</span><span class="s">꼬마김밥 3줄</span><span class="d num p">5,500</span></div>
       <div class="mrow"><span class="n">짜파게티 세트</span><span class="s">꼬마김밥 3줄</span><span class="d num p">6,000</span></div>
@@ -404,7 +479,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
     </div>
   </div>
   <div style="height:34px"></div>
-  <div class="cats">
+  <div class="cats reveal">
     <div><div class="kicker" style="font-size:9px">밥</div><div class="cat num">덮밥(제육·스팸마요·김치스팸) 5,500 · 센터김밥 3,500 · 매운어묵김밥 4,000 · 스팸김밥 4,500 · 사골떡만두국+공기밥 6,500</div></div>
     <div><div class="kicker" style="font-size:9px">면 · 분식</div><div class="cat num">라면 3,500~4,000 (토핑 +1,000) · 짜파게티+계란후라이 4,500 · 떡볶이 4,000 · 라볶이 5,000 · 오뎅 1,000</div></div>
     <div><div class="kicker" style="font-size:9px">빵 · 버거</div><div class="cat num">샌드위치·토스트 3,000~3,500 · 미니햄버거 4,000 · 뉴욕핫도그 4,000 · 돈까스샌드위치 5,000 · 점보버거 5,000</div></div>
@@ -416,7 +491,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
 <div class="wrap">
 <!-- 03 오시는 길 -->
 <section class="sec" id="loc">
-  <div class="shead">
+  <div class="shead reveal">
     <div class="ord num">03</div>
     <div style="padding-top:4px">
       <div class="kicker" style="color:var(--gold)">LOCATION</div>
@@ -425,7 +500,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
     </div>
   </div>
   <div style="height:28px"></div>
-  <div class="loc">
+  <div class="loc reveal">
     <div class="map"><span style="font-size:10px;letter-spacing:2px;color:#4E5761">지도 · 카카오맵 삽입</span></div>
     <div>
       <div style="height:24px"></div>
@@ -454,7 +529,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
     </svg>
     <span class="d" style="font-size:15px;font-weight:600;letter-spacing:2.6px">센터간식</span>
   </div>
-  <div class="num" style="font-size:11.5px;font-weight:300;color:var(--fg4);padding-top:14px;line-height:2">
+  <div class="num" style="font-size:11.5px;font-weight:300;color:var(--fg5);padding-top:14px;line-height:2">
     성남시 중원구 사기막골로62번길 33 지하1층 RB104호<br>010-4668-1679
   </div>
 </footer>
@@ -492,6 +567,29 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
   CATALOG.forEach(function(c){ st.qty[c.id] = 0; });
 
   function comma(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  // 아이폰은 sms:번호&body=, 안드로이드는 sms:번호?body= 를 쓴다.
+  var UA = navigator.userAgent || '';
+  var IS_IOS = /iPad|iPhone|iPod/.test(UA) || (UA.indexOf('Mac') > -1 && 'ontouchend' in document);
+  var IS_MOBILE = IS_IOS || /Android|Mobile|Windows Phone/i.test(UA);
+  function smsHref(text){
+    return 'sms:' + TELRAW + (IS_IOS ? '&' : '?') + 'body=' + encodeURIComponent(text);
+  }
+  function copyText(text, btn, done){
+    function ok(){ var t = btn.getAttribute('data-label') || btn.textContent;
+      btn.setAttribute('data-label', t); btn.textContent = done;
+      setTimeout(function(){ btn.textContent = btn.getAttribute('data-label'); }, 1800); }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(ok, function(){ window.prompt('주문 내용을 복사하세요', text); });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); ok(); }
+      catch(e){ window.prompt('주문 내용을 복사하세요', text); }
+      document.body.removeChild(ta);
+    }
+  }
 
   function applyPreset(key){
     var per = RECIPE[key].per;
@@ -568,7 +666,7 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
       ? ('1인당 약 ' + comma(Math.round(m.total / st.people)) + '원 · ' + st.people + '명 기준')
       : '인원과 품목을 고르면 1인당 금액이 나옵니다';
     document.getElementById('msgT').textContent    = m.text;
-    document.getElementById('smsBtn').href         = 'sms:' + TELRAW + '?body=' + encodeURIComponent(m.text);
+    document.getElementById('smsBtn').href         = smsHref(m.text);
     [].forEach.call(document.querySelectorAll('.slot'), function(b){
       b.classList.toggle('on', b.dataset.slot === st.slot);
     });
@@ -590,24 +688,41 @@ footer{margin-top:50px;padding:34px var(--pad) 42px;border-top:1px solid var(--l
     } else if (t.dataset.slot){
       st.slot = t.dataset.slot; render();
     } else if (t.id === 'copyBtn'){
-      var txt = message().text;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(txt).then(function(){
-          t.textContent = '복사했습니다';
-          setTimeout(function(){ t.textContent = '주문 내용 복사'; }, 1600);
-        });
-      } else { window.prompt('주문 내용을 복사하세요', txt); }
+      copyText(message().text, t, '복사했습니다 — 카톡에 붙여넣으세요');
     }
   });
 
-  // 데스크톱에서만 히어로 사진 자리를 보여준다
-  function panes(){
-    var pane = document.querySelector('.hero .pane');
-    if (pane) pane.style.display = window.matchMedia('(min-width:900px)').matches ? 'flex' : 'none';
+  // PC에는 문자 앱이 없다 — 문자 버튼을 복사 버튼으로 바꾼다
+  function adaptSendButton(){
+    var sms = document.getElementById('smsBtn');
+    if (IS_MOBILE) return;
+    sms.setAttribute('role', 'button');
+    sms.removeAttribute('href');
+    sms.style.cursor = 'pointer';
+    sms.querySelector('span').textContent = '주문 내용 복사하기';
+    sms.addEventListener('click', function(e){
+      e.preventDefault();
+      copyText(message().text, sms.querySelector('span'), '복사했습니다 — 카톡·문자에 붙여넣으세요');
+    });
+    var copy = document.getElementById('copyBtn');
+    copy.textContent = '전화로 주문 · ' + TEL;
+    copy.addEventListener('click', function(){ window.location.href = 'tel:' + TELRAW; });
+    copy.id = 'callBtn';
   }
-  window.addEventListener('resize', panes);
 
-  applyPreset('A'); render(); panes();
+  // 스크롤에 따라 구역이 떠오른다
+  function reveals(){
+    var els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      [].forEach.call(els, function(e){ e.classList.add('in'); }); return;
+    }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
+    [].forEach.call(els, function(e){ io.observe(e); });
+  }
+
+  applyPreset('A'); render(); adaptSendButton(); reveals();
 })();
 </script>
 </body>
