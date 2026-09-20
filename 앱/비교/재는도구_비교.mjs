@@ -4,7 +4,7 @@ const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const st=fs.readFileSync('state.json','utf8');
 const tabs=[['map','여정'],['today','오늘'],['sites','현장'],['ask','창고']];
 const out={};
-for(const [tag,path] of [['1호','split/index.html'],['2호','v2/index.html']]){
+for(const [tag,path] of [['1호','split/index.html'],['2호','v2/index.html'],['3호','v3/index.html']]){
   const ctx=await b.newContext({viewport:{width:390,height:844},deviceScaleFactor:2});
   const p=await ctx.newPage();p.setDefaultTimeout(3000);
   await p.addInitScript(s=>{try{localStorage.setItem('km6_state',s)}catch(e){}},st);
