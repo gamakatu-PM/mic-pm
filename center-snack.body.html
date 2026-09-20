@@ -203,15 +203,101 @@ footer .fr{text-align:right;font-family:var(--f-num);font-size:12px;color:rgba(2
   .wrap{padding-inline:18px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* print center */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px}
+.tab{font-size:13px;padding:9px 16px;border:1px solid var(--line);background:var(--paper);color:var(--ink2);cursor:pointer;border-radius:2px;font-family:var(--f-body)}
+.tab[aria-selected="true"]{background:var(--navy2);border-color:var(--navy2);color:#fff}
+.tab:hover{border-color:var(--brass-l)}
+.pwrap{display:grid;grid-template-columns:1fr 250px;gap:28px;align-items:start}
+.mini{overflow:hidden;border:1px solid var(--line);background:#fff;position:relative}
+.mini .psheet{transform-origin:top left}
+.mini{display:block}
+.pinfo{border:1px solid var(--line);padding:20px;background:var(--card)}
+.pinfo h4{font-family:var(--f-disp);font-size:15px}
+.pinfo dl{margin:14px 0 0}
+.pinfo div{display:grid;grid-template-columns:62px 1fr;gap:10px;padding-block:7px;border-bottom:1px solid var(--hair);font-size:12.5px}
+.pinfo dt{color:var(--muted)}
+.pinfo dd{margin:0;font-family:var(--f-num);font-size:12px}
+.pinfo .btn{width:100%;margin-top:16px}
+.psheet{background:#fff;color:#131c26;box-sizing:border-box}
+.psheet .qr img,.psheet .qr canvas{display:block}
+/* A4 엘리베이터 */
+.p-a4{width:210mm;height:297mm;padding:22mm 20mm;display:flex;flex-direction:column}
+.p-a4 .kick{font-size:4mm;letter-spacing:.3em;color:#8a6a2f}
+.p-a4 h3{font-size:15mm;line-height:1.25;margin-top:6mm;color:#101c2b}
+.p-a4 .lead{font-size:4.6mm;color:#3d4854;margin-top:5mm;line-height:1.7}
+.p-a4 .plist{list-style:none;margin:10mm 0 0;padding:0}
+.p-a4 .plist li{display:flex;justify-content:space-between;gap:6mm;font-size:5.4mm;padding-block:3.2mm;border-bottom:.3mm solid #e6e9ee}
+.p-a4 .plist li span{font-family:var(--f-num)}
+.p-a4 .pfoot{margin-top:auto;padding-top:6mm;border-top:.8mm solid #101c2b;display:flex;justify-content:space-between;align-items:flex-end;gap:8mm}
+.p-a4 .pfoot .t{font-size:4.4mm;color:#3d4854;line-height:1.75}
+.p-a4 .pfoot .t b{font-size:7mm;font-family:var(--f-num);color:#101c2b}
+.p-a4 .qr{width:30mm;height:30mm;flex:0 0 auto}
+/* A1 입간판 */
+.p-a1{width:594mm;height:841mm;padding:60mm 50mm;display:flex;flex-direction:column;background:#101c2b;color:#eef1f5}
+.p-a1 .kick{font-size:9mm;letter-spacing:.32em;color:#c9a35a}
+.p-a1 h3{font-size:44mm;line-height:1.2;margin-top:16mm;color:#fff}
+.p-a1 .lead{font-size:13mm;color:rgba(238,241,245,.8);margin-top:14mm;font-weight:300}
+.p-a1 .plist{list-style:none;margin:30mm 0 0;padding:0}
+.p-a1 .plist li{display:flex;justify-content:space-between;gap:14mm;font-size:15mm;padding-block:8mm;border-bottom:.6mm solid rgba(238,241,245,.22)}
+.p-a1 .plist li span{font-family:var(--f-num);color:#c9a35a}
+.p-a1 .pfoot{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:20mm;padding-top:20mm;border-top:2mm solid #c9a35a}
+.p-a1 .pfoot .t{font-size:11mm;line-height:1.7}
+.p-a1 .pfoot .t b{font-size:22mm;font-family:var(--f-num);color:#c9a35a;display:block;margin-top:4mm}
+.p-a1 .qr{width:90mm;height:90mm;background:#fff;padding:4mm;flex:0 0 auto}
+/* X배너 600x1800 */
+.p-bn{width:600mm;height:1800mm;padding:90mm 60mm;display:flex;flex-direction:column;background:#fff}
+.p-bn .kick{font-size:14mm;letter-spacing:.36em;color:#8a6a2f}
+.p-bn h3{font-size:74mm;line-height:1.18;margin-top:26mm;color:#101c2b;letter-spacing:-.02em}
+.p-bn .big{font-size:34mm;color:#3d4854;margin-top:34mm;line-height:1.6;font-weight:300}
+.p-bn .prices{list-style:none;margin:50mm 0 0;padding:0}
+.p-bn .prices li{display:flex;justify-content:space-between;gap:20mm;font-size:30mm;padding-block:15mm;border-bottom:1mm solid #e6e9ee}
+.p-bn .prices li span{font-family:var(--f-num);color:#101c2b}
+.p-bn .pfoot{margin-top:auto;padding-top:34mm;border-top:3mm solid #101c2b;display:flex;justify-content:space-between;align-items:flex-end;gap:30mm}
+.p-bn .pfoot .t{font-size:24mm;color:#3d4854;line-height:1.6}
+.p-bn .pfoot .t b{display:block;font-size:44mm;font-family:var(--f-num);color:#101c2b;margin-top:8mm}
+.p-bn .qr{width:130mm;height:130mm;flex:0 0 auto}
+.p-bn .fl{margin-top:22mm;font-size:18mm;font-family:var(--f-num);color:#8a6a2f}
+/* 견적서 */
+.p-qt{width:210mm;height:297mm;padding:20mm;display:flex;flex-direction:column;font-size:3.6mm}
+.p-qt .qh{display:flex;justify-content:space-between;align-items:flex-start;gap:10mm;border-bottom:1mm solid #101c2b;padding-bottom:5mm}
+.p-qt h3{font-size:9mm;letter-spacing:.3em;color:#101c2b}
+.p-qt .qmeta{text-align:right;font-family:var(--f-num);font-size:3.2mm;color:#3d4854;line-height:1.8}
+.p-qt .qto{margin-top:7mm;font-size:4.4mm}
+.p-qt .qto b{font-size:5.4mm}
+.p-qt table{width:100%;border-collapse:collapse;margin-top:8mm}
+.p-qt th{background:#f1f3f6;font-size:3.2mm;font-weight:500;color:#3d4854;padding:2.6mm;border:.3mm solid #dde1e7;text-align:left}
+.p-qt td{padding:2.6mm;border:.3mm solid #e6e9ee;font-size:3.5mm}
+.p-qt td.r,.p-qt th.r{text-align:right;font-family:var(--f-num)}
+.p-qt tfoot td{background:#f1f3f6;font-weight:700;font-size:4.2mm}
+.p-qt .qnote{margin-top:6mm;font-size:3.2mm;color:#6a7482;line-height:1.8}
+.p-qt .qfrom{margin-top:auto;border-top:.6mm solid #dde1e7;padding-top:5mm;display:flex;justify-content:space-between;gap:8mm;align-items:flex-end}
+.p-qt .qfrom .t{font-size:3.4mm;color:#3d4854;line-height:1.8}
+.p-qt .qfrom .t b{font-family:var(--f-num);font-size:4.4mm;color:#101c2b}
+.p-qt .qr{width:24mm;height:24mm;flex:0 0 auto}
+/* 설정 */
+.setup{border:1px solid var(--line);background:var(--card)}
+.setup summary{cursor:pointer;padding:16px 20px;font-size:14px;font-weight:500;list-style:none;display:flex;align-items:center;gap:10px}
+.setup summary::-webkit-details-marker{display:none}
+.setup summary::before{content:"＋";color:var(--brass);font-family:var(--f-num)}
+.setup[open] summary::before{content:"－"}
+.setup .sbody{padding:0 20px 22px;border-top:1px solid var(--hair)}
+.setup .sbody p.hint{font-size:12.5px;color:var(--muted);margin:14px 0 16px}
+.setup .fields{grid-template-columns:repeat(3,1fr)}
+.setup .sact{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+@media (max-width:900px){.pwrap{grid-template-columns:1fr}.setup .fields{grid-template-columns:1fr}}
+
 @media print{
-  body{background:#fff;color:#131c26}
-  .no-print{display:none!important}
-  section#print{padding:0;border:0}
-  .sheet{border:0;padding:0;page-break-inside:avoid}
-  @page{size:A4;margin:16mm}
+  body{background:#fff}
+  body *{visibility:hidden!important}
+  .psheet.printing,.psheet.printing *{visibility:visible!important}
+  .psheet.printing{position:absolute;left:0;top:0;transform:none!important;box-shadow:none;border:0}
+  .mini{overflow:visible!important;border:0!important}
 }
 </style>
 
+<style id="pagesize">@page{size:A4;margin:0}</style>
 <header class="top no-print">
   <div class="wrap">
     <span class="brand"><b>센터간식</b><i>CENTER SNACK</i></span>
@@ -363,6 +449,7 @@ footer .fr{text-align:right;font-family:var(--f-num);font-size:12px;color:rgba(2
         <div class="pa">
           <a class="btn brass" id="smsBtn" href="#">문자로 보내기</a>
           <button type="button" class="btn o" id="copyBtn">복사</button>
+          <a class="btn o" href="#print" id="toQuote">견적서</a>
           <a class="btn o" href="tel:01046681679">전화</a>
         </div>
         <p class="toast" id="toast"></p>
@@ -439,29 +526,145 @@ footer .fr{text-align:right;font-family:var(--f-num);font-size:12px;color:rgba(2
 <section id="print">
   <div class="wrap">
     <div class="shead no-print">
-      <div><p class="label">Print</p><h2>게시용 안내문</h2></div>
-      <p class="note">엘리베이터·로비 게시용 A4입니다. 인쇄하면 이 한 장만 출력되고, QR은 이 페이지 주소로 자동 생성됩니다.</p>
+      <div><p class="label">Print</p><h2>인쇄물</h2></div>
+      <p class="note">인쇄소에 그대로 넘길 수 있는 실제 규격입니다. 종류를 고르고 「인쇄」를 누르면 그 한 장만 출력되며, QR은 이 페이지 주소로 자동 생성됩니다.</p>
     </div>
-    <div class="sheet">
-      <div>
-        <p class="sk">Center Snack · RB104</p>
-        <h3>점심 · 간식 · 커피<br>같은 건물 안에서</h3>
-        <ul class="rows srows">
-          <li><span class="n">진라면 + 꼬마김밥 3줄</span><span class="d"></span><span class="p">5,500</span></li>
-          <li><span class="n">짜파게티 + 꼬마김밥 3줄</span><span class="d"></span><span class="p">6,000</span></li>
-          <li><span class="n">제육덮밥</span><span class="d"></span><span class="p">5,500</span></li>
-          <li><span class="n">클럽샌드위치</span><span class="d"></span><span class="p">3,500</span></li>
-          <li><span class="n">센터김밥</span><span class="d"></span><span class="p">3,500</span></li>
-          <li><span class="n">커피 HOT · ICE</span><span class="d"></span><span class="p">1,500</span></li>
-        </ul>
-        <p class="sfoot">회의 · 야근 간식 사무실 배달 — <b class="num">010-4668-1679</b><br>사기막골로62번길 33 · RB104 &nbsp;<span class="num">2F ↑</span></p>
-      </div>
-      <div class="qrbox">
-        <div id="qr"><span class="qrcap">QR</span></div>
-        <p class="qrcap">메뉴 · 단체주문 안내</p>
-        <button type="button" class="btn o no-print" id="printBtn" style="margin-top:16px">A4로 인쇄</button>
-      </div>
+
+    <div class="tabs no-print" role="tablist">
+      <button type="button" class="tab" role="tab" data-p="p-a4" aria-selected="true">엘리베이터 A4</button>
+      <button type="button" class="tab" role="tab" data-p="p-a1" aria-selected="false">로비 입간판 A1</button>
+      <button type="button" class="tab" role="tab" data-p="p-b1" aria-selected="false">도로가 X배너</button>
+      <button type="button" class="tab" role="tab" data-p="p-b2" aria-selected="false">화단 계단 X배너</button>
+      <button type="button" class="tab" role="tab" data-p="p-qt" aria-selected="false">단체 견적서</button>
     </div>
+
+    <div class="pwrap">
+      <div class="mini" id="mini">
+
+        <div class="psheet p-a4" id="p-a4" data-w="210" data-h="297" data-name="엘리베이터 A4">
+          <p class="kick">CENTER SNACK · RB104</p>
+          <h3>점심 · 간식 · 커피<br>같은 건물 안에서</h3>
+          <p class="lead">주문 후 그 자리에서 조리합니다.<br>회의 · 야근 간식은 사무실로 가져다 드립니다.</p>
+          <ul class="plist">
+            <li>진라면 + 꼬마김밥 3줄<span>5,500</span></li>
+            <li>짜파게티 + 꼬마김밥 3줄<span>6,000</span></li>
+            <li>제육덮밥<span>5,500</span></li>
+            <li>클럽샌드위치<span>3,500</span></li>
+            <li>센터김밥<span>3,500</span></li>
+            <li>커피 HOT · ICE<span>1,500</span></li>
+          </ul>
+          <div class="pfoot">
+            <p class="t">주문 · 단체주문<b>010-4668-1679</b>사기막골로62번길 33 · RB104 &nbsp;2F ↑</p>
+            <div class="qr" data-qr></div>
+          </div>
+        </div>
+
+        <div class="psheet p-a1" id="p-a1" data-w="594" data-h="841" data-name="로비 입간판 A1" hidden>
+          <p class="kick">CENTER SNACK · RB104</p>
+          <h3>점심 · 간식<br>그리고 커피</h3>
+          <p class="lead">같은 건물 안에서 매일 조리합니다</p>
+          <ul class="plist">
+            <li>덮밥<span>5,500</span></li>
+            <li>라면 세트<span>5,500</span></li>
+            <li>김밥<span>3,500</span></li>
+            <li>샌드위치<span>3,500</span></li>
+            <li>커피 HOT · ICE<span>1,500</span></li>
+          </ul>
+          <div class="pfoot">
+            <p class="t">회의 · 야근 간식 사무실 배달<b>010-4668-1679</b></p>
+            <div class="qr" data-qr></div>
+          </div>
+        </div>
+
+        <div class="psheet p-bn" id="p-b1" data-w="600" data-h="1800" data-name="도로가 X배너" hidden>
+          <p class="kick">CENTER SNACK</p>
+          <h3>센터간식</h3>
+          <p class="big">점심 · 간식 · 커피<br>회의 · 야근 간식 사무실 배달</p>
+          <ul class="prices">
+            <li>커피 HOT · ICE<span>1,500</span></li>
+            <li>김밥<span>3,500</span></li>
+            <li>덮밥 · 라면세트<span>5,500</span></li>
+          </ul>
+          <div class="pfoot">
+            <p class="t">주문 · 단체주문<b>010-4668-1679</b><span class="fl">RB104 &nbsp;2F ↑</span></p>
+            <div class="qr" data-qr></div>
+          </div>
+        </div>
+
+        <div class="psheet p-bn" id="p-b2" data-w="600" data-h="1800" data-name="화단 계단 X배너" hidden>
+          <p class="kick">CENTER SNACK · RB104</p>
+          <h3>오늘 점심<br>여기서</h3>
+          <ul class="prices">
+            <li>진라면세트<span>5,500</span></li>
+            <li>짜파게티세트<span>6,000</span></li>
+            <li>제육덮밥<span>5,500</span></li>
+            <li>클럽샌드위치<span>3,500</span></li>
+            <li>센터김밥<span>3,500</span></li>
+            <li>커피<span>1,500</span></li>
+          </ul>
+          <div class="pfoot">
+            <p class="t">단체주문<b>010-4668-1679</b><span class="fl">2F ↑</span></p>
+            <div class="qr" data-qr></div>
+          </div>
+        </div>
+
+        <div class="psheet p-qt" id="p-qt" data-w="210" data-h="297" data-name="단체 견적서" hidden>
+          <div class="qh">
+            <h3>견 적 서</h3>
+            <div class="qmeta">문서번호 <span id="qtNo">—</span><br>작성일 <span id="qtDate">—</span></div>
+          </div>
+          <p class="qto">수신 <b id="qtTo">귀중</b><br><span id="qtAttn" style="color:#6a7482"></span></p>
+          <table>
+            <thead><tr><th>품목</th><th class="r">단가</th><th class="r">수량</th><th class="r">금액</th></tr></thead>
+            <tbody id="qtBody"><tr><td colspan="4" style="color:#6a7482">단체주문 계산에서 품목을 담으면 자동으로 채워집니다.</td></tr></tbody>
+            <tfoot><tr><td colspan="3" class="r">합계</td><td class="r" id="qtSum">0원</td></tr></tfoot>
+          </table>
+          <p class="qnote" id="qtNote">· 상기 금액은 매장 판매가 기준입니다.<br>· 구성·수량·배달 시간은 통화로 확정합니다.</p>
+          <div class="qfrom">
+            <p class="t">센터간식<br>성남시 중원구 사기막골로62번길 33 지하1층 RB104호<br><b>010-4668-1679</b></p>
+            <div class="qr" data-qr></div>
+          </div>
+        </div>
+
+      </div>
+
+      <aside class="pinfo no-print">
+        <h4 id="pName">엘리베이터 A4</h4>
+        <dl>
+          <div><dt>규격</dt><dd id="pSize">210 × 297 mm</dd></div>
+          <div><dt>인쇄</dt><dd id="pHow">실물 크기 · 100%</dd></div>
+          <div><dt>QR</dt><dd>이 페이지 주소</dd></div>
+        </dl>
+        <button type="button" class="btn" id="printBtn">인쇄</button>
+        <button type="button" class="btn o" id="qtFill" style="margin-top:8px;width:100%">견적서에 계산값 넣기</button>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section id="setup" class="band no-print">
+  <div class="wrap">
+    <details class="setup">
+      <summary>사장님 설정 — 영업시간 · 마감 · 배달 시간 · 최소 인원 · 세트 가격</summary>
+      <div class="sbody">
+        <p class="hint">입력하면 <b>이 기기에서 바로 미리보기</b>가 되고, 비어 있는 항목은 고객 화면에 아예 나타나지 않습니다. 모든 손님 화면에 반영하려면 「설정값 복사」를 눌러 배성윤에게 전달해 주십시오.</p>
+        <div class="fields">
+          <div class="f"><label for="s-hours">영업시간</label><input id="s-hours" type="text" placeholder="예) 평일 08:00 – 18:00"></div>
+          <div class="f"><label for="s-cut">주문 마감</label><input id="s-cut" type="text" placeholder="예) 전날 오후 3시"></div>
+          <div class="f"><label for="s-del">배달 시간</label><input id="s-del" type="text" placeholder="예) 11:00 / 15:00"></div>
+          <div class="f"><label for="s-min">최소 인원</label><input id="s-min" type="text" placeholder="예) 5인 이상"></div>
+          <div class="f"><label for="s-pa">세트 A 1인 가격</label><input id="s-pa" type="number" min="0" step="100" placeholder="숫자만"></div>
+          <div class="f"><label for="s-pb">세트 B 1인 가격</label><input id="s-pb" type="number" min="0" step="100" placeholder="숫자만"></div>
+          <div class="f"><label for="s-pc">세트 C 1인 가격</label><input id="s-pc" type="number" min="0" step="100" placeholder="숫자만"></div>
+        </div>
+        <div class="sact">
+          <button type="button" class="btn" id="sSave">이 기기에 적용</button>
+          <button type="button" class="btn o" id="sCopy">설정값 복사</button>
+          <button type="button" class="btn o" id="sClear">초기화</button>
+        </div>
+        <p class="toast" id="sToast"></p>
+      </div>
+    </details>
   </div>
 </section>
 
@@ -599,7 +802,6 @@ async function copy(text, msg){
 }
 $("copyBtn").addEventListener("click", () => copy(renderSheet(), "주문서를 복사했습니다."));
 $("addrCopy").addEventListener("click", () => copy(ADDR, "주소를 복사했습니다."));
-$("printBtn").addEventListener("click", () => window.print());
 
 /* 확정된 값만 화면에 올린다 */
 function show(rowId, valId, val){
@@ -613,16 +815,146 @@ show("timeRow","timeVal",STORE.delivery);
 show("minRow","minVal",STORE.minPeople);
 if(STORE.hours) $("footHours").innerHTML = "<br>영업시간 " + STORE.hours;
 
-(function(){
-  const box = $("qr"), url = location.href.split("#")[0];
-  if(window.QRCode){
-    box.innerHTML = "";
-    try{ new QRCode(box, { text:url, width:144, height:144, colorDark:"#101c2b", colorLight:"#ffffff", correctLevel:QRCode.CorrectLevel.M }); }
-    catch(e){ box.innerHTML = '<span class="qrcap">' + url + '</span>'; }
-  }else{
-    box.innerHTML = '<span class="qrcap">' + url + '</span>';
-  }
-})();
+
 
 renderTotals();
+
+/* ── 인쇄물 센터 ─────────────────────────────────────────────── */
+const MM = 96/25.4;                       // 1mm -> px (인쇄 기준)
+const sheets = [...document.querySelectorAll(".psheet")];
+let current = "p-a4";
+
+function fitMini(){
+  const el = $(current), mini = $("mini");
+  const w = +el.dataset.w, h = +el.dataset.h;
+  const scale = Math.min(1, (mini.clientWidth || 640) / (w*MM), 820 / (h*MM));
+  const left = Math.max(0, ((mini.clientWidth || 640) - w*MM*scale) / 2);
+  el.style.transform = "translateX(" + left + "px) scale(" + scale + ")";
+  mini.style.height = (h*MM*scale) + "px";
+}
+function selectSheet(id){
+  current = id;
+  sheets.forEach(el => { el.hidden = (el.id !== id); el.style.transform = ""; });
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.p === id)));
+  const el = $(id);
+  $("pName").textContent = el.dataset.name;
+  $("pSize").textContent = el.dataset.w + " × " + el.dataset.h + " mm";
+  $("pHow").textContent = (+el.dataset.w > 300) ? "실물 크기 · 인쇄소 출력용" : "A4 · 100% 배율";
+  $("qtFill").hidden = (id !== "p-qt");
+  fitMini();
+}
+document.querySelector(".tabs").addEventListener("click", e => {
+  const t = e.target.closest(".tab"); if(t) selectSheet(t.dataset.p);
+});
+addEventListener("resize", fitMini);
+
+$("printBtn").addEventListener("click", () => {
+  const el = $(current);
+  el.style.transform = "";
+  $("pagesize").textContent = "@page{size:" + el.dataset.w + "mm " + el.dataset.h + "mm;margin:0}";
+  sheets.forEach(x => x.classList.remove("printing"));
+  el.classList.add("printing");
+  window.print();
+  setTimeout(() => { el.classList.remove("printing"); fitMini(); }, 400);
+});
+
+/* ── 견적서 ──────────────────────────────────────────────────── */
+function docNo(){
+  const d = new Date(), z = n => String(n).padStart(2,"0");
+  return "CS-" + String(d.getFullYear()).slice(2) + z(d.getMonth()+1) + z(d.getDate()) + "-" + z(d.getHours()) + z(d.getMinutes());
+}
+const QNO = docNo();
+function fillQuote(){
+  const rows = picked();
+  const sum = rows.reduce((a,r) => a + r[1]*r[2], 0);
+  const co = $("f-co").value.trim(), room = $("f-room").value.trim();
+  const nm = $("f-name").value.trim(), tel = $("f-tel").value.trim();
+  const d = $("f-date").value, t = $("f-time").value, people = $("f-people").value, how = $("f-how").value;
+  const today = new Date();
+  $("qtNo").textContent = QNO;
+  $("qtDate").textContent = today.toLocaleDateString("ko-KR");
+  $("qtTo").textContent = (co || "———") + " 귀중";
+  $("qtAttn").textContent = [room, nm && (nm + " 담당자"), tel].filter(Boolean).join(" · ");
+  $("qtBody").innerHTML = rows.length
+    ? rows.map(([n,p,q]) => `<tr><td>${n}</td><td class="r">${p.toLocaleString("ko-KR")}</td><td class="r">${q}</td><td class="r">${(p*q).toLocaleString("ko-KR")}</td></tr>`).join("")
+    : '<tr><td colspan="4" style="color:#6a7482">단체주문 계산에서 품목을 담으면 자동으로 채워집니다.</td></tr>';
+  $("qtSum").textContent = won(sum);
+  const when = [d, t].filter(Boolean).join(" ");
+  $("qtNote").innerHTML = [
+    when ? "· 희망 일시 : " + when + " / " + how : "· 수령 방법 : " + how,
+    people ? "· 인원 : " + people + "명" + (sum ? " (1인 기준 " + won(Math.round(sum/(+people||1))) + ")" : "") : "",
+    "· 상기 금액은 매장 판매가 기준입니다.",
+    "· 구성·수량·배달 시간은 통화로 확정합니다."
+  ].filter(Boolean).join("<br>");
+}
+$("qtFill").addEventListener("click", () => { fillQuote(); toast("견적서에 계산값을 넣었습니다."); });
+$("toQuote").addEventListener("click", () => { fillQuote(); selectSheet("p-qt"); });
+
+/* ── 사장님 설정 (이 기기 미리보기) ───────────────────────────── */
+const SKEY = "center-snack-setup";
+function applySetup(cfg){
+  show("hoursRow","hoursVal",cfg.hours);
+  show("cutRow","cutVal",cfg.cutoff);
+  show("timeRow","timeVal",cfg.delivery);
+  show("minRow","minVal",cfg.minPeople);
+  if(cfg.hours) $("footHours").innerHTML = "<br>영업시간 " + cfg.hours;
+  [["A",cfg.pa],["B",cfg.pb],["C",cfg.pc]].forEach(([k,v]) => {
+    const card = [...document.querySelectorAll(".set")].find(c => c.querySelector(".sn").textContent.trim() === "SET " + k);
+    if(card && v) card.querySelector(".sp .v").textContent = won(+v);
+  });
+}
+function readSetupForm(){
+  return { hours:$("s-hours").value.trim(), cutoff:$("s-cut").value.trim(), delivery:$("s-del").value.trim(),
+           minPeople:$("s-min").value.trim(), pa:$("s-pa").value.trim(), pb:$("s-pb").value.trim(), pc:$("s-pc").value.trim() };
+}
+function stoast(m){ $("sToast").textContent = m; clearTimeout(stoast.t); stoast.t = setTimeout(() => { $("sToast").textContent = ""; }, 3000); }
+try{
+  const saved = JSON.parse(localStorage.getItem(SKEY) || "null");
+  if(saved){
+    $("s-hours").value = saved.hours || ""; $("s-cut").value = saved.cutoff || "";
+    $("s-del").value = saved.delivery || ""; $("s-min").value = saved.minPeople || "";
+    $("s-pa").value = saved.pa || ""; $("s-pb").value = saved.pb || ""; $("s-pc").value = saved.pc || "";
+    applySetup(saved);
+  }
+}catch(e){}
+$("sSave").addEventListener("click", () => {
+  const cfg = readSetupForm();
+  try{ localStorage.setItem(SKEY, JSON.stringify(cfg)); }catch(e){}
+  applySetup(cfg);
+  stoast("이 기기에 적용했습니다. 모든 손님 화면에 넣으려면 「설정값 복사」로 전달해 주십시오.");
+});
+$("sCopy").addEventListener("click", () => {
+  const c = readSetupForm();
+  const line = 'const STORE = { hours:"' + c.hours + '", cutoff:"' + c.cutoff + '", delivery:"' + c.delivery + '", minPeople:"' + c.minPeople + '" };\n' +
+               '세트 1인 가격 : A ' + (c.pa||"-") + ' / B ' + (c.pb||"-") + ' / C ' + (c.pc||"-");
+  copy(line, "").then(() => stoast("설정값을 복사했습니다. 배성윤에게 붙여넣어 전달해 주십시오."));
+});
+$("sClear").addEventListener("click", () => {
+  try{ localStorage.removeItem(SKEY); }catch(e){}
+  ["s-hours","s-cut","s-del","s-min","s-pa","s-pb","s-pc"].forEach(id => { $(id).value = ""; });
+  stoast("초기화했습니다. 화면을 새로 고치면 기본값으로 돌아갑니다.");
+});
+
+/* ── QR (인쇄물마다 1개) ──────────────────────────────────────── */
+(function(){
+  const url = location.href.split("#")[0];
+  document.querySelectorAll("[data-qr]").forEach(box => {
+    const side = Math.round(box.getBoundingClientRect().width) || 120;
+    if(window.QRCode){
+      try{
+        new QRCode(box, { text:url, width:Math.max(96,side), height:Math.max(96,side),
+                          colorDark:"#101c2b", colorLight:"#ffffff", correctLevel:QRCode.CorrectLevel.M });
+        const img = box.querySelector("img,canvas");
+        if(img){ img.style.width = "100%"; img.style.height = "100%"; }
+        return;
+      }catch(e){}
+    }
+    box.textContent = url;
+    box.style.fontSize = "10px"; box.style.wordBreak = "break-all"; box.style.color = "#6a7482";
+  });
+})();
+
+selectSheet("p-a4");
+fillQuote();
+
 </script>
