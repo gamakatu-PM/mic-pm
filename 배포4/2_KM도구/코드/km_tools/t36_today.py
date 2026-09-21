@@ -63,6 +63,15 @@ def run(quiet=False):
             M.run(quiet=True)
         except Exception:
             traceback.print_exc()
+        try:
+            import t51_driveup as DU     # 51 회의록을 구글 드라이브로 (클로드가 읽어 아침 메일에 싣는다)
+            _d = DU.run(quiet=True)
+            if _d.get('올림'):
+                print('   회의록 %d개를 드라이브로 올림' % _d['올림'])
+            elif _d.get('이유'):
+                print('   회의록 드라이브 올리기 건너뜀 : %s' % _d['이유'])
+        except Exception:
+            traceback.print_exc()
         print('')
         print('-' * 74); print(' >> 31 도면 접수 (받은함 분류 + 전 현장 새 판 찾기)'); print('-' * 74)
         results = []
