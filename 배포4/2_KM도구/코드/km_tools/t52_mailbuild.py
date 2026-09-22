@@ -21,7 +21,7 @@ meta.json 만 읽어서 「현장별 회의록 정리」 메일 원고를 만든
 from __future__ import print_function
 import os, sys, io, json, re, datetime
 
-VERSION = 'v1 2026-09-22'
+VERSION = 'v2 2026-09-23'
 
 # ── 빈 값으로 볼 것 ─────────────────────────────────────────
 EMPTY = ('', '-', '없음', '- 없음', '해당 없음', '- 해당 없음', '미정', 'N/A', 'n/a')
@@ -71,6 +71,23 @@ def _lines(v):
     return out
 
 
+# ── ★ 현장명은 차장님이 손으로 넣으신 것(meta.site)만 쓴다 ───────────
+#    회의록 본문에 다른 현장 이름이 나와도 현장으로 삼지 않는다.
+#    도구도, 클로드도 「이건 사실 어느 현장 것」이라는 판단을 하지 않는다.
+#    (2026-09-23 차장님 지시 — 잘못된 귀속이 일을 그르친다)
+NOT_A_SITE = ('복합회의', '확인필요', '확인 필요', '현장미정', '미정',
+              '수금채크', '수금체크', '삭제요망')
+
+
+def is_site(name):
+    """차장님이 넣으신 이름이 진짜 현장인가. 아니면 「현장 아님」으로 뺀다."""
+    n = re.sub(r'\s+', '', name or '')
+    for x in NOT_A_SITE:
+        if n == re.sub(r'\s+', '', x):
+            return False
+    return bool(n)
+
+
 # ── 현장 이름 묶기 ──────────────────────────────────────────
 def norm_site(s):
     s = (s or '').strip()
@@ -114,7 +131,9 @@ def who(m):
     return out[:40] or '상대 미상'
 
 
-SEC1_KEYS = ['확인·회신 요청 사항', '일정', '수량·규격 변경']
+# ★ 차장님 확정 2026-09-23 : 「확인·회신 요청 사항」은 적지 않는다.
+#   130건이 쌓여 메일을 뒤덮었고, 결정된 것이 묻혔다.
+SEC1_KEYS = ['일정', '수량·규격 변경']
 SEC2_KEYS = ['할 일', '리스크와 대처', '타부서 전달 사항', '대외 언급 금지 사항']
 
 
@@ -243,90 +262,123 @@ def _d(ymd):
 
 
 def build_text(recs, today=None):
+    """차장님 확정 모양 (2026-09-23)
+         현장명  /  날짜는 같으면 한 번만  /  협의한 사람과 시각  /  회신은 안 적음
+       현장명은 차장님이 손으로 넣으신 것(meta.site) 그대로. 도구가 바꾸지 않는다."""
     today = today or datetime.date.today()
     ty = today.strftime('%y%m%d')
     tm = (today + datetime.timedelta(days=1)).strftime('%y%m%d')
 
     rep = merge_sites([r['site'] for r in recs])
-    sites = {}
+    bag = {}
     for r in recs:
-        sites.setdefault(rep.get(r['site'], r['site']), []).append(r)
-    for k in sites:
-        sites[k].sort(key=lambda r: (r['ymd'], r['hm']))
-    order = sorted(sites, key=lambda k: (-len(sites[k]), k))
+        bag.setdefault(rep.get(r['site'], r['site']), []).append(r)
+    for k in bag:
+        bag[k].sort(key=lambda r: (r['ymd'], r['hm'] or '99:99'))
+
+    sites = sorted([k for k in bag if is_site(k)], key=lambda k: (-len(bag[k]), k))
+    others = sorted([k for k in bag if not is_site(k)], key=lambda k: (-len(bag[k]), k))
 
     L = []
     L.append('회의록 정리 %s (%s)' % (today.strftime('%Y-%m-%d'), WD[today.weekday()]))
-    L.append('협의 %d건 · %d개 현장' % (len(recs), len(sites)))
-    L.append('이 메일은 파이썬이 meta.json 만 읽어 만들었습니다. (AI 사용량 0)')
+    L.append('협의 %d건 · 현장 %d개%s'
+             % (len(recs), len(sites),
+                ('  (그 밖에 %s %d건)' % (' · '.join(others), sum(len(bag[o]) for o in others))
+                 if others else '')))
     L.append('')
 
-    # 날짜가 박힌 것
-    urgent = []
+    # ── 날짜가 박힌 것 (앞으로 할 일의 기한. 회의한 날과 다르다) ──
+    urgent = set()
     for r in recs:
         for d8 in r['dates']:
             if d8 >= ty:
-                urgent.append((d8, rep.get(r['site'], r['site']), r))
+                urgent.add((d8, rep.get(r['site'], r['site'])))
     if urgent:
         L.append('=' * 56)
-        L.append('[ 날짜가 박힌 것 ]')
+        L.append('[ 기한 ] - 앞으로 해야 할 날. 회의한 날이 아닙니다')
         L.append('=' * 56)
-        for d8, site, r in sorted(set((u[0], u[1], u[2]['file']) for u in urgent)):
+        last = ''
+        for d8, site in sorted(urgent):
             mark = '  <-- 오늘' if d8 == ty else ('  <-- 내일' if d8 == tm else '')
-            L.append('  %s  %s%s' % (_d(d8), site, mark))
+            head = _d(d8) if d8 != last else ' ' * len(_d(d8))   # 같은 날짜는 한 번만
+            L.append('  %-7s %s%s' % (head, site, mark))
+            last = d8
         L.append('')
 
-    # 1) 회의록
-    L.append('=' * 56)
-    L.append('[ 1. 회의록 ] - 현장별, 빠짐없이')
-    L.append('=' * 56)
-    for i, site in enumerate(order, 1):
-        rs = sites[site]
+    def one_site(name, rs):
         L.append('')
         L.append('-' * 56)
-        L.append('%d. %s   (협의 %d건)' % (i, site, len(rs)))
+        L.append('%s        협의 %d건' % (name, len(rs)))
         L.append('-' * 56)
+        last_day = ''
         for r in rs:
-            who = ' '.join(x for x in [r['company'], r['person']] if x)
-            head = '  [%s %s] %s' % (_d(r['ymd']), r['hm'], who or '상대 미상')
-            L.append(head)
+            if r['ymd'] != last_day:                      # ★ 같은 날짜는 한 번만
+                L.append('  [%s]' % _d(r['ymd']))
+                last_day = r['ymd']
+            who = r['person'] or '상대 미상'
+            L.append('    %s  %s' % ((r['hm'] or '시각미상').rjust(5), who))
             if r['topic']:
-                L.append('    안건> %s' % r['topic'])
+                L.append('        안건> %s' % r['topic'])
             for it in r['items']:
                 if it['title']:
-                    L.append('    · %s' % it['title'])
+                    L.append('        · %s' % it['title'])
                 for b in it['bullets']:
-                    L.append('        %s' % b)
+                    L.append('            %s' % b)
                 if it['decision']:
-                    L.append('      결정> %s' % it['decision'])
+                    L.append('          결정> %s' % it['decision'])
                 for a in it['actions']:
-                    L.append('      조치> %s' % a)
-            for name, vals in r['blocks']:
-                L.append('    %s>' % name)
+                    L.append('          조치> %s' % a)
+            for kname, vals in r['blocks']:
+                L.append('        %s>' % kname)
                 for v in vals:
-                    L.append('        %s' % v)
+                    L.append('            %s' % v)
             L.append('')
 
-    # 2) 현장별 중요 사항
     L.append('=' * 56)
-    L.append('[ 2. 현장별 중요 사항 ] - 위 회의록에서 결정·변경만 추림')
+    L.append('[ 1. 회의록 ] - 현장명은 차장님이 넣으신 그대로입니다')
     L.append('=' * 56)
-    for site in order:
+    for name in sites:
+        one_site(name, bag[name])
+
+    if others:
+        L.append('')
+        L.append('=' * 56)
+        L.append('[ 2. 현장이 아닌 것 ] - 여러 현장을 한꺼번에 얘기한 회의 등')
+        L.append('=' * 56)
+        L.append('  ※ 안에 다른 현장 이름이 나와도 그 현장 것으로 옮기지 않았습니다.')
+        L.append('    어느 현장 것인지는 차장님이 정하십시오.')
+        for name in others:
+            one_site(name, bag[name])
+
+    # ── 결정·변경만 ──
+    L.append('')
+    L.append('=' * 56)
+    L.append('[ 3. 결정된 것 · 바뀐 것 ]')
+    L.append('=' * 56)
+    any_pick = False
+    for name in sites + others:
         picked = []
-        for r in sites[site]:
+        for r in bag[name]:
             for it in r['items']:
                 if it['decision']:
-                    picked.append('%s  %s' % (_d(r['ymd']), it['decision']))
-            for name, vals in r['blocks']:
-                if name in ('수량·규격 변경', '확인·회신 요청 사항'):
+                    picked.append((r['ymd'], r['hm'], '결정', it['decision']))
+            for kname, vals in r['blocks']:
+                if kname == '수량·규격 변경':
                     for v in vals:
-                        picked.append('%s  [%s] %s' % (_d(r['ymd']), name, v))
+                        picked.append((r['ymd'], r['hm'], '변경', v))
         if not picked:
             continue
+        any_pick = True
         L.append('')
-        L.append('* %s' % site)
-        for p in picked:
-            L.append('    %s' % p)
+        L.append('* %s' % name)
+        last_day = ''
+        for ymd, hm, kind, txt in picked:
+            head = _d(ymd) if ymd != last_day else ' ' * len(_d(ymd))
+            L.append('    %-6s %s> %s' % (head, kind, txt))
+            last_day = ymd
+    if not any_pick:
+        L.append('')
+        L.append('  결정되거나 바뀐 것이 없습니다.')
 
     L.append('')
     L.append('-' * 56)
@@ -356,11 +408,15 @@ def run(meta_dir, d_from=None, d_to=None, out=None, today=None):
     with io.open(base + '.html', 'w', encoding='utf-8') as f:
         f.write(build_html(text))
     rep = merge_sites([r['site'] for r in recs])
+    allnames = set(rep.get(r['site'], r['site']) for r in recs)
+    realsites = sorted([n for n in allnames if is_site(n)])
+    notsites = sorted([n for n in allnames if not is_site(n)])
     stat = {
         'version': VERSION,
         '회의수': len(recs),
-        '현장수': len(set(rep.get(r['site'], r['site']) for r in recs)),
-        '현장목록': sorted(set(rep.get(r['site'], r['site']) for r in recs)),
+        '현장수': len(realsites),            # ★ 현장이 아닌 것은 안 센다
+        '현장목록': realsites,
+        '현장아닌것': notsites,
         '줄수': len(text.split('\n')),
         '글자수': len(text),
         '중복지운줄': cut,
