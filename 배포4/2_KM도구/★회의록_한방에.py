@@ -143,7 +143,7 @@ def main():
         tgt = os.path.join(dest, os.path.basename(made[0]))
         shutil.copy2(made[0], tgt)
         say('  올렸습니다 : %s' % tgt)
-        say('  내일 07:00 에 앱스 스크립트가 이것을 읽어 메일로 보냅니다.')
+        say('  5분 안에 bsy 메일로 갑니다. (KM_즉시발송 이 지켜보고 있습니다)')
         return tgt
     step(4, '메일 원고를 드라이브로 올리기', s4)
 
@@ -153,7 +153,7 @@ def main():
     if r3 and r3.get('회의수'):
         say(' 끝났습니다. 회의 %d건 / 현장 %d개 가 메일로 나갑니다.' % (r3['회의수'], r3['현장수']))
         say(' 지금 바로 보시려면 「_회의록정리」 폴더의 html 을 여십시오.')
-        say(' 급하시면 클로드 대화창에 「지금 보내」 라고만 하십시오.')
+        say(' 메일은 5분 안에 bsy@micronic.co.kr 로 갑니다.')
     elif r2 and r2.get('이유'):
         say(' 멈춘 까닭 : %s' % r2['이유'])
         say(' 위 화면을 클로드에게 보여 주십시오.')
