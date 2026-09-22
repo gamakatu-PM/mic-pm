@@ -19,8 +19,8 @@
 var KM = {
   VERSION: 'v1 2026-09-21',
   TZ: 'Asia/Seoul',
-  FOLDER_NAME: 'KM_아침메일',
-  PARENT_FOLDER_ID: '16TXRgGJ7XxFhCq71EVY9l1DYIA9Ewj_U', // KM_블록작업 (CB 단가장·인수인계)
+  // ★ 2026-09-23 고침 : KM_아침메일 폴더가 두 개여서 엇갈려 있었다. id 로 직접 잡는다.
+  FOLDER_ID: '1uIon56BcKjSxIo5rCUyVzLDQLn3tZEZB',   // 내 드라이브 바로 밑 KM_아침메일 (즉시발송과 같은 곳)
   FILE_PREFIX: '아침대장_',
   TO_FALLBACK: 'bsy@micronic.co.kr',
   HOUR: 7,
@@ -48,9 +48,7 @@ function installTrigger() {
 }
 
 function folder_() {
-  var parent = DriveApp.getFolderById(KM.PARENT_FOLDER_ID);
-  var it = parent.getFoldersByName(KM.FOLDER_NAME);
-  return it.hasNext() ? it.next() : parent.createFolder(KM.FOLDER_NAME);
+  return DriveApp.getFolderById(KM.FOLDER_ID);
 }
 
 /* ═════════════════════════ 2. 자료 읽기 ═════════════════════════ */

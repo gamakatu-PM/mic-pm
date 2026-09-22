@@ -45,8 +45,16 @@ def _days(s, today):
     return ''
 
 
+KST = datetime.timezone(datetime.timedelta(hours=9))
+
+
+def seoul_today():
+    """서버가 UTC 여도 한국 날짜를 쓴다. (2026-09-23 하루 밀림 고침)"""
+    return datetime.datetime.now(KST).date()
+
+
 def build(today=None):
-    today = today or datetime.date.today()
+    today = today or seoul_today()
     rows = [r for r in _read(LEDGER) if (r.get('현장') or '').strip()]
     out = []
 
@@ -74,7 +82,7 @@ def build(today=None):
 
 def main():
     args = sys.argv[1:]
-    today = datetime.date.today()
+    today = seoul_today()
     if '--today' in args:
         today = datetime.datetime.strptime(args[args.index('--today') + 1], '%Y-%m-%d').date()
     out = args[args.index('--out') + 1] if '--out' in args else \

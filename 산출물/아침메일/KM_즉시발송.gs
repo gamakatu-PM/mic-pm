@@ -25,8 +25,10 @@
 var IM = {
   VERSION: 'v1 2026-09-22',
   TZ: 'Asia/Seoul',
-  FOLDER_NAME: 'KM_아침메일',
-  PARENT_FOLDER_ID: '16TXRgGJ7XxFhCq71EVY9l1DYIA9Ewj_U', // KM_블록작업
+  // ★ 2026-09-23 고침 : KM_아침메일 폴더가 두 개여서 엇갈려 있었다.
+  //    파이썬(★회의록_한방에.py)은 「내 드라이브\KM_아침메일」 에 쓴다.
+  //    그래서 그 폴더를 id 로 직접 잡는다. 이름으로 찾으면 또 엇갈린다.
+  FOLDER_ID: '1uIon56BcKjSxIo5rCUyVzLDQLn3tZEZB',   // 내 드라이브 바로 밑 KM_아침메일
   PREFIX: '회의록정리_',          // 이 이름으로 시작하는 .txt 만 본다
   TO: 'bsy@micronic.co.kr',
   EVERY_MIN: 5,                   // 1 · 5 · 10 · 15 · 30 만 됩니다 (구글 제한)
@@ -154,9 +156,7 @@ function split_(text, max) {
 /* ═════════════════════════ 폴더·로그 ═════════════════════════ */
 
 function folder_() {
-  var parent = DriveApp.getFolderById(IM.PARENT_FOLDER_ID);
-  var it = parent.getFoldersByName(IM.FOLDER_NAME);
-  return it.hasNext() ? it.next() : parent.createFolder(IM.FOLDER_NAME);
+  return DriveApp.getFolderById(IM.FOLDER_ID);
 }
 
 /** 덮어쓰지 않고 뒤에 붙인다. */
