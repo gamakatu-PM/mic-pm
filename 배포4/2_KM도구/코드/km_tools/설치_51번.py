@@ -13,7 +13,45 @@
 """
 import os, io, sys, shutil, datetime, traceback
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+WHERE_I_AM = os.path.dirname(os.path.abspath(__file__))
+_moved = ''
+
+
+def find_tools(start):
+    """menu.py 가 있는 km_tools 폴더를 스스로 찾는다.
+    파일을 코드\ 나 2_KM도구\ 에 넣으셔도 되도록 위·아래를 뒤진다."""
+    if os.path.exists(os.path.join(start, 'menu.py')):
+        return start
+    # 아래로 3단계까지 (코드\ -> 코드\km_tools)
+    for root, dirs, files in os.walk(start):
+        if 'menu.py' in files and 'common.py' in files:
+            if root.count(os.sep) - start.count(os.sep) <= 3:
+                return root
+    # 위로 3단계 올라가며 그 아래를 뒤진다 (2_KM도구\ 에 넣은 경우)
+    up = start
+    for _ in range(3):
+        up = os.path.dirname(up)
+        if not up:
+            break
+        for root, dirs, files in os.walk(up):
+            if 'menu.py' in files and 'common.py' in files:
+                if root.count(os.sep) - up.count(os.sep) <= 3:
+                    return root
+    return ''
+
+
+HERE = find_tools(WHERE_I_AM) or WHERE_I_AM
+if HERE != WHERE_I_AM:
+    # 내가 엉뚱한 곳에 있다 -> t51_driveup.py 를 제 자리로 옮기고 거기서 일한다
+    _moved = '파일을 넣으신 곳 : %s\n           일하는 곳 : %s  (스스로 찾았습니다)' % (WHERE_I_AM, HERE)
+    try:
+        src = os.path.join(WHERE_I_AM, 't51_driveup.py')
+        dst = os.path.join(HERE, 't51_driveup.py')
+        if os.path.exists(src) and not os.path.exists(dst):
+            shutil.copy2(src, dst)
+            _moved += '\n           t51_driveup.py 를 일하는 곳으로 복사했습니다'
+    except Exception as _e:
+        _moved += '\n           t51_driveup.py 복사 실패 : %s' % _e
 os.chdir(HERE)
 LOG = os.path.join(HERE, '설치_51번_결과.txt')
 _lines = []
@@ -126,6 +164,8 @@ except Exception:
 say('=' * 64)
 say(' 51번 설치 결과   %s' % datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
 say(' 자리 : %s' % HERE)
+if _moved:
+    say(' ' + _moved)
 say('=' * 64)
 for d in done:    say('  했음   : ' + d)
 for d in skipped: say('  건너뜀 : ' + d)
@@ -152,10 +192,12 @@ say('  이 글은 아래 파일에도 저장했습니다. 클로드에게 그대
 say('  ' + LOG)
 
 # 파일로 남기고, 그 파일을 열어 준다 (창이 닫혀도 볼 수 있게)
-try:
-    io.open(LOG, 'w', encoding='utf-8', newline='\r\n').write('\n'.join(_lines) + '\n')
-except Exception:
-    pass
+_txt = '\n'.join(_lines) + '\n'
+for _p in ([LOG] if HERE == WHERE_I_AM else [LOG, os.path.join(WHERE_I_AM, '설치_51번_결과.txt')]):
+    try:
+        io.open(_p, 'w', encoding='utf-8', newline='\r\n').write(_txt)
+    except Exception:
+        pass
 try:
     if os.name == 'nt':
         os.startfile(LOG)
