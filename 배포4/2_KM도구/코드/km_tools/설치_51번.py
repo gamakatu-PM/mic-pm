@@ -130,6 +130,33 @@ try:
     except Exception as e:
         bad.append('t36_today.py : %s' % e)
 
+    # ── 2-b. 시작.py  (zip 이 km_tools 를 덮어도 여기는 안 덮인다 -> 51번이 살아남는다)
+    try:
+        sp = os.path.join(os.path.dirname(os.path.dirname(HERE)), '시작.py')
+        if not os.path.exists(sp):
+            skipped.append('시작.py 를 못 찾음 (없어도 메뉴에서 51번을 누르시면 됩니다)')
+        else:
+            s, enc, bom = read(sp)
+            if 't51_driveup' in s:
+                skipped.append('시작.py 에 51번 보루가 이미 있음')
+            else:
+                anchor = "    import menu as _menu"
+                if anchor not in s:
+                    skipped.append('시작.py 에서 끼울 자리를 못 찾음 (구조가 다름). 손대지 않았습니다')
+                else:
+                    block = ("    # 51 회의록 -> 구글 드라이브. zip 이 km_tools 를 덮어도 이 줄은 남는다\n"
+                             "    try:\n"
+                             "        import t51_driveup as _DU\n"
+                             "        _r51 = _DU.run(quiet=True)\n"
+                             "        if _r51.get('올림'):\n"
+                             "            print('회의록 %d개를 구글 드라이브로 올렸습니다.' % _r51['올림'])\n"
+                             "    except Exception:\n"
+                             "        pass\n")
+                    write(sp, s.replace(anchor, block + anchor, 1), enc, bom)
+                    done.append('시작.py 에 51번 보루 추가 (zip 에 안 덮이는 자리)')
+    except Exception as e:
+        bad.append('시작.py : %s' % e)
+
     # ── 3. 설정.ini
     try:
         if os.path.exists('설정.ini'):
