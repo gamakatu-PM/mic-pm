@@ -62,6 +62,7 @@ chk('회의록 아닌 폴더 안 올림', not any('도면메모' in f for f in f
 chk('결과 txt 생김', os.path.exists(os.path.join(OUT, '드라이브올림_결과.txt')))
 t = io.open(os.path.join(OUT, '드라이브올림_결과.txt'), encoding='utf-8').read()
 chk('txt 에 본 곳 목록', t.count('본 곳 :') >= 3, t.count('본 곳 :'))
+chk('base 는 안 뒤진다(느림)', ('본 곳 : %s\n' % BASE) not in t)
 chk('txt 에 합계', '합계 : 회의록 파일 5개' in t)
 
 print('[2] 두 번 돌려도 안 올림')

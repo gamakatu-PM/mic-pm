@@ -24,7 +24,7 @@ INCOMING = os.path.join('회의록', 'incoming')
 TAKE_EXT = ('.json', '.docx', '.txt', '.md', '.hwp', '.hwpx')
 SKIP_NAMES = ('여기로_plaud를_옮기십시오.txt', '여기에_PLAUD결과를_넣으세요.txt', '읽어보세요.txt')
 LOG_HEAD = ['올린날', '현장', '회의폴더', '파일', '크기', '수정시각', '올린이름']
-MAX_DEPTH = 5
+MAX_DEPTH = 4
 
 DRIVE_GUESS = (
     r'G:\내 드라이브', r'G:\My Drive', r'H:\내 드라이브', r'H:\My Drive',
@@ -57,9 +57,11 @@ def drive_root():
 
 
 def roots():
-    """회의록이 있을 수 있는 곳 전부. 있는 것만 돌려준다"""
+    """회의록이 있을 수 있는 곳. 있는 것만 돌려준다.
+    ★ base(저장 폴더 전체)는 넣지 않는다 — OneDrive 라 파일이 수만 개여서 몇 분이 걸린다.
+      회의록은 plaud\26년\1.현장 / _현장비서 / _도구결과 아래에 있다."""
     out = []
-    for key in ('out', 'biseo', 'plaud', 'base'):
+    for key in ('out', 'biseo', 'plaud'):
         try:
             p = cfg(key)
         except Exception:
@@ -121,7 +123,7 @@ def _under(path, parent):
     return a == b or a.startswith(b + os.sep)
 
 
-def find_meetings(note=None, skip_under=''):
+def find_meetings(note=None, skip_under='', loud=False):
     """[(현장, 회의폴더, 파일경로)] — 여러 뿌리 아래 「회의록」 폴더를 전부 찾는다.
     skip_under : 이 폴더 아래는 보지 않는다 (내가 올려 놓은 드라이브 폴더를 다시 집지 않게)"""
     found, seen = [], set()
@@ -131,6 +133,8 @@ def find_meetings(note=None, skip_under=''):
                 note.append('  건너뜀 : %s   (드라이브 안이라 제외)' % root)
             continue
         cnt0 = len(found)
+        if loud:
+            print('  뒤지는 중 : %s' % root)
         base_depth = root.count(os.sep)
         for dp, dirs, files in os.walk(root):
             if skip_under and _under(dp, skip_under):
@@ -200,7 +204,9 @@ def run(quiet=False):
     note.append(' 드라이브 : %s' % dest)
     note.append('')
     note.append('[회의록을 찾은 곳]')
-    hits = find_meetings(note, skip_under=os.path.join(root, '회의록'))
+    if not quiet:
+        print('회의록을 찾습니다. 폴더가 크면 1~2분 걸립니다...')
+    hits = find_meetings(note, skip_under=os.path.join(root, '회의록'), loud=not quiet)
     note.append('  합계 : 회의록 파일 %d개' % len(hits))
     note.append('')
 
