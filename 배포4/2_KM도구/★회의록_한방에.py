@@ -128,16 +128,22 @@ def hunt_drive():
     looked.append('설정.ini [드라이브] 경로 = %s' % (v or '(비어 있음)'))
     take(v)
 
-    # 드라이브 문자 전부 (A~Z). 그 아래 「내 드라이브」 가 있으면 그것.
+    # 드라이브 문자 전부. 어느 문자가 살아 있는지도 남긴다(원인을 보시라고).
+    alive = []
     for i in range(ord('C'), ord('Z') + 1):
         d = '%s:\\' % chr(i)
         if not os.path.isdir(d):
             continue
+        try:
+            inside = os.listdir(d)[:6]
+        except Exception:
+            inside = ['(못 읽음)']
+        alive.append('%s  ->  %s' % (d, ', '.join(inside) if inside else '(비어 있음)'))
         for n in DRIVE_NAMES:
             take(os.path.join(d, n))
-        # G:\ 자체가 드라이브 뿌리인 경우
-        if any(os.path.isdir(os.path.join(d, n)) for n in DRIVE_NAMES):
-            looked.append('%s 안에서 찾음' % d)
+    looked.append('살아 있는 드라이브 문자 %d개' % len(alive))
+    for a in alive:
+        looked.append('    %s' % a)
 
     # 사용자 폴더 아래
     home = os.path.expanduser('~')
@@ -147,6 +153,19 @@ def hunt_drive():
     looked.append('사용자 폴더 : %s' % home)
 
     return seen, looked
+
+
+def gdrive_installed():
+    """구글 드라이브 데스크톱이 깔려는 있는지. 꺼진 것과 안 깔린 것을 가른다."""
+    spots = [
+        r'C:\Program Files\Google\Drive File Stream',
+        r'C:\Program Files (x86)\Google\Drive File Stream',
+        os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'Google', 'DriveFS'),
+    ]
+    for p in spots:
+        if os.path.isdir(p):
+            return True
+    return False
 
 
 def fix_drive(found_by_51):
@@ -164,6 +183,19 @@ def fix_drive(found_by_51):
         return seen[0]
     say('')
     say('  ★ 구글 드라이브 폴더를 못 찾았습니다.')
+    if gdrive_installed():
+        say('')
+        say('    ※ 구글 드라이브 데스크톱은 깔려 있습니다. 지금 꺼져 있을 뿐입니다.')
+        say('      시작 메뉴에서 「Google Drive」 를 찾아 켜 주십시오.')
+        say('      켜고 1~2분 기다리면 G: 가 생깁니다. 그다음 이 파일을 다시 누르시면 됩니다.')
+        say('      (매번 저절로 켜지게 하려면 : 구글 드라이브 설정 -> 「시스템 시작 시 실행」 켜기)')
+        say('')
+        say('    그래도 안 되면 아래에 자리를 넣어 주십시오.')
+    else:
+        say('')
+        say('    ※ 구글 드라이브 데스크톱이 안 깔려 있는 것 같습니다.')
+        say('      google.com/drive/download 에서 받아 까시면 됩니다. 무료·5분.')
+        say('')
     say('    윈도 탐색기에서 「내 드라이브」 폴더를 여시고,')
     say('    맨 위 주소줄을 눌러 나오는 글자를 그대로 붙여 넣어 주십시오.')
     say('    (예 : G:\\내 드라이브)   그냥 엔터를 치시면 건너뜁니다.')
