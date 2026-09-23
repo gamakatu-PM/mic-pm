@@ -5,6 +5,9 @@
 meta.json 만 읽는다. 클로드(AI)를 전혀 쓰지 않는다 → 사용량 0.
 
     python t53_daily.py <meta폴더> [--today 260923] [--out 폴더] [--sheet <26년 할 일 모음 링크>]
+    python t53_daily.py <meta폴더> --from 260901 --to 260915 [--out 폴더]     기간 지정
+    python t53_daily.py <meta폴더> --month 2609                                 한 달
+    python t53_daily.py <meta폴더> --day 260915                                 하루
 
 만드는 것 (오늘 = YYMMDD)
     답해주십시오_YYMMDD.txt   ① 어제 회의록에서 새로 생긴 「할 일」 하루치 + 시트 링크
@@ -26,12 +29,12 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v2 2026-09-23'   # v2 : 차장님 지시 원문과 대조해 고침 (머리·꼬리·설명문 제거, 시트 4칸+완료, 안건마다 날짜·사람)
+VERSION = 'v3 2026-09-23'   # v3 : 종류 칸 삭제 · 날짜 = 회의한 날(기한은 할일 글 끝에) · 기간 지정(--from --to / --month)
 
 # 「26년 할 일 모음」 시트의 종류 칸. 차장님 예시(26년 회의록 시트)에 나온 낱말 그대로.
 KINDS = ('발송', '도면', '회의', '확인', '전달', '샘플', '제작', '발행', '설치',
          '납품', '회신', '제출', '계약', '발주', '연락')
-SHEET_HEAD = ['날짜', '종류', '현장', '할일', '완료']   # 26년 회의록 시트의 할 일 모음 4칸 + 완료(차장님 체크)
+SHEET_HEAD = ['날짜', '현장', '할일', '완료']   # 차장님 확정 (2026-09-23) : 종류 칸 없음. 날짜 = 회의한 날. 완료 = 차장님 체크
 
 TODO_RE = re.compile(r'^\s*[-·•]?\s*(\d{6}|미정)\s*\|\s*(.+?)\s*(?:\|\s*(.*?))?\s*$')
 SCHED_RE = re.compile(r'^\s*[-·•]?\s*([^|]+?)\s*\|\s*(\d{6})\s*\|\s*(.+?)\s*$')
@@ -44,8 +47,18 @@ def _iso(ymd):
     return '20%s-%s-%s' % (ymd[:2], ymd[2:4], ymd[4:6])
 
 
-def _row_line(date, kind, site, what):
-    return '%s\t%s\t%s\t%s' % (date, kind, site, what)
+def _row_line(date, site, what):
+    return '%s\t%s\t%s' % (date, site, what)
+
+
+def _todo_text(ymd, what, whom):
+    """할일 글 = 무엇 + (기한 2026-09-23) + (배성윤 → 누구). 기한이 없으면 안 붙인다."""
+    t = what
+    if _iso(ymd):
+        t += '  (기한 %s)' % _iso(ymd)
+    if whom:
+        t += '  (%s)' % whom
+    return t
 
 
 def kind_of(text):
@@ -167,8 +180,7 @@ def todo_rows(recs_y):
             if key in seen:
                 continue
             seen.add(key)
-            rows.append({'날짜': _iso(ymd), '종류': kind_of(what), '현장': site,
-                         '할일': what + (('  (%s)' % whom) if whom else ''), '완료': ''})
+            rows.append({'날짜': _iso(r['ymd']), '현장': site, '할일': _todo_text(ymd, what, whom), '완료': ''})
     return rows
 
 
@@ -177,7 +189,7 @@ def build_answer(recs_y, yday, sheet_url=''):
     rows = todo_rows(recs_y)
     L = []
     for row in sorted(rows, key=lambda x: (not T52.is_site(x['현장']), x['현장'], x['날짜'])):
-        L.append(_row_line(row['날짜'], row['종류'], row['현장'], row['할일']))
+        L.append(_row_line(row['날짜'], row['현장'], row['할일']))
     if not rows:
         L.append('(%s 회의록에서 새로 생긴 할 일 없음)' % _iso(yday.strftime('%y%m%d')))
     L.append('')
@@ -196,9 +208,9 @@ def build_today(recs_all, today):
         for ymd, what, whom in r['todos']:
             if ymd == ty and (site, what) not in seen:
                 seen.add((site, what))
-                picked.append((site, what + (('  (%s)' % whom) if whom else ''), kind_of(what)))
+                picked.append((site, what + (('  (%s)' % whom) if whom else ''), _iso(r['ymd'])))
     picked.sort(key=lambda x: (not T52.is_site(x[0]), x[0]))
-    L = [_row_line(_iso(ty), kind, site, what) for site, what, kind in picked]
+    L = [_row_line(_iso(ty), site, what) for site, what, _src in picked]
     if not picked:
         L.append('(회의록에 %s 로 적힌 할 일 없음)' % _iso(ty))
     return '\n'.join(L), picked
@@ -295,11 +307,97 @@ def run(meta_dir, today=None, out=None, sheet_url=''):
     return (t1, t2, t3), stat
 
 
+def run_range(meta_dir, d_from, d_to, out=None, sheet_url=''):
+    """차장님이 정한 기간(YYMMDD~YYMMDD)의 회의록을 ③ 모양으로 정리 + 그 기간에 생긴 할 일 줄.
+         기간정리_<from>-<to>.txt   ③ 모양 (현장 → 날짜 사람 → 안건/협의내용/결정사항/조치사항)
+         기간할일_<from>-<to>.txt   날짜\t현장\t할일 줄 + 시트 링크
+         기간할일_<from>-<to>.csv   시트에 넣을 줄
+         기간_<from>-<to>.json      건수"""
+    recs_all, skipped = collect(meta_dir)
+    recs = [r for r in recs_all if r['ymd'] and d_from <= r['ymd'] <= d_to]
+    recs.sort(key=lambda r: (r['ymd'], r['hm'] or '99:99', r['file']))
+    sites, others, bag = _group(recs)
+    L = []
+    n = 0
+
+    def one(idx, name, rs):
+        L.append('%d. %s' % (idx, name))
+        L.append('')
+        for r in rs:
+            head = '%s   %s%s' % (T52._d(r['ymd']), (r['hm'] + '  ') if r['hm'] else '', r['person'] or '상대 미상')
+            items = r['items'] or [{'title': '(안건 없음)', 'bullets': [], 'decision': '', 'actions': []}]
+            for it in items:
+                L.append(head)
+                L.append('')
+                L.append('안건 : %s' % it['title'])
+                b = it['bullets'] or ['']
+                L.append('협의내용 : %s' % b[0])
+                for x in b[1:]:
+                    L.append(x)
+                L.append('결정사항 : %s' % (it['decision'] or '없음'))
+                L.append('조치사항 : %s' % ' / '.join(it['actions']))
+                L.append('')
+        L.append('')
+
+    if not recs:
+        L.append('(%s ~ %s 회의록 없음)' % (_iso(d_from), _iso(d_to)))
+    for name in sites:
+        n += 1
+        one(n, name, bag[name])
+    if others:
+        L.append('※ 현장이 아닌 것 — 어느 현장 것인지는 차장님이 정하십시오')
+        L.append('')
+        for name in others:
+            n += 1
+            one(n, name, bag[name])
+    t_meet = '\n'.join(L).rstrip('\n') + '\n'
+
+    rows = todo_rows(recs)
+    M = [_row_line(row['날짜'], row['현장'], row['할일'])
+         for row in sorted(rows, key=lambda x: (x['날짜'], not T52.is_site(x['현장']), x['현장']))]
+    if not rows:
+        M.append('(%s ~ %s 할 일 없음)' % (_iso(d_from), _iso(d_to)))
+    M.append('')
+    M.append('26년 할 일 모음 : %s' % (sheet_url or '(링크 없음)'))
+    t_todo = '\n'.join(M)
+
+    out = out or meta_dir
+    if not os.path.isdir(out):
+        os.makedirs(out)
+    tag = '%s-%s' % (d_from, d_to)
+    paths = {}
+    for name, txt in (('기간정리', t_meet), ('기간할일', t_todo)):
+        p = os.path.join(out, '%s_%s.txt' % (name, tag))
+        with io.open(p, 'w', encoding='utf-8') as f:
+            f.write(txt)
+        paths[name] = p
+    p = os.path.join(out, '기간할일_%s.csv' % tag)
+    with io.open(p, 'w', encoding='utf-8-sig', newline='') as f:
+        w = csv.DictWriter(f, fieldnames=SHEET_HEAD)
+        w.writeheader()
+        for row in rows:
+            w.writerow(row)
+    paths['기간할일csv'] = p
+    stat = {'version': VERSION, '기간': [_iso(d_from), _iso(d_to)], 'meta전체': len(recs_all),
+            '회의': len(recs), '현장': len(sites), '현장별': {k: len(bag[k]) for k in sites + others},
+            '할일': len(rows), '건너뜀': skipped, '파일': paths}
+    with io.open(os.path.join(out, '기간_%s.json' % tag), 'w', encoding='utf-8') as f:
+        f.write(json.dumps(stat, ensure_ascii=False, indent=1))
+    return (t_meet, t_todo), stat
+
+
+def _month_range(yymm):
+    y, m = 2000 + int(yymm[:2]), int(yymm[2:4])
+    last = (datetime.date(y + (m == 12), (m % 12) + 1, 1) - datetime.timedelta(days=1)).day
+    return '%s01' % yymm, '%s%02d' % (yymm, last)
+
+
 def main(argv):
     if len(argv) < 2:
         print(__doc__)
         return 1
     meta_dir, today, out, sheet = argv[1], None, None, ''
+    d_from = d_to = None
     i = 2
     while i < len(argv):
         if argv[i] == '--today':
@@ -308,9 +406,22 @@ def main(argv):
             out = argv[i + 1]; i += 2
         elif argv[i] == '--sheet':
             sheet = argv[i + 1]; i += 2
+        elif argv[i] == '--from':
+            d_from = argv[i + 1]; i += 2
+        elif argv[i] == '--to':
+            d_to = argv[i + 1]; i += 2
+        elif argv[i] == '--month':                       # --month 2609
+            d_from, d_to = _month_range(argv[i + 1]); i += 2
+        elif argv[i] == '--day':                         # --day 260915  (하루)
+            d_from = d_to = argv[i + 1]; i += 2
         else:
             i += 1
-    _t, stat = run(meta_dir, today, out, sheet)
+    if d_from or d_to:
+        d_from = d_from or d_to
+        d_to = d_to or d_from
+        _t, stat = run_range(meta_dir, d_from, d_to, out, sheet)
+    else:
+        _t, stat = run(meta_dir, today, out, sheet)
     print(json.dumps(stat, ensure_ascii=False, indent=1))
     return 0
 
