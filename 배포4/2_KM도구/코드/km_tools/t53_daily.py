@@ -37,7 +37,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v7 2026-09-23'   # v7 : 담당 칸의 「배성윤 →」 뺌 · 시트에서 완료 표시한 할 일은 메일 ①② 에서 뺌 (--done)
+VERSION = 'v8 2026-09-23'   # v8 : 답요청·오늘 할일 완료 칸(D열) = 체크박스 (체크 = 「완료」, 끄면 빈칸)
+# v7 2026-09-23   # v7 : 담당 칸의 「배성윤 →」 뺌 · 시트에서 완료 표시한 할 일은 메일 ①② 에서 뺌 (--done)
 # v6 2026-09-23   # v6 : ①② 날짜·현장은 머리줄로 한 번만 (할 일은 들여쓰기) · 시트 답요청·오늘 할일 현장 칸(B열) 세로 병합
 # v5 : 「신규 현장 레이더」 결과를 한 통 끝(4번)에 합침
 # v4 : 3통 → 1통 「오늘의 정리」 · 시트 「26년 회의록2」 탭 3개(답요청·오늘 할일·회의록)에 날짜별 누적
@@ -437,7 +438,17 @@ def merge_body(plan, ranges):
                                                  'startColumnIndex': 0, 'endColumnIndex': 1}, 'mergeType': 'MERGE_ALL'}})
         if plan[tab]['kind'] == 'date':
             req.extend(site_merge(sid, top, [v[1] for v in plan[tab]['values']][:bot - top]))
+            req.append(done_checkbox(sid, top, bot))
     return {'requests': req}
+
+
+def done_checkbox(sid, top, bot):
+    """v8 차장님 (2026-09-23 「완료 칸 체크박스로」) : D열 체크박스. 체크하면 칸 값이 「완료」, 끄면 빈칸.
+       (값이 「완료」 라서 차장님이 손으로 적으신 옛 「완료」 도 그대로 체크로 보이고, load_done 도 그대로 읽는다)"""
+    return {'setDataValidation': {'range': {'sheetId': sid, 'startRowIndex': top, 'endRowIndex': bot,
+                                            'startColumnIndex': 3, 'endColumnIndex': 4},
+                                  'rule': {'condition': {'type': 'BOOLEAN', 'values': [{'userEnteredValue': '완료'}]},
+                                           'strict': True}}}
 
 
 def site_merge(sid, top, sites):

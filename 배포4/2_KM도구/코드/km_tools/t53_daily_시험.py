@@ -122,7 +122,12 @@ try:
     chk('v6 오늘 할일 현장 다르면 B 병합 없음', not any(r['sheetId'] == 1 and r['startColumnIndex'] == 1 for r in mg), mg)
     aj = json.load(io.open(st['파일']['시트_답요청'], encoding='utf-8'))['rows']
     chk('v6 시트 줄 순서 = 메일 순서 (같은 현장이 붙어 있음)', [r['COL$B'] for r in aj] == ['수유초등학교', '앵커 호텔', '앵커 호텔', '앵커 호텔'], [r['COL$B'] for r in aj])
-    chk('한 줄뿐이면 병합 안 함', T.merge_body(plan, {'답요청': '5-5'}) == {'requests': []})
+    one_row = T.merge_body(plan, {'답요청': '5-5'})['requests']
+    chk('한 줄뿐이면 병합 안 함 (체크박스만)', [list(x)[0] for x in one_row] == ['setDataValidation'], one_row)
+    cb = [x['setDataValidation'] for x in mb if 'setDataValidation' in x]
+    chk('v8 완료 칸 체크박스 : 답요청 D8:D11 · 오늘 할일 D2:D3, 회의록 탭은 없음',
+        [(c['range']['sheetId'], c['range']['startRowIndex'], c['range']['endRowIndex'], c['range']['startColumnIndex']) for c in cb] == [(0, 7, 11, 3), (1, 1, 3, 3)], cb)
+    chk('v8 체크 값 = 「완료」', cb[0]['rule']['condition'] == {'type': 'BOOLEAN', 'values': [{'userEnteredValue': '완료'}]})
 
     print('--- v5 레이더 합치기')
     rad = {'results': [{'body': {'valueRanges': [

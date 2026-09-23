@@ -31,10 +31,10 @@ try:
         f.write("VERSION = 'v1 2026-09-22'\n")
     n1 = G.ensure_tool(tools, 't52_mailbuild'); n2 = G.ensure_tool(tools, 't53_daily')
     chk('옛 52번 덮어씀', 'v1 → v2' in n1, n1)
-    chk('없는 53번 새로 넣음', '없음 → v7' in n2, n2)
+    chk('없는 53번 새로 넣음', '없음 → v8' in n2, n2)
     chk('다시 하면 안 건드림', G.ensure_tool(tools, 't52_mailbuild') == '' and G.ensure_tool(tools, 't53_daily') == '')
     src = io.open(os.path.join(tools, 't53_daily.py'), encoding='utf-8').read()
-    chk('넣은 53번이 진짜 v7', "VERSION = 'v7" in src and 'def run_range' in src)
+    chk('넣은 53번이 진짜 v8', "VERSION = 'v8" in src and 'def run_range' in src)
 
     print('--- 통째로 돌리기 (가짜 드라이브)')
     drive = os.path.join(d, 'drive'); meta = os.path.join(drive, '회의록', 'incoming'); os.makedirs(meta)
