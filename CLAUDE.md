@@ -58,6 +58,7 @@
 ```
 배포4/2_KM도구/코드/km_tools/t51_driveup.py      회의록 → 구글 드라이브
 배포4/2_KM도구/코드/km_tools/t52_mailbuild.py    meta.json → 메일 원고 (AI 사용량 0)
+배포4/2_KM도구/코드/km_tools/t53_daily.py        meta.json → 아침 3통(답해주십시오·오늘할것·어제있었던일) + 할일추가.csv (AI 사용량 0)
 산출물/아침메일/KM_아침메일.gs                    07:00 자동 발송 (앱스 스크립트)
 ```
 
@@ -71,3 +72,4 @@
 | `search_files` + `snippetVerbosity: MAX_ALLOWED` | 10개에 약 1,000 토큰 — **이걸 써라** |
 
 회의록 폴더 : `1FWev-4Hzy2KmDT_H25S7BGMtpaKFeSgm` (meta.json 117개)
+「26년 할 일 모음」 시트 : `1S02QcwHnRNiJJbq3qfSPs9sRtR1UDtTMSUPhLy4_Ckk` — 클로드는 **줄을 덧붙이기만**(Zapier Google Sheets add_row_lines). 지우거나 완료 표시는 차장님만 한다
