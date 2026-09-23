@@ -8,6 +8,12 @@ meta.json 만 읽는다. 클로드(AI)를 전혀 쓰지 않는다 → 사용량 
     python t53_daily.py <meta폴더> --from 260901 --to 260915 [--out 폴더]     기간 지정
     python t53_daily.py <meta폴더> --month 2609                                 한 달
     python t53_daily.py <meta폴더> --day 260915                                 하루
+    python t53_daily.py --merge <시트계획.json> "답요청=8-60" "오늘 할일=2-12" "회의록=2-80"   덧붙인 줄 번호로 병합 본문
+
+만드는 것 (v4 추가)
+    오늘의정리_YYMMDD.txt     ①②③ 을 순서대로 한 통에. 제목 [KM] 오늘의 정리 입니다. YYYY-MM-DD (요일)
+    시트_답요청_·시트_오늘할일_·시트_회의록_YYMMDD.json   「26년 회의록2」 각 탭에 Zapier add_row_lines 로 넣을 rows
+    시트계획_YYMMDD.json      덧붙인 뒤 병합할 칸 계산용
 
 만드는 것 (오늘 = YYMMDD)
     답해주십시오_YYMMDD.txt   ① 어제 회의록에서 새로 생긴 「할 일」 하루치 + 시트 링크
@@ -29,11 +35,16 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v3 2026-09-23'   # v3 : 종류 칸 삭제 · 날짜 = 회의한 날(기한은 할일 글 끝에) · 기간 지정(--from --to / --month)
+VERSION = 'v4 2026-09-23'   # v4 : 3통 → 1통 「오늘의 정리」 · 시트 「26년 회의록2」 탭 3개(답요청·오늘 할일·회의록)에 날짜별 누적
+# v3 : 종류 칸 삭제 · 날짜 = 회의한 날(기한은 할일 글 끝에) · 기간 지정(--from --to / --month)
 
 # 「26년 할 일 모음」 시트의 종류 칸. 차장님 예시(26년 회의록 시트)에 나온 낱말 그대로.
 KINDS = ('발송', '도면', '회의', '확인', '전달', '샘플', '제작', '발행', '설치',
          '납품', '회신', '제출', '계약', '발주', '연락')
+SHEET_NAME = '26년 회의록2'
+TABS = ('답요청', '오늘 할일', '회의록')          # sheetId 0 · 1 · 2 (2026-09-23 만들 때 고정)
+TAB_ID = {'답요청': 0, '오늘 할일': 1, '회의록': 2}
+MEET_HEAD = ['날짜', '현장', '시각·협의자', '안건', '협의내용', '결정사항', '조치사항']
 SHEET_HEAD = ['날짜', '현장', '할일', '완료']   # 차장님 확정 (2026-09-23) : 종류 칸 없음. 날짜 = 회의한 날. 완료 = 차장님 체크
 
 TODO_RE = re.compile(r'^\s*[-·•]?\s*(\d{6}|미정)\s*\|\s*(.+?)\s*(?:\|\s*(.*?))?\s*$')
@@ -193,7 +204,7 @@ def build_answer(recs_y, yday, sheet_url=''):
     if not rows:
         L.append('(%s 회의록에서 새로 생긴 할 일 없음)' % _iso(yday.strftime('%y%m%d')))
     L.append('')
-    L.append('26년 할 일 모음 : %s' % (sheet_url or '(링크 없음)'))
+    L.append('%s : %s' % (SHEET_NAME, sheet_url or '(링크 없음)'))
     return '\n'.join(L), rows
 
 
@@ -267,6 +278,104 @@ def build_yesterday(recs_y, yday):
     return '\n'.join(L).rstrip('\n') + '\n', {s: len(bag[s]) for s in sites + others}
 
 
+# ── 시트 「26년 회의록2」 에 넣을 줄 ──────────────────────────
+def _kday(ymd):
+    """260922 -> 26년 09월 22일"""
+    return '%s년 %s월 %s일' % (ymd[:2], ymd[2:4], ymd[4:6])
+
+
+def meet_title(yy, n):
+    """차장님 지시 : 「oo년 oo월 oo일_회의 oo건」"""
+    return '%s_회의 %d건' % (_kday(yy), n)
+
+
+def meet_rows(recs_y):
+    """회의록 탭 : 날짜 | 현장 | 시각·협의자 | 안건 | 협의내용 | 결정사항 | 조치사항  (안건 하나가 한 줄)"""
+    sites, others, bag = _group(recs_y)
+    out = []
+    for name in sites + others:
+        for r in bag[name]:
+            who = '%s%s' % ((r['hm'] + '  ') if r['hm'] else '', r['person'] or '상대 미상')
+            for it in (r['items'] or [{'title': '(안건 없음)', 'bullets': [], 'decision': '', 'actions': []}]):
+                out.append([_iso(r['ymd']), name, who, it['title'], '\n'.join(it['bullets']),
+                            it['decision'] or '없음', ' / '.join(it['actions'])])
+    return out
+
+
+def sheet_plan(rows, picked, recs_y, today, yday):
+    """탭별로 덧붙일 줄과, 덧붙인 뒤 합칠 칸.
+       kind : 'date' = A열 날짜 세로 병합 / 'title' = 첫 줄 제목(A:G 병합·굵게) + 나머지 A열 병합"""
+    yy = yday.strftime('%y%m%d')
+    ty = today.strftime('%y%m%d')
+    plan = {}
+    plan['답요청'] = {'kind': 'date', 'cols': 4,
+                     'values': [[r['날짜'], r['현장'], r['할일'], ''] for r in rows]}
+    plan['오늘 할일'] = {'kind': 'date', 'cols': 4,
+                      'values': [[_iso(ty), site, what, ''] for site, what, _k in picked]}
+    mr = meet_rows(recs_y)
+    plan['회의록'] = {'kind': 'title', 'cols': len(MEET_HEAD),
+                    'values': ([[meet_title(yy, len(recs_y))] + [''] * (len(MEET_HEAD) - 1)] + mr) if mr else []}
+    return plan
+
+
+def zap_rows(values):
+    """Zapier add_row_lines 의 rows 모양으로. 빈 칸은 뺀다."""
+    out = []
+    for v in values:
+        out.append(dict(('COL$%s' % chr(65 + i), x) for i, x in enumerate(v) if x != ''))
+    return out
+
+
+def merge_body(plan, ranges):
+    """덧붙인 줄 범위 (예 '회의록'!A12:G40  또는  12-40) 를 받아 병합 batchUpdate 본문을 만든다."""
+    req = []
+    for tab, rng in ranges.items():
+        if not rng or tab not in plan:
+            continue
+        m = re.search(r'!A(\d+)(?::[A-Z]+(\d+))?', rng) or re.match(r'^\s*(\d+)\s*(?:-\s*(\d+))?\s*$', rng)
+        if not m:
+            continue
+        top = int(m.group(1)) - 1                        # 0 부터
+        bot = int(m.group(2) or m.group(1))              # 끝 (포함 안 함)
+        sid = TAB_ID[tab]
+        cols = plan[tab]['cols']
+        if plan[tab]['kind'] == 'title':
+            req.append({'mergeCells': {'range': {'sheetId': sid, 'startRowIndex': top, 'endRowIndex': top + 1,
+                                                 'startColumnIndex': 0, 'endColumnIndex': cols}, 'mergeType': 'MERGE_ALL'}})
+            req.append({'repeatCell': {'range': {'sheetId': sid, 'startRowIndex': top, 'endRowIndex': top + 1,
+                                                 'startColumnIndex': 0, 'endColumnIndex': cols},
+                                       'cell': {'userEnteredFormat': {'textFormat': {'bold': True},
+                                                                      'horizontalAlignment': 'LEFT',
+                                                                      'backgroundColor': {'red': 1, 'green': 0.95, 'blue': 0.8}}},
+                                       'fields': 'userEnteredFormat(textFormat,horizontalAlignment,backgroundColor)'}})
+            top += 1
+        if bot - top >= 2:
+            req.append({'mergeCells': {'range': {'sheetId': sid, 'startRowIndex': top, 'endRowIndex': bot,
+                                                 'startColumnIndex': 0, 'endColumnIndex': 1}, 'mergeType': 'MERGE_ALL'}})
+    return {'requests': req}
+
+
+# ── 한 통으로 ─────────────────────────────────────────────
+def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url=''):
+    """차장님 지시 (2026-09-23) : 3통을 순서대로 한 통에. 제목 [KM] 오늘의 정리 입니다. 날짜"""
+    yy = yday.strftime('%y%m%d')
+    t1_body = '\n'.join(ln for ln in t1.split('\n') if not ln.startswith(SHEET_NAME + ' :')).rstrip('\n')
+    L = ['%s : %s' % (SHEET_NAME, sheet_url or '(링크 없음)'), '']
+    L.append('━━ 1. 답해 주십시오 ━━  %s 회의에서 생긴 할 일 %d건' % (T52._d(yy), len(rows)))
+    L.append('')
+    L.append(t1_body)
+    L.append('')
+    L.append('━━ 2. 오늘 할 것 ━━  %s · %d건' % (_iso(today.strftime('%y%m%d')), len(picked)))
+    L.append('')
+    L.append(t2.rstrip('\n'))
+    L.append('')
+    L.append('━━ 3. 어제 있었던 일 ━━  %s' % meet_title(yy, len(recs_y)))
+    L.append('')
+    L.append(t3.rstrip('\n'))
+    subject = '[KM] 오늘의 정리 입니다. %s (%s)' % (today.strftime('%Y-%m-%d'), T52.WD[today.weekday()])
+    return '\n'.join(L) + '\n', subject
+
+
 # ── 한 번에 ───────────────────────────────────────────────
 def run(meta_dir, today=None, out=None, sheet_url=''):
     today = today or datetime.date.today()
@@ -297,7 +406,24 @@ def run(meta_dir, today=None, out=None, sheet_url=''):
             w.writerow(row)
     paths['할일추가'] = p
 
-    stat = {'version': VERSION, '오늘': st, '어제': yy,
+    one, subject = build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url)
+    p = os.path.join(out, '오늘의정리_%s.txt' % st)
+    with io.open(p, 'w', encoding='utf-8') as f:
+        f.write(one)
+    paths['오늘의정리'] = p
+    plan = sheet_plan(rows, picked, recs_y, today, yday)
+    for tab in TABS:
+        p = os.path.join(out, '시트_%s_%s.json' % (tab.replace(' ', ''), st))
+        with io.open(p, 'w', encoding='utf-8') as f:
+            f.write(json.dumps({'rows': zap_rows(plan[tab]['values'])}, ensure_ascii=False))
+        paths['시트_' + tab] = p
+    p = os.path.join(out, '시트계획_%s.json' % st)
+    with io.open(p, 'w', encoding='utf-8') as f:
+        f.write(json.dumps(plan, ensure_ascii=False))
+    paths['시트계획'] = p
+
+    stat = {'version': VERSION, '오늘': st, '어제': yy, '제목': subject,
+            '시트줄': dict((t, len(plan[t]['values'])) for t in TABS),
             'meta전체': len(recs_all), '어제회의': len(recs_y),
             '어제_현장별': per_site,
             '①할일': len(rows), '②오늘': len(picked),
@@ -358,7 +484,7 @@ def run_range(meta_dir, d_from, d_to, out=None, sheet_url=''):
     if not rows:
         M.append('(%s ~ %s 할 일 없음)' % (_iso(d_from), _iso(d_to)))
     M.append('')
-    M.append('26년 할 일 모음 : %s' % (sheet_url or '(링크 없음)'))
+    M.append('%s : %s' % (SHEET_NAME, sheet_url or '(링크 없음)'))
     t_todo = '\n'.join(M)
 
     out = out or meta_dir
@@ -396,6 +522,13 @@ def main(argv):
     if len(argv) < 2:
         print(__doc__)
         return 1
+    if argv[1] == '--merge':
+        # python3 t53_daily.py --merge <시트계획.json> "답요청=<updatedRange>" "오늘 할일=<updatedRange>" "회의록=<updatedRange>"
+        with io.open(argv[2], 'r', encoding='utf-8') as f:
+            plan = json.load(f)
+        ranges = dict(a.split('=', 1) for a in argv[3:] if '=' in a)
+        print(json.dumps(merge_body(plan, ranges), ensure_ascii=False))
+        return 0
     meta_dir, today, out, sheet = argv[1], None, None, ''
     d_from = d_to = None
     i = 2
