@@ -1,0 +1,256 @@
+# -*- coding: utf-8 -*-
+"""★회의록 기간 메일 — 날짜·기간·달을 고르면 그 회의록을 메일로.  (v1, 2026-09-23)
+
+누르면 먼저 사용법이 보이고, 그다음 물어봅니다. 외울 것이 없습니다.
+
+    어떻게 고르시겠습니까 ?
+      1  하루        예) 260915
+      2  기간        예) 260901 ~ 260915
+      3  한 달       예) 2609  (또는 9)
+      엔터  =  최근 7일
+
+그러면 파이썬이 (AI 사용량 0)
+    드라이브\회의록\incoming 의 meta.json 을 그 기간만 골라
+    ① 회의록 정리  (현장 → 날짜 사람 → 안건/협의내용/결정사항/조치사항)   ← 아침 메일 ③ 과 같은 모양
+    ② 그 기간에 생긴 할 일  (날짜 · 현장 · 할일 + 「26년 할 일 모음」 링크)
+    두 파일을 드라이브\KM_아침메일\ 에 올려 둡니다.
+    KM_즉시발송(앱스 스크립트)이 깔려 있으면 5분 안에 bsy 메일로 갑니다.
+    아직 안 깔려 있으면 클로드에게 「올렸어」 라고 하십시오. 클로드가 보냅니다.
+
+53번(t53_daily)·52번(t52_mailbuild)이 없거나 옛것이면 이 파일이 새것을 넣습니다.
+"""
+import os, sys, io, re, shutil, datetime, traceback
+
+VERSION = 'v1 2026-09-23'
+SHEET = 'https://docs.google.com/spreadsheets/d/1S02QcwHnRNiJJbq3qfSPs9sRtR1UDtTMSUPhLy4_Ckk/edit'
+HERE = os.path.dirname(os.path.abspath(__file__))
+NOTE = []
+
+T52_SRC = '# -*- coding: utf-8 -*-\n"""\n52. 회의록 정리 메일 원고 만들기  (km_tools / t52_mailbuild)\n\nmeta.json 만 읽어서 「현장별 회의록 정리」 메일 원고를 만든다.\n클로드(AI)를 전혀 쓰지 않는다 → 사용량 0.\n\n    python t52_mailbuild.py <meta폴더> [--from 260921] [--to 260922] [--out 폴더]\n\n만드는 것\n    회의록정리_YYMMDD.txt    메일 본문(글자)\n    회의록정리_YYMMDD.html   메일 본문(서식)\n    회의록정리_YYMMDD.json   몇 건을 어디서 뽑았는지 (자가진단용)\n\n규칙 (배성윤 프로 확정)\n    · 줄 수 제한 없음 - 있는 것은 다 적는다\n    · 빈 칸은 아예 찍지 않는다 ("없음"도 안 찍는다)\n    · 1) 회의록을 위에, 2) 그 아래 현장별 중요 사항\n    · 현장 이름이 달리 적혀도 (앵커호텔 / 앵커 호텔) 한 현장으로 묶는다\n"""\nfrom __future__ import print_function\nimport os, sys, io, json, re, datetime\n\nVERSION = \'v2 2026-09-23\'\n\n# ── 빈 값으로 볼 것 ─────────────────────────────────────────\nEMPTY = (\'\', \'-\', \'없음\', \'- 없음\', \'해당 없음\', \'- 해당 없음\', \'미정\', \'N/A\', \'n/a\')\nJUNK_RE = re.compile(r\'^[=\\-_\\s]+$\')\n\n\ndef _is_empty(v):\n    if v is None:\n        return True\n    s = str(v).strip()\n    s = re.sub(r\'^[-·•]\\s*\', \'\', s).strip()\n    if not s or s in EMPTY:\n        return True\n    # 「없음 — 무엇 확인 후 재협의 예정」 은 결정이 안 난 것이다. 찍지 않는다.\n    if re.match(r\'^(없음|해당\\s*없음|미정)\\s*[—\\-–:]\', s):\n        return True\n    return bool(JUNK_RE.match(s))\n\n\ndef _clean(v):\n    s = str(v).strip()\n    return re.sub(r\'^[-·•]\\s*\', \'\', s).strip()\n\n\ndef _lines(v):\n    """문자열 / 리스트 / 표(리스트의 리스트) 를 모두 줄 목록으로."""\n    out = []\n    if v is None:\n        return out\n    if isinstance(v, (str, bytes)):\n        for ln in str(v).split(\'\\n\'):\n            if not _is_empty(ln):\n                out.append(_clean(ln))\n        return out\n    if isinstance(v, dict):\n        v = list(v.values())\n    if isinstance(v, (list, tuple)):\n        for it in v:\n            if isinstance(it, (list, tuple)):\n                cells = [_clean(c) for c in it if not _is_empty(c)]\n                if cells:\n                    out.append(\' | \'.join(cells))\n            elif isinstance(it, dict):\n                out.extend(_lines(list(it.values())))\n            elif not _is_empty(it):\n                out.append(_clean(it))\n    return out\n\n\n# ── ★ 현장명은 차장님이 손으로 넣으신 것(meta.site)만 쓴다 ───────────\n#    회의록 본문에 다른 현장 이름이 나와도 현장으로 삼지 않는다.\n#    도구도, 클로드도 「이건 사실 어느 현장 것」이라는 판단을 하지 않는다.\n#    (2026-09-23 차장님 지시 — 잘못된 귀속이 일을 그르친다)\nNOT_A_SITE = (\'복합회의\', \'확인필요\', \'확인 필요\', \'현장미정\', \'미정\',\n              \'수금채크\', \'수금체크\', \'삭제요망\')\n\n\ndef is_site(name):\n    """차장님이 넣으신 이름이 진짜 현장인가. 아니면 「현장 아님」으로 뺀다."""\n    n = re.sub(r\'\\s+\', \'\', name or \'\')\n    for x in NOT_A_SITE:\n        if n == re.sub(r\'\\s+\', \'\', x):\n            return False\n    return bool(n)\n\n\n# ── 현장 이름 묶기 ──────────────────────────────────────────\ndef norm_site(s):\n    s = (s or \'\').strip()\n    s = re.sub(r\'^[_\\s]+\', \'\', s)\n    s = re.sub(r\'\\s+\', \'\', s)\n    return s\n\n\ndef merge_sites(names):\n    """짧은 이름이 긴 이름의 앞머리이면 한 현장으로 본다(동구로초 ⊂ 동구로초등학교)."""\n    uniq = sorted(set(n for n in names if n), key=len)\n    rep = {}\n    for n in uniq:\n        hit = None\n        for r in rep.values():\n            if len(r) >= 3 and (n.startswith(r) or r.startswith(n)):\n                hit = r\n                break\n        rep[n] = hit or n\n    return rep\n\n\n# ── meta.json 한 건 읽기 ────────────────────────────────────\ndef who(m):\n    """협의자 한 줄. company 칸에 안건이 통째로 들어온 자료가 많아 걸러낸다."""\n    name = (m.get(\'name\') or \'\').strip()\n    rank = (m.get(\'rank\') or \'\').strip()\n    person = (m.get(\'person\') or \'\').strip()\n    comp = (m.get(\'company\') or \'\').strip()\n    # 안건이 섞여 들어온 회사칸은 버린다\n    if len(comp) > 20 or \',\' in comp:\n        comp = \'\'\n    base = (name + \' \' + rank).strip() if name else person\n    if not base:\n        base = person or comp\n    # person 이 name 을 되풀이하면 짧은 쪽만\n    if base and person and base in person and len(person) > len(base) * 2:\n        pass\n    out = \' \'.join(x for x in [comp, base] if x and x not in (comp if x is base else base))\n    out = re.sub(r\'\\s+\', \' \', out).strip()\n    return out[:40] or \'상대 미상\'\n\n\n# ★ 차장님 확정 2026-09-23 : 「확인·회신 요청 사항」은 적지 않는다.\n#   130건이 쌓여 메일을 뒤덮었고, 결정된 것이 묻혔다.\nSEC1_KEYS = [\'일정\', \'수량·규격 변경\']\nSEC2_KEYS = [\'할 일\', \'리스크와 대처\', \'타부서 전달 사항\', \'대외 언급 금지 사항\']\n\n\ndef read_meta(path):\n    with io.open(path, \'r\', encoding=\'utf-8\') as f:\n        d = json.load(f)\n    m = d.get(\'meta\', {}) or {}\n    sec = d.get(\'sec\', {}) or {}\n    s1 = sec.get(\'1\', {}) or {}\n    s2 = sec.get(\'2\', {}) or {}\n\n    site = m.get(\'site\') or s1.get(\'현장\') or \'\'\n    rec = {\n        \'file\': os.path.basename(path),\n        \'site_raw\': site,\n        \'site\': norm_site(site),\n        \'ymd\': m.get(\'ymd\') or \'\',\n        \'hm\': m.get(\'hm\') or \'\',\n        \'person\': who(m),\n        \'company\': \'\',\n        \'topic\': _clean(s1.get(\'안건\') or \'\'),\n        \'items\': [],\n        \'blocks\': [],\n        \'dates\': [],\n    }\n\n    for it in (s1.get(\'안건목록\') or []):\n        if not isinstance(it, dict):\n            continue\n        one = {\n            \'title\': _clean(it.get(\'title\') or \'\'),\n            \'bullets\': _lines(it.get(\'bullets\')),\n            \'decision\': \'\' if _is_empty(it.get(\'decision\')) else _clean(it.get(\'decision\')),\n            \'actions\': _lines(it.get(\'actions\')),\n        }\n        if one[\'title\'] or one[\'bullets\'] or one[\'decision\'] or one[\'actions\']:\n            rec[\'items\'].append(one)\n\n    for k in SEC1_KEYS:\n        v = _lines(s1.get(k))\n        if v:\n            rec[\'blocks\'].append((k, v))\n    for k in SEC2_KEYS:\n        v = _lines(s2.get(k))\n        if v:\n            rec[\'blocks\'].append((k, v))\n\n    # 날짜 뽑기 : 일정표 + 할 일 + 일정 에 박힌 YYMMDD\n    hay = json.dumps({\'a\': s1.get(\'일정표\'), \'b\': s1.get(\'일정\'), \'c\': s2.get(\'할 일\')},\n                     ensure_ascii=False)\n    for d8 in re.findall(r\'(?<!\\d)(2[0-9](?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01]))(?!\\d)\', hay):\n        rec[\'dates\'].append(d8)\n    rec[\'dates\'] = sorted(set(rec[\'dates\']))\n    return rec\n\n\ndef collect(meta_dir, d_from=None, d_to=None):\n    recs, skipped = [], []\n    for root, _dirs, files in os.walk(meta_dir):\n        for fn in files:\n            if not fn.endswith(\'meta.json\'):\n                continue\n            if fn.startswith(\'_삭제요망\'):\n                skipped.append((fn, \'삭제요망\'))\n                continue\n            p = os.path.join(root, fn)\n            try:\n                r = read_meta(p)\n            except Exception as e:\n                skipped.append((fn, \'읽기실패 %s\' % e))\n                continue\n            if d_from and (not r[\'ymd\'] or r[\'ymd\'] < d_from):\n                skipped.append((fn, \'기간밖 %s\' % r[\'ymd\']))\n                continue\n            if d_to and (not r[\'ymd\'] or r[\'ymd\'] > d_to):\n                skipped.append((fn, \'기간밖 %s\' % r[\'ymd\']))\n                continue\n            recs.append(r)\n    return recs, skipped\n\n\n# ── 중복 지우기 (글자가 똑같은 것만) ────────────────────────\ndef _key(s):\n    return re.sub(r\'[\\s·,.\\-()]+\', \'\', s)\n\n\ndef dedupe(recs):\n    """같은 현장 안에서 글자가 같은 줄은 한 번만 남긴다. 몇 줄을 지웠는지 돌려준다."""\n    seen, cut = {}, 0\n    for r in recs:\n        bag = seen.setdefault(r[\'site\'], set())\n        for it in r[\'items\']:\n            keep = []\n            for b in it[\'bullets\']:\n                k = _key(b)\n                if k in bag:\n                    cut += 1\n                else:\n                    bag.add(k)\n                    keep.append(b)\n            it[\'bullets\'] = keep\n        nb = []\n        for name, vals in r[\'blocks\']:\n            keep = []\n            for v in vals:\n                k = (name, _key(v))\n                if k in bag:\n                    cut += 1\n                else:\n                    bag.add(k)\n                    keep.append(v)\n            if keep:\n                nb.append((name, keep))\n        r[\'blocks\'] = nb\n    return cut\n\n\n# ── 원고 만들기 ────────────────────────────────────────────\nWD = [\'월\', \'화\', \'수\', \'목\', \'금\', \'토\', \'일\']\n\n\ndef _d(ymd):\n    if not ymd or len(ymd) != 6:\n        return ymd or \'\'\n    return \'%s/%s\' % (int(ymd[2:4]), int(ymd[4:6]))\n\n\ndef build_text(recs, today=None):\n    """차장님 확정 모양 (2026-09-23)\n         현장명  /  날짜는 같으면 한 번만  /  협의한 사람과 시각  /  회신은 안 적음\n       현장명은 차장님이 손으로 넣으신 것(meta.site) 그대로. 도구가 바꾸지 않는다."""\n    today = today or datetime.date.today()\n    ty = today.strftime(\'%y%m%d\')\n    tm = (today + datetime.timedelta(days=1)).strftime(\'%y%m%d\')\n\n    rep = merge_sites([r[\'site\'] for r in recs])\n    bag = {}\n    for r in recs:\n        bag.setdefault(rep.get(r[\'site\'], r[\'site\']), []).append(r)\n    for k in bag:\n        bag[k].sort(key=lambda r: (r[\'ymd\'], r[\'hm\'] or \'99:99\'))\n\n    sites = sorted([k for k in bag if is_site(k)], key=lambda k: (-len(bag[k]), k))\n    others = sorted([k for k in bag if not is_site(k)], key=lambda k: (-len(bag[k]), k))\n\n    L = []\n    L.append(\'회의록 정리 %s (%s)\' % (today.strftime(\'%Y-%m-%d\'), WD[today.weekday()]))\n    L.append(\'협의 %d건 · 현장 %d개%s\'\n             % (len(recs), len(sites),\n                (\'  (그 밖에 %s %d건)\' % (\' · \'.join(others), sum(len(bag[o]) for o in others))\n                 if others else \'\')))\n    L.append(\'\')\n\n    # ── 날짜가 박힌 것 (앞으로 할 일의 기한. 회의한 날과 다르다) ──\n    urgent = set()\n    for r in recs:\n        for d8 in r[\'dates\']:\n            if d8 >= ty:\n                urgent.add((d8, rep.get(r[\'site\'], r[\'site\'])))\n    if urgent:\n        L.append(\'=\' * 56)\n        L.append(\'[ 기한 ] - 앞으로 해야 할 날. 회의한 날이 아닙니다\')\n        L.append(\'=\' * 56)\n        last = \'\'\n        for d8, site in sorted(urgent):\n            mark = \'  <-- 오늘\' if d8 == ty else (\'  <-- 내일\' if d8 == tm else \'\')\n            head = _d(d8) if d8 != last else \' \' * len(_d(d8))   # 같은 날짜는 한 번만\n            L.append(\'  %-7s %s%s\' % (head, site, mark))\n            last = d8\n        L.append(\'\')\n\n    def one_site(name, rs):\n        L.append(\'\')\n        L.append(\'-\' * 56)\n        L.append(\'%s        협의 %d건\' % (name, len(rs)))\n        L.append(\'-\' * 56)\n        last_day = \'\'\n        for r in rs:\n            if r[\'ymd\'] != last_day:                      # ★ 같은 날짜는 한 번만\n                L.append(\'  [%s]\' % _d(r[\'ymd\']))\n                last_day = r[\'ymd\']\n            who = r[\'person\'] or \'상대 미상\'\n            L.append(\'    %s  %s\' % ((r[\'hm\'] or \'시각미상\').rjust(5), who))\n            if r[\'topic\']:\n                L.append(\'        안건> %s\' % r[\'topic\'])\n            for it in r[\'items\']:\n                if it[\'title\']:\n                    L.append(\'        · %s\' % it[\'title\'])\n                for b in it[\'bullets\']:\n                    L.append(\'            %s\' % b)\n                if it[\'decision\']:\n                    L.append(\'          결정> %s\' % it[\'decision\'])\n                for a in it[\'actions\']:\n                    L.append(\'          조치> %s\' % a)\n            for kname, vals in r[\'blocks\']:\n                L.append(\'        %s>\' % kname)\n                for v in vals:\n                    L.append(\'            %s\' % v)\n            L.append(\'\')\n\n    L.append(\'=\' * 56)\n    L.append(\'[ 1. 회의록 ] - 현장명은 차장님이 넣으신 그대로입니다\')\n    L.append(\'=\' * 56)\n    for name in sites:\n        one_site(name, bag[name])\n\n    if others:\n        L.append(\'\')\n        L.append(\'=\' * 56)\n        L.append(\'[ 2. 현장이 아닌 것 ] - 여러 현장을 한꺼번에 얘기한 회의 등\')\n        L.append(\'=\' * 56)\n        L.append(\'  ※ 안에 다른 현장 이름이 나와도 그 현장 것으로 옮기지 않았습니다.\')\n        L.append(\'    어느 현장 것인지는 차장님이 정하십시오.\')\n        for name in others:\n            one_site(name, bag[name])\n\n    # ── 결정·변경만 ──\n    L.append(\'\')\n    L.append(\'=\' * 56)\n    L.append(\'[ 3. 결정된 것 · 바뀐 것 ]\')\n    L.append(\'=\' * 56)\n    any_pick = False\n    for name in sites + others:\n        picked = []\n        for r in bag[name]:\n            for it in r[\'items\']:\n                if it[\'decision\']:\n                    picked.append((r[\'ymd\'], r[\'hm\'], \'결정\', it[\'decision\']))\n            for kname, vals in r[\'blocks\']:\n                if kname == \'수량·규격 변경\':\n                    for v in vals:\n                        picked.append((r[\'ymd\'], r[\'hm\'], \'변경\', v))\n        if not picked:\n            continue\n        any_pick = True\n        L.append(\'\')\n        L.append(\'* %s\' % name)\n        last_day = \'\'\n        for ymd, hm, kind, txt in picked:\n            head = _d(ymd) if ymd != last_day else \' \' * len(_d(ymd))\n            L.append(\'    %-6s %s> %s\' % (head, kind, txt))\n            last_day = ymd\n    if not any_pick:\n        L.append(\'\')\n        L.append(\'  결정되거나 바뀐 것이 없습니다.\')\n\n    L.append(\'\')\n    L.append(\'-\' * 56)\n    L.append(\'t52_mailbuild %s · meta.json %d건\' % (VERSION, len(recs)))\n    return \'\\n\'.join(L)\n\n\ndef build_html(text):\n    esc = (text.replace(\'&\', \'&amp;\').replace(\'<\', \'&lt;\').replace(\'>\', \'&gt;\'))\n    return (\'<div style="font-family:맑은 고딕,Malgun Gothic,sans-serif;font-size:13px;\'\n            \'line-height:1.55;white-space:pre-wrap">%s</div>\' % esc)\n\n\ndef run(meta_dir, d_from=None, d_to=None, out=None, today=None):\n    recs, skipped = collect(meta_dir, d_from, d_to)\n    before = sum(len(b) for r in recs for _n, b in r[\'blocks\']) + \\\n             sum(len(i[\'bullets\']) for r in recs for i in r[\'items\'])\n    cut = dedupe(recs)\n    text = build_text(recs, today)\n    out = out or meta_dir\n    if not os.path.isdir(out):\n        os.makedirs(out)\n    stamp = (today or datetime.date.today()).strftime(\'%y%m%d\')\n    base = os.path.join(out, \'회의록정리_%s\' % stamp)\n    with io.open(base + \'.txt\', \'w\', encoding=\'utf-8\') as f:\n        f.write(text)\n    with io.open(base + \'.html\', \'w\', encoding=\'utf-8\') as f:\n        f.write(build_html(text))\n    rep = merge_sites([r[\'site\'] for r in recs])\n    allnames = set(rep.get(r[\'site\'], r[\'site\']) for r in recs)\n    realsites = sorted([n for n in allnames if is_site(n)])\n    notsites = sorted([n for n in allnames if not is_site(n)])\n    stat = {\n        \'version\': VERSION,\n        \'회의수\': len(recs),\n        \'현장수\': len(realsites),            # ★ 현장이 아닌 것은 안 센다\n        \'현장목록\': realsites,\n        \'현장아닌것\': notsites,\n        \'줄수\': len(text.split(\'\\n\')),\n        \'글자수\': len(text),\n        \'중복지운줄\': cut,\n        \'중복전줄\': before,\n        \'건너뜀\': len(skipped),\n    }\n    with io.open(base + \'.json\', \'w\', encoding=\'utf-8\') as f:\n        f.write(json.dumps(stat, ensure_ascii=False, indent=1))\n\n    # 현장당 1통용 : 현장별로 따로 저장한다\n    per = os.path.join(out, \'현장별_%s\' % stamp)\n    if not os.path.isdir(per):\n        os.makedirs(per)\n    rep2 = merge_sites([r[\'site\'] for r in recs])\n    by = {}\n    for r in recs:\n        by.setdefault(rep2.get(r[\'site\'], r[\'site\']), []).append(r)\n    stat[\'현장별\'] = {}\n    for site, rs in by.items():\n        t = build_text(rs, today)\n        fn = os.path.join(per, \'%s.txt\' % re.sub(r\'[\\\\/:*?"<>|]\', \'_\', site))\n        with io.open(fn, \'w\', encoding=\'utf-8\') as f:\n            f.write(t)\n        stat[\'현장별\'][site] = {\'회의\': len(rs), \'줄\': len(t.split(\'\\n\')), \'글자\': len(t)}\n    with io.open(base + \'.json\', \'w\', encoding=\'utf-8\') as f:\n        f.write(json.dumps(stat, ensure_ascii=False, indent=1))\n    return text, stat\n\n\ndef main(argv):\n    if len(argv) < 2:\n        print(__doc__)\n        return 1\n    meta_dir = argv[1]\n    d_from = d_to = out = None\n    i = 2\n    while i < len(argv):\n        if argv[i] == \'--from\':\n            d_from = argv[i + 1]; i += 2\n        elif argv[i] == \'--to\':\n            d_to = argv[i + 1]; i += 2\n        elif argv[i] == \'--out\':\n            out = argv[i + 1]; i += 2\n        else:\n            i += 1\n    _t, stat = run(meta_dir, d_from, d_to, out)\n    print(json.dumps(stat, ensure_ascii=False, indent=1))\n    return 0\n\n\nif __name__ == \'__main__\':\n    sys.exit(main(sys.argv))\n'
+T53_SRC = '# -*- coding: utf-8 -*-\n"""\n53. 아침 메일 3통 원고 만들기  (km_tools / t53_daily)\n\nmeta.json 만 읽는다. 클로드(AI)를 전혀 쓰지 않는다 → 사용량 0.\n\n    python t53_daily.py <meta폴더> [--today 260923] [--out 폴더] [--sheet <26년 할 일 모음 링크>]\n    python t53_daily.py <meta폴더> --from 260901 --to 260915 [--out 폴더]     기간 지정\n    python t53_daily.py <meta폴더> --month 2609                                 한 달\n    python t53_daily.py <meta폴더> --day 260915                                 하루\n\n만드는 것 (오늘 = YYMMDD)\n    답해주십시오_YYMMDD.txt   ① 어제 회의록에서 새로 생긴 「할 일」 하루치 + 시트 링크\n    할일추가_YYMMDD.csv       ① 과 같은 내용. 「26년 할 일 모음」 시트에 덧붙일 줄 (날짜|종류|현장|할일|어디서|완료)\n    오늘할것_YYMMDD.txt       ② 회의록 「할 일」·「일정」 중 날짜가 오늘인 것만. 지난 것은 안 적는다\n    어제있었던일_YYMMDD.txt   ③ 어제 회의록 전문 정리. 현장명 → 날짜 사람 → 안건/협의내용/결정사항/조치사항\n    아침3통_YYMMDD.json       몇 건을 어디서 뽑았는지 (자가진단)\n\n차장님 확정 (2026-09-23)\n    · ① 은 하루치. 쌓인 것은 시트에서 보신다 → 메일에 「N일 지남」 을 적지 않는다\n    · ② 는 오늘 날짜인 것만\n    · ③ 은 현장별 회의 수 = meta.json 수 (PLAUD 회의록 수와 정확히 일치)\n    · 현장명은 차장님이 손으로 넣으신 것(meta.site) 그대로. 도구가 바꾸지 않는다\n    · 여러 현장이 섞인 회의(복합회의 등)는 「현장이 아닌 것」 으로 따로 둔다\n"""\nfrom __future__ import print_function\nimport os, sys, io, json, re, csv, datetime\n\nsys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\nimport t52_mailbuild as T52\n\nVERSION = \'v3 2026-09-23\'   # v3 : 종류 칸 삭제 · 날짜 = 회의한 날(기한은 할일 글 끝에) · 기간 지정(--from --to / --month)\n\n# 「26년 할 일 모음」 시트의 종류 칸. 차장님 예시(26년 회의록 시트)에 나온 낱말 그대로.\nKINDS = (\'발송\', \'도면\', \'회의\', \'확인\', \'전달\', \'샘플\', \'제작\', \'발행\', \'설치\',\n         \'납품\', \'회신\', \'제출\', \'계약\', \'발주\', \'연락\')\nSHEET_HEAD = [\'날짜\', \'현장\', \'할일\', \'완료\']   # 차장님 확정 (2026-09-23) : 종류 칸 없음. 날짜 = 회의한 날. 완료 = 차장님 체크\n\nTODO_RE = re.compile(r\'^\\s*[-·•]?\\s*(\\d{6}|미정)\\s*\\|\\s*(.+?)\\s*(?:\\|\\s*(.*?))?\\s*$\')\nSCHED_RE = re.compile(r\'^\\s*[-·•]?\\s*([^|]+?)\\s*\\|\\s*(\\d{6})\\s*\\|\\s*(.+?)\\s*$\')\n\n\ndef _iso(ymd):\n    """260922 -> 2026-09-22. 미정·빈칸은 빈칸 (차장님 예시 : 기한 미지정은 날짜 칸이 비어 있다)."""\n    if not ymd or not re.match(r\'^\\d{6}$\', ymd):\n        return \'\'\n    return \'20%s-%s-%s\' % (ymd[:2], ymd[2:4], ymd[4:6])\n\n\ndef _row_line(date, site, what):\n    return \'%s\\t%s\\t%s\' % (date, site, what)\n\n\ndef _todo_text(ymd, what, whom):\n    """할일 글 = 무엇 + (기한 2026-09-23) + (배성윤 → 누구). 기한이 없으면 안 붙인다."""\n    t = what\n    if _iso(ymd):\n        t += \'  (기한 %s)\' % _iso(ymd)\n    if whom:\n        t += \'  (%s)\' % whom\n    return t\n\n\ndef kind_of(text):\n    """할 일 글에서 종류를 고른다. 낱말이 없으면 「확인」."""\n    for k in KINDS:\n        if k in text:\n            return k\n    return \'확인\'\n\n\ndef parse_todo(line):\n    """\'- 260922 | 무엇 | 배성윤 → 누구\'  ->  (날짜|미정, 무엇, 누구)"""\n    m = TODO_RE.match(line or \'\')\n    if not m:\n        return None\n    return m.group(1), m.group(2).strip(), (m.group(3) or \'\').strip()\n\n\ndef _who(m):\n    w = T52.who(m)\n    person = re.sub(r\'\\s+\', \' \', (m.get(\'person\') or \'\')).strip()\n    if person and (w == \'상대 미상\' or re.sub(r\'\\s\', \'\', w) == re.sub(r\'\\s\', \'\', person)):\n        return person\n    return w\n\n\ndef read_raw(path):\n    with io.open(path, \'r\', encoding=\'utf-8-sig\') as f:\n        d = json.load(f)\n    m = d.get(\'meta\') or {}\n    s1 = (d.get(\'sec\') or {}).get(\'1\') or {}\n    s2 = (d.get(\'sec\') or {}).get(\'2\') or {}\n    rec = {\n        \'file\': os.path.basename(path),\n        \'site\': re.sub(r\'\\s+\', \' \', (m.get(\'site\') or s1.get(\'현장\') or \'\')).strip(),   # ★ 손으로 넣으신 그대로\n        \'key\': T52.norm_site(m.get(\'site\') or s1.get(\'현장\') or \'\'),\n        \'ymd\': m.get(\'ymd\') or \'\',\n        \'hm\': m.get(\'hm\') or \'\',\n        \'person\': _who(m),\n        \'items\': [],\n        \'todos\': [],\n        \'sched\': [],\n    }\n    for it in (s1.get(\'안건목록\') or []):\n        if not isinstance(it, dict):\n            continue\n        rec[\'items\'].append({\n            \'title\': T52._clean(it.get(\'title\') or \'\'),\n            \'bullets\': T52._lines(it.get(\'bullets\')),\n            \'decision\': T52._clean(it.get(\'decision\') or \'\'),   # ★ 「없음 — …」 도 그대로 보여드린다\n            \'actions\': T52._lines(it.get(\'actions\')),\n        })\n    for ln in T52._lines(s2.get(\'할 일\')):\n        t = parse_todo(ln)\n        if t:\n            rec[\'todos\'].append(t)\n    for ln in T52._lines(s1.get(\'일정\')):\n        m2 = SCHED_RE.match(ln)\n        if m2:\n            rec[\'sched\'].append((m2.group(2), m2.group(1).strip(), m2.group(3).strip()))\n    return rec\n\n\ndef collect(meta_dir):\n    recs, skipped = [], []\n    for root, _dirs, files in os.walk(meta_dir):\n        for fn in sorted(files):\n            if not fn.endswith(\'meta.json\') or fn.startswith(\'_삭제요망\'):\n                continue\n            try:\n                recs.append(read_raw(os.path.join(root, fn)))\n            except Exception as e:\n                skipped.append((fn, str(e)))\n    return recs, skipped\n\n\ndef _group(recs):\n    """현장별로 묶는다. (현장 목록, 현장이 아닌 것 목록, 묶음)"""\n    rep = T52.merge_sites([r[\'key\'] for r in recs])\n    byk = {}\n    for r in recs:\n        byk.setdefault(rep.get(r[\'key\'], r[\'key\']) or \'현장미정\', []).append(r)\n    bag = {}\n    for k, rs in byk.items():\n        rs.sort(key=lambda r: (r[\'ymd\'], r[\'hm\'] or \'99:99\', r[\'file\']))\n        bag[rs[0][\'site\'] or \'현장미정\'] = rs\n    sites = sorted([k for k in bag if T52.is_site(k)], key=lambda k: (-len(bag[k]), k))\n    others = sorted([k for k in bag if not T52.is_site(k)], key=lambda k: (-len(bag[k]), k))\n    return sites, others, bag\n\n\ndef _names(recs):\n    """공백만 다른 이름(앵커호텔/앵커 호텔)은 한 현장. 이름은 그 묶음 첫 회의의 site 그대로."""\n    _s, _o, bag = _group(recs)\n    out = {}\n    for name, rs in bag.items():\n        for r in rs:\n            out[r[\'key\']] = name\n    return out\n\n\ndef _head(title, day):\n    return [\'%s  %s (%s)\' % (title, day.strftime(\'%Y-%m-%d\'), T52.WD[day.weekday()]), \'\']\n\n\ndef _src(r):\n    return \'%s 회의 %s%s\' % (T52._d(r[\'ymd\']), (r[\'hm\'] + \' \') if r[\'hm\'] else \'\', r[\'person\'] or \'\')\n\n\n# ── ① 답해 주십시오 ─────────────────────────────────────────\ndef todo_rows(recs_y):\n    """어제 회의록에서 새로 생긴 할 일 → 시트 줄(날짜|종류|현장|할일|완료). 현장명은 meta.site 그대로."""\n    rows, seen = [], set()\n    nm = _names(recs_y)\n    for r in recs_y:\n        site = nm.get(r[\'key\'], r[\'site\'])\n        for ymd, what, whom in r[\'todos\']:\n            key = (site, what)\n            if key in seen:\n                continue\n            seen.add(key)\n            rows.append({\'날짜\': _iso(r[\'ymd\']), \'현장\': site, \'할일\': _todo_text(ymd, what, whom), \'완료\': \'\'})\n    return rows\n\n\ndef build_answer(recs_y, yday, sheet_url=\'\'):\n    """차장님 지시 : 하루치 내용을 메일에 적고, 「26년 할 일 모음」 링크를 넣는다. 그 밖의 말은 안 적는다."""\n    rows = todo_rows(recs_y)\n    L = []\n    for row in sorted(rows, key=lambda x: (not T52.is_site(x[\'현장\']), x[\'현장\'], x[\'날짜\'])):\n        L.append(_row_line(row[\'날짜\'], row[\'현장\'], row[\'할일\']))\n    if not rows:\n        L.append(\'(%s 회의록에서 새로 생긴 할 일 없음)\' % _iso(yday.strftime(\'%y%m%d\')))\n    L.append(\'\')\n    L.append(\'26년 할 일 모음 : %s\' % (sheet_url or \'(링크 없음)\'))\n    return \'\\n\'.join(L), rows\n\n\n# ── ② 오늘 할 것 ────────────────────────────────────────────\ndef build_today(recs_all, today):\n    """차장님 지시 : 회의록 「할 일」 중 날짜가 오늘인 것만. 지난 것·미정은 안 적는다."""\n    ty = today.strftime(\'%y%m%d\')\n    picked, seen = [], set()\n    nm = _names(recs_all)\n    for r in recs_all:\n        site = nm.get(r[\'key\'], r[\'site\'])\n        for ymd, what, whom in r[\'todos\']:\n            if ymd == ty and (site, what) not in seen:\n                seen.add((site, what))\n                picked.append((site, what + ((\'  (%s)\' % whom) if whom else \'\'), _iso(r[\'ymd\'])))\n    picked.sort(key=lambda x: (not T52.is_site(x[0]), x[0]))\n    L = [_row_line(_iso(ty), site, what) for site, what, _src in picked]\n    if not picked:\n        L.append(\'(회의록에 %s 로 적힌 할 일 없음)\' % _iso(ty))\n    return \'\\n\'.join(L), picked\n\n\n# ── ③ 어제 있었던 일 ────────────────────────────────────────\ndef build_yesterday(recs_y, yday):\n    """차장님 모양 (2026-09-23 원문) :\n         1. 현장명\n         (빈 줄)\n         날짜   사람이름\n         (빈 줄)\n         안건 : …\n         협의내용 : 첫 줄\n         다음 줄들…\n         결정사항 : …\n         조치사항 : …\n         (안건이 있을 때마다 「날짜 사람이름」 부터 다시)\n       머리말·꼬리말·건수 설명은 적지 않는다."""\n    sites, others, bag = _group(recs_y)\n    L = []\n\n    def one(idx, name, rs):\n        L.append(\'%d. %s\' % (idx, name))\n        L.append(\'\')\n        for r in rs:\n            head = \'%s   %s%s\' % (T52._d(r[\'ymd\']), (r[\'hm\'] + \'  \') if r[\'hm\'] else \'\', r[\'person\'] or \'상대 미상\')\n            items = r[\'items\'] or [{\'title\': \'(안건 없음)\', \'bullets\': [], \'decision\': \'\', \'actions\': []}]\n            for it in items:\n                L.append(head)\n                L.append(\'\')\n                L.append(\'안건 : %s\' % it[\'title\'])\n                b = it[\'bullets\'] or [\'\']\n                L.append(\'협의내용 : %s\' % b[0])\n                for x in b[1:]:\n                    L.append(x)\n                L.append(\'결정사항 : %s\' % (it[\'decision\'] or \'없음\'))\n                L.append(\'조치사항 : %s\' % \' / \'.join(it[\'actions\']))\n                L.append(\'\')\n        L.append(\'\')\n\n    n = 0\n    if not recs_y:\n        L.append(\'(%s 회의록 없음)\' % _iso(yday.strftime(\'%y%m%d\')))\n    for name in sites:\n        n += 1\n        one(n, name, bag[name])\n    if others:\n        L.append(\'※ 현장이 아닌 것 — 어느 현장 것인지는 차장님이 정하십시오\')\n        L.append(\'\')\n        for name in others:\n            n += 1\n            one(n, name, bag[name])\n    return \'\\n\'.join(L).rstrip(\'\\n\') + \'\\n\', {s: len(bag[s]) for s in sites + others}\n\n\n# ── 한 번에 ───────────────────────────────────────────────\ndef run(meta_dir, today=None, out=None, sheet_url=\'\'):\n    today = today or datetime.date.today()\n    yday = today - datetime.timedelta(days=1)\n    yy = yday.strftime(\'%y%m%d\')\n    recs_all, skipped = collect(meta_dir)\n    recs_y = [r for r in recs_all if r[\'ymd\'] == yy]\n\n    t1, rows = build_answer(recs_y, yday, sheet_url)\n    t2, picked = build_today(recs_all, today)\n    t3, per_site = build_yesterday(recs_y, yday)\n\n    out = out or meta_dir\n    if not os.path.isdir(out):\n        os.makedirs(out)\n    st = today.strftime(\'%y%m%d\')\n    paths = {}\n    for name, txt in ((\'답해주십시오\', t1), (\'오늘할것\', t2), (\'어제있었던일\', t3)):\n        p = os.path.join(out, \'%s_%s.txt\' % (name, st))\n        with io.open(p, \'w\', encoding=\'utf-8\') as f:\n            f.write(txt)\n        paths[name] = p\n    p = os.path.join(out, \'할일추가_%s.csv\' % st)\n    with io.open(p, \'w\', encoding=\'utf-8-sig\', newline=\'\') as f:\n        w = csv.DictWriter(f, fieldnames=SHEET_HEAD)\n        w.writeheader()\n        for row in rows:\n            w.writerow(row)\n    paths[\'할일추가\'] = p\n\n    stat = {\'version\': VERSION, \'오늘\': st, \'어제\': yy,\n            \'meta전체\': len(recs_all), \'어제회의\': len(recs_y),\n            \'어제_현장별\': per_site,\n            \'①할일\': len(rows), \'②오늘\': len(picked),\n            \'건너뜀\': skipped, \'파일\': paths}\n    with io.open(os.path.join(out, \'아침3통_%s.json\' % st), \'w\', encoding=\'utf-8\') as f:\n        f.write(json.dumps(stat, ensure_ascii=False, indent=1))\n    return (t1, t2, t3), stat\n\n\ndef run_range(meta_dir, d_from, d_to, out=None, sheet_url=\'\'):\n    """차장님이 정한 기간(YYMMDD~YYMMDD)의 회의록을 ③ 모양으로 정리 + 그 기간에 생긴 할 일 줄.\n         기간정리_<from>-<to>.txt   ③ 모양 (현장 → 날짜 사람 → 안건/협의내용/결정사항/조치사항)\n         기간할일_<from>-<to>.txt   날짜\\t현장\\t할일 줄 + 시트 링크\n         기간할일_<from>-<to>.csv   시트에 넣을 줄\n         기간_<from>-<to>.json      건수"""\n    recs_all, skipped = collect(meta_dir)\n    recs = [r for r in recs_all if r[\'ymd\'] and d_from <= r[\'ymd\'] <= d_to]\n    recs.sort(key=lambda r: (r[\'ymd\'], r[\'hm\'] or \'99:99\', r[\'file\']))\n    sites, others, bag = _group(recs)\n    L = []\n    n = 0\n\n    def one(idx, name, rs):\n        L.append(\'%d. %s\' % (idx, name))\n        L.append(\'\')\n        for r in rs:\n            head = \'%s   %s%s\' % (T52._d(r[\'ymd\']), (r[\'hm\'] + \'  \') if r[\'hm\'] else \'\', r[\'person\'] or \'상대 미상\')\n            items = r[\'items\'] or [{\'title\': \'(안건 없음)\', \'bullets\': [], \'decision\': \'\', \'actions\': []}]\n            for it in items:\n                L.append(head)\n                L.append(\'\')\n                L.append(\'안건 : %s\' % it[\'title\'])\n                b = it[\'bullets\'] or [\'\']\n                L.append(\'협의내용 : %s\' % b[0])\n                for x in b[1:]:\n                    L.append(x)\n                L.append(\'결정사항 : %s\' % (it[\'decision\'] or \'없음\'))\n                L.append(\'조치사항 : %s\' % \' / \'.join(it[\'actions\']))\n                L.append(\'\')\n        L.append(\'\')\n\n    if not recs:\n        L.append(\'(%s ~ %s 회의록 없음)\' % (_iso(d_from), _iso(d_to)))\n    for name in sites:\n        n += 1\n        one(n, name, bag[name])\n    if others:\n        L.append(\'※ 현장이 아닌 것 — 어느 현장 것인지는 차장님이 정하십시오\')\n        L.append(\'\')\n        for name in others:\n            n += 1\n            one(n, name, bag[name])\n    t_meet = \'\\n\'.join(L).rstrip(\'\\n\') + \'\\n\'\n\n    rows = todo_rows(recs)\n    M = [_row_line(row[\'날짜\'], row[\'현장\'], row[\'할일\'])\n         for row in sorted(rows, key=lambda x: (x[\'날짜\'], not T52.is_site(x[\'현장\']), x[\'현장\']))]\n    if not rows:\n        M.append(\'(%s ~ %s 할 일 없음)\' % (_iso(d_from), _iso(d_to)))\n    M.append(\'\')\n    M.append(\'26년 할 일 모음 : %s\' % (sheet_url or \'(링크 없음)\'))\n    t_todo = \'\\n\'.join(M)\n\n    out = out or meta_dir\n    if not os.path.isdir(out):\n        os.makedirs(out)\n    tag = \'%s-%s\' % (d_from, d_to)\n    paths = {}\n    for name, txt in ((\'기간정리\', t_meet), (\'기간할일\', t_todo)):\n        p = os.path.join(out, \'%s_%s.txt\' % (name, tag))\n        with io.open(p, \'w\', encoding=\'utf-8\') as f:\n            f.write(txt)\n        paths[name] = p\n    p = os.path.join(out, \'기간할일_%s.csv\' % tag)\n    with io.open(p, \'w\', encoding=\'utf-8-sig\', newline=\'\') as f:\n        w = csv.DictWriter(f, fieldnames=SHEET_HEAD)\n        w.writeheader()\n        for row in rows:\n            w.writerow(row)\n    paths[\'기간할일csv\'] = p\n    stat = {\'version\': VERSION, \'기간\': [_iso(d_from), _iso(d_to)], \'meta전체\': len(recs_all),\n            \'회의\': len(recs), \'현장\': len(sites), \'현장별\': {k: len(bag[k]) for k in sites + others},\n            \'할일\': len(rows), \'건너뜀\': skipped, \'파일\': paths}\n    with io.open(os.path.join(out, \'기간_%s.json\' % tag), \'w\', encoding=\'utf-8\') as f:\n        f.write(json.dumps(stat, ensure_ascii=False, indent=1))\n    return (t_meet, t_todo), stat\n\n\ndef _month_range(yymm):\n    y, m = 2000 + int(yymm[:2]), int(yymm[2:4])\n    last = (datetime.date(y + (m == 12), (m % 12) + 1, 1) - datetime.timedelta(days=1)).day\n    return \'%s01\' % yymm, \'%s%02d\' % (yymm, last)\n\n\ndef main(argv):\n    if len(argv) < 2:\n        print(__doc__)\n        return 1\n    meta_dir, today, out, sheet = argv[1], None, None, \'\'\n    d_from = d_to = None\n    i = 2\n    while i < len(argv):\n        if argv[i] == \'--today\':\n            today = datetime.datetime.strptime(argv[i + 1], \'%y%m%d\').date(); i += 2\n        elif argv[i] == \'--out\':\n            out = argv[i + 1]; i += 2\n        elif argv[i] == \'--sheet\':\n            sheet = argv[i + 1]; i += 2\n        elif argv[i] == \'--from\':\n            d_from = argv[i + 1]; i += 2\n        elif argv[i] == \'--to\':\n            d_to = argv[i + 1]; i += 2\n        elif argv[i] == \'--month\':                       # --month 2609\n            d_from, d_to = _month_range(argv[i + 1]); i += 2\n        elif argv[i] == \'--day\':                         # --day 260915  (하루)\n            d_from = d_to = argv[i + 1]; i += 2\n        else:\n            i += 1\n    if d_from or d_to:\n        d_from = d_from or d_to\n        d_to = d_to or d_from\n        _t, stat = run_range(meta_dir, d_from, d_to, out, sheet)\n    else:\n        _t, stat = run(meta_dir, today, out, sheet)\n    print(json.dumps(stat, ensure_ascii=False, indent=1))\n    return 0\n\n\nif __name__ == \'__main__\':\n    sys.exit(main(sys.argv))\n'
+NEED = {'t52_mailbuild': ('v2', T52_SRC), 't53_daily': ('v3', T53_SRC)}
+
+
+def say(s=''):
+    print(s)
+    NOTE.append(s)
+
+
+def _ver_num(v):
+    m = re.match(r'v(\d+)', str(v or ''))
+    return int(m.group(1)) if m else 0
+
+
+def find_tools():
+    cands = [os.path.join(HERE, '코드', 'km_tools'),
+             os.path.join(HERE, '2_도구모음_25종', '코드', 'km_tools'),
+             os.path.join(HERE, 'km_tools')]
+    for p in cands:
+        if os.path.isdir(p):
+            return p
+    return ''
+
+
+def ensure_tool(tools, name):
+    """도구가 없거나 옛 판이면 이 파일 안의 새것을 써 넣는다."""
+    need_v, src = NEED[name]
+    p = os.path.join(tools, name + '.py')
+    old = ''
+    if os.path.isfile(p):
+        try:
+            with io.open(p, 'r', encoding='utf-8') as f:
+                m = re.search(r"VERSION\s*=\s*'(v\d+)", f.read())
+            old = m.group(1) if m else 'v0'
+        except Exception:
+            old = 'v0'
+    if not old or _ver_num(old) < _ver_num(need_v):
+        with io.open(p, 'w', encoding='utf-8') as f:
+            f.write(src)
+        return '%s 를 새로 넣었습니다 (%s → %s)' % (name, old or '없음', need_v)
+    return ''
+
+
+def load_tools():
+    tools = find_tools()
+    if not tools:
+        tools = os.path.join(HERE, '코드', 'km_tools')
+        os.makedirs(tools)
+    notes = []
+    for name in ('t52_mailbuild', 't53_daily'):
+        n = ensure_tool(tools, name)
+        if n:
+            notes.append(n)
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    for name in ('t52_mailbuild', 't53_daily'):
+        if name in sys.modules:
+            del sys.modules[name]
+    import t53_daily as D
+    return D, tools, notes
+
+
+def ask(q, default=''):
+    try:
+        v = input(q).strip()
+    except Exception:
+        v = ''
+    return v or default
+
+
+def norm_ymd(v, fallback):
+    """260901 / 26-09-01 / 2026-09-01 / 2026.9.1 을 다 받아 260901 로."""
+    s = str(v or '').strip()
+    m = re.match(r'^(\d{2}|\d{4})\D+(\d{1,2})\D+(\d{1,2})$', s)
+    if m:
+        return '%s%02d%02d' % (m.group(1)[-2:], int(m.group(2)), int(m.group(3)))
+    d = re.sub(r'\D', '', s)
+    if len(d) == 8:
+        d = d[2:]
+    if len(d) == 6 and d.isdigit():
+        return d
+    return fallback
+
+
+def norm_month(v, today):
+    """2609 / 26-09 / 2026-09 / 9 / 9월 → ('260901','260930')"""
+    s = str(v or '').strip().replace('월', '')
+    d = re.sub(r'\D', '', s)
+    if len(d) == 6:
+        d = d[2:]
+    if len(d) == 4 and d.isdigit():
+        yymm = d
+    elif 1 <= len(d) <= 2 and d.isdigit() and 1 <= int(d) <= 12:
+        yymm = '%s%02d' % (today.strftime('%y'), int(d))
+    else:
+        yymm = today.strftime('%y%m')
+    y, m = 2000 + int(yymm[:2]), int(yymm[2:4])
+    last = (datetime.date(y + (m == 12), (m % 12) + 1, 1) - datetime.timedelta(days=1)).day
+    return '%s01' % yymm, '%s%02d' % (yymm, last)
+
+
+def choose(today=None):
+    """물어보는 부분. (from, to, 설명) 을 돌려준다."""
+    today = today or datetime.date.today()
+    ty = today.strftime('%y%m%d')
+    say(' 어떻게 고르시겠습니까 ?')
+    say('   1  하루        예) 260915')
+    say('   2  기간        예) 260901 ~ 260915')
+    say('   3  한 달       예) 2609  (또는 9)')
+    say('   엔터  =  최근 7일')
+    c = ask(' 번호 : ', '')
+    if c == '1':
+        d = norm_ymd(ask('   어느 날 ? (예 260915) : ', ty), ty)
+        return d, d, '하루 %s' % d
+    if c == '2':
+        d7 = (today - datetime.timedelta(days=7)).strftime('%y%m%d')
+        a = norm_ymd(ask('   언제부터 ? (예 260901, 엔터=%s) : ' % d7, d7), d7)
+        b = norm_ymd(ask('   언제까지 ? (예 260915, 엔터=오늘 %s) : ' % ty, ty), ty)
+        if a > b:
+            a, b = b, a
+        return a, b, '기간 %s ~ %s' % (a, b)
+    if c == '3':
+        a, b = norm_month(ask('   몇 월 ? (예 2609 또는 9, 엔터=이번 달) : ', ''), today)
+        return a, b, '한 달 %s ~ %s' % (a, b)
+    d7 = (today - datetime.timedelta(days=7)).strftime('%y%m%d')
+    return d7, ty, '최근 7일 %s ~ %s' % (d7, ty)
+
+
+def run(d_from, d_to, drive=None, out=None, today=None):
+    """시험에서도 부를 수 있게 물어보는 부분과 떼어 놓았다."""
+    today = today or datetime.date.today()
+    D, tools, notes = load_tools()
+    for n in notes:
+        say(' ' + n)
+
+    if drive is None:
+        try:
+            import t51_driveup as DU
+            drive = DU.drive_root()
+        except Exception:
+            drive = ''
+    if not drive:
+        say('★ 구글 드라이브 폴더를 못 찾았습니다. 드라이브 데스크톱이 켜져 있는지 보십시오.')
+        return None
+    meta_dir = os.path.join(drive, '회의록', 'incoming')
+    if not os.path.isdir(meta_dir):
+        say('★ %s 가 없습니다. 먼저 ★회의록_한방에 로 회의록을 올리십시오.' % meta_dir)
+        return None
+
+    out = out or os.path.join(HERE, '_기간메일')
+    (t_meet, t_todo), stat = D.run_range(meta_dir, d_from, d_to, out=out, sheet_url=SHEET)
+
+    say(' 기간 : %s ~ %s' % (D._iso(d_from), D._iso(d_to)))
+    say(' 회의 %d건 / 현장 %d개 / 할 일 %d건' % (stat['회의'], stat['현장'], stat['할일']))
+    if not stat['회의']:
+        say('')
+        say(' 그 기간에 회의록이 없습니다. 날짜를 넓혀 보십시오.')
+        return stat
+    for k, v in sorted(stat['현장별'].items(), key=lambda x: -x[1]):
+        say('     %-14s 회의 %d건' % (k, v))
+
+    dest = os.path.join(drive, 'KM_아침메일')
+    if not os.path.isdir(dest):
+        os.makedirs(dest)
+    stamp = today.strftime('%y%m%d')
+    tag = '%s-%s' % (d_from, d_to)
+    put = []
+    for src_name, kind in (('기간정리', '회의록'), ('기간할일', '할일')):
+        tgt = os.path.join(dest, '회의록정리_%s_%s_%s.txt' % (stamp, kind, tag))
+        shutil.copy2(stat['파일'][src_name], tgt)
+        put.append(tgt)
+
+    say('')
+    say(' 드라이브 KM_아침메일 에 %d개 올렸습니다.' % len(put))
+    for p in put:
+        say('   %s' % os.path.basename(p))
+    say('')
+    if os.path.isfile(os.path.join(dest, '즉시발송_로그.csv')):
+        say(' KM_즉시발송이 돌고 있습니다. 5분 안에 bsy 메일로 갑니다.')
+    else:
+        say(' KM_즉시발송(앱스 스크립트)이 아직 없습니다. 클로드에게 「올렸어」 라고 하십시오.')
+    stat['올린파일'] = put
+    return stat
+
+
+def main():
+    say('=' * 60)
+    say(' 회의록 기간 메일  %s        %s' % (VERSION, datetime.datetime.now().strftime('%Y-%m-%d %H:%M')))
+    say('=' * 60)
+    for ln in (__doc__ or '').strip().split('\n')[2:]:
+        say(' ' + ln)
+    say('-' * 60)
+    d_from, d_to, what = choose()
+    say('')
+    say(' → %s' % what)
+    say('-' * 60)
+    try:
+        run(d_from, d_to)
+    except Exception:
+        say('★ 멈췄습니다. 아래 글자를 클로드에게 보여 주십시오.')
+        for ln in traceback.format_exc().split('\n'):
+            say('  ' + ln)
+    say('=' * 60)
+
+
+def save_note():
+    p = os.path.join(HERE, '회의록_기간_메일_결과.txt')
+    try:
+        with io.open(p, 'w', encoding='cp949', errors='replace', newline='\r\n') as f:
+            f.write('\n'.join(NOTE))
+        try:
+            os.startfile(p)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    finally:
+        save_note()
+        try:
+            input('\n엔터를 누르면 닫힙니다... ')
+        except Exception:
+            pass
