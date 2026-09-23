@@ -37,7 +37,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v9 2026-09-23'   # v9 : 메일 ① 만 — 할 일 앞에 「- 」, 오른쪽 담당 괄호 뺌 (기한 괄호는 그대로). ②·시트·기간 메일은 안 바꿈
+VERSION = 'v10 2026-09-23'  # v10 : 「26년 회의록2」 에 들어가는 것 전부 — ①② 메일·시트 답요청·오늘 할일 : 「- 」 + 담당 괄호 뺌. 기간 메일은 그대로
+# v9 2026-09-23   # v9 : 메일 ① 만 — 할 일 앞에 「- 」, 오른쪽 담당 괄호 뺌 (기한 괄호는 그대로). ②·시트·기간 메일은 안 바꿈
 # v8 2026-09-23   # v8 : 답요청·오늘 할일 완료 칸(D열) = 체크박스 (체크 = 「완료」, 끄면 빈칸)
 # v7 2026-09-23   # v7 : 담당 칸의 「배성윤 →」 뺌 · 시트에서 완료 표시한 할 일은 메일 ①② 에서 뺌 (--done)
 # v6 2026-09-23   # v6 : ①② 날짜·현장은 머리줄로 한 번만 (할 일은 들여쓰기) · 시트 답요청·오늘 할일 현장 칸(B열) 세로 병합
@@ -103,7 +104,18 @@ def _whom(whom):
 
 def _core(text):
     """할일 글에서 뒤에 붙은 「  (기한 …)」「  (담당)」 을 떼고 무엇만. 완료 대조용."""
-    return re.sub(r'\s+', ' ', str(text or '').split('  (')[0]).strip()
+    t = re.sub(r'^\s*-\s+', '', str(text or ''))          # v10 : 시트 글 앞 「- 」 도 뗀다
+    return re.sub(r'\s+', ' ', t.split('  (')[0]).strip()
+
+
+def sheet_text(text):
+    """v10 차장님 (2026-09-23 「시트에 들어가는 것들은 다 적용」) : 시트 할일 글 = 「- 」 + 무엇 + (기한 …). 담당 괄호는 뺀다.
+       옛 글 「무엇  (기한 2026-09-23)  (배성윤 → 확인 예정)」 → 「- 무엇  (기한 2026-09-23)」"""
+    t = re.sub(r'^\s*-\s+', '', str(text or '')).strip()
+    parts = t.split('  (')
+    keep = [parts[0].strip()] + ['(' + x for x in parts[1:] if x.startswith('기한 ')]
+    return '- ' + '  '.join(keep) if keep[0] else ''
+
 
 
 def _todo_text(ymd, what, whom):
@@ -307,9 +319,9 @@ def build_today(recs_all, today, done=None):
                 seen.add((site, what))
                 if _is_done(done, site, what):
                     continue
-                picked.append((site, what + (('  (%s)' % _whom(whom)) if _whom(whom) else ''), _iso(r['ymd'])))
+                picked.append((site, what, _iso(r['ymd'])))   # v10 : 담당 괄호 없이
     picked.sort(key=lambda x: (not T52.is_site(x[0]), x[0]))
-    L = _grouped([(_iso(ty), site, what) for site, what, _src in picked])
+    L = _grouped([(_iso(ty), site, what) for site, what, _src in picked], bullet='  - ')
     if not picked:
         L.append('(회의록에 %s 로 적힌 할 일 없음)' % _iso(ty))
     return '\n'.join(L), picked
@@ -399,7 +411,7 @@ def sheet_plan(rows, picked, recs_y, today, yday):
     plan['답요청'] = {'kind': 'date', 'cols': 4,
                      'values': [[r['날짜'], r['현장'], r['할일'], ''] for r in rows]}
     plan['오늘 할일'] = {'kind': 'date', 'cols': 4,
-                      'values': [[_iso(ty), site, what, ''] for site, what, _k in picked]}
+                      'values': [[_iso(ty), site, '- ' + what, ''] for site, what, _k in picked]}
     mr = meet_rows(recs_y)
     plan['회의록'] = {'kind': 'title', 'cols': len(MEET_HEAD),
                     'values': ([[meet_title(yy, len(recs_y))] + [''] * (len(MEET_HEAD) - 1)] + mr) if mr else []}
@@ -579,6 +591,7 @@ def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='
 
     done = load_done(done_path) if done_path else None
     t1, rows = build_answer(recs_y, yday, sheet_url, done)
+    rows = [dict(r, 할일='- ' + r['_메일']) for r in rows]      # v10 : 시트·csv 도 「- 」 + 담당 괄호 없이
     t2, picked = build_today(recs_all, today, done)
     n_done = (len(todo_rows(recs_y)) - len(rows) + len(build_today(recs_all, today)[1]) - len(picked)) if done else 0
     t3, per_site = build_yesterday(recs_y, yday)

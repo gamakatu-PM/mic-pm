@@ -83,8 +83,8 @@ try:
     chk('미정 없음', '샘플 발송' not in t2)
     chk('일정 칸은 안 잡음', '수업 끝나고 방문' not in t2)
     chk('출처·설명문 없음', '회의 17:26' not in t2 and '지난 것은' not in t2)
-    chk('복합회의 할 일을 다른 현장으로 안 옮김', '\n복합회의\n  센서 단가 회신' in t2 and '부천대' not in t2 and '제천' not in t2)
-    chk('v6 줄 모양 (날짜 한 번 → 현장 → 들여쓰기, 현장이 아닌 것은 뒤)', t2.startswith('2026-09-23\n\n앵커 호텔\n  회로도 제출') and t2.index('앵커 호텔') < t2.index('복합회의') and t2.count('2026-09-23') == 1, t2)
+    chk('복합회의 할 일을 다른 현장으로 안 옮김', '\n복합회의\n  - 센서 단가 회신' in t2 and '부천대' not in t2 and '제천' not in t2, t2)
+    chk('v10 ② 줄 모양 (날짜 한 번 → 현장 → 「- 」, 담당 괄호 없음, 현장이 아닌 것은 뒤)', t2.startswith('2026-09-23\n\n앵커 호텔\n  - 회로도 제출\n') and t2.index('앵커 호텔') < t2.index('복합회의') and t2.count('2026-09-23') == 1 and '(김경원 상무)' not in t2, t2)
 
     print('--- ③ 어제 있었던 일 (차장님 모양 그대로)')
     chk('머리말·꼬리말 없음', not t3.startswith('어제') and 't53' not in t3 and '회의 3건' not in t3)
@@ -184,7 +184,7 @@ try:
     chk('기간 밖이면 비어 있음', '회의록 없음' in T.run_range(d, '261001', '261031', out=os.path.join(d, 'o5'))[0][0])
 
     print('--- v7 「배성윤 →」 빼기 · 시트 완료 표시는 ①② 에서 뺌')
-    chk('「배성윤 →」 없음 (상대는 남김)', '배성윤' not in t1 and '배성윤' not in t2 and '(김경원 상무)' in t2, t2)
+    chk('「배성윤 →」 없음', '배성윤' not in t1 and '배성윤' not in t2)
     chk('_whom', T._whom('배성윤 → 김경원 상무') == '김경원 상무' and T._whom('배성윤->AS') == 'AS' and T._whom('배성윤') == '' and T._whom('김경원 → 배성윤') == '김경원 → 배성윤')
     dj = write(d, 'done_a.json', {'results': [{'status': 200, 'body': {'range': "'답요청'!A1:D200", 'values': [
         ['날짜', '현장', '할일', '완료'],
@@ -207,9 +207,14 @@ try:
     chk('--done 파일 없으면 멈추지 않음', T.run(d, TODAY, out=os.path.join(d, 'out9'), done_path=os.path.join(d, '없음.json'))[1]['①할일'] == st2['①할일'])
 
     print('--- v9 ① 만 바뀜 (② · 시트 · 기간 메일은 그대로)')
-    chk('② 는 그대로 (들여쓰기 두 칸 · 담당 괄호 있음)', '\n  회로도 제출  (김경원 상무)' in t2 and '  - ' not in t2, t2)
+    chk('v10 ② 도 「- 」 · 담당 괄호 없음', '\n  - 회로도 제출\n' in t2 and '(김경원 상무)' not in t2, t2)
     sj = json.load(io.open(st['파일']['시트_답요청'], encoding='utf-8'))['rows']
-    chk('시트 답요청 글은 그대로 (담당 괄호 있음)', any(r.get('COL$C') == '회로도 제출  (기한 2026-09-23)  (김경원 상무)' for r in sj), sj)
+    chk('v10 시트 답요청 글 = 「- 」 + 기한만 (담당 괄호 없음)', any(r.get('COL$C') == '- 회로도 제출  (기한 2026-09-23)' for r in sj) and all(r['COL$C'].startswith('- ') for r in sj), sj)
+    tj10 = json.load(io.open(st['파일']['시트_오늘 할일'], encoding='utf-8'))['rows']
+    chk('v10 시트 오늘 할일 글 = 「- 」 + 무엇', [r['COL$C'] for r in tj10] == ['- 회로도 제출', '- 센서 단가 회신'], tj10)
+    chk('v10 csv 도 시트와 같음', [r['할일'] for r in rows] == [r['COL$C'] for r in sj], ([r['할일'] for r in rows], sj))
+    chk('sheet_text : 옛 글 고치기', T.sheet_text('회로도 제출  (기한 2026-09-23)  (배성윤 → 김경원 상무)') == '- 회로도 제출  (기한 2026-09-23)' and T.sheet_text('샘플 발송  (배성윤 → 현장)') == '- 샘플 발송' and T.sheet_text('- 샘플 발송') == '- 샘플 발송' and T.sheet_text('') == '')
+    chk('v10 완료 대조 : 「- 」 붙은 시트 글도 맞춤', T._core('- 샘플 발송  (기한 2026-09-23)') == '샘플 발송')
     chk('csv 는 4칸 그대로 (_메일 안 들어감)', list(rows[0].keys()) == ['날짜', '현장', '할일', '완료'])
     chk('기간 메일 할 일은 그대로 (들여쓰기 두 칸 · 담당 괄호 있음)', '\n  도면 발송  (기한 2026-09-17)  (발주처)' in g2 and '  - ' not in g2, g2)
 
