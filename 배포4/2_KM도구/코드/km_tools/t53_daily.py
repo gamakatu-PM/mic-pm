@@ -37,7 +37,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v8 2026-09-23'   # v8 : 답요청·오늘 할일 완료 칸(D열) = 체크박스 (체크 = 「완료」, 끄면 빈칸)
+VERSION = 'v9 2026-09-23'   # v9 : 메일 ① 만 — 할 일 앞에 「- 」, 오른쪽 담당 괄호 뺌 (기한 괄호는 그대로). ②·시트·기간 메일은 안 바꿈
+# v8 2026-09-23   # v8 : 답요청·오늘 할일 완료 칸(D열) = 체크박스 (체크 = 「완료」, 끄면 빈칸)
 # v7 2026-09-23   # v7 : 담당 칸의 「배성윤 →」 뺌 · 시트에서 완료 표시한 할 일은 메일 ①② 에서 뺌 (--done)
 # v6 2026-09-23   # v6 : ①② 날짜·현장은 머리줄로 한 번만 (할 일은 들여쓰기) · 시트 답요청·오늘 할일 현장 칸(B열) 세로 병합
 # v5 : 「신규 현장 레이더」 결과를 한 통 끝(4번)에 합침
@@ -68,7 +69,7 @@ def _row_line(date, site, what):
     return '%s\t%s\t%s' % (date, site, what)
 
 
-def _grouped(items):
+def _grouped(items, bullet='  '):
     """v6 차장님 확정 (2026-09-23 「날짜와 현장명이 반복되는 것은 하나만」 → A. 머리줄로 한 번) :
          2026-09-22
          (빈 줄)
@@ -90,7 +91,7 @@ def _grouped(items):
             L.append('')
             L.append(site)
             last_s = site
-        L.append('  ' + what)
+        L.append(bullet + what)
     return L
 
 
@@ -273,7 +274,8 @@ def todo_rows(recs_y, done=None):
             if key in seen or _is_done(done, site, what):
                 continue
             seen.add(key)
-            rows.append({'날짜': _iso(r['ymd']), '현장': site, '할일': _todo_text(ymd, what, whom), '완료': ''})
+            rows.append({'날짜': _iso(r['ymd']), '현장': site, '할일': _todo_text(ymd, what, whom), '완료': '',
+                         '_메일': _todo_text(ymd, what, '')})   # v9 : 메일 ① 은 담당 괄호 없이
     # v6 : 메일·시트 같은 순서 (날짜 → 현장 → 현장이 아닌 것은 뒤로) — 같은 현장이 붙어 있어야 한 번만 쓰고 병합한다
     rows.sort(key=lambda x: (x['날짜'], not T52.is_site(x['현장']), x['현장']))
     return rows
@@ -282,7 +284,9 @@ def todo_rows(recs_y, done=None):
 def build_answer(recs_y, yday, sheet_url='', done=None):
     """차장님 지시 : 하루치 내용을 메일에 적고, 「26년 할 일 모음」 링크를 넣는다. 그 밖의 말은 안 적는다."""
     rows = todo_rows(recs_y, done)
-    L = _grouped([(row['날짜'], row['현장'], row['할일']) for row in rows])
+    # v9 차장님 확정 (2026-09-23 캡처) : 할 일 앞에 「- 」 / 오른쪽 담당 괄호 (확인 예정)(한국마이크로닉) 등은 안 적는다.
+    #    「표시한 것만」 — ② 오늘 할 것 · 시트 · 기간 메일 · (기한) 괄호는 차장님께 여쭌 뒤에만 바꾼다
+    L = _grouped([(row['날짜'], row['현장'], row['_메일']) for row in rows], bullet='  - ')
     if not rows:
         L.append('(%s 회의록에서 새로 생긴 할 일 없음)' % _iso(yday.strftime('%y%m%d')))
     L.append('')
@@ -591,7 +595,7 @@ def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='
         paths[name] = p
     p = os.path.join(out, '할일추가_%s.csv' % st)
     with io.open(p, 'w', encoding='utf-8-sig', newline='') as f:
-        w = csv.DictWriter(f, fieldnames=SHEET_HEAD)
+        w = csv.DictWriter(f, fieldnames=SHEET_HEAD, extrasaction='ignore')
         w.writeheader()
         for row in rows:
             w.writerow(row)
@@ -696,7 +700,7 @@ def run_range(meta_dir, d_from, d_to, out=None, sheet_url=''):
         paths[name] = p
     p = os.path.join(out, '기간할일_%s.csv' % tag)
     with io.open(p, 'w', encoding='utf-8-sig', newline='') as f:
-        w = csv.DictWriter(f, fieldnames=SHEET_HEAD)
+        w = csv.DictWriter(f, fieldnames=SHEET_HEAD, extrasaction='ignore')
         w.writeheader()
         for row in rows:
             w.writerow(row)
