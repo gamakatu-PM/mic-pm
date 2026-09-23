@@ -8,6 +8,7 @@ meta.json 만 읽는다. 클로드(AI)를 전혀 쓰지 않는다 → 사용량 
     python t53_daily.py <meta폴더> --from 260901 --to 260915 [--out 폴더]     기간 지정
     python t53_daily.py <meta폴더> --month 2609                                 한 달
     python t53_daily.py <meta폴더> --day 260915                                 하루
+    python t53_daily.py <meta폴더> --today 260924 --radar <로그.json,확정.json,재검토.json>   4. 신규 현장 레이더 칸 넣기
     python t53_daily.py --merge <시트계획.json> "답요청=8-60" "오늘 할일=2-12" "회의록=2-80"   덧붙인 줄 번호로 병합 본문
 
 만드는 것 (v4 추가)
@@ -35,7 +36,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v4 2026-09-23'   # v4 : 3통 → 1통 「오늘의 정리」 · 시트 「26년 회의록2」 탭 3개(답요청·오늘 할일·회의록)에 날짜별 누적
+VERSION = 'v5 2026-09-23'   # v5 : 「신규 현장 레이더」 결과를 한 통 끝(4번)에 합침
+# v4 : 3통 → 1통 「오늘의 정리」 · 시트 「26년 회의록2」 탭 3개(답요청·오늘 할일·회의록)에 날짜별 누적
 # v3 : 종류 칸 삭제 · 날짜 = 회의한 날(기한은 할일 글 끝에) · 기간 지정(--from --to / --month)
 
 # 「26년 할 일 모음」 시트의 종류 칸. 차장님 예시(26년 회의록 시트)에 나온 낱말 그대로.
@@ -355,8 +357,77 @@ def merge_body(plan, ranges):
     return {'requests': req}
 
 
+# ── 4. 신규 현장 레이더 (차장님 지시 2026-09-23 : 레이더 메일을 오늘의 정리에 합친다) ──
+RADAR_SHEET = '1LWK3fmXgf2_aG12B3cunutLUHnSqNMDf_sr3lXOyr-c'
+RADAR_RANGES = ["'구글AI_실행로그'!A1:G2000", "'구글AI_백필_확정'!A1:M5000", "'구글AI_백필_재검토필요'!A1:F5000"]   # 하나씩 values/<범위> 로 읽는다
+
+
+def _radar_day(v):
+    """'2026. 9. 23 오전 6:40:51' / '2026-09-23 06:40' -> '260923'"""
+    m = re.match(r'\s*(\d{4})\D+(\d{1,2})\D+(\d{1,2})', str(v or ''))
+    return '%s%02d%02d' % (m.group(1)[2:], int(m.group(2)), int(m.group(3))) if m else ''
+
+
+def load_radar(path):
+    """레이더 시트를 읽은 응답 파일(들)을 (로그, 확정, 재검토) 줄 목록으로.
+       path : 파일 하나 또는 쉼표로 여럿. Zapier 응답 그대로 / values:get / values:batchGet 모두 받는다.
+       어느 탭인지는 응답의 range 이름(실행로그·확정·재검토)으로 가린다."""
+    out = {'로그': [], '확정': [], '재검토': []}
+    for one in [x for x in str(path).split(',') if x.strip()]:
+        with io.open(one.strip(), 'r', encoding='utf-8') as f:
+            d = json.load(f)
+        if isinstance(d, dict) and 'results' in d:
+            d = d['results'][0].get('body', d)
+        blocks = d.get('valueRanges') if isinstance(d, dict) and 'valueRanges' in d else [d]
+        for blk in blocks:
+            rng = str(blk.get('range', ''))
+            key = '로그' if '실행로그' in rng else ('재검토' if '재검토' in rng else ('확정' if '확정' in rng else ''))
+            if key:
+                out[key] = (blk.get('values') or [])[1:]
+    return out['로그'], out['확정'], out['재검토']
+
+
+def build_radar(radar, today):
+    """오늘 날짜 실행 결과만. 오류로 0건이면 「없음」 이 아니라 「못 찾음」 이라고 적는다."""
+    ty = today.strftime('%y%m%d')
+    logs, conf, rev = radar
+    runs = [r for r in logs if _radar_day(r[0] if r else '') == ty]
+    conf = [r for r in conf if _radar_day(r[0] if r else '') == ty]
+    rev = [r for r in rev if _radar_day(r[0] if r else '') == ty]
+    L = []
+    if not runs:
+        L.append('(오늘 레이더 실행 기록 없음)')
+        return '\n'.join(L), {'실행': 0, '확정': 0, '재검토': 0, '오류': 0}
+    last = runs[-1] + [''] * 7
+    err = str(last[6] or '')
+    n_err = err.count(': Error')
+    L.append('실행 %s · 확정 %d건 · 재검토 %d건' % (last[0], len(conf), len(rev)))
+    if n_err:
+        models = sorted(set(re.findall(r'models/([\w.\-]+)', err)))
+        why = ('모델 없음 : %s' % ', '.join(models)) if models else err.split(': Error')[1][:80].strip()
+        L.append('※ 검색 %d곳 모두 오류 — 「0건」 은 없는 게 아니라 못 찾은 것 (%s)' % (n_err, why) if not conf and not rev
+                 else '※ 검색 중 %d곳 오류 (%s)' % (n_err, why))
+    for r in conf:
+        r = list(r) + [''] * 13
+        L.append('')
+        L.append('%s  (%s · %s)' % (r[5], r[2], r[3]))
+        L.append('단계 : %s · 규모 : %s' % (r[4], r[6]))
+        L.append('발주처 : %s · 시공사 : %s · 설계 : %s' % (r[7], r[8], r[9]))
+        if r[10]:
+            L.append(r[10])
+        if r[11]:
+            L.append(r[11])
+    if rev:
+        L.append('')
+        L.append('재검토 필요')
+        for r in rev:
+            r = list(r) + [''] * 6
+            L.append('  %s — %s' % (r[2], r[4]))
+    return '\n'.join(L), {'실행': len(runs), '확정': len(conf), '재검토': len(rev), '오류': n_err}
+
+
 # ── 한 통으로 ─────────────────────────────────────────────
-def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url=''):
+def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url='', t4=None):
     """차장님 지시 (2026-09-23) : 3통을 순서대로 한 통에. 제목 [KM] 오늘의 정리 입니다. 날짜"""
     yy = yday.strftime('%y%m%d')
     t1_body = '\n'.join(ln for ln in t1.split('\n') if not ln.startswith(SHEET_NAME + ' :')).rstrip('\n')
@@ -372,12 +443,17 @@ def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url=''):
     L.append('━━ 3. 어제 있었던 일 ━━  %s' % meet_title(yy, len(recs_y)))
     L.append('')
     L.append(t3.rstrip('\n'))
+    if t4 is not None:
+        L.append('')
+        L.append('━━ 4. 신규 현장 레이더 ━━')
+        L.append('')
+        L.append(t4.rstrip('\n'))
     subject = '[KM] 오늘의 정리 입니다. %s (%s)' % (today.strftime('%Y-%m-%d'), T52.WD[today.weekday()])
     return '\n'.join(L) + '\n', subject
 
 
 # ── 한 번에 ───────────────────────────────────────────────
-def run(meta_dir, today=None, out=None, sheet_url=''):
+def run(meta_dir, today=None, out=None, sheet_url='', radar_path=''):
     today = today or datetime.date.today()
     yday = today - datetime.timedelta(days=1)
     yy = yday.strftime('%y%m%d')
@@ -406,7 +482,13 @@ def run(meta_dir, today=None, out=None, sheet_url=''):
             w.writerow(row)
     paths['할일추가'] = p
 
-    one, subject = build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url)
+    t4, rstat = (None, {})
+    if radar_path:
+        try:
+            t4, rstat = build_radar(load_radar(radar_path), today)
+        except Exception as e:
+            t4, rstat = '(레이더 결과를 읽지 못함 : %s)' % e, {'읽기실패': str(e)}
+    one, subject = build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url, t4)
     p = os.path.join(out, '오늘의정리_%s.txt' % st)
     with io.open(p, 'w', encoding='utf-8') as f:
         f.write(one)
@@ -423,7 +505,7 @@ def run(meta_dir, today=None, out=None, sheet_url=''):
     paths['시트계획'] = p
 
     stat = {'version': VERSION, '오늘': st, '어제': yy, '제목': subject,
-            '시트줄': dict((t, len(plan[t]['values'])) for t in TABS),
+            '시트줄': dict((t, len(plan[t]['values'])) for t in TABS), '레이더': rstat,
             'meta전체': len(recs_all), '어제회의': len(recs_y),
             '어제_현장별': per_site,
             '①할일': len(rows), '②오늘': len(picked),
@@ -529,7 +611,7 @@ def main(argv):
         ranges = dict(a.split('=', 1) for a in argv[3:] if '=' in a)
         print(json.dumps(merge_body(plan, ranges), ensure_ascii=False))
         return 0
-    meta_dir, today, out, sheet = argv[1], None, None, ''
+    meta_dir, today, out, sheet, radar = argv[1], None, None, '', ''
     d_from = d_to = None
     i = 2
     while i < len(argv):
@@ -539,6 +621,8 @@ def main(argv):
             out = argv[i + 1]; i += 2
         elif argv[i] == '--sheet':
             sheet = argv[i + 1]; i += 2
+        elif argv[i] == '--radar':
+            radar = argv[i + 1]; i += 2
         elif argv[i] == '--from':
             d_from = argv[i + 1]; i += 2
         elif argv[i] == '--to':
@@ -554,7 +638,7 @@ def main(argv):
         d_to = d_to or d_from
         _t, stat = run_range(meta_dir, d_from, d_to, out, sheet)
     else:
-        _t, stat = run(meta_dir, today, out, sheet)
+        _t, stat = run(meta_dir, today, out, sheet, radar)
     print(json.dumps(stat, ensure_ascii=False, indent=1))
     return 0
 

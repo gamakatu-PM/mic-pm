@@ -114,6 +114,37 @@ try:
     chk('병합 : 회의록 날짜 A3:A6', mb[-1]['mergeCells']['range'] == {'sheetId': 2, 'startRowIndex': 2, 'endRowIndex': 6, 'startColumnIndex': 0, 'endColumnIndex': 1})
     chk('한 줄뿐이면 병합 안 함', T.merge_body(plan, {'답요청': '5-5'}) == {'requests': []})
 
+    print('--- v5 레이더 합치기')
+    rad = {'results': [{'body': {'valueRanges': [
+        {'range': "'구글AI_실행로그'!A1:G2000", 'values': [['실행일시'], ['2026. 9. 22 오전 6:40:48', '일일', '0', '0', '0', '0', 'x: Error: {"message":"models/gemini-3.1-pro is not found"}'],
+                    ['2026. 9. 23 오전 6:40:51', '일일', '0', '0', '0', '0', 'a: Error: {"message":"models/gemini-3.1-pro is not found"} / b: Error: {"message":"models/gemini-3.1-pro is not found"}']]},
+        {'range': "'구글AI_백필_확정'!A1:M5000", 'values': [['수집일시']]}, {'range': "'구글AI_백필_재검토필요'!A1:F1000", 'values': [['수집일시']]}]}}]}
+    rp = os.path.join(d, 'radar.json')
+    with io.open(rp, 'w', encoding='utf-8') as f:
+        f.write(json.dumps(rad, ensure_ascii=False))
+    (_a, _b, _c), st5 = T.run(d, TODAY, out=os.path.join(d, 'out5'), sheet_url='https://SHEET', radar_path=rp)
+    one5 = io.open(st5['파일']['오늘의정리'], encoding='utf-8').read()
+    chk('4번 칸이 ③ 뒤에', one5.index('━━ 3. 어제 있었던 일') < one5.index('━━ 4. 신규 현장 레이더'))
+    chk('오늘 실행만 (9/23)', '실행 2026. 9. 23 오전 6:40:51 · 확정 0건 · 재검토 0건' in one5, one5[-300:])
+    chk('오류면 「못 찾은 것」 이라고 밝힘', '검색 2곳 모두 오류' in one5 and '모델 없음 : gemini-3.1-pro' in one5)
+    chk('레이더 통계', st5['레이더'] == {'실행': 1, '확정': 0, '재검토': 0, '오류': 2}, st5['레이더'])
+    rad['results'][0]['body']['valueRanges'][1]['values'].append(['2026. 9. 23 오전 6:40:51', '일일', '서울', '중구', '착공', '가나호텔', '300실', 'A사', 'B건설', 'C설계', '요약글', 'http://x', '호텔신축_서울'])
+    rad['results'][0]['body']['valueRanges'][0]['values'][-1][6] = ''
+    with io.open(rp, 'w', encoding='utf-8') as f:
+        f.write(json.dumps(rad, ensure_ascii=False))
+    t4, s4 = T.build_radar(T.load_radar(rp), TODAY)
+    chk('확정 현장 적힘', '가나호텔  (서울 · 중구)' in t4 and '발주처 : A사 · 시공사 : B건설 · 설계 : C설계' in t4 and '못 찾은' not in t4, t4)
+    chk('레이더 없으면 칸 없음', '━━ 4.' not in one)
+    # 파일 3개로 나눠 줘도 같다
+    parts = []
+    for i, vr in enumerate(rad['results'][0]['body']['valueRanges']):
+        pp = os.path.join(d, 'r%d.json' % i)
+        with io.open(pp, 'w', encoding='utf-8') as f:
+            f.write(json.dumps({'results': [{'body': vr}]}, ensure_ascii=False))
+        parts.append(pp)
+    chk('파일 3개로 나눠도 같음', T.build_radar(T.load_radar(','.join(parts)), TODAY) == (t4, s4))
+    chk('어제 실행만 있으면', '(오늘 레이더 실행 기록 없음)' in T.build_radar(T.load_radar(rp), datetime.date(2026, 9, 25))[0])
+
     print('--- 현장이 아닌 것 이 어제 있을 때')
     write(d, 'f__meta.json', meta('복합회의', '260922', hm='16:00', person='이순신 이사', name='이순신', rank='이사',
           items=[it('여러 현장', ['부천대·제천 얘기'], '', [])], todo=['- 미정 | 부천대 확인 | 배성윤 → x']))
