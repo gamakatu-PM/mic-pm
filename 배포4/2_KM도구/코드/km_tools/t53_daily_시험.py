@@ -62,8 +62,10 @@ try:
     chk('어제 할 일만 4건 (같은 할 일 1번)', st['①할일'] == 4, st['①할일'])
     chk('9/21 복합회의 할 일은 ① 에 없음', '센서 단가 회신' not in t1)
     chk('「N일 지남」·설명문 없음', '지남' not in t1 and '완료한 것은' not in t1 and '하루치' not in t1)
-    chk('줄 모양 = 회의한 날\\t현장\\t할일(기한·담당은 글 끝에)', '2026-09-22\t앵커 호텔\t회로도 제출  (기한 2026-09-23)  (배성윤 → 김경원 상무)' in t1, t1)
-    chk('기한 없으면 (기한) 안 붙임', '2026-09-22\t앵커 호텔\t샘플 발송  (배성윤 → 현장)' in t1, t1)
+    chk('v6 날짜 머리줄 한 번 → 현장 머리줄 → 할일 들여쓰기 (기한·담당은 글 끝에)',
+        t1.startswith('2026-09-22\n\n수유초등학교\n  차단기 리셋 후 동작 확인  (배성윤 → 확인 예정)\n\n앵커 호텔\n  회로도 제출  (기한 2026-09-23)  (배성윤 → 김경원 상무)\n'), t1)
+    chk('v6 날짜·현장은 한 번만', t1.count('2026-09-22\n') == 1 and t1.count('앵커 호텔\n') == 1 and '\t' not in t1, t1)
+    chk('기한 없으면 (기한) 안 붙임', '\n  샘플 발송  (배성윤 → 현장)\n' in t1, t1)
     chk('종류 칸 없음', '\t발송\t' not in t1 and '\t제출\t' not in t1)
     chk('현장명 띄어쓰기 그대로 (앵커 호텔)', '앵커 호텔' in t1 and '앵커호텔' not in t1)
     rows = list(csv.DictReader(io.open(st['파일']['할일추가'], encoding='utf-8-sig')))
@@ -78,8 +80,8 @@ try:
     chk('미정 없음', '샘플 발송' not in t2)
     chk('일정 칸은 안 잡음', '수업 끝나고 방문' not in t2)
     chk('출처·설명문 없음', '회의 17:26' not in t2 and '지난 것은' not in t2)
-    chk('복합회의 할 일을 다른 현장으로 안 옮김', '\t복합회의\t센서 단가 회신' in t2 and '부천대' not in t2 and '제천' not in t2)
-    chk('줄 모양 (종류 없음)', t2.startswith('2026-09-23\t앵커 호텔\t회로도 제출'), t2[:60])
+    chk('복합회의 할 일을 다른 현장으로 안 옮김', '\n복합회의\n  센서 단가 회신' in t2 and '부천대' not in t2 and '제천' not in t2)
+    chk('v6 줄 모양 (날짜 한 번 → 현장 → 들여쓰기, 현장이 아닌 것은 뒤)', t2.startswith('2026-09-23\n\n앵커 호텔\n  회로도 제출') and t2.index('앵커 호텔') < t2.index('복합회의') and t2.count('2026-09-23') == 1, t2)
 
     print('--- ③ 어제 있었던 일 (차장님 모양 그대로)')
     chk('머리말·꼬리말 없음', not t3.startswith('어제') and 't53' not in t3 and '회의 3건' not in t3)
@@ -110,8 +112,16 @@ try:
     plan = json.load(io.open(st['파일']['시트계획'], encoding='utf-8'))
     mb = T.merge_body(plan, {'답요청': '8-11', '오늘 할일': "'오늘 할일'!A2:D3", '회의록': '2-6'})['requests']
     chk('병합 : 답요청 A8:A11', {'mergeCells': {'range': {'sheetId': 0, 'startRowIndex': 7, 'endRowIndex': 11, 'startColumnIndex': 0, 'endColumnIndex': 1}, 'mergeType': 'MERGE_ALL'}} in mb)
-    chk('병합 : 회의록 제목줄 A2:G2', mb[2]['mergeCells']['range'] == {'sheetId': 2, 'startRowIndex': 1, 'endRowIndex': 2, 'startColumnIndex': 0, 'endColumnIndex': 7})
-    chk('병합 : 회의록 날짜 A3:A6', mb[-1]['mergeCells']['range'] == {'sheetId': 2, 'startRowIndex': 2, 'endRowIndex': 6, 'startColumnIndex': 0, 'endColumnIndex': 1})
+    mg = [x['mergeCells']['range'] for x in mb if 'mergeCells' in x]
+    chk('병합 : 회의록 제목줄 A2:G2', {'sheetId': 2, 'startRowIndex': 1, 'endRowIndex': 2, 'startColumnIndex': 0, 'endColumnIndex': 7} in mg, mg)
+    chk('병합 : 회의록 날짜 A3:A6', {'sheetId': 2, 'startRowIndex': 2, 'endRowIndex': 6, 'startColumnIndex': 0, 'endColumnIndex': 1} in mg, mg)
+    chk('v6 병합 : 답요청 현장 B9:B11 (수유초 1줄은 안 합침, 앵커 호텔 3줄)',
+        {'sheetId': 0, 'startRowIndex': 8, 'endRowIndex': 11, 'startColumnIndex': 1, 'endColumnIndex': 2} in mg and
+        not any(r['sheetId'] == 0 and r['startColumnIndex'] == 1 and r['startRowIndex'] == 7 for r in mg), mg)
+    chk('v6 회의록 탭은 현장 칸 병합 안 함', not any(r['sheetId'] == 2 and r['startColumnIndex'] == 1 for r in mg), mg)
+    chk('v6 오늘 할일 현장 다르면 B 병합 없음', not any(r['sheetId'] == 1 and r['startColumnIndex'] == 1 for r in mg), mg)
+    aj = json.load(io.open(st['파일']['시트_답요청'], encoding='utf-8'))['rows']
+    chk('v6 시트 줄 순서 = 메일 순서 (같은 현장이 붙어 있음)', [r['COL$B'] for r in aj] == ['수유초등학교', '앵커 호텔', '앵커 호텔', '앵커 호텔'], [r['COL$B'] for r in aj])
     chk('한 줄뿐이면 병합 안 함', T.merge_body(plan, {'답요청': '5-5'}) == {'requests': []})
 
     print('--- v5 레이더 합치기')
@@ -151,7 +161,8 @@ try:
     (u1, u2, u3), st2 = T.run(d, TODAY, out=os.path.join(d, 'out2'))
     chk('③ 따로 절', '※ 현장이 아닌 것 — 어느 현장 것인지는 차장님이 정하십시오' in u3)
     chk('③ 현장 2개 뒤에 3번으로', '3. 복합회의\n' in u3 and st2['어제_현장별'].get('복합회의') == 1)
-    chk('① 도 현장명 그대로 (귀속 안 함)', '\t복합회의\t부천대 확인' in u1)
+    chk('① 도 현장명 그대로 (귀속 안 함)', '\n복합회의\n  부천대 확인' in u1)
+    chk('v6 ① 현장이 아닌 것은 맨 뒤', u1.index('앵커 호텔') < u1.index('복합회의'), u1)
 
     print('--- 기간 지정')
     (g1, g2), gs = T.run_range(d, '260920', '260922', out=os.path.join(d, 'o4'), sheet_url='https://SHEET')
@@ -159,7 +170,7 @@ try:
     chk('현장별 건수', gs['현장별'] == {'앵커 호텔': 2, '수유초등학교': 1, '제천': 1, '복합회의': 2}, gs['현장별'])
     chk('③ 모양 그대로', '1. 앵커 호텔\n\n9/22   09:00  일능 홍길동 부장\n\n안건 : 회로도 구성' in g1, g1[:200])
     chk('현장이 아닌 것 절', '※ 현장이 아닌 것' in g1 and '복합회의' in g1)
-    chk('기간 할 일 줄 (회의한 날짜 순)', g2.startswith('2026-09-20\t제천\t도면 발송  (기한 2026-09-17)') and '26년 회의록2 : https://SHEET' in g2, g2)
+    chk('기간 할 일 (회의한 날짜 머리줄 → 현장 → 들여쓰기)', g2.startswith('2026-09-20\n\n제천\n  도면 발송  (기한 2026-09-17)') and '\n\n2026-09-21\n\n복합회의\n' in g2 and '26년 회의록2 : https://SHEET' in g2, g2)
     chk('기간 파일 4개', all(os.path.exists(x) for x in gs['파일'].values()) and os.path.exists(os.path.join(d, 'o4', '기간_260920-260922.json')))
     chk('--month 범위', T._month_range('2609') == ('260901', '260930') and T._month_range('2602') == ('260201', '260228') and T._month_range('2612') == ('261201', '261231'))
     chk('기간 밖이면 비어 있음', '회의록 없음' in T.run_range(d, '261001', '261031', out=os.path.join(d, 'o5'))[0][0])

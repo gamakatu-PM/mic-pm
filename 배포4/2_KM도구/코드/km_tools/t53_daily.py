@@ -36,7 +36,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v5 2026-09-23'   # v5 : 「신규 현장 레이더」 결과를 한 통 끝(4번)에 합침
+VERSION = 'v6 2026-09-23'   # v6 : ①② 날짜·현장은 머리줄로 한 번만 (할 일은 들여쓰기) · 시트 답요청·오늘 할일 현장 칸(B열) 세로 병합
+# v5 : 「신규 현장 레이더」 결과를 한 통 끝(4번)에 합침
 # v4 : 3통 → 1통 「오늘의 정리」 · 시트 「26년 회의록2」 탭 3개(답요청·오늘 할일·회의록)에 날짜별 누적
 # v3 : 종류 칸 삭제 · 날짜 = 회의한 날(기한은 할일 글 끝에) · 기간 지정(--from --to / --month)
 
@@ -62,6 +63,32 @@ def _iso(ymd):
 
 def _row_line(date, site, what):
     return '%s\t%s\t%s' % (date, site, what)
+
+
+def _grouped(items):
+    """v6 차장님 확정 (2026-09-23 「날짜와 현장명이 반복되는 것은 하나만」 → A. 머리줄로 한 번) :
+         2026-09-22
+         (빈 줄)
+         수유초등학교
+           할 일
+           할 일
+         (빈 줄)
+         앵커 호텔
+           할 일
+       items = [(날짜, 현장, 할일)] 이미 정렬된 것. 날짜가 바뀌면 날짜 줄, 현장이 바뀌면 현장 줄만 다시."""
+    L, last_d, last_s = [], None, None
+    for d, site, what in items:
+        if d != last_d:
+            if L:
+                L.append('')
+            L.append(d or '(기한 미정)')
+            last_d, last_s = d, None
+        if site != last_s:
+            L.append('')
+            L.append(site)
+            last_s = site
+        L.append('  ' + what)
+    return L
 
 
 def _todo_text(ymd, what, whom):
@@ -194,15 +221,15 @@ def todo_rows(recs_y):
                 continue
             seen.add(key)
             rows.append({'날짜': _iso(r['ymd']), '현장': site, '할일': _todo_text(ymd, what, whom), '완료': ''})
+    # v6 : 메일·시트 같은 순서 (날짜 → 현장 → 현장이 아닌 것은 뒤로) — 같은 현장이 붙어 있어야 한 번만 쓰고 병합한다
+    rows.sort(key=lambda x: (x['날짜'], not T52.is_site(x['현장']), x['현장']))
     return rows
 
 
 def build_answer(recs_y, yday, sheet_url=''):
     """차장님 지시 : 하루치 내용을 메일에 적고, 「26년 할 일 모음」 링크를 넣는다. 그 밖의 말은 안 적는다."""
     rows = todo_rows(recs_y)
-    L = []
-    for row in sorted(rows, key=lambda x: (not T52.is_site(x['현장']), x['현장'], x['날짜'])):
-        L.append(_row_line(row['날짜'], row['현장'], row['할일']))
+    L = _grouped([(row['날짜'], row['현장'], row['할일']) for row in rows])
     if not rows:
         L.append('(%s 회의록에서 새로 생긴 할 일 없음)' % _iso(yday.strftime('%y%m%d')))
     L.append('')
@@ -223,7 +250,7 @@ def build_today(recs_all, today):
                 seen.add((site, what))
                 picked.append((site, what + (('  (%s)' % whom) if whom else ''), _iso(r['ymd'])))
     picked.sort(key=lambda x: (not T52.is_site(x[0]), x[0]))
-    L = [_row_line(_iso(ty), site, what) for site, what, _src in picked]
+    L = _grouped([(_iso(ty), site, what) for site, what, _src in picked])
     if not picked:
         L.append('(회의록에 %s 로 적힌 할 일 없음)' % _iso(ty))
     return '\n'.join(L), picked
@@ -354,7 +381,28 @@ def merge_body(plan, ranges):
         if bot - top >= 2:
             req.append({'mergeCells': {'range': {'sheetId': sid, 'startRowIndex': top, 'endRowIndex': bot,
                                                  'startColumnIndex': 0, 'endColumnIndex': 1}, 'mergeType': 'MERGE_ALL'}})
+        if plan[tab]['kind'] == 'date':
+            req.extend(site_merge(sid, top, [v[1] for v in plan[tab]['values']][:bot - top]))
     return {'requests': req}
+
+
+def site_merge(sid, top, sites):
+    """v6 차장님 확정 : 답요청·오늘 할일 탭의 현장 칸(B열)도 같은 현장이 이어지면 세로로 합친다 (가운데 정렬).
+       top = 첫 줄의 0 부터 번호, sites = 그 아래로 이어지는 B열 값들."""
+    req, i = [], 0
+    while i < len(sites):
+        j = i
+        while j + 1 < len(sites) and sites[j + 1] == sites[i]:
+            j += 1
+        if j > i:
+            rng = {'sheetId': sid, 'startRowIndex': top + i, 'endRowIndex': top + j + 1,
+                   'startColumnIndex': 1, 'endColumnIndex': 2}
+            req.append({'mergeCells': {'range': rng, 'mergeType': 'MERGE_ALL'}})
+            req.append({'repeatCell': {'range': rng,
+                                       'cell': {'userEnteredFormat': {'verticalAlignment': 'MIDDLE', 'horizontalAlignment': 'CENTER'}},
+                                       'fields': 'userEnteredFormat(verticalAlignment,horizontalAlignment)'}})
+        i = j + 1
+    return req
 
 
 # ── 4. 신규 현장 레이더 (차장님 지시 2026-09-23 : 레이더 메일을 오늘의 정리에 합친다) ──
@@ -561,8 +609,7 @@ def run_range(meta_dir, d_from, d_to, out=None, sheet_url=''):
     t_meet = '\n'.join(L).rstrip('\n') + '\n'
 
     rows = todo_rows(recs)
-    M = [_row_line(row['날짜'], row['현장'], row['할일'])
-         for row in sorted(rows, key=lambda x: (x['날짜'], not T52.is_site(x['현장']), x['현장']))]
+    M = _grouped([(row['날짜'], row['현장'], row['할일']) for row in rows])
     if not rows:
         M.append('(%s ~ %s 할 일 없음)' % (_iso(d_from), _iso(d_to)))
     M.append('')
