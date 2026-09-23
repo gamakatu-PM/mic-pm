@@ -37,7 +37,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v10 2026-09-23'  # v10 : 「26년 회의록2」 에 들어가는 것 전부 — ①② 메일·시트 답요청·오늘 할일 : 「- 」 + 담당 괄호 뺌. 기간 메일은 그대로
+VERSION = 'v11 2026-09-23'  # v11 : 체크가 곧 소통 — 체크 안 한 것은 계속 적는다. ① 기한 없는 지난 할 일 · ② 기한 지난 할 일(원래 기한 아래) · ⑤ 앞으로 할 것 + 시트 4번째 탭 「앞으로 할일」
+# v10 2026-09-23  # v10 : 「26년 회의록2」 에 들어가는 것 전부 — ①② 메일·시트 답요청·오늘 할일 : 「- 」 + 담당 괄호 뺌. 기간 메일은 그대로
 # v9 2026-09-23   # v9 : 메일 ① 만 — 할 일 앞에 「- 」, 오른쪽 담당 괄호 뺌 (기한 괄호는 그대로). ②·시트·기간 메일은 안 바꿈
 # v8 2026-09-23   # v8 : 답요청·오늘 할일 완료 칸(D열) = 체크박스 (체크 = 「완료」, 끄면 빈칸)
 # v7 2026-09-23   # v7 : 담당 칸의 「배성윤 →」 뺌 · 시트에서 완료 표시한 할 일은 메일 ①② 에서 뺌 (--done)
@@ -50,8 +51,9 @@ VERSION = 'v10 2026-09-23'  # v10 : 「26년 회의록2」 에 들어가는 것 
 KINDS = ('발송', '도면', '회의', '확인', '전달', '샘플', '제작', '발행', '설치',
          '납품', '회신', '제출', '계약', '발주', '연락')
 SHEET_NAME = '26년 회의록2'
-TABS = ('답요청', '오늘 할일', '회의록')          # sheetId 0 · 1 · 2 (2026-09-23 만들 때 고정)
-TAB_ID = {'답요청': 0, '오늘 할일': 1, '회의록': 2}
+TABS = ('답요청', '오늘 할일', '회의록', '앞으로 할일')          # sheetId 0 · 1 · 2 · 3 (2026-09-23 만들 때 고정)
+TAB_ID = {'답요청': 0, '오늘 할일': 1, '회의록': 2, '앞으로 할일': 3}
+FUTURE_HEAD = ['기한', '현장', '할일', '완료']   # v11 차장님 (2026-09-23) : 앞으로 날짜가 있는 할 일 — 체크할 때까지 계속
 MEET_HEAD = ['날짜', '현장', '시각·협의자', '안건', '협의내용', '결정사항', '조치사항']
 SHEET_HEAD = ['날짜', '현장', '할일', '완료']   # 차장님 확정 (2026-09-23) : 종류 칸 없음. 날짜 = 회의한 날. 완료 = 차장님 체크
 
@@ -240,12 +242,29 @@ def _src(r):
 DONE_NO = ('', 'FALSE', 'false', '0', '미완료', 'N', 'n', '-')
 
 
-def load_done(path):
-    """「26년 회의록2」 답요청·오늘 할일 탭을 읽은 응답 파일(들) → 완료 표시된 할 일.
-       path : 쉼표로 여럿. Zapier 응답 그대로 / values:get 모두 받는다. 칸 : 날짜 | 현장 | 할일 | 완료
-       병합된 칸(날짜·현장)은 아래 줄이 비어 있으므로 위 값을 내려 쓴다.
-       완료 칸이 비었거나 FALSE·0·미완료 가 아니면 완료로 본다 (「완료」「O」「v」 체크박스 TRUE 모두)."""
-    done = {'pair': set(), 'what': set()}
+def _cell_date(v):
+    """시트 날짜 칸 → 'YYYY-MM-DD'. 「2026-09-22」 도, 날짜 서식이 없어 숫자(46287)로 보이는 것도 받는다."""
+    v = str(v or '').strip()
+    m = re.match(r'^(\d{4})\D(\d{1,2})\D(\d{1,2})', v)
+    if m:
+        return '%s-%02d-%02d' % (m.group(1), int(m.group(2)), int(m.group(3)))
+    if re.match(r'^\d{5}(\.0+)?$', v):
+        return (datetime.date(1899, 12, 30) + datetime.timedelta(days=int(float(v)))).isoformat()
+    return ''
+
+
+def _due_in(text):
+    m = re.search(r'\(기한 (\d{4}-\d{2}-\d{2})\)', str(text or ''))
+    return m.group(1) if m else ''
+
+
+def load_board(path):
+    """v11 : 「26년 회의록2」 답요청·오늘 할일·앞으로 할일 탭을 읽은 응답 파일(들) → 줄 목록.
+       path : 쉼표로 여럿. Zapier 응답 그대로 / values:get 모두 받는다. 칸 : 날짜(기한) | 현장 | 할일 | 완료
+       병합된 칸(날짜·현장)은 아래 줄이 비어 있으므로 위 값을 내려 쓴다. 어느 탭인지는 응답의 range 이름으로 가린다.
+       기한 : 답요청은 글 끝 「(기한 …)」, 오늘 할일·앞으로 할일은 A열 날짜.
+       완료 칸이 비었거나 FALSE·0·미완료 가 아니면 완료로 본다 (체크박스 「완료」·TRUE 모두)."""
+    out = []
     for one in [x for x in str(path or '').split(',') if x.strip()]:
         if not os.path.isfile(one.strip()):
             continue
@@ -255,16 +274,40 @@ def load_done(path):
             d = d['results'][0].get('body', d)
         blocks = d.get('valueRanges') if isinstance(d, dict) and 'valueRanges' in d else [d]
         for blk in blocks:
-            site = ''
+            rng = str(blk.get('range', ''))
+            tab = '앞으로 할일' if '앞으로' in rng else ('오늘 할일' if '오늘' in rng else '답요청')
+            date = site = ''
             for row in (blk.get('values') or [])[1:]:
                 row = [str(x) for x in row] + [''] * 4
+                if _cell_date(row[0]):
+                    date = _cell_date(row[0])
                 if row[1].strip():
                     site = row[1].strip()
-                if row[3].strip() in DONE_NO or not _core(row[2]):
+                if not _core(row[2]):
                     continue
-                done['pair'].add((T52.norm_site(site), _core(row[2])))
-                done['what'].add(_core(row[2]))
+                due = _due_in(row[2]) if tab == '답요청' else date
+                out.append({'tab': tab, 'date': date, 'site': site, 'text': row[2], 'due': due,
+                            'done': row[3].strip() not in DONE_NO,
+                            'key': (T52.norm_site(site), _core(row[2]))})
+    return out
+
+
+def load_done(path):
+    """완료 표시된 할 일 (v7). v11 부터 load_board 를 쓴다."""
+    return _done_of(load_board(path))
+
+
+def _done_of(board):
+    done = {'pair': set(), 'what': set()}
+    for b in board or []:
+        if b['done']:
+            done['pair'].add(b['key'])
+            done['what'].add(b['key'][1])
     return done
+
+
+def _key(site, what):
+    return (T52.norm_site(site), _core(what))
 
 
 def _is_done(done, site, what):
@@ -293,22 +336,51 @@ def todo_rows(recs_y, done=None):
     return rows
 
 
-def build_answer(recs_y, yday, sheet_url='', done=None):
-    """차장님 지시 : 하루치 내용을 메일에 적고, 「26년 할 일 모음」 링크를 넣는다. 그 밖의 말은 안 적는다."""
+def build_answer(recs_y, yday, sheet_url='', done=None, board=None):
+    """차장님 지시 : 하루치 내용을 메일에 적고, 「26년 할 일 모음」 링크를 넣는다. 그 밖의 말은 안 적는다.
+       v11 (차장님 「체크 안 된 것들은 계속 적어줘」) : 시트 답요청 탭에서 체크 안 한 기한 없는 지난 할 일도 회의한 날 아래에 계속 적는다.
+       (기한이 있는 것은 ② 오늘 할 것 · ⑤ 앞으로 할 것 이 맡는다)"""
     rows = todo_rows(recs_y, done)
+    carry = answer_carry(board, rows, yday)
     # v9 차장님 확정 (2026-09-23 캡처) : 할 일 앞에 「- 」 / 오른쪽 담당 괄호 (확인 예정)(한국마이크로닉) 등은 안 적는다.
     #    「표시한 것만」 — ② 오늘 할 것 · 시트 · 기간 메일 · (기한) 괄호는 차장님께 여쭌 뒤에만 바꾼다
-    L = _grouped([(row['날짜'], row['현장'], row['_메일']) for row in rows], bullet='  - ')
+    items = [(row['날짜'], row['현장'], row['_메일']) for row in rows] + carry
+    items.sort(key=lambda x: (x[0], not T52.is_site(x[1]), x[1]))
+    L = _grouped(items, bullet='  - ')
     if not rows:
         L.append('(%s 회의록에서 새로 생긴 할 일 없음)' % _iso(yday.strftime('%y%m%d')))
     L.append('')
     L.append('%s : %s' % (SHEET_NAME, sheet_url or '(링크 없음)'))
-    return '\n'.join(L), rows
+    return '\n'.join(L), rows, len(carry)
+
+
+def _plain(text):
+    return re.sub(r'^\s*-\s+', '', str(text or '')).strip()
+
+
+def answer_carry(board, rows, yday):
+    """① 에 이어 적을 것 : 답요청 탭, 체크 안 함, 기한 없음, 어제보다 앞선 회의. (회의한 날, 현장, 글)"""
+    if not board:
+        return []
+    done = _done_of(board)
+    seen = set(_key(r['현장'], r['_메일']) for r in rows)
+    yd = yday.isoformat()
+    out = []
+    for b in board:
+        if b['tab'] != '답요청' or b['due'] or not b['date'] or b['date'] >= yd:
+            continue
+        if b['key'] in done['pair'] or b['key'] in seen:
+            continue
+        seen.add(b['key'])
+        out.append((b['date'], b['site'], _plain(b['text'])))
+    return out
 
 
 # ── ② 오늘 할 것 ────────────────────────────────────────────
-def build_today(recs_all, today, done=None):
-    """차장님 지시 : 회의록 「할 일」 중 날짜가 오늘인 것만. 지난 것·미정은 안 적는다."""
+def build_today(recs_all, today, done=None, board=None):
+    """차장님 지시 : 회의록 「할 일」 중 날짜가 오늘인 것만. 미정은 안 적는다.
+       v11 (차장님 「체크 안 된 것들은 날짜가 지나가도 계속」) : 시트에서 기한이 지났는데 체크 안 한 것도 원래 기한 날짜 아래에 계속 적는다.
+       시트 앞으로 할일 탭에서 기한이 오늘이 된 것도 오늘 것으로 넣는다."""
     ty = today.strftime('%y%m%d')
     picked, seen = [], set()
     nm = _names(recs_all)
@@ -320,11 +392,57 @@ def build_today(recs_all, today, done=None):
                 if _is_done(done, site, what):
                     continue
                 picked.append((site, what, _iso(r['ymd'])))   # v10 : 담당 괄호 없이
+    carry = []
+    if board:
+        dn = _done_of(board)
+        keys = set(_key(site, what) for site, what, _s in picked)
+        for b in board:
+            if not b['due'] or b['due'] > today.isoformat() or b['key'] in dn['pair'] or b['key'] in keys:
+                continue
+            keys.add(b['key'])
+            if b['due'] == today.isoformat():
+                picked.append((b['site'], _core(b['text']), b['date']))
+            else:
+                carry.append((b['due'], b['site'], _core(b['text'])))
     picked.sort(key=lambda x: (not T52.is_site(x[0]), x[0]))
-    L = _grouped([(_iso(ty), site, what) for site, what, _src in picked], bullet='  - ')
-    if not picked:
+    items = sorted(carry, key=lambda x: (x[0], not T52.is_site(x[1]), x[1])) + [(_iso(ty), site, what) for site, what, _src in picked]
+    L = _grouped(items, bullet='  - ')
+    if not items:
         L.append('(회의록에 %s 로 적힌 할 일 없음)' % _iso(ty))
-    return '\n'.join(L), picked
+    return '\n'.join(L), picked, len(carry)
+
+
+# ── ⑤ 앞으로 할 것 (v11) ─────────────────────────────────────
+def build_future(recs_all, today, done=None, board=None):
+    """차장님 (2026-09-23) : 「오늘보다 앞선 날짜가 있는 것들은 내가 완료 체크를 할 때까지 … 계속 적어 줘」
+       「매우 중요 — 앞으로 해야 될 일을 미리 알아야 하니 메일 아래에도, 시트에도 따로」
+       재료 : 회의록 할 일 중 기한이 내일 이후 + 시트(답요청 기한·앞으로 할일 탭) 중 기한이 내일 이후. 체크한 것은 뺀다.
+       돌려주는 것 : (메일 글, 전체 [(기한, 현장, 무엇)], 시트 앞으로 할일 탭에 새로 붙일 것)"""
+    ty = today.isoformat()
+    dn = _done_of(board) if board else (done or {'pair': set()})
+    have = set(b['key'] for b in (board or []) if b['tab'] == '앞으로 할일')
+    fut, seen = [], set()
+    nm = _names(recs_all)
+    for r in recs_all:
+        site = nm.get(r['key'], r['site'])
+        for ymd, what, whom in r['todos']:
+            due = _iso(ymd)
+            k = _key(site, what)
+            if not due or due <= ty or k in seen or k in dn['pair']:
+                continue
+            seen.add(k)
+            fut.append((due, site, what))
+    for b in board or []:
+        if not b['due'] or b['due'] <= ty or b['key'] in seen or b['key'] in dn['pair']:
+            continue
+        seen.add(b['key'])
+        fut.append((b['due'], b['site'], _core(b['text'])))
+    fut.sort(key=lambda x: (x[0], not T52.is_site(x[1]), x[1]))
+    new = [f for f in fut if _key(f[1], f[2]) not in have]
+    L = _grouped(fut, bullet='  - ')
+    if not fut:
+        L.append('(앞으로 날짜가 잡힌 할 일 없음)')
+    return '\n'.join(L), fut, new
 
 
 # ── ③ 어제 있었던 일 ────────────────────────────────────────
@@ -402,7 +520,7 @@ def meet_rows(recs_y):
     return out
 
 
-def sheet_plan(rows, picked, recs_y, today, yday):
+def sheet_plan(rows, picked, recs_y, today, yday, new_future=None):
     """탭별로 덧붙일 줄과, 덧붙인 뒤 합칠 칸.
        kind : 'date' = A열 날짜 세로 병합 / 'title' = 첫 줄 제목(A:G 병합·굵게) + 나머지 A열 병합"""
     yy = yday.strftime('%y%m%d')
@@ -415,6 +533,8 @@ def sheet_plan(rows, picked, recs_y, today, yday):
     mr = meet_rows(recs_y)
     plan['회의록'] = {'kind': 'title', 'cols': len(MEET_HEAD),
                     'values': ([[meet_title(yy, len(recs_y))] + [''] * (len(MEET_HEAD) - 1)] + mr) if mr else []}
+    plan['앞으로 할일'] = {'kind': 'date', 'cols': 4,
+                        'values': [[due, site, '- ' + what, ''] for due, site, what in (new_future or [])]}
     return plan
 
 
@@ -449,11 +569,15 @@ def merge_body(plan, ranges):
                                                                       'backgroundColor': {'red': 1, 'green': 0.95, 'blue': 0.8}}},
                                        'fields': 'userEnteredFormat(textFormat,horizontalAlignment,backgroundColor)'}})
             top += 1
-        if bot - top >= 2:
-            req.append({'mergeCells': {'range': {'sheetId': sid, 'startRowIndex': top, 'endRowIndex': bot,
-                                                 'startColumnIndex': 0, 'endColumnIndex': 1}, 'mergeType': 'MERGE_ALL'}})
-        if plan[tab]['kind'] == 'date':
-            req.extend(site_merge(sid, top, [v[1] for v in plan[tab]['values']][:bot - top]))
+        if plan[tab]['kind'] == 'title':
+            if bot - top >= 2:
+                req.append({'mergeCells': {'range': {'sheetId': sid, 'startRowIndex': top, 'endRowIndex': bot,
+                                                     'startColumnIndex': 0, 'endColumnIndex': 1}, 'mergeType': 'MERGE_ALL'}})
+        else:
+            vals = plan[tab]['values'][:bot - top]
+            req.extend(run_merge(sid, top, [v[0] for v in vals], 0, center=False))          # A : 같은 날짜
+            req.extend(run_merge(sid, top, [(v[0], v[1]) for v in vals], 1))                 # B : 같은 날짜 안의 같은 현장
+            req.append(date_format(sid, top, bot))
             req.append(done_checkbox(sid, top, bot))
     return {'requests': req}
 
@@ -465,6 +589,34 @@ def done_checkbox(sid, top, bot):
                                             'startColumnIndex': 3, 'endColumnIndex': 4},
                                   'rule': {'condition': {'type': 'BOOLEAN', 'values': [{'userEnteredValue': '완료'}]},
                                            'strict': True}}}
+
+
+def date_format(sid, top, bot):
+    """v11 : A열 날짜를 2026-09-24 로 보이게 (숫자 46289 로 보이던 것 고침) + 가운데."""
+    return {'repeatCell': {'range': {'sheetId': sid, 'startRowIndex': top, 'endRowIndex': bot,
+                                     'startColumnIndex': 0, 'endColumnIndex': 1},
+                           'cell': {'userEnteredFormat': {'numberFormat': {'type': 'DATE', 'pattern': 'yyyy-mm-dd'},
+                                                          'horizontalAlignment': 'CENTER', 'verticalAlignment': 'MIDDLE'}},
+                           'fields': 'userEnteredFormat(numberFormat,horizontalAlignment,verticalAlignment)'}}
+
+
+def run_merge(sid, top, vals, col, center=True):
+    """같은 값이 이어지는 칸을 세로로 합친다 (col 0 = 날짜, 1 = 현장)."""
+    req, i = [], 0
+    while i < len(vals):
+        j = i
+        while j + 1 < len(vals) and vals[j + 1] == vals[i]:
+            j += 1
+        if j > i:
+            rng = {'sheetId': sid, 'startRowIndex': top + i, 'endRowIndex': top + j + 1,
+                   'startColumnIndex': col, 'endColumnIndex': col + 1}
+            req.append({'mergeCells': {'range': rng, 'mergeType': 'MERGE_ALL'}})
+            if center:
+                req.append({'repeatCell': {'range': rng,
+                                           'cell': {'userEnteredFormat': {'verticalAlignment': 'MIDDLE', 'horizontalAlignment': 'CENTER'}},
+                                           'fields': 'userEnteredFormat(verticalAlignment,horizontalAlignment)'}})
+        i = j + 1
+    return req
 
 
 def site_merge(sid, top, sites):
@@ -556,16 +708,16 @@ def build_radar(radar, today):
 
 
 # ── 한 통으로 ─────────────────────────────────────────────
-def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url='', t4=None):
+def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url='', t4=None, t5=None, n1c=0, n2c=0, n5=0):
     """차장님 지시 (2026-09-23) : 3통을 순서대로 한 통에. 제목 [KM] 오늘의 정리 입니다. 날짜"""
     yy = yday.strftime('%y%m%d')
     t1_body = '\n'.join(ln for ln in t1.split('\n') if not ln.startswith(SHEET_NAME + ' :')).rstrip('\n')
     L = ['%s : %s' % (SHEET_NAME, sheet_url or '(링크 없음)'), '']
-    L.append('━━ 1. 답해 주십시오 ━━  %s 회의에서 생긴 할 일 %d건' % (T52._d(yy), len(rows)))
+    L.append('━━ 1. 답해 주십시오 ━━  %s 회의에서 생긴 할 일 %d건%s' % (T52._d(yy), len(rows), (' · 체크 안 한 지난 할 일 %d건' % n1c) if n1c else ''))
     L.append('')
     L.append(t1_body)
     L.append('')
-    L.append('━━ 2. 오늘 할 것 ━━  %s · %d건' % (_iso(today.strftime('%y%m%d')), len(picked)))
+    L.append('━━ 2. 오늘 할 것 ━━  %s · %d건%s' % (_iso(today.strftime('%y%m%d')), len(picked), (' · 기한 지난 것 %d건' % n2c) if n2c else ''))
     L.append('')
     L.append(t2.rstrip('\n'))
     L.append('')
@@ -577,6 +729,11 @@ def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url='', t4=No
         L.append('━━ 4. 신규 현장 레이더 ━━')
         L.append('')
         L.append(t4.rstrip('\n'))
+    if t5 is not None:
+        L.append('')
+        L.append('━━ 5. 앞으로 할 것 ━━  %d건' % n5)
+        L.append('')
+        L.append(t5.rstrip('\n'))
     subject = '[KM] 오늘의 정리 입니다. %s (%s)' % (today.strftime('%Y-%m-%d'), T52.WD[today.weekday()])
     return '\n'.join(L) + '\n', subject
 
@@ -589,11 +746,14 @@ def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='
     recs_all, skipped = collect(meta_dir)
     recs_y = [r for r in recs_all if r['ymd'] == yy]
 
-    done = load_done(done_path) if done_path else None
-    t1, rows = build_answer(recs_y, yday, sheet_url, done)
+    board = load_board(done_path) if done_path else None
+    done = _done_of(board) if done_path else None
+    t1, rows, n1c = build_answer(recs_y, yday, sheet_url, done, board)
     rows = [dict(r, 할일='- ' + r['_메일']) for r in rows]      # v10 : 시트·csv 도 「- 」 + 담당 괄호 없이
-    t2, picked = build_today(recs_all, today, done)
-    n_done = (len(todo_rows(recs_y)) - len(rows) + len(build_today(recs_all, today)[1]) - len(picked)) if done else 0
+    t2, picked, n2c = build_today(recs_all, today, done, board)
+    t5, fut, new_fut = build_future(recs_all, today, done, board)
+    n_done = ((len(todo_rows(recs_y)) - len(rows)) +
+              len([q for q in build_today(recs_all, today)[1] if _key(q[0], q[1]) in done['pair']])) if done else 0
     t3, per_site = build_yesterday(recs_y, yday)
 
     out = out or meta_dir
@@ -620,12 +780,12 @@ def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='
             t4, rstat = build_radar(load_radar(radar_path), today)
         except Exception as e:
             t4, rstat = '(레이더 결과를 읽지 못함 : %s)' % e, {'읽기실패': str(e)}
-    one, subject = build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url, t4)
+    one, subject = build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url, t4, t5, n1c, n2c, len(fut))
     p = os.path.join(out, '오늘의정리_%s.txt' % st)
     with io.open(p, 'w', encoding='utf-8') as f:
         f.write(one)
     paths['오늘의정리'] = p
-    plan = sheet_plan(rows, picked, recs_y, today, yday)
+    plan = sheet_plan(rows, picked, recs_y, today, yday, new_fut)
     for tab in TABS:
         p = os.path.join(out, '시트_%s_%s.json' % (tab.replace(' ', ''), st))
         with io.open(p, 'w', encoding='utf-8') as f:
@@ -641,6 +801,7 @@ def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='
             'meta전체': len(recs_all), '어제회의': len(recs_y),
             '어제_현장별': per_site,
             '①할일': len(rows), '②오늘': len(picked), '완료로뺌': n_done,
+            '①지난것': n1c, '②기한지난것': n2c, '⑤앞으로': len(fut), '⑤새로시트에': len(new_fut),
             '완료표시': len(done['pair']) if done else None,
             '건너뜀': skipped, '파일': paths}
     with io.open(os.path.join(out, '아침3통_%s.json' % st), 'w', encoding='utf-8') as f:

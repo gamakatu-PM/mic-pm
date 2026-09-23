@@ -106,7 +106,7 @@ try:
     chk('링크는 맨 위 한 번', one.startswith('26년 회의록2 : https://docs.google.com/spreadsheets/d/SHEET') and one.count('26년 회의록2 :') == 1)
     chk('③ 머리 「26년 09월 22일_회의 3건」', '━━ 3. 어제 있었던 일 ━━  26년 09월 22일_회의 3건' in one)
     chk('① ② ③ 본문이 다 들어감', t1.split('\n')[0] in one and t2.split('\n')[0] in one and '1. 앵커 호텔' in one)
-    chk('시트줄 수', st['시트줄'] == {'답요청': 4, '오늘 할일': 2, '회의록': 4}, st['시트줄'])
+    chk('시트줄 수', st['시트줄'] == {'답요청': 4, '오늘 할일': 2, '회의록': 4, '앞으로 할일': 1}, st['시트줄'])
     rj = json.load(io.open(st['파일']['시트_회의록'], encoding='utf-8'))['rows']
     chk('회의록 탭 첫 줄 = 날짜 제목', rj[0] == {'COL$A': '26년 09월 22일_회의 3건'}, rj[0])
     chk('회의록 탭 줄 = 안건 하나', rj[1]['COL$D'] == '회로도 구성' and rj[1]['COL$E'] == '냉장고·비데·세면대 회로 구성 협의함\n기존 도면상 확인', rj[1])
@@ -126,7 +126,7 @@ try:
     aj = json.load(io.open(st['파일']['시트_답요청'], encoding='utf-8'))['rows']
     chk('v6 시트 줄 순서 = 메일 순서 (같은 현장이 붙어 있음)', [r['COL$B'] for r in aj] == ['수유초등학교', '앵커 호텔', '앵커 호텔', '앵커 호텔'], [r['COL$B'] for r in aj])
     one_row = T.merge_body(plan, {'답요청': '5-5'})['requests']
-    chk('한 줄뿐이면 병합 안 함 (체크박스만)', [list(x)[0] for x in one_row] == ['setDataValidation'], one_row)
+    chk('한 줄뿐이면 병합 안 함 (날짜 서식 · 체크박스만)', [list(x)[0] for x in one_row] == ['repeatCell', 'setDataValidation'], one_row)
     cb = [x['setDataValidation'] for x in mb if 'setDataValidation' in x]
     chk('v8 완료 칸 체크박스 : 답요청 D8:D11 · 오늘 할일 D2:D3, 회의록 탭은 없음',
         [(c['range']['sheetId'], c['range']['startRowIndex'], c['range']['endRowIndex'], c['range']['startColumnIndex']) for c in cb] == [(0, 7, 11, 3), (1, 1, 3, 3)], cb)
@@ -217,6 +217,44 @@ try:
     chk('v10 완료 대조 : 「- 」 붙은 시트 글도 맞춤', T._core('- 샘플 발송  (기한 2026-09-23)') == '샘플 발송')
     chk('csv 는 4칸 그대로 (_메일 안 들어감)', list(rows[0].keys()) == ['날짜', '현장', '할일', '완료'])
     chk('기간 메일 할 일은 그대로 (들여쓰기 두 칸 · 담당 괄호 있음)', '\n  도면 발송  (기한 2026-09-17)  (발주처)' in g2 and '  - ' not in g2, g2)
+
+    print('--- v11 체크 안 한 것은 계속 · ⑤ 앞으로 할 것 · 앞으로 할일 탭')
+    bj = write(d, 'b_a.json', {'range': "'답요청'!A1:D50", 'values': [
+        ['날짜', '현장', '할일', '완료'],
+        ['2026-09-20', '제천', '- 옛 확인 일', ''],                              # ① 에 이어짐 (기한 없음 · 체크 안 함)
+        ['', '', '- 옛 끝난 일', '완료'],                                        # 체크 → 안 나옴
+        ['', '', '- 지난 기한 일  (기한 2026-09-21)', ''],                        # ② 원래 기한 9/21 아래
+        ['', '', '- 먼 일  (기한 2026-10-15)', '']]})                            # ⑤
+    bt = write(d, 'b_t.json', {'range': "'오늘 할일'!A1:D50", 'values': [
+        ['날짜', '현장', '할일', '완료'], ['46287', '제천', '- 어제 못 한 일', '']]})   # 숫자 날짜 = 2026-09-22 → ② 9/22 아래
+    bf = write(d, 'b_f.json', {'range': "'앞으로 할일'!A1:D50", 'values': [
+        ['기한', '현장', '할일', '완료'],
+        ['2026-09-23', '제천', '- 오늘 된 일', ''],                              # 오늘이 됨 → ② 오늘
+        ['2026-10-01', '앵커 호텔', '- 계약서 제출', ''],                          # 이미 탭에 있음 → 새로 안 붙임
+        ['2026-11-01', '제천', '- 체크한 먼 일', '완료']]})                        # 체크 → ⑤ 에 안 나옴
+    (w1, w2, _w3), sw = T.run(d, TODAY, out=os.path.join(d, 'out11'), done_path=','.join([bj, bt, bf]))
+    one11 = io.open(sw['파일']['오늘의정리'], encoding='utf-8').read()
+    chk('숫자 날짜 46287 = 2026-09-22', T._cell_date('46287') == '2026-09-22' and T._cell_date('2026-09-22') == '2026-09-22')
+    chk('① 체크 안 한 지난 할 일 (회의한 날 아래)', '2026-09-20\n\n제천\n  - 옛 확인 일\n' in w1 and '옛 끝난 일' not in w1 and sw['①지난것'] == 1, w1)
+    chk('① 기한 있는 지난 것은 ① 에 안 넣음', '지난 기한 일' not in w1 and '먼 일' not in w1, w1)
+    chk('② 기한 지난 것 = 원래 기한 아래, 오늘 것은 맨 뒤',
+        w2.startswith('2026-09-21\n\n제천\n  - 지난 기한 일\n\n2026-09-22\n\n제천\n  - 어제 못 한 일\n\n2026-09-23\n') and sw['②기한지난것'] == 2, w2)
+    chk('② 앞으로 할일 탭에서 오늘이 된 것', '  - 오늘 된 일' in w2 and '(기한' not in w2, w2)
+    chk('머리 줄 숫자', '체크 안 한 지난 할 일 1건' in one11 and '기한 지난 것 2건' in one11, one11[:400])
+    t5 = one11.split('━━ 5. 앞으로 할 것 ━━')[1] if '━━ 5. 앞으로 할 것 ━━' in one11 else ''
+    chk('⑤ 메일 맨 끝 (④ 다음)', one11.index('━━ 5. 앞으로 할 것') > one11.index('━━ 3. 어제 있었던 일') and sw['⑤앞으로'] == 2, sw['⑤앞으로'])
+    chk('⑤ 기한 순 · 기한 머리 · 「- 」', '2026-10-01\n\n앵커 호텔\n  - 계약서 제출\n\n2026-10-15\n\n제천\n  - 먼 일' in t5, t5)
+    chk('⑤ 체크한 것 · 오늘 것은 없음', '체크한 먼 일' not in t5 and '오늘 된 일' not in t5, t5)
+    fj = json.load(io.open(sw['파일']['시트_앞으로 할일'], encoding='utf-8'))['rows']
+    chk('앞으로 할일 탭 = 새로 생긴 것만 (이미 있는 계약서 제출 제외)', fj == [{'COL$A': '2026-10-15', 'COL$B': '제천', 'COL$C': '- 먼 일'}], fj)
+    oj = json.load(io.open(sw['파일']['시트_오늘 할일'], encoding='utf-8'))['rows']
+    chk('오늘 할일 탭 = 오늘 것만 (지난 것은 다시 안 붙임)', all(r['COL$A'] == '2026-09-23' for r in oj) and any(r['COL$C'] == '- 오늘 된 일' for r in oj), oj)
+    pl = {'앞으로 할일': {'kind': 'date', 'cols': 4, 'values': [['2026-10-01', 'A', '- x', ''], ['2026-10-01', 'A', '- y', ''], ['2026-10-02', 'A', '- z', '']]}}
+    mg11 = [x['mergeCells']['range'] for x in T.merge_body(pl, {'앞으로 할일': '2-4'})['requests'] if 'mergeCells' in x]
+    chk('앞으로 할일 병합 : 같은 기한 A2:A3, 현장은 기한이 바뀌면 끊김 B2:B3',
+        mg11 == [{'sheetId': 3, 'startRowIndex': 1, 'endRowIndex': 3, 'startColumnIndex': 0, 'endColumnIndex': 1},
+                 {'sheetId': 3, 'startRowIndex': 1, 'endRowIndex': 3, 'startColumnIndex': 1, 'endColumnIndex': 2}], mg11)
+    chk('시트 없으면 예전과 같음 (⑤ 는 회의록 기한만)', T.run(d, TODAY, out=os.path.join(d, 'out12'))[1]['①지난것'] == 0)
 
     print('--- 낱개')
     chk('parse_todo', T.parse_todo('- 260922 | 무엇 | 배성윤 → 누구') == ('260922', '무엇', '배성윤 → 누구'))
