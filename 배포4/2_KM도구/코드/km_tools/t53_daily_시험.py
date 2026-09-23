@@ -63,9 +63,9 @@ try:
     chk('9/21 복합회의 할 일은 ① 에 없음', '센서 단가 회신' not in t1)
     chk('「N일 지남」·설명문 없음', '지남' not in t1 and '완료한 것은' not in t1 and '하루치' not in t1)
     chk('v6 날짜 머리줄 한 번 → 현장 머리줄 → 할일 들여쓰기 (기한·담당은 글 끝에)',
-        t1.startswith('2026-09-22\n\n수유초등학교\n  차단기 리셋 후 동작 확인  (배성윤 → 확인 예정)\n\n앵커 호텔\n  회로도 제출  (기한 2026-09-23)  (배성윤 → 김경원 상무)\n'), t1)
+        t1.startswith('2026-09-22\n\n수유초등학교\n  차단기 리셋 후 동작 확인  (확인 예정)\n\n앵커 호텔\n  회로도 제출  (기한 2026-09-23)  (김경원 상무)\n'), t1)
     chk('v6 날짜·현장은 한 번만', t1.count('2026-09-22\n') == 1 and t1.count('앵커 호텔\n') == 1 and '\t' not in t1, t1)
-    chk('기한 없으면 (기한) 안 붙임', '\n  샘플 발송  (배성윤 → 현장)\n' in t1, t1)
+    chk('기한 없으면 (기한) 안 붙임', '\n  샘플 발송  (현장)\n' in t1, t1)
     chk('종류 칸 없음', '\t발송\t' not in t1 and '\t제출\t' not in t1)
     chk('현장명 띄어쓰기 그대로 (앵커 호텔)', '앵커 호텔' in t1 and '앵커호텔' not in t1)
     rows = list(csv.DictReader(io.open(st['파일']['할일추가'], encoding='utf-8-sig')))
@@ -174,6 +174,29 @@ try:
     chk('기간 파일 4개', all(os.path.exists(x) for x in gs['파일'].values()) and os.path.exists(os.path.join(d, 'o4', '기간_260920-260922.json')))
     chk('--month 범위', T._month_range('2609') == ('260901', '260930') and T._month_range('2602') == ('260201', '260228') and T._month_range('2612') == ('261201', '261231'))
     chk('기간 밖이면 비어 있음', '회의록 없음' in T.run_range(d, '261001', '261031', out=os.path.join(d, 'o5'))[0][0])
+
+    print('--- v7 「배성윤 →」 빼기 · 시트 완료 표시는 ①② 에서 뺌')
+    chk('「배성윤 →」 없음 (상대는 남김)', '배성윤' not in t1 and '배성윤' not in t2 and '(김경원 상무)' in t1, t1)
+    chk('_whom', T._whom('배성윤 → 김경원 상무') == '김경원 상무' and T._whom('배성윤->AS') == 'AS' and T._whom('배성윤') == '' and T._whom('김경원 → 배성윤') == '김경원 → 배성윤')
+    dj = write(d, 'done_a.json', {'results': [{'status': 200, 'body': {'range': "'답요청'!A1:D200", 'values': [
+        ['날짜', '현장', '할일', '완료'],
+        ['46287', '앵커호텔', '샘플 발송  (배성윤 → 현장)', '완료'],        # 옛 글꼴(배성윤 →) · 띄어쓰기 다른 현장명도 맞춘다
+        ['', '', '계약서 제출  (기한 2026-10-01)  (발주처)', ''],          # 병합 칸 : 현장 빈칸 → 위 값
+        ['', '', '회로도 제출', 'FALSE'],                                  # 체크 안 함
+        ['', '제천', '차단기 리셋 후 동작 확인', '완료']]}}]})            # 현장이 다르면 안 뺀다
+    dt = write(d, 'done_t.json', {'range': "'오늘 할일'!A1:D50", 'values': [
+        ['날짜', '현장'], ['2026-09-23', '복합회의', '센서 단가 회신  (x)', 'TRUE']]})
+    dn = T.load_done(dj + ',' + dt)
+    chk('완료 3건 읽음 (FALSE·빈칸 제외)', len(dn['pair']) == 3, dn)
+    (v1, v2, _v3), sv = T.run(d, TODAY, out=os.path.join(d, 'out7'), done_path=dj + ',' + dt)
+    chk('① 완료한 「샘플 발송」 빠짐', '샘플 발송' not in v1 and '계약서 제출' in v1 and '회로도 제출' in v1, v1)
+    chk('① 현장이 다르면 안 뺌 (수유초 차단기 남음)', '차단기 리셋 후 동작 확인' in v1, v1)
+    chk('② 완료한 「센서 단가 회신」 빠짐, 회로도 남음', '센서 단가 회신' not in v2 and '회로도 제출' in v2, v2)
+    chk('완료로 뺀 수 = 2', sv['완료로뺌'] == 2, sv['완료로뺌'])
+    aj7 = json.load(io.open(sv['파일']['시트_답요청'], encoding='utf-8'))['rows']
+    chk('시트 답요청에도 완료한 것 안 넣음', not any('샘플 발송' in r.get('COL$C', '') for r in aj7) and len(aj7) == st2['①할일'] - 1, aj7)
+    chk('--done 없으면 그대로', T.run(d, TODAY, out=os.path.join(d, 'out8'))[1]['①할일'] == st2['①할일'])
+    chk('--done 파일 없으면 멈추지 않음', T.run(d, TODAY, out=os.path.join(d, 'out9'), done_path=os.path.join(d, '없음.json'))[1]['①할일'] == st2['①할일'])
 
     print('--- 낱개')
     chk('parse_todo', T.parse_todo('- 260922 | 무엇 | 배성윤 → 누구') == ('260922', '무엇', '배성윤 → 누구'))

@@ -9,6 +9,7 @@ meta.json 만 읽는다. 클로드(AI)를 전혀 쓰지 않는다 → 사용량 
     python t53_daily.py <meta폴더> --month 2609                                 한 달
     python t53_daily.py <meta폴더> --day 260915                                 하루
     python t53_daily.py <meta폴더> --today 260924 --radar <로그.json,확정.json,재검토.json>   4. 신규 현장 레이더 칸 넣기
+    python t53_daily.py <meta폴더> --today 260924 --done <답요청.json,오늘할일.json>          v7 시트에 완료 표시한 할 일은 ①② 에서 뺀다
     python t53_daily.py --merge <시트계획.json> "답요청=8-60" "오늘 할일=2-12" "회의록=2-80"   덧붙인 줄 번호로 병합 본문
 
 만드는 것 (v4 추가)
@@ -36,7 +37,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v6 2026-09-23'   # v6 : ①② 날짜·현장은 머리줄로 한 번만 (할 일은 들여쓰기) · 시트 답요청·오늘 할일 현장 칸(B열) 세로 병합
+VERSION = 'v7 2026-09-23'   # v7 : 담당 칸의 「배성윤 →」 뺌 · 시트에서 완료 표시한 할 일은 메일 ①② 에서 뺌 (--done)
+# v6 2026-09-23   # v6 : ①② 날짜·현장은 머리줄로 한 번만 (할 일은 들여쓰기) · 시트 답요청·오늘 할일 현장 칸(B열) 세로 병합
 # v5 : 「신규 현장 레이더」 결과를 한 통 끝(4번)에 합침
 # v4 : 3통 → 1통 「오늘의 정리」 · 시트 「26년 회의록2」 탭 3개(답요청·오늘 할일·회의록)에 날짜별 누적
 # v3 : 종류 칸 삭제 · 날짜 = 회의한 날(기한은 할일 글 끝에) · 기간 지정(--from --to / --month)
@@ -91,11 +93,23 @@ def _grouped(items):
     return L
 
 
+def _whom(whom):
+    """v7 차장님 (2026-09-23) : 「내가 배성윤인데 (배성윤 → …) 는 빼」 → 앞의 「배성윤 →」 만 뺀다. 상대는 남긴다."""
+    w = re.sub(r'^\s*배성윤\s*(?:→|->|>)\s*', '', whom or '').strip()
+    return '' if w == '배성윤' else w
+
+
+def _core(text):
+    """할일 글에서 뒤에 붙은 「  (기한 …)」「  (담당)」 을 떼고 무엇만. 완료 대조용."""
+    return re.sub(r'\s+', ' ', str(text or '').split('  (')[0]).strip()
+
+
 def _todo_text(ymd, what, whom):
     """할일 글 = 무엇 + (기한 2026-09-23) + (배성윤 → 누구). 기한이 없으면 안 붙인다."""
     t = what
     if _iso(ymd):
         t += '  (기한 %s)' % _iso(ymd)
+    whom = _whom(whom)
     if whom:
         t += '  (%s)' % whom
     return t
@@ -208,8 +222,46 @@ def _src(r):
     return '%s 회의 %s%s' % (T52._d(r['ymd']), (r['hm'] + ' ') if r['hm'] else '', r['person'] or '')
 
 
+# ── 완료 표시 (v7) ─────────────────────────────────────────
+DONE_NO = ('', 'FALSE', 'false', '0', '미완료', 'N', 'n', '-')
+
+
+def load_done(path):
+    """「26년 회의록2」 답요청·오늘 할일 탭을 읽은 응답 파일(들) → 완료 표시된 할 일.
+       path : 쉼표로 여럿. Zapier 응답 그대로 / values:get 모두 받는다. 칸 : 날짜 | 현장 | 할일 | 완료
+       병합된 칸(날짜·현장)은 아래 줄이 비어 있으므로 위 값을 내려 쓴다.
+       완료 칸이 비었거나 FALSE·0·미완료 가 아니면 완료로 본다 (「완료」「O」「v」 체크박스 TRUE 모두)."""
+    done = {'pair': set(), 'what': set()}
+    for one in [x for x in str(path or '').split(',') if x.strip()]:
+        if not os.path.isfile(one.strip()):
+            continue
+        with io.open(one.strip(), 'r', encoding='utf-8') as f:
+            d = json.load(f)
+        if isinstance(d, dict) and 'results' in d:
+            d = d['results'][0].get('body', d)
+        blocks = d.get('valueRanges') if isinstance(d, dict) and 'valueRanges' in d else [d]
+        for blk in blocks:
+            site = ''
+            for row in (blk.get('values') or [])[1:]:
+                row = [str(x) for x in row] + [''] * 4
+                if row[1].strip():
+                    site = row[1].strip()
+                if row[3].strip() in DONE_NO or not _core(row[2]):
+                    continue
+                done['pair'].add((T52.norm_site(site), _core(row[2])))
+                done['what'].add(_core(row[2]))
+    return done
+
+
+def _is_done(done, site, what):
+    """같은 현장 + 같은 할일(무엇) 이면 완료. 현장명 띄어쓰기 차이는 norm_site 로 맞춘다."""
+    if not done:
+        return False
+    return (T52.norm_site(site), _core(what)) in done['pair']
+
+
 # ── ① 답해 주십시오 ─────────────────────────────────────────
-def todo_rows(recs_y):
+def todo_rows(recs_y, done=None):
     """어제 회의록에서 새로 생긴 할 일 → 시트 줄(날짜|종류|현장|할일|완료). 현장명은 meta.site 그대로."""
     rows, seen = [], set()
     nm = _names(recs_y)
@@ -217,7 +269,7 @@ def todo_rows(recs_y):
         site = nm.get(r['key'], r['site'])
         for ymd, what, whom in r['todos']:
             key = (site, what)
-            if key in seen:
+            if key in seen or _is_done(done, site, what):
                 continue
             seen.add(key)
             rows.append({'날짜': _iso(r['ymd']), '현장': site, '할일': _todo_text(ymd, what, whom), '완료': ''})
@@ -226,9 +278,9 @@ def todo_rows(recs_y):
     return rows
 
 
-def build_answer(recs_y, yday, sheet_url=''):
+def build_answer(recs_y, yday, sheet_url='', done=None):
     """차장님 지시 : 하루치 내용을 메일에 적고, 「26년 할 일 모음」 링크를 넣는다. 그 밖의 말은 안 적는다."""
-    rows = todo_rows(recs_y)
+    rows = todo_rows(recs_y, done)
     L = _grouped([(row['날짜'], row['현장'], row['할일']) for row in rows])
     if not rows:
         L.append('(%s 회의록에서 새로 생긴 할 일 없음)' % _iso(yday.strftime('%y%m%d')))
@@ -238,7 +290,7 @@ def build_answer(recs_y, yday, sheet_url=''):
 
 
 # ── ② 오늘 할 것 ────────────────────────────────────────────
-def build_today(recs_all, today):
+def build_today(recs_all, today, done=None):
     """차장님 지시 : 회의록 「할 일」 중 날짜가 오늘인 것만. 지난 것·미정은 안 적는다."""
     ty = today.strftime('%y%m%d')
     picked, seen = [], set()
@@ -248,7 +300,9 @@ def build_today(recs_all, today):
         for ymd, what, whom in r['todos']:
             if ymd == ty and (site, what) not in seen:
                 seen.add((site, what))
-                picked.append((site, what + (('  (%s)' % whom) if whom else ''), _iso(r['ymd'])))
+                if _is_done(done, site, what):
+                    continue
+                picked.append((site, what + (('  (%s)' % _whom(whom)) if _whom(whom) else ''), _iso(r['ymd'])))
     picked.sort(key=lambda x: (not T52.is_site(x[0]), x[0]))
     L = _grouped([(_iso(ty), site, what) for site, what, _src in picked])
     if not picked:
@@ -501,15 +555,17 @@ def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url='', t4=No
 
 
 # ── 한 번에 ───────────────────────────────────────────────
-def run(meta_dir, today=None, out=None, sheet_url='', radar_path=''):
+def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path=''):
     today = today or datetime.date.today()
     yday = today - datetime.timedelta(days=1)
     yy = yday.strftime('%y%m%d')
     recs_all, skipped = collect(meta_dir)
     recs_y = [r for r in recs_all if r['ymd'] == yy]
 
-    t1, rows = build_answer(recs_y, yday, sheet_url)
-    t2, picked = build_today(recs_all, today)
+    done = load_done(done_path) if done_path else None
+    t1, rows = build_answer(recs_y, yday, sheet_url, done)
+    t2, picked = build_today(recs_all, today, done)
+    n_done = (len(todo_rows(recs_y)) - len(rows) + len(build_today(recs_all, today)[1]) - len(picked)) if done else 0
     t3, per_site = build_yesterday(recs_y, yday)
 
     out = out or meta_dir
@@ -556,7 +612,8 @@ def run(meta_dir, today=None, out=None, sheet_url='', radar_path=''):
             '시트줄': dict((t, len(plan[t]['values'])) for t in TABS), '레이더': rstat,
             'meta전체': len(recs_all), '어제회의': len(recs_y),
             '어제_현장별': per_site,
-            '①할일': len(rows), '②오늘': len(picked),
+            '①할일': len(rows), '②오늘': len(picked), '완료로뺌': n_done,
+            '완료표시': len(done['pair']) if done else None,
             '건너뜀': skipped, '파일': paths}
     with io.open(os.path.join(out, '아침3통_%s.json' % st), 'w', encoding='utf-8') as f:
         f.write(json.dumps(stat, ensure_ascii=False, indent=1))
@@ -658,7 +715,7 @@ def main(argv):
         ranges = dict(a.split('=', 1) for a in argv[3:] if '=' in a)
         print(json.dumps(merge_body(plan, ranges), ensure_ascii=False))
         return 0
-    meta_dir, today, out, sheet, radar = argv[1], None, None, '', ''
+    meta_dir, today, out, sheet, radar, donep = argv[1], None, None, '', '', ''
     d_from = d_to = None
     i = 2
     while i < len(argv):
@@ -670,6 +727,8 @@ def main(argv):
             sheet = argv[i + 1]; i += 2
         elif argv[i] == '--radar':
             radar = argv[i + 1]; i += 2
+        elif argv[i] == '--done':                        # --done 답요청.json,오늘할일.json
+            donep = argv[i + 1]; i += 2
         elif argv[i] == '--from':
             d_from = argv[i + 1]; i += 2
         elif argv[i] == '--to':
@@ -685,7 +744,7 @@ def main(argv):
         d_to = d_to or d_from
         _t, stat = run_range(meta_dir, d_from, d_to, out, sheet)
     else:
-        _t, stat = run(meta_dir, today, out, sheet, radar)
+        _t, stat = run(meta_dir, today, out, sheet, radar, donep)
     print(json.dumps(stat, ensure_ascii=False, indent=1))
     return 0
 
