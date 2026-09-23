@@ -26,15 +26,26 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v1 2026-09-23'
+VERSION = 'v2 2026-09-23'   # v2 : 차장님 지시 원문과 대조해 고침 (머리·꼬리·설명문 제거, 시트 4칸+완료, 안건마다 날짜·사람)
 
 # 「26년 할 일 모음」 시트의 종류 칸. 차장님 예시(26년 회의록 시트)에 나온 낱말 그대로.
 KINDS = ('발송', '도면', '회의', '확인', '전달', '샘플', '제작', '발행', '설치',
          '납품', '회신', '제출', '계약', '발주', '연락')
-SHEET_HEAD = ['날짜', '종류', '현장', '할일', '어디서', '완료']
+SHEET_HEAD = ['날짜', '종류', '현장', '할일', '완료']   # 26년 회의록 시트의 할 일 모음 4칸 + 완료(차장님 체크)
 
 TODO_RE = re.compile(r'^\s*[-·•]?\s*(\d{6}|미정)\s*\|\s*(.+?)\s*(?:\|\s*(.*?))?\s*$')
 SCHED_RE = re.compile(r'^\s*[-·•]?\s*([^|]+?)\s*\|\s*(\d{6})\s*\|\s*(.+?)\s*$')
+
+
+def _iso(ymd):
+    """260922 -> 2026-09-22. 미정·빈칸은 빈칸 (차장님 예시 : 기한 미지정은 날짜 칸이 비어 있다)."""
+    if not ymd or not re.match(r'^\d{6}$', ymd):
+        return ''
+    return '20%s-%s-%s' % (ymd[:2], ymd[2:4], ymd[4:6])
+
+
+def _row_line(date, kind, site, what):
+    return '%s\t%s\t%s\t%s' % (date, kind, site, what)
 
 
 def kind_of(text):
@@ -146,7 +157,7 @@ def _src(r):
 
 # ── ① 답해 주십시오 ─────────────────────────────────────────
 def todo_rows(recs_y):
-    """어제 회의록에서 새로 생긴 할 일 → 시트 줄. 현장명은 meta.site 그대로."""
+    """어제 회의록에서 새로 생긴 할 일 → 시트 줄(날짜|종류|현장|할일|완료). 현장명은 meta.site 그대로."""
     rows, seen = [], set()
     nm = _names(recs_y)
     for r in recs_y:
@@ -156,95 +167,74 @@ def todo_rows(recs_y):
             if key in seen:
                 continue
             seen.add(key)
-            rows.append({'날짜': ymd, '종류': kind_of(what), '현장': site,
-                         '할일': what + (('  (%s)' % whom) if whom else ''),
-                         '어디서': _src(r), '완료': ''})
+            rows.append({'날짜': _iso(ymd), '종류': kind_of(what), '현장': site,
+                         '할일': what + (('  (%s)' % whom) if whom else ''), '완료': ''})
     return rows
 
 
 def build_answer(recs_y, yday, sheet_url=''):
+    """차장님 지시 : 하루치 내용을 메일에 적고, 「26년 할 일 모음」 링크를 넣는다. 그 밖의 말은 안 적는다."""
     rows = todo_rows(recs_y)
-    L = _head('답해 주십시오', yday + datetime.timedelta(days=1))
-    L.append('%s 회의록에서 새로 생긴 할 일 %d건. 「26년 할 일 모음」 에도 같이 적었습니다.'
-             % (T52._d(yday.strftime('%y%m%d')), len(rows)))
-    if sheet_url:
-        L.append('시트 : %s' % sheet_url)
-    L.append('완료한 것은 시트에서 지우시거나 완료 칸에 표시하십시오. 여기는 하루치만 적습니다.')
-    L.append('')
+    L = []
+    for row in sorted(rows, key=lambda x: (not T52.is_site(x['현장']), x['현장'], x['날짜'])):
+        L.append(_row_line(row['날짜'], row['종류'], row['현장'], row['할일']))
     if not rows:
-        L.append('  새로 생긴 할 일이 없습니다.')
-    by = {}
-    for row in rows:
-        by.setdefault(row['현장'], []).append(row)
-    for site in sorted(by, key=lambda s: (not T52.is_site(s), -len(by[s]), s)):
-        L.append('-' * 56)
-        L.append('%s%s' % (site, '' if T52.is_site(site) else '   (현장이 아닌 것 - 어느 현장 것인지 정해 주십시오)'))
-        L.append('-' * 56)
-        for row in by[site]:
-            d = T52._d(row['날짜']) if row['날짜'] != '미정' else '미정'
-            L.append('  %-6s [%s] %s' % (d, row['종류'], row['할일']))
-        L.append('')
-    L.append('-' * 56)
-    L.append('t53_daily %s' % VERSION)
+        L.append('(%s 회의록에서 새로 생긴 할 일 없음)' % _iso(yday.strftime('%y%m%d')))
+    L.append('')
+    L.append('26년 할 일 모음 : %s' % (sheet_url or '(링크 없음)'))
     return '\n'.join(L), rows
 
 
 # ── ② 오늘 할 것 ────────────────────────────────────────────
 def build_today(recs_all, today):
+    """차장님 지시 : 회의록 「할 일」 중 날짜가 오늘인 것만. 지난 것·미정은 안 적는다."""
     ty = today.strftime('%y%m%d')
-    picked = []                       # (site, what, src, kind)
-    seen = set()
+    picked, seen = [], set()
     nm = _names(recs_all)
     for r in recs_all:
         site = nm.get(r['key'], r['site'])
         for ymd, what, whom in r['todos']:
             if ymd == ty and (site, what) not in seen:
                 seen.add((site, what))
-                picked.append((site, what + (('  (%s)' % whom) if whom else ''), _src(r), kind_of(what)))
-        for ymd, stage, what in r['sched']:
-            if ymd == ty and (site, what) not in seen:
-                seen.add((site, what))
-                picked.append((site, '%s · %s' % (stage, what), _src(r), '일정'))
-    L = _head('오늘 할 것', today)
-    L.append('회의록에 오늘 날짜로 적힌 것 %d건. 지난 것은 「26년 할 일 모음」 에서 보십시오.' % len(picked))
-    L.append('')
+                picked.append((site, what + (('  (%s)' % whom) if whom else ''), kind_of(what)))
+    picked.sort(key=lambda x: (not T52.is_site(x[0]), x[0]))
+    L = [_row_line(_iso(ty), kind, site, what) for site, what, kind in picked]
     if not picked:
-        L.append('  오늘 날짜로 적힌 것이 없습니다.')
-    by = {}
-    for site, what, src, kind in picked:
-        by.setdefault(site, []).append((what, src, kind))
-    for site in sorted(by, key=lambda s: (not T52.is_site(s), -len(by[s]), s)):
-        L.append('-' * 56)
-        L.append('%s%s' % (site, '' if T52.is_site(site) else '   (현장이 아닌 것)'))
-        L.append('-' * 56)
-        for what, src, kind in by[site]:
-            L.append('  [%s] %s' % (kind, what))
-            L.append('         (%s)' % src)
-        L.append('')
-    L.append('-' * 56)
-    L.append('t53_daily %s' % VERSION)
+        L.append('(회의록에 %s 로 적힌 할 일 없음)' % _iso(ty))
     return '\n'.join(L), picked
 
 
 # ── ③ 어제 있었던 일 ────────────────────────────────────────
 def build_yesterday(recs_y, yday):
+    """차장님 모양 (2026-09-23 원문) :
+         1. 현장명
+         (빈 줄)
+         날짜   사람이름
+         (빈 줄)
+         안건 : …
+         협의내용 : 첫 줄
+         다음 줄들…
+         결정사항 : …
+         조치사항 : …
+         (안건이 있을 때마다 「날짜 사람이름」 부터 다시)
+       머리말·꼬리말·건수 설명은 적지 않는다."""
     sites, others, bag = _group(recs_y)
-    L = _head('어제 있었던 일', yday)
-    L.append('회의 %d건 · 현장 %d개%s'
-             % (len(recs_y), len(sites),
-                ('  (그 밖에 %s %d건)' % (' · '.join(others), sum(len(bag[o]) for o in others)) if others else '')))
-    L.append('')
+    L = []
 
-    def one(idx, name, rs, tail=''):
-        L.append('%d. %s%s        회의 %d건' % (idx, name, tail, len(rs)))
+    def one(idx, name, rs):
+        L.append('%d. %s' % (idx, name))
         L.append('')
         for r in rs:
-            L.append('%s   %s%s' % (T52._d(r['ymd']), (r['hm'] + '  ') if r['hm'] else '', r['person'] or '상대 미상'))
-            if not r['items']:
-                L.append('안건 : (안건목록 없음)')
-            for it in r['items']:
+            head = '%s   %s%s' % (T52._d(r['ymd']), (r['hm'] + '  ') if r['hm'] else '', r['person'] or '상대 미상')
+            items = r['items'] or [{'title': '(안건 없음)', 'bullets': [], 'decision': '', 'actions': []}]
+            for it in items:
+                L.append(head)
+                L.append('')
                 L.append('안건 : %s' % it['title'])
-                L.append('협의내용 : %s' % ' / '.join(it['bullets']))
+                b = it['bullets'] or ['']
+                L.append('협의내용 : %s' % b[0])
+                for x in b[1:]:
+                    L.append(x)
                 L.append('결정사항 : %s' % (it['decision'] or '없음'))
                 L.append('조치사항 : %s' % ' / '.join(it['actions']))
                 L.append('')
@@ -252,21 +242,17 @@ def build_yesterday(recs_y, yday):
 
     n = 0
     if not recs_y:
-        L.append('  어제 회의록이 없습니다.')
+        L.append('(%s 회의록 없음)' % _iso(yday.strftime('%y%m%d')))
     for name in sites:
         n += 1
         one(n, name, bag[name])
     if others:
-        L.append('=' * 56)
-        L.append('[ 현장이 아닌 것 ] - 여러 현장을 한꺼번에 얘기한 회의 등. 어느 현장 것인지는 차장님이 정하십시오.')
-        L.append('=' * 56)
+        L.append('※ 현장이 아닌 것 — 어느 현장 것인지는 차장님이 정하십시오')
         L.append('')
         for name in others:
             n += 1
             one(n, name, bag[name])
-    L.append('-' * 56)
-    L.append('t53_daily %s · meta.json %d건' % (VERSION, len(recs_y)))
-    return '\n'.join(L), {s: len(bag[s]) for s in sites + others}
+    return '\n'.join(L).rstrip('\n') + '\n', {s: len(bag[s]) for s in sites + others}
 
 
 # ── 한 번에 ───────────────────────────────────────────────
