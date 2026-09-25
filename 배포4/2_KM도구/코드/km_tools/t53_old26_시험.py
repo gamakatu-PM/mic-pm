@@ -31,7 +31,7 @@ def main():
         b = meta('복합회의', '260921', '', '내부',
                  [{'title': '납품', 'bullets': ['가능 여부'], 'decision': '', 'actions': []}], [])
         c = meta('연합기숙사', '260921', '10:00', '위한빛',
-                 [{'title': '코이닝', 'bullets': ['치수'], 'decision': '카톡본으로 진행', 'actions': ['확인']}], ['- 미정 | 대조 | 배성윤'])
+                 [{'title': '코이닝', 'bullets': ['치수'], 'decision': '카톡본으로 진행', 'actions': ['확인']}], ['- 미정 | 대조 | 배성윤', '===================', '- '])
         d = meta('단양디캠프', '260910', '', '김대현', [{'title': 'x', 'bullets': ['y'], 'decision': '', 'actions': []}], [])
         for i, m in enumerate([a, b, c, d]):
             with io.open(os.path.join(tmp, '%d_meta.json' % i), 'w', encoding='utf-8') as f:
@@ -58,6 +58,7 @@ def main():
         r1 = yh['rows'][0]
         ok('결정 있으면 F 에 결정 글', r1[5].startswith('💡 1. 카톡본으로 진행  → 확인'), r1[5][:40])
         ok('D 없으면 빈칸', r1[3] == '' and r1[4] == '')
+        ok('v1.1 「=====」 구분선은 할 일로 안 옮김', '===' not in r1[5] and '그 밖의 할 일 : 대조' in r1[5], r1[5])
         bh = [r for r in res['records'] if r['tab'] == '복합회의'][0]
         ok('결정·조치 없으면 F 기본 글', bh['rows'][0][5].startswith('💡 결정 없음 — 확인 후 재협의'))
         ok('preview 에 담당자: 라벨 (반영모음 E열용)', '담당자:' in yh['preview'] and yh['preview'].startswith('260921'), yh['preview'][:50])

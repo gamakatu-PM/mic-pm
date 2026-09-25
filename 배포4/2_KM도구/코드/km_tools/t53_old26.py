@@ -28,7 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import t52_mailbuild as T52
 
-VERSION = 'v1 2026-09-25'
+VERSION = 'v1.1 2026-09-26'   # v1.1 : 할 일 칸의 「=====」 같은 구분선을 할 일로 옮기던 것 뺌 (9/26 옛 시트 96건 넣은 뒤 발견)
 DRIVE_FOLDER = 'https://drive.google.com/drive/folders/1FWev-4Hzy2KmDT_H25S7BGMtpaKFeSgm'
 TAIL = '\n\n\n'                       # 셀 끝 빈 줄 3개
 D8 = re.compile(r'(?<!\d)(2[0-9](?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01]))(?!\d)')
@@ -121,6 +121,7 @@ def build(meta_dir, d_from=None, d_to=None, tabmap=None):
         if d_to and r['ymd'] > d_to:
             continue
         todos = ((raw.get('sec') or {}).get('2') or {}).get('할 일') or []
+        todos = [t for t in todos if re.search(r'[0-9A-Za-z가-힣]', str(t))]   # v1.1 : 「=====」 구분선 제외
         recs.append((r, todos))
     recs.sort(key=lambda x: (x[0]['ymd'], x[0]['hm'], x[0]['site_raw']))
 
