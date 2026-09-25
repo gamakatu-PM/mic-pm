@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""39. 제안서 PPT - 회사 제안서의 고정 장을 그대로 가져오고, 현장 내용만 새로 만들어 붙인다.
+"""54. 제안서 PPT - 회사 제안서의 고정 장을 그대로 가져오고, 현장 내용만 새로 만들어 붙인다.
 
 왜 이렇게 하는가
   청담PJ 제안서(260715, 26장)를 뜯어보니 20장이 회사개요·핵심경쟁력·제품·납품실적·A/S 였다.
@@ -16,7 +16,7 @@ from common import *
 from pptx import Presentation
 from pptx.util import Inches
 
-import t26_deck as deck          # 슬라이드 그리는 부분은 26번 것을 그대로 쓴다
+import deck_core as deck          # 슬라이드 그리는 부분. 메뉴 번호를 갖지 않는 부품이다
 
 SPECS = os.path.join(os.path.dirname(os.path.abspath(__file__)), '제안서_내용')
 SKIP_REL = ('slideLayout', 'notesSlide', 'slideMaster')
