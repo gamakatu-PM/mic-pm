@@ -100,7 +100,8 @@ def load_tabmap(path):
         return {}
     with io.open(path, 'r', encoding='utf-8') as f:
         d = json.load(f)
-    return dict((str(k).strip(), str(v)) for k, v in (d or {}).items() if str(v).strip())
+    return dict((str(k).strip(), str(v)) for k, v in (d or {}).items()
+                if str(v).strip() and not str(k).startswith('_'))   # _설명 같은 안내 줄은 뺀다
 
 
 def build(meta_dir, d_from=None, d_to=None, tabmap=None):
