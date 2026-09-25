@@ -101,7 +101,7 @@ def load_tabmap(path):
     with io.open(path, 'r', encoding='utf-8') as f:
         d = json.load(f)
     return dict((str(k).strip(), str(v)) for k, v in (d or {}).items()
-                if str(v).strip() and not str(k).startswith('_'))   # _설명 같은 안내 줄은 뺀다
+                if isinstance(v, str) and v.strip() and k not in ('_설명', '_합치기'))   # 안내 줄·합치기 표만 뺀다 (_현장미정 같은 현장명은 남긴다)
 
 
 def build(meta_dir, d_from=None, d_to=None, tabmap=None):

@@ -75,10 +75,11 @@ def main():
         # 차장님 탭 이름 표
         mpath = os.path.join(tmp, 'map.json')
         with io.open(mpath, 'w', encoding='utf-8') as f:
-            f.write(json.dumps({'복합회의': '회사', '없는현장': '어디'}, ensure_ascii=False))
+            f.write(json.dumps({'_설명': '안내', '_합치기': [{'from': 'a', 'to': 'b'}], '_현장미정': '0.현장명 확인필요', '복합회의': '회사', '없는현장': '어디'}, ensure_ascii=False))
         res2 = M.build(tmp, '260912', '260924', M.load_tabmap(mpath))
         ok('--map 표에 있는 현장만 그 탭으로', [r['tab'] for r in res2['records']] == ['회사', '연합기숙사'], str([r['tab'] for r in res2['records']]))
         ok('--map 없으면 빈 표', M.load_tabmap(os.path.join(tmp, 'none.json')) == {})
+        ok('--map _현장미정 은 남기고 _설명·_합치기 만 뺌', M.load_tabmap(mpath).get('_현장미정') == '0.현장명 확인필요' and '_설명' not in M.load_tabmap(mpath) and '_합치기' not in M.load_tabmap(mpath))
         d0, w0 = M._todo_text('- 미정 | 사진 보내기 | 배성윤 → 위한빛')
         ok('_todo_text 미정', d0 == '' and w0 == '사진 보내기 → 위한빛', repr((d0, w0)))
         d1, w1 = M._todo_text('- 260923 | 입고 확인 | 배성윤')

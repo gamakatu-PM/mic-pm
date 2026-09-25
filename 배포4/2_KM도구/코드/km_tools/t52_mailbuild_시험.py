@@ -105,3 +105,12 @@ finally:
 print('\n통과 %d / 실패 %d' % (OK[0], len(NG)))
 if NG:
     print('실패:', NG); sys.exit(1)
+
+def _test_who_v21():
+    """v2.1 : 회사 칸 == 이름 칸 이면 상대 미상이 아니라 이름"""
+    import t52_mailbuild as M
+    assert M.who({'company': '이유흥', 'name': '이유흥', 'rank': '', 'person': '이유흥'}) == '이유흥'
+    assert M.who({'company': '객실관리', 'name': '유경환', 'rank': '프로', 'person': '유경환 프로'}) == '객실관리 유경환 프로'
+    print('  OK   v2.1 who 회사==이름')
+_test_who_v21()
+

@@ -21,7 +21,7 @@ meta.json 만 읽어서 「현장별 회의록 정리」 메일 원고를 만든
 from __future__ import print_function
 import os, sys, io, json, re, datetime
 
-VERSION = 'v2 2026-09-23'
+VERSION = 'v2.1 2026-09-26'   # v2.1 : who() 회사 칸 == 이름 칸(이유흥) 이면 「상대 미상」 이 나오던 것 고침 (차장님 「고쳐」)
 
 # ── 빈 값으로 볼 것 ─────────────────────────────────────────
 EMPTY = ('', '-', '없음', '- 없음', '해당 없음', '- 해당 없음', '미정', 'N/A', 'n/a')
@@ -126,7 +126,10 @@ def who(m):
     # person 이 name 을 되풀이하면 짧은 쪽만
     if base and person and base in person and len(person) > len(base) * 2:
         pass
-    out = ' '.join(x for x in [comp, base] if x and x not in (comp if x is base else base))
+    if comp and base and comp == base:                 # v2.1 : 회사 칸 == 이름 칸 이면 이름 하나만
+        out = base
+    else:
+        out = ' '.join(x for x in [comp, base] if x and x not in (comp if x is base else base))
     out = re.sub(r'\s+', ' ', out).strip()
     return out[:40] or '상대 미상'
 
