@@ -36,6 +36,13 @@ def main():
         for i, m in enumerate([a, b, c, d]):
             with io.open(os.path.join(tmp, '%d_meta.json' % i), 'w', encoding='utf-8') as f:
                 f.write(json.dumps(m, ensure_ascii=False))
+        a['meta']['title'] = 'T1'; c['meta']['title'] = 'T2'
+        with io.open(os.path.join(tmp, '0_meta.json'), 'w', encoding='utf-8') as f:
+            f.write(json.dumps(a, ensure_ascii=False))
+        with io.open(os.path.join(tmp, '9_dup_meta.json'), 'w', encoding='utf-8') as f:     # v1.2 같은 회의 두 번 올라온 것
+            f.write(json.dumps(a, ensure_ascii=False))
+        with io.open(os.path.join(tmp, '_삭제요망_x_meta.json'), 'w', encoding='utf-8') as f:  # v1.2 지우라 표시한 것
+            f.write(json.dumps(c, ensure_ascii=False))
 
         res = M.build(tmp, '260912', '260924')
         ok('기간 밖(260910) 제외', res['n'] == 3, str(res['n']))

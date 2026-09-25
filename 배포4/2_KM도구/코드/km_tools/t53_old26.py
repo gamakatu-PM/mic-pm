@@ -28,7 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import t52_mailbuild as T52
 
-VERSION = 'v1.1 2026-09-26'   # v1.1 : 할 일 칸의 「=====」 같은 구분선을 할 일로 옮기던 것 뺌 (9/26 옛 시트 96건 넣은 뒤 발견)
+VERSION = 'v1.2 2026-09-26'   # v1.2 : 파일명 _삭제요망 은 건너뜀 · 같은 현장·날·제목(meta.title) 중복 파일은 하나만 (t51 이 두 번 올린 것)   # v1.1 : 할 일 칸의 「=====」 같은 구분선을 할 일로 옮기던 것 뺌 (9/26 옛 시트 96건 넣은 뒤 발견)
 DRIVE_FOLDER = 'https://drive.google.com/drive/folders/1FWev-4Hzy2KmDT_H25S7BGMtpaKFeSgm'
 TAIL = '\n\n\n'                       # 셀 끝 빈 줄 3개
 D8 = re.compile(r'(?<!\d)(2[0-9](?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01]))(?!\d)')
@@ -107,7 +107,10 @@ def load_tabmap(path):
 def build(meta_dir, d_from=None, d_to=None, tabmap=None):
     tabmap = tabmap or {}
     recs = []
+    seen = set()
     for p in sorted(glob.glob(os.path.join(meta_dir, '*meta.json'))):
+        if os.path.basename(p).startswith('_삭제요망'):      # v1.2 : 차장님이 지우라고 표시한 파일
+            continue
         try:
             r = T52.read_meta(p)
             with io.open(p, 'r', encoding='utf-8') as f:
@@ -120,6 +123,11 @@ def build(meta_dir, d_from=None, d_to=None, tabmap=None):
             continue
         if d_to and r['ymd'] > d_to:
             continue
+        first = (r['items'][0]['title'] if r['items'] else '')
+        key = (r['ymd'], r['site_raw'].strip(), r['hm'], r['person'], first)   # 같은 날·현장·시각·협의자·첫 안건이면 같은 회의 파일
+        if key in seen:                                         # v1.2 : 같은 회의 파일이 둘이면 하나만
+            continue
+        seen.add(key)
         todos = ((raw.get('sec') or {}).get('2') or {}).get('할 일') or []
         todos = [t for t in todos if re.search(r'[0-9A-Za-z가-힣]', str(t))]   # v1.1 : 「=====」 구분선 제외
         recs.append((r, todos))
