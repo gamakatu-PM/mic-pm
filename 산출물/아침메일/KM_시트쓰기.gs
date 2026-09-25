@@ -1,5 +1,6 @@
 /**
- * KM_시트쓰기 v2 (2026-09-25)  — 클로드가 부르는 웹 앱. Zapier 없이 0원·무제한.
+ * KM_시트쓰기 v3 (2026-09-25)  — 클로드가 부르는 웹 앱. Zapier 없이 0원·무제한.
+ *   v3 : read·batch 를 「Google Sheets API」 서비스(편집기 왼쪽 서비스 + 에서 추가)로 — UrlFetch 는 프로젝트에서 API 를 켜야 해서 403 이 났다
  *   v2 : oldMerge 추가 — 차장님 지시 「예전에 잘못 만들어진 이름은 합쳐야 돼」 (옛 탭 이름 바꾸기, 이미 있으면 줄 옮기기. 지우지 않는다)
  *   ping   : 연결 확인
  *   read   : 「26년 회의록2」·「신규 현장 레이더」 읽기 (값 그대로)
@@ -8,7 +9,7 @@
  *   oldMerge : 옛 탭 합치기 {merges:[{from,to}]} — to 가 없으면 from 을 to 로 이름 바꿈 / to 가 있으면 from 의 줄(3행~)을 to 끝에 옮기고 from 은 「(합침) from」 으로 이름만 바꿈
  *
  * ★ 지우는 기능은 없다. 허용한 요청 종류만 받는다. 암호(KM_TOKEN)가 맞을 때만 움직인다.
- * ★ 설치 : 확장 프로그램 → Apps Script → 새 파일에 이 전문 붙여넣기 → KM_TOKEN 칸에 클로드가 드린 암호
+ * ★ 설치 : 확장 프로그램 → Apps Script → 왼쪽 「서비스 +」 → Google Sheets API 추가(식별자 Sheets) → 이 전문 붙여넣기 → KM_TOKEN 칸에 클로드가 드린 암호
  *          → 배포 → 새 배포 → 유형 「웹 앱」 → 실행 : 나 / 액세스 : 모든 사용자 → 배포 → 권한 허용 → 주소 복사해 클로드에게
  */
 
@@ -35,7 +36,7 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) { return km_out_({ok: false, error: '본문이 JSON 이 아님'}); }
   if (!KM_TOKEN || body.token !== KM_TOKEN) return km_out_({ok: false, error: '암호 틀림'});
   try {
-    if (body.action === 'ping')  return km_out_({ok: true, version: 'v1 2026-09-25', now: new Date().toISOString()});
+    if (body.action === 'ping')  return km_out_({ok: true, version: 'v3 2026-09-25', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
     if (body.action === 'read')  return km_out_(km_read_(body));
     if (body.action === 'batch') return km_out_(km_batch_(body));
     if (body.action === 'old26') return km_out_(km_old26_(body));
@@ -50,22 +51,13 @@ function km_out_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function km_api_(method, url, payload) {
-  var opt = {method: method, muteHttpExceptions: true,
-             headers: {Authorization: 'Bearer ' + ScriptApp.getOAuthToken()}};
-  if (payload) { opt.contentType = 'application/json'; opt.payload = JSON.stringify(payload); }
-  var res = UrlFetchApp.fetch(url, opt);
-  return {code: res.getResponseCode(), text: res.getContentText()};
-}
-
-/** read : {which:'new2'|'radar', ranges:["'답요청'!A1:G2000", ...]} → valueRanges (Zapier batchGet 과 같은 모양) */
+/** read : {which:'new2'|'radar', ranges:["'답요청'!A1:G2000", ...]} → valueRanges (Zapier batchGet 과 같은 모양)
+ *   Google Sheets API 서비스(Sheets) 를 쓴다. 서비스가 안 붙어 있으면 그 말을 돌려준다 */
 function km_read_(body) {
   var id = KM_IDS[body.which];
   if (!id || body.which === 'old') return {ok: false, error: '읽을 수 없는 시트'};
-  var q = (body.ranges || []).map(function (r) { return 'ranges=' + encodeURIComponent(r); }).join('&');
-  var r = km_api_('get', 'https://sheets.googleapis.com/v4/spreadsheets/' + id + '/values:batchGet?' + q);
-  if (r.code !== 200) return {ok: false, code: r.code, error: r.text.slice(0, 800)};
-  var d = JSON.parse(r.text);
+  if (typeof Sheets === 'undefined') return {ok: false, error: '편집기 왼쪽 「서비스 +」 에서 Google Sheets API 를 추가해 주십시오'};
+  var d = Sheets.Spreadsheets.Values.batchGet(id, {ranges: body.ranges || []});
   return {ok: true, valueRanges: d.valueRanges || []};
 }
 
@@ -77,8 +69,9 @@ function km_batch_(body) {
     if (KM_BATCH_OK.indexOf(k) < 0) return {ok: false, error: '허용 안 된 요청 : ' + k};
   }
   if (!reqs.length) return {ok: true, skipped: '요청 없음'};
-  var r = km_api_('post', 'https://sheets.googleapis.com/v4/spreadsheets/' + KM_IDS.new2 + ':batchUpdate', {requests: reqs});
-  return {ok: r.code === 200, code: r.code, error: r.code === 200 ? '' : r.text.slice(0, 800), n: reqs.length};
+  if (typeof Sheets === 'undefined') return {ok: false, error: '편집기 왼쪽 「서비스 +」 에서 Google Sheets API 를 추가해 주십시오'};
+  Sheets.Spreadsheets.batchUpdate({requests: reqs}, KM_IDS.new2);
+  return {ok: true, n: reqs.length};
 }
 
 /** old26 : {records:[{tab, rows:[[A..G],…], person, preview}]}
@@ -193,4 +186,5 @@ function km_selfTest() {
   Logger.log('옛 시트 탭 수 : ' + ss.getSheets().length + ' / 현장 갑지 위치 : ' + (ss.getSheetByName(KM_OLD_FIRST_ADMIN) || {getIndex: function () { return '없음'; }}).getIndex());
   Logger.log('회의록2 : ' + SpreadsheetApp.openById(KM_IDS.new2).getName());
   Logger.log('암호 넣음 : ' + (KM_TOKEN ? '예' : '아니오 — 암호 칸이 비어 있음'));
+  Logger.log('Sheets API 서비스 : ' + (typeof Sheets !== 'undefined' ? '붙어 있음' : '없음 — 왼쪽 서비스 + 에서 Google Sheets API 추가'));
 }
