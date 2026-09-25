@@ -1,9 +1,11 @@
 /**
- * KM_시트쓰기 v1 (2026-09-25)  — 클로드가 부르는 웹 앱. Zapier 없이 0원·무제한.
+ * KM_시트쓰기 v2 (2026-09-25)  — 클로드가 부르는 웹 앱. Zapier 없이 0원·무제한.
+ *   v2 : oldMerge 추가 — 차장님 지시 「예전에 잘못 만들어진 이름은 합쳐야 돼」 (옛 탭 이름 바꾸기, 이미 있으면 줄 옮기기. 지우지 않는다)
  *   ping   : 연결 확인
  *   read   : 「26년 회의록2」·「신규 현장 레이더」 읽기 (값 그대로)
  *   batch  : 「26년 회의록2」 에 줄 덧붙이기·병합·체크박스·▼ (t53 --write 가 만든 본문 그대로)
  *   old26  : 옛 「26년 회의록」 현장 탭에 회의 기록 덧붙이기 + 「0.전체 반영모음」 맨 위에 한 줄
+ *   oldMerge : 옛 탭 합치기 {merges:[{from,to}]} — to 가 없으면 from 을 to 로 이름 바꿈 / to 가 있으면 from 의 줄(3행~)을 to 끝에 옮기고 from 은 「(합침) from」 으로 이름만 바꿈
  *
  * ★ 지우는 기능은 없다. 허용한 요청 종류만 받는다. 암호(KM_TOKEN)가 맞을 때만 움직인다.
  * ★ 설치 : 확장 프로그램 → Apps Script → 새 파일에 이 전문 붙여넣기 → KM_TOKEN 칸에 클로드가 드린 암호
@@ -37,6 +39,7 @@ function doPost(e) {
     if (body.action === 'read')  return km_out_(km_read_(body));
     if (body.action === 'batch') return km_out_(km_batch_(body));
     if (body.action === 'old26') return km_out_(km_old26_(body));
+    if (body.action === 'oldMerge') return km_out_(km_oldMerge_(body));
     return km_out_({ok: false, error: '모르는 action : ' + body.action});
   } catch (err) {
     return km_out_({ok: false, error: String(err && err.stack || err)});
@@ -101,6 +104,41 @@ function km_old26_(body) {
       one.ok = true; one.firstRow = r0; one.lastRow = r0 + rows.length - 1;
       one.link = 'https://docs.google.com/spreadsheets/d/' + KM_IDS.old + '/edit#gid=' + sh.getSheetId() + '&range=A' + r0;
       km_master_(ss, rec, one.link);
+    } catch (err) { one.error = String(err); }
+    out.push(one);
+  });
+  return {ok: out.every(function (o) { return o.ok; }), results: out};
+}
+
+/** oldMerge : {merges:[{from:'조선호텔 리뉴얼 ', to:'조선호텔'}, …]}  순서대로. 차장님 표(옛시트_탭이름.json _합치기) 그대로 */
+function km_oldMerge_(body) {
+  var ss = SpreadsheetApp.openById(KM_IDS.old);
+  var out = [];
+  (body.merges || []).forEach(function (m) {
+    var one = {from: m.from, to: m.to, ok: false};
+    try {
+      var src = ss.getSheetByName(m.from);
+      if (!src) { one.error = '탭 없음 : ' + m.from; out.push(one); return; }
+      if (!m.to || m.to === m.from) { one.error = '바꿀 이름 없음'; out.push(one); return; }
+      var dst = ss.getSheetByName(m.to);
+      if (!dst) {
+        src.setName(m.to); one.ok = true; one.did = '이름 바꿈';
+      } else {
+        var last = km_lastRow_(src, 7);
+        var n = last - 2;
+        if (n > 0) {
+          var vals = src.getRange(3, 1, n, 7).getValues();
+          var dl = km_lastRow_(dst, 7);
+          var r0 = Math.max(dl + 1, 3);
+          dst.getRange(r0, 1, 1, 1).setNumberFormat('@');
+          dst.getRange(r0, 1, n, 1).setNumberFormat('@');
+          dst.getRange(r0, 1, n, 7).setValues(vals).setWrap(true).setBackground('#ffffff').setVerticalAlignment('top');
+          one.moved = n; one.firstRow = r0;
+        }
+        var keep = '(합침) ' + m.from;
+        if (!ss.getSheetByName(keep)) src.setName(keep);
+        one.ok = true; one.did = '줄 옮기고 (합침) 표시';
+      }
     } catch (err) { one.error = String(err); }
     out.push(one);
   });
