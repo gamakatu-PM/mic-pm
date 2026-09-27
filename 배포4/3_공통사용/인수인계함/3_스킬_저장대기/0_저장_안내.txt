@@ -84,3 +84,6 @@
 
 [2026-09-27 저녁 - 최우선 6개 확정]
   km-32-session-start      v3   v2 + 7절 「최우선 6개」 (잊지 않기·회의->작업의뢰서·도면->돈·레이더·수금·제안서 PPT). 옛 판은 버전\km-32-session-start_v2.skill
+
+[2026-09-27 밤 - 제안서 창]
+  km-31-hyeonjang-tools    v19  v18 + PC 검사기 deck_check 절 (54번이 만든 뒤 저절로 점검 · ★제안서_PPT 4번). v18 은 버전\km-31-hyeonjang-tools_v18.skill
