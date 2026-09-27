@@ -22,7 +22,7 @@
 ## 2. 브랜치
 
 `claude/cowork-suggestions-bohllt` — **main 에 푸시하지 않는다.**
-※ 2026-09-27 작업(54번 · finish_xlsx 고침 · v33)은 `claude/three-priorities-drttpa` 에 있다 (bohllt 위에 이어 붙임, 아직 안 합침). v33 0절
+※ 2026-09-27 작업(54번 · finish_xlsx 고침 · 레이더 v9 · v33)은 `claude/three-priorities-drttpa` 에서 만들어 **PR #11 로 bohllt 에 합쳤다** (2026-09-27 오후. 옛 값 : 「아직 안 합침」). v33 0절
 
 ## 3. 차장님 기준 (어기면 안 되는 것)
 
