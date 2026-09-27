@@ -1,0 +1,467 @@
+<title>손바닥 세 판 비교</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@500;700;900&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --paper:#fbfaf7; --ink:#14191c; --ink2:#4d585c; --ink3:#778286;
+  --line:#dad9d2; --line2:#eceae3; --card:#ffffff;
+  --one:#2a5d8f; --one-s:#e3ecf5;
+  --two:#0a5f57; --two-s:#d9ece9;
+  --three:#8a4a17; --three-s:#f6e5d5;
+  --warn:#a3442b; --warn-s:#f7e2dc;
+  --good:#256b3c; --good-s:#dcefe1;
+  --disp:"Gothic A1",-apple-system,"Apple SD Gothic Neo",sans-serif;
+  --body:"Noto Sans KR",-apple-system,"Apple SD Gothic Neo",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#101415; --ink:#eef2f1; --ink2:#a9b4b4; --ink3:#7d8888;
+  --line:#2e3739; --line2:#232c2e; --card:#18201f;
+  --one:#7db4e8; --one-s:#16293a;
+  --two:#5fd4c6; --two-s:#123230;
+  --three:#e0a370; --three-s:#3a2716;
+  --warn:#f0917a; --warn-s:#3a1f18;
+  --good:#7fd69b; --good-s:#16301f;
+}}
+:root[data-theme="dark"]{
+  --paper:#101415; --ink:#eef2f1; --ink2:#a9b4b4; --ink3:#7d8888;
+  --line:#2e3739; --line2:#232c2e; --card:#18201f;
+  --one:#7db4e8; --one-s:#16293a;
+  --two:#5fd4c6; --two-s:#123230;
+  --three:#e0a370; --three-s:#3a2716;
+  --warn:#f0917a; --warn-s:#3a1f18;
+  --good:#7fd69b; --good-s:#16301f;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);
+  font-size:16px;line-height:1.72;margin:0;padding-block:0 56px;
+  -webkit-text-size-adjust:100%}
+.wrap{max-width:860px;margin:0 auto;padding:0 18px}
+h1,h2,h3{font-family:var(--disp);text-wrap:balance;margin:0}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink3);font-weight:600}
+
+/* 표지 */
+.cover{padding-block:30px 22px;border-bottom:3px solid var(--ink)}
+.cover h1{font-size:clamp(1.85rem,7vw,2.6rem);font-weight:900;letter-spacing:-.03em;line-height:1.2;margin-top:8px}
+.cover .lede{color:var(--ink2);margin-top:12px;max-width:52ch;font-size:.97rem}
+.verdict{margin-top:18px;border-left:5px solid var(--warn);background:var(--warn-s);
+  padding:14px 16px;border-radius:0 10px 10px 0}
+.verdict b{font-family:var(--disp);font-weight:900}
+
+/* 두 벌 머리표 */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+.pair.three{grid-template-columns:repeat(3,1fr);gap:9px}
+.who.thr{border-color:var(--three)}
+.who.thr .tag{background:var(--three-s);color:var(--three)}
+.who.thr a{background:var(--three);color:var(--paper)}
+.shot.thr figcaption{color:var(--three)}
+.shot.thr img{border-color:var(--three)}
+.col.thr{border-color:var(--three)}
+.col.thr>h3{background:var(--three)}
+.win.c{color:var(--three)}
+td.n[data-h="3호"]::before{color:var(--three)}
+@media (max-width:420px){.pair.three .who{padding:10px 9px}.pair.three h3{font-size:.95rem}.pair.three p{font-size:.76rem}.pair.three a{font-size:.8rem;padding:10px 4px}}
+.who{border:2px solid var(--line);border-radius:12px;background:var(--card);padding:13px 14px}
+.who.one{border-color:var(--one)}
+.who.two{border-color:var(--two)}
+.who .tag{font-family:var(--mono);font-size:.7rem;font-weight:600;letter-spacing:.1em;
+  padding:3px 9px;border-radius:999px;display:inline-block}
+.who.one .tag{background:var(--one-s);color:var(--one)}
+.who.two .tag{background:var(--two-s);color:var(--two)}
+.who h3{font-size:1.06rem;font-weight:900;margin-top:7px;letter-spacing:-.01em}
+.who p{margin:4px 0 0;font-size:.83rem;color:var(--ink2);line-height:1.55}
+.who a{display:block;margin-top:10px;text-align:center;font-weight:700;font-size:.88rem;
+  text-decoration:none;padding:11px 8px;border-radius:9px;min-height:46px;line-height:1.45}
+.who.one a{background:var(--one);color:var(--paper)}
+.who.two a{background:var(--two);color:var(--paper)}
+
+section{padding-block:34px;border-bottom:1px solid var(--line)}
+section h2{font-size:1.38rem;font-weight:900;letter-spacing:-.02em;margin-top:6px}
+section .note{color:var(--ink2);font-size:.92rem;margin-top:8px;max-width:56ch}
+
+/* 화면 나란히 */
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:18px 0 14px}
+.tabs button{font:inherit;font-size:.9rem;font-weight:700;font-family:var(--body);
+  background:var(--card);color:var(--ink2);border:2px solid var(--line);
+  padding:9px 16px;border-radius:999px;min-height:46px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tabs button:focus-visible{outline:3px solid var(--two);outline-offset:2px}
+.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.shot{min-width:0}
+.shot figcaption{font-family:var(--mono);font-size:.72rem;font-weight:600;letter-spacing:.08em;
+  padding:5px 0 7px;color:var(--ink2)}
+.shot.one figcaption{color:var(--one)}
+.shot.two figcaption{color:var(--two)}
+.shot img{width:100%;max-width:100%;display:block;border-radius:10px;
+  border:2px solid var(--line);background:var(--card);cursor:zoom-in}
+.shot.one img{border-color:var(--one)}
+.shot.two img{border-color:var(--two)}
+.hint{font-size:.8rem;color:var(--ink3);margin-top:10px;font-family:var(--mono)}
+
+/* 확대 */
+.zoom{position:fixed;inset:0;background:rgba(10,14,15,.93);z-index:50;
+  display:flex;align-items:center;justify-content:center;padding:14px;cursor:zoom-out}
+.zoom img{max-width:100%;max-height:88vh;border-radius:8px}
+.zoom .x{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:14px;
+  background:#fff;color:#14191c;border:0;border-radius:999px;font:inherit;font-weight:800;
+  min-height:46px;padding:0 20px;cursor:pointer}
+
+/* 숫자 표 */
+.tbl{overflow-x:auto;margin-top:18px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.87rem}
+th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--line2);vertical-align:top}
+thead th{font-family:var(--mono);font-size:.71rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink3);font-weight:600;background:var(--line2);border-bottom:2px solid var(--line)}
+tbody tr:last-child td{border-bottom:0}
+td.n,th.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+td.lbl{font-weight:700}
+td.lbl small{display:block;font-weight:400;color:var(--ink3);font-size:.78rem;line-height:1.45}
+.win{font-weight:700}
+.win.a{color:var(--one)}
+.win.b{color:var(--two)}
+.bar{height:7px;border-radius:99px;background:var(--line2);overflow:hidden;margin-top:5px;min-width:54px}
+.bar i{display:block;height:100%;border-radius:99px}
+.bar i.one{background:var(--one)}
+.bar i.two{background:var(--two)}
+/* 폰(≤600px) : 표를 옆으로 밀지 않는다. 한 줄이 한 장으로 접힌다. */
+@media (max-width:600px){
+  .tbl{overflow-x:visible}
+  table{min-width:0}
+  table thead{display:none}
+  table,table tbody,table tr,table td{display:block}
+  table tbody tr{display:grid;grid-template-columns:repeat(3,1fr);gap:0 10px;
+    padding:13px 14px 11px;border-bottom:1px solid var(--line2)}
+  table tbody tr:last-child{border-bottom:0}
+  table td{border:0;padding:0}
+  td.lbl{grid-column:1/-1;margin-bottom:9px}
+  td.n{text-align:left;white-space:normal}
+  td.n{font-size:.92rem}
+  td.n::before{content:attr(data-h);display:block;font-family:var(--mono);
+    font-size:.64rem;letter-spacing:.08em;color:var(--ink3);font-weight:600;margin-bottom:1px}
+  td.n[data-h="1호"]::before{color:var(--one)}
+  td.n[data-h="2호"]::before{color:var(--two)}
+  td.win{grid-column:1/-1;margin-top:9px;font-size:.83rem;
+    padding-top:8px;border-top:1px dashed var(--line)}
+  td.win::before{content:"이긴 쪽 · ";color:var(--ink3);font-weight:400}
+}
+
+/* 장단점 */
+.pros{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+@media (max-width:820px){.pros{grid-template-columns:1fr}}
+
+.col{border:2px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+.col.one{border-color:var(--one)}
+.col.two{border-color:var(--two)}
+.col>h3{font-size:1rem;font-weight:900;padding:11px 14px;color:var(--paper)}
+.col.one>h3{background:var(--one)}
+.col.two>h3{background:var(--two)}
+.col ul{list-style:none;margin:0;padding:12px 14px 14px}
+.col li{display:grid;grid-template-columns:20px 1fr;gap:9px;padding:7px 0;font-size:.9rem;line-height:1.6}
+.col li+li{border-top:1px solid var(--line2)}
+.col li .m{font-weight:900;font-family:var(--disp);line-height:1.5}
+.col li.p .m{color:var(--good)}
+.col li.c .m{color:var(--warn)}
+.col li b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600}
+
+/* 추천 */
+.rec{margin-top:20px;border:3px solid var(--ink);border-radius:14px;background:var(--card);padding:18px}
+.rec h3{font-size:1.15rem;font-weight:900;letter-spacing:-.02em}
+.rec ol{margin:12px 0 0;padding-left:1.15em}
+.rec li{padding:5px 0;font-size:.93rem}
+.steps{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:10px}
+.steps li{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start}
+.steps .k{font-family:var(--mono);font-weight:600;font-size:.76rem;background:var(--ink);color:var(--paper);
+  border-radius:8px;text-align:center;padding:6px 0;line-height:1.3}
+.steps .t{font-size:.92rem;line-height:1.6}
+.steps .t b{font-weight:700}
+
+.foot{padding-block:26px 0;color:var(--ink3);font-size:.81rem;line-height:1.65}
+.foot code{font-family:var(--mono);font-size:.94em;background:var(--line2);padding:1px 5px;border-radius:4px;color:var(--ink2)}
+@media (prefers-reduced-motion:no-preference){.shots{transition:opacity .16s ease}}
+</style>
+
+<div class="wrap">
+
+<header class="cover">
+  <div class="eyebrow">KM 손바닥 · 2026-09-20 갱신 · 배성윤 프로</div>
+  <h1>손바닥 1호 · 2호 · 3호</h1>
+  <p class="lede">같은 앱을 세 벌 만들었습니다. 기능·저장 문법·저장소 구조는 셋 다 완전히 같습니다. 아래 숫자는 아이폰 크기(390×844) 화면에서 실제로 재어 본 것입니다.</p>
+  <div class="verdict">
+    <b>먼저 결론.</b> 1호는 <b>눈</b>이 지고, 2호는 <b>손가락</b>이 이기는 대신 너무 많이 밀었습니다(창고 13.5번). <b>3호</b>는 2호의 큰 글씨·큰 단추를 그대로 두고 긴 카드를 접어 창고를 <b>8.5번</b>까지 되돌렸습니다. 없앤 기능은 없습니다 — 「＋ 더 보기」 한 번이면 전부 나옵니다. 다만 여정·오늘은 여전히 1호보다 많이 밉니다(9.7 · 10.1 대 6.5 · 6.9). 글씨가 실제로 더 크기 때문입니다.
+  </div>
+</header>
+
+<div class="pair three">
+  <div class="who one">
+    <span class="tag">1호</span>
+    <h3>빽빽한 판</h3>
+    <p>글씨 15px · 단추 24px<br>많이 보이고 덜 민다</p>
+    <a href="https://claude.ai/artifact/Mg52NGzLvSegFJYXhuzHwH" target="_blank" rel="noopener">1호 열기</a>
+  </div>
+  <div class="who two">
+    <span class="tag">2호</span>
+    <h3>가독성판</h3>
+    <p>글씨 17~23px · 단추 42px<br>잘 눌리지만 많이 민다</p>
+    <a href="https://claude.ai/artifact/JL1QWi1yBx9N9WS8RyiN4Y" target="_blank" rel="noopener">2호 열기</a>
+  </div>
+  <div class="who thr">
+    <span class="tag">3호 · 추천</span>
+    <h3>접기판</h3>
+    <p>2호 글씨·단추 그대로<br>긴 카드는 접어 둔다</p>
+    <a href="https://claude.ai/artifact/8fzZyExskHKVgSBK1WtVtR" target="_blank" rel="noopener">3호 열기</a>
+  </div>
+</div>
+
+<section>
+  <div class="eyebrow">1 · 눈으로</div>
+  <h2>같은 화면, 나란히</h2>
+  <p class="note">화면을 골라 보십시오. 왼쪽부터 1호 · 2호 · 3호입니다. 같은 자료(현장 31곳)를 넣고 같은 순간에 찍었습니다. 3호는 접힌 상태 그대로입니다.</p>
+  <div class="tabs" id="tabs" role="tablist">
+    <button role="tab" data-v="map" aria-selected="true">여정</button>
+    <button role="tab" data-v="today" aria-selected="false">오늘</button>
+    <button role="tab" data-v="sites" aria-selected="false">현장</button>
+    <button role="tab" data-v="ask" aria-selected="false">창고</button>
+  </div>
+  <div class="shots" id="shots">
+    <figure class="shot one" style="margin:0">
+      <figcaption>1호 · 15px</figcaption>
+      <img id="imgA" alt="1호 여정 화면" src="__MAP1__">
+    </figure>
+    <figure class="shot two" style="margin:0">
+      <figcaption>2호 · 17px</figcaption>
+      <img id="imgB" alt="2호 여정 화면" src="__MAP2__">
+    </figure>
+    <figure class="shot thr" style="margin:0">
+      <figcaption>3호 · 접힘</figcaption>
+      <img id="imgC" alt="3호 여정 화면" src="__MAP3__">
+    </figure>
+  </div>
+  <p class="hint">그림을 누르면 크게 보입니다.</p>
+</section>
+
+<section>
+  <div class="eyebrow">2 · 숫자로</div>
+  <h2>재어 본 것</h2>
+  <p class="note">짐작이 아니라 화면에서 실제로 잰 값입니다. 「잘못 누를 단추」 는 높이가 44px 이 안 되는 단추 수입니다 — 사람 손가락 끝이 대략 그 크기라 그보다 작으면 옆 것이 눌립니다.</p>
+
+  <div class="tbl">
+  <table>
+    <thead><tr><th>재어 본 것</th><th class="n">1호</th><th class="n">2호</th><th class="n">3호</th><th>이긴 쪽</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="lbl">글씨 크기<small>본문 기준</small></td>
+        <td class="n" data-h="1호">15px</td>
+        <td class="n" data-h="2호">17~23px</td>
+        <td class="n" data-h="3호">17~23px</td>
+        <td class="win b">2호·3호가 같음</td>
+      </tr>
+      <tr>
+        <td class="lbl">줄과 줄 사이<small>빽빽할수록 작음</small></td>
+        <td class="n" data-h="1호">22.5px</td>
+        <td class="n" data-h="2호">28.9px</td>
+        <td class="n" data-h="3호">28.9px</td>
+        <td class="win b">2호·3호가 같음</td>
+      </tr>
+      <tr>
+        <td class="lbl">가장 작은 단추<small>이보다 작으면 잘못 눌림</small></td>
+        <td class="n" data-h="1호">24px</td>
+        <td class="n" data-h="2호">42px</td>
+        <td class="n" data-h="3호">44px</td>
+        <td class="win c">3호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">잘못 누를 단추 · 오늘<small>44px 미만 / 전체</small></td>
+        <td class="n" data-h="1호">64 / 70</td>
+        <td class="n" data-h="2호">2 / 72</td>
+        <td class="n" data-h="3호">0 / 88</td>
+        <td class="win c">3호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">잘못 누를 단추 · 창고<small>44px 미만 / 전체</small></td>
+        <td class="n" data-h="1호">79 / 86</td>
+        <td class="n" data-h="2호">2 / 88</td>
+        <td class="n" data-h="3호">0 / 104</td>
+        <td class="win c">3호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">위 띠가 먹는 높이<small>날짜·글씨 단추 줄</small></td>
+        <td class="n" data-h="1호">61px</td>
+        <td class="n" data-h="2호">99px</td>
+        <td class="n" data-h="3호">73px</td>
+        <td class="win a">1호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">한 화면에 보이는 것 · 여정<small>현장 카드 수</small></td>
+        <td class="n" data-h="1호">2</td>
+        <td class="n" data-h="2호">0</td>
+        <td class="n" data-h="3호">2</td>
+        <td class="win c">1호·3호가 같음</td>
+      </tr>
+      <tr>
+        <td class="lbl">한 화면에 보이는 것 · 오늘</td>
+        <td class="n" data-h="1호">5</td>
+        <td class="n" data-h="2호">3</td>
+        <td class="n" data-h="3호">3</td>
+        <td class="win a">1호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">한 화면에 보이는 것 · 현장</td>
+        <td class="n" data-h="1호">6</td>
+        <td class="n" data-h="2호">4</td>
+        <td class="n" data-h="3호">4</td>
+        <td class="win a">1호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">한 화면에 보이는 것 · 창고</td>
+        <td class="n" data-h="1호">3</td>
+        <td class="n" data-h="2호">1</td>
+        <td class="n" data-h="3호">2</td>
+        <td class="win a">1호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">끝까지 미는 횟수 · 여정<small>한 번 = 한 화면</small></td>
+        <td class="n" data-h="1호">6.5회</td>
+        <td class="n" data-h="2호">10.5회</td>
+        <td class="n" data-h="3호">9.7회</td>
+        <td class="win a">1호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">끝까지 미는 횟수 · 오늘</td>
+        <td class="n" data-h="1호">6.9회</td>
+        <td class="n" data-h="2호">11.8회</td>
+        <td class="n" data-h="3호">10.1회</td>
+        <td class="win a">1호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">끝까지 미는 횟수 · 현장</td>
+        <td class="n" data-h="1호">4.5회</td>
+        <td class="n" data-h="2호">6.7회</td>
+        <td class="n" data-h="3호">6.4회</td>
+        <td class="win a">1호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">끝까지 미는 횟수 · 창고<small>2호 대비 5번 줄어듦</small></td>
+        <td class="n" data-h="1호">6.8회</td>
+        <td class="n" data-h="2호">13.5회</td>
+        <td class="n" data-h="3호">8.5회</td>
+        <td class="win a">1호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">긴 카드 접기<small>제목+두 줄만 보이고 눌러서 폄</small></td>
+        <td class="n" data-h="1호">없음</td>
+        <td class="n" data-h="2호">없음</td>
+        <td class="n" data-h="3호">있음</td>
+        <td class="win c">3호가 나음</td>
+      </tr>
+      <tr>
+        <td class="lbl">글씨 크기 바꾸기<small>차 안·현장에서</small></td>
+        <td class="n" data-h="1호">설정 들어가야 함</td>
+        <td class="n" data-h="2호">위 띠에 단추 2개</td>
+        <td class="n" data-h="3호">위 띠에 단추 1개</td>
+        <td class="win c">3호가 나음</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">3 · 따져 보면</div>
+  <h2>장점과 단점</h2>
+
+  <div class="pros">
+    <div class="col one">
+      <h3>1호 — 빽빽한 판</h3>
+      <ul>
+        <li class="p"><span class="m">＋</span><span><b>가장 덜 밉니다.</b> 여정 <b>6.5번</b> · 오늘 6.9번. 세 판 중 제일 짧습니다.</span></li>
+        <li class="p"><span class="m">＋</span><span>현장 목록에 <b>6곳</b>이 한 화면에 들어옵니다.</span></li>
+        <li class="c"><span class="m">−</span><span><b>잘못 눌립니다.</b> 오늘 화면 단추 70개 중 <b>64개</b>가 손가락보다 작습니다(24~34px).</span></li>
+        <li class="c"><span class="m">−</span><span>글씨 <b>15px</b>. 차 안이나 밝은 현장에서 읽기 힘듭니다.</span></li>
+        <li class="c"><span class="m">−</span><span>크게 보려면 <b>설정</b>까지 들어가야 하고 한 단계뿐입니다.</span></li>
+      </ul>
+    </div>
+    <div class="col two">
+      <h3>2호 — 가독성판</h3>
+      <ul>
+        <li class="p"><span class="m">＋</span><span><b>잘못 누를 일이 거의 없습니다.</b> 오늘 64개 → <b>2개</b>.</span></li>
+        <li class="p"><span class="m">＋</span><span>글씨를 위 띠에서 바로 <b>17 · 20 · 23px</b> 로 바꿉니다.</span></li>
+        <li class="c"><span class="m">−</span><span><b>너무 많이 밉니다.</b> 창고 <b>13.5번</b>(1호의 2.0배). 쓰기 힘든 수준입니다.</span></li>
+        <li class="c"><span class="m">−</span><span>여정 첫 화면에 <b>현장 카드가 한 장도</b> 안 보입니다.</span></li>
+        <li class="c"><span class="m">−</span><span>위 띠가 <b>99px</b> 로 커져 본문이 줄었습니다.</span></li>
+      </ul>
+    </div>
+    <div class="col thr">
+      <h3>3호 — 접기판 · 제가 권하는 것</h3>
+      <ul>
+        <li class="p"><span class="m">＋</span><span><b>작은 단추가 0개입니다.</b> 네 화면 전부. 세 판 중 유일합니다.</span></li>
+        <li class="p"><span class="m">＋</span><span><b>창고 13.5번 → 8.5번.</b> 2호에서 다섯 번을 덜 밉니다.</span></li>
+        <li class="p"><span class="m">＋</span><span>여정 첫 화면에 현장 카드가 <b>2장</b> — 1호와 같아졌습니다.</span></li>
+        <li class="p"><span class="m">＋</span><span><b>없앤 기능이 없습니다.</b> 가려졌을 뿐이고 「＋ 더 보기」 한 번이면 전부 나옵니다. 「전부 펴기」 도 있습니다.</span></li>
+        <li class="p"><span class="m">＋</span><span>위 띠를 <b>73px</b> 로 줄였습니다(글씨 단추를 「가」 하나로).</span></li>
+        <li class="c"><span class="m">−</span><span><b>여정·오늘은 아직 1호보다 깁니다</b>(9.7 · 10.1 대 6.5 · 6.9). 글씨가 실제로 크기 때문이라 접기로는 다 못 줄입니다.</span></li>
+        <li class="c"><span class="m">−</span><span>본문을 보려면 <b>한 번 더 눌러야</b> 합니다. 매번 전부 읽으시는 화면이면 오히려 손이 갑니다.</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<section>
+  <div class="eyebrow">4 · 그래서</div>
+  <h2>제가 권하는 것</h2>
+  <p class="note">두 쪽 다 반쪽입니다. 지금 고르시면 어느 쪽을 고르셔도 하나를 버리게 됩니다. 그래서 이렇게 하시기를 권합니다.</p>
+
+  <div class="rec">
+    <h3>3호로 가시되, 여정·오늘은 한 번 더 손봐야 합니다</h3>
+    <p style="margin:10px 0 0;font-size:.93rem;color:var(--ink2)">앞서 권해 드린 네 가지를 다 넣었습니다. 잰 결과 <b>창고는 목표에 닿았고(13.5 → 8.5번), 여정·오늘은 절반만 왔습니다.</b> 남은 차이는 접기로 줄일 수 있는 것이 아니라 글씨가 실제로 커서 생긴 것입니다.</p>
+    <ul class="steps">
+      <li><span class="k">넣음</span><span class="t"><b>카드 접기.</b> 제목은 항상 보이고 본문은 두 줄까지. 창고 −5번, 오늘 −1.7번.</span></li>
+      <li><span class="k">넣음</span><span class="t"><b>안내 띠 접기.</b> 여정 첫 화면에 현장 카드가 2장 올라왔습니다(0장 → 2장).</span></li>
+      <li><span class="k">넣음</span><span class="t"><b>위 띠 줄이기.</b> 「가− 보통 가＋」 를 「가」 하나로 → 99px → 73px.</span></li>
+      <li><span class="k">넣음</span><span class="t"><b>한 카드 한 단추.</b> 접히면 단추도 함께 가려지고, 펴면 전부 나옵니다.</span></li>
+      <li><span class="k">남음</span><span class="t"><b>여정 현장 카드를 줄일지.</b> 카드마다 9단계 점줄과 상세 한 줄이 약 60px입니다. 이것을 접으면 여정 9.7 → 약 7.3번이 됩니다. 다만 「다음 한 수」 가 한 번 더 눌러야 보이게 됩니다 — <b>프로님이 정하실 일</b>이라 손대지 않았습니다.</span></li>
+    </ul>
+    <p style="margin:14px 0 0;font-size:.9rem"><b>1호·2호는 그대로 둡니다.</b> 셋 다 각자 저장소를 갖고 있고, 셋 모두 같은 자료 81건이 들어가 있습니다.</p>
+  </div>
+</div>
+</section>
+
+<footer class="foot">
+  <p><b>재는 방법</b> — 아이폰 크기(390×844) 화면에 같은 자료(현장 31곳 · 할 일 16건 · 질문 15건)를 넣고 네 화면을 열어 쟀습니다. 「미는 횟수」 = 화면 전체 길이 ÷ 한 번에 보이는 높이(1호 714px · 2호 679px).</p>
+  <p><b>지난 판에서 틀린 것</b> — 어제 3호를 「창고 5번 안쪽」 으로 짐작했습니다. 실제로 만들어 재니 <b>8.5번</b>이었습니다. 짐작이 낙관적이었습니다. 지금 표의 숫자는 전부 만들어서 잰 값입니다.</p>
+  <p><b>확신 없이 넣은 것</b> — 「여정 카드를 접으면 7.3번」 은 아직 만들지 않은 것이라 제 계산입니다(31곳 × 60px). 만들어 재 봐야 압니다.</p>
+  <p><b>저장소는 각자 따로입니다.</b> 지금부터 1호에 넣으신 것은 2호에 가지 않고 반대도 같습니다. 오래 두 벌로 쓰시면 갈라집니다.</p>
+  <p>코드 : <code>앱/v7.1_화면별파일/</code>(1호) · <code>앱/v2_가독성판/</code>(2호) · <code>앱/v3_접기판/</code>(3호) · 접기는 <code>14-fold.js</code> 한 파일 · 시험 35개 세 판 모두 통과</p>
+</footer>
+
+</div>
+
+<script>
+var SHOTS={
+  map:["__MAP1__","__MAP2__","__MAP3__"],
+  today:["__TODAY1__","__TODAY2__","__TODAY3__"],
+  sites:["__SITES1__","__SITES2__","__SITES3__"],
+  ask:["__ASK1__","__ASK2__","__ASK3__"]
+};
+var NAME={map:"여정",today:"오늘",sites:"현장",ask:"창고"};
+var A=document.getElementById('imgA'), B=document.getElementById('imgB'), C=document.getElementById('imgC');
+document.getElementById('tabs').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b) return;
+  var v=b.dataset.v;
+  [].forEach.call(this.querySelectorAll('button'),function(x){
+    x.setAttribute('aria-selected', x===b ? 'true':'false');
+  });
+  A.src=SHOTS[v][0]; A.alt='1호 '+NAME[v]+' 화면';
+  B.src=SHOTS[v][1]; B.alt='2호 '+NAME[v]+' 화면';
+  C.src=SHOTS[v][2]; C.alt='3호 '+NAME[v]+' 화면';
+});
+document.getElementById('shots').addEventListener('click',function(e){
+  var im=e.target.closest('img'); if(!im) return;
+  var z=document.createElement('div'); z.className='zoom';
+  var big=document.createElement('img'); big.src=im.src; big.alt=im.alt;
+  var x=document.createElement('button'); x.className='x'; x.textContent='닫기 ✕';
+  z.appendChild(big); z.appendChild(x);
+  z.addEventListener('click',function(){z.remove()});
+  document.body.appendChild(z);
+});
+</script>
