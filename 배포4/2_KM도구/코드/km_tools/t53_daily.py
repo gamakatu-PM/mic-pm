@@ -37,7 +37,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v12 2026-09-24'  # v12 : 한 곳·한 통·두 동작 (차장님 「1번으로」) — 시트 E열 ▼고르기(진행중·아니야·맞아·만들어줘)·F열 메모·G열 현장(걸러보기) / 메일 맨 위 자료 상태·급한 것 5줄·▼고르신 것
+VERSION = 'v12.1 2026-09-27'  # v12.1 : 답요청 A열 「날짜 미상」 을 날짜로 받아 ① 맨 끝에 「날짜 미상」 머리줄로 (옛 할 일 모음 중 회의한 날을 못 찾은 것, 차장님 「다 넣어」)
+# v12 2026-09-24  # v12 : 한 곳·한 통·두 동작 (차장님 「1번으로」) — 시트 E열 ▼고르기(진행중·아니야·맞아·만들어줘)·F열 메모·G열 현장(걸러보기) / 메일 맨 위 자료 상태·급한 것 5줄·▼고르신 것
 # v11 2026-09-23  # v11 : 체크가 곧 소통 — 체크 안 한 것은 계속 적는다. ① 기한 없는 지난 할 일 · ② 기한 지난 할 일(원래 기한 아래) · ⑤ 앞으로 할 것 + 시트 4번째 탭 「앞으로 할일」
 # v10 2026-09-23  # v10 : 「26년 회의록2」 에 들어가는 것 전부 — ①② 메일·시트 답요청·오늘 할일 : 「- 」 + 담당 괄호 뺌. 기간 메일은 그대로
 # v9 2026-09-23   # v9 : 메일 ① 만 — 할 일 앞에 「- 」, 오른쪽 담당 괄호 뺌 (기한 괄호는 그대로). ②·시트·기간 메일은 안 바꿈
@@ -58,6 +59,7 @@ FUTURE_HEAD = ['기한', '현장', '할일', '완료']
 EXTRA_HEAD = ['고르기', '메모', '현장(걸러보기)']   # v12 : E·F·G 열 (답요청·오늘 할일·앞으로 할일)
 PICKS = ('진행중', '아니야', '맞아', '만들어줘')    # v12 : E열 ▼ 목록. 완료는 D열 체크로만
 _PICK = {}            # v12 : run() 이 시트에서 읽어 채운다. key -> (고르기, 메모)
+UNKNOWN_DATE = '날짜 미상'   # v12.1 : 답요청 A열에 이 글이면 「회의한 날 모름」 (정렬하면 ① 맨 끝)
 _BOARD_TABS = set()   # v12 : 읽은 탭 (자료 상태 줄)
 _TODAY_ITEMS = []     # v12 : ② 줄 (급한 것 5줄 재료)   # v11 차장님 (2026-09-23) : 앞으로 날짜가 있는 할 일 — 체크할 때까지 계속
 MEET_HEAD = ['날짜', '현장', '시각·협의자', '안건', '협의내용', '결정사항', '조치사항']
@@ -281,6 +283,8 @@ def load_board(path):
         blocks = d.get('valueRanges') if isinstance(d, dict) and 'valueRanges' in d else [d]
         for blk in blocks:
             rng = str(blk.get('range', ''))
+            if '회의록' in rng:                      # v12.1 : 회의록 탭은 할 일이 아니다 (줄 수 세려고 같이 읽을 뿐)
+                continue
             tab = '앞으로 할일' if '앞으로' in rng else ('오늘 할일' if '오늘' in rng else '답요청')
             _BOARD_TABS.add(tab)
             date = site = ''
@@ -288,6 +292,8 @@ def load_board(path):
                 row = [str(x) for x in row] + [''] * 7
                 if _cell_date(row[0]):
                     date = _cell_date(row[0])
+                elif row[0].strip() == UNKNOWN_DATE:     # v12.1 : 회의한 날을 모르는 줄 (위 날짜를 이어받지 않는다)
+                    date = UNKNOWN_DATE
                 if row[1].strip():
                     site = row[1].strip()
                 if not _core(row[2]):
@@ -402,7 +408,7 @@ def answer_carry(board, rows, yday):
     yd = yday.isoformat()
     out = []
     for b in board:
-        if b['tab'] != '답요청' or b['due'] or not b['date'] or b['date'] >= yd:
+        if b['tab'] != '답요청' or b['due'] or not b['date'] or (b['date'] >= yd and b['date'] != UNKNOWN_DATE):
             continue
         if b['key'] in done['pair'] or b['key'] in seen:
             continue

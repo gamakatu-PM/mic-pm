@@ -310,5 +310,29 @@ try:
 finally:
     shutil.rmtree(d, ignore_errors=True)
 
+def _test_v121_unknown_date():
+    """v12.1 : 답요청 A열 「날짜 미상」 줄은 위 날짜를 이어받지 않고 ① 맨 끝 「날짜 미상」 아래"""
+    import tempfile, datetime as _dt
+    M = T
+    d = {'valueRanges': [{'range': "'답요청'!A1:G10", 'values': [
+        ['날짜', '현장', '할일', '완료'],
+        ['2026-09-01', '연합기숙사', '- 가 확인', ''],
+        ['날짜 미상', '조선호텔', '- 나 확인', ''],
+        ['', '', '- 다 확인', '']]},
+        {'range': "'회의록'!A1:G5", 'values': [['날짜', '현장', '시각·협의자'], ['2026-09-01', '연합기숙사', '10:00  홍길동', '안건']]}]}
+    p = tempfile.mktemp(suffix='.json')
+    with open(p, 'w', encoding='utf-8') as f:
+        json.dump(d, f, ensure_ascii=False)
+    b = M.load_board(p)
+    assert [x['date'] for x in b] == ['2026-09-01', '날짜 미상', '날짜 미상'], [x['date'] for x in b]
+    c = M.answer_carry(b, [], _dt.date(2026, 9, 27))
+    assert [x[0] for x in c] == ['2026-09-01', '날짜 미상', '날짜 미상'], c
+
+
+try:
+    _test_v121_unknown_date()
+    chk('v12.1 답요청 「날짜 미상」 은 위 날짜를 이어받지 않고 ① 맨 끝', True)
+except AssertionError as e:
+    chk('v12.1 답요청 「날짜 미상」 은 위 날짜를 이어받지 않고 ① 맨 끝', False, str(e))
 print('\n통과 %d / 실패 %d %s' % (OK[0], len(NG), NG or ''))
 sys.exit(1 if NG else 0)
