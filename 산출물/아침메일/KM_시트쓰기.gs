@@ -1,4 +1,5 @@
 /**
+ * KM_시트쓰기 v4 (2026-09-27) — v4 : oldStrip (옛 시트 통찰 칸 끝 「/ =====」 구분선 지우기) · 옛 시트 읽기 허용 (확인용)
  * KM_시트쓰기 v3 (2026-09-25)  — 클로드가 부르는 웹 앱. Zapier 없이 0원·무제한.
  *   v3 : read·batch 를 「Google Sheets API」 서비스(편집기 왼쪽 서비스 + 에서 추가)로 — UrlFetch 는 프로젝트에서 API 를 켜야 해서 403 이 났다
  *   v2 : oldMerge 추가 — 차장님 지시 「예전에 잘못 만들어진 이름은 합쳐야 돼」 (옛 탭 이름 바꾸기, 이미 있으면 줄 옮기기. 지우지 않는다)
@@ -36,11 +37,12 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) { return km_out_({ok: false, error: '본문이 JSON 이 아님'}); }
   if (!KM_TOKEN || body.token !== KM_TOKEN) return km_out_({ok: false, error: '암호 틀림'});
   try {
-    if (body.action === 'ping')  return km_out_({ok: true, version: 'v3 2026-09-25', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
+    if (body.action === 'ping')  return km_out_({ok: true, version: 'v4 2026-09-27', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
     if (body.action === 'read')  return km_out_(km_read_(body));
     if (body.action === 'batch') return km_out_(km_batch_(body));
     if (body.action === 'old26') return km_out_(km_old26_(body));
     if (body.action === 'oldMerge') return km_out_(km_oldMerge_(body));
+    if (body.action === 'oldStrip') return km_out_(km_oldStrip_(body));
     return km_out_({ok: false, error: '모르는 action : ' + body.action});
   } catch (err) {
     return km_out_({ok: false, error: String(err && err.stack || err)});
@@ -55,7 +57,7 @@ function km_out_(o) {
  *   Google Sheets API 서비스(Sheets) 를 쓴다. 서비스가 안 붙어 있으면 그 말을 돌려준다 */
 function km_read_(body) {
   var id = KM_IDS[body.which];
-  if (!id || body.which === 'old') return {ok: false, error: '읽을 수 없는 시트'};
+  if (!id) return {ok: false, error: '읽을 수 없는 시트'};   // v4 : old 도 읽기 허용 (확인용)
   if (typeof Sheets === 'undefined') return {ok: false, error: '편집기 왼쪽 「서비스 +」 에서 Google Sheets API 를 추가해 주십시오'};
   var d = Sheets.Spreadsheets.Values.batchGet(id, {ranges: body.ranges || []});
   return {ok: true, valueRanges: d.valueRanges || []};
@@ -137,6 +139,39 @@ function km_oldMerge_(body) {
   });
   return {ok: out.every(function (o) { return o.ok; }), results: out};
 }
+
+/** oldStrip (v4, 2026-09-27 차장님 「맞다고 생각한 것은 다 해」) :
+ *   옛 「26년 회의록」 현장 탭 F칸(통찰) 끝에 t53_old26 v1 이 잘못 붙인 「/ ===================」 를 지운다.
+ *   고치는 것 : 날짜(A)가 2609 로 시작하는 줄의 F칸만, 끝이 「=」 3개 이상으로 끝나는 것만. 셀 끝 빈 줄 3개는 그대로 둔다. 지우는 줄·다른 칸 없음.
+ *   {dry:true} 면 세기만 한다 */
+function km_oldStrip_(body) {
+  var ss = SpreadsheetApp.openById(KM_IDS.old);
+  var fixed = 0, tabs = [];
+  ss.getSheets().forEach(function (sh) {
+    var name = sh.getName();
+    if (name.indexOf('0.') === 0 || name === KM_OLD_FIRST_ADMIN || name === '할 일 모음' || name === '업무일지') return;
+    var last = sh.getLastRow();
+    if (last < 3) return;
+    var a = sh.getRange(3, 1, last - 2, 1).getDisplayValues();
+    var f = sh.getRange(3, 6, last - 2, 1).getValues();
+    var n = 0;
+    for (var i = 0; i < f.length; i++) {
+      if (String(a[i][0]).trim().indexOf('2609') !== 0) continue;
+      var v = String(f[i][0]);
+      var m = v.match(/^([\s\S]*?)(\s*\/\s*={3,}|\n?그 밖의 할 일 : ={3,})(\s*)$/);
+      if (!m) continue;
+      var tail = /\n\s*$/.test(v) ? '\n\n\n' : '';
+      f[i][0] = m[1].replace(/\s+$/, '') + tail;
+      n++;
+    }
+    if (n) {
+      if (!body.dry) sh.getRange(3, 6, last - 2, 1).setValues(f);
+      fixed += n; tabs.push(name + ' ' + n);
+    }
+  });
+  return {ok: true, dry: !!body.dry, fixed: fixed, tabs: tabs};
+}
+
 
 function km_lastRow_(sh, ncol) {
   var n = sh.getLastRow();
