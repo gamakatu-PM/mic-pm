@@ -1,0 +1,42 @@
+// 구글AI_레이더_v9.gs 모의 시험 (node test/레이더_v9_시험.js). 구글·시트 없이 404·429·5분 이어 돌기를 본다
+const path=require('path'); const SRC=path.join(__dirname,'..','구글AI_레이더_v9.gs');
+const fs=require('fs'); let src=fs.readFileSync(SRC,'utf8');
+let calls=[]; let plan=[];
+global.Logger={log:m=>calls.push('LOG '+m)};
+global.Utilities={sleep:()=>{}};
+global.UrlFetchApp={fetch:(url,o)=>{const m=url.split('/models/')[1].split(':')[0]; calls.push('FETCH '+m); const r=plan.shift()||{text:'[]'};
+ if(r.err) return {getContentText:()=>JSON.stringify({error:r.err})};
+ return {getContentText:()=>JSON.stringify({candidates:[{content:{parts:[{text:r.text}]}}]})};}};
+eval(src+'\nglobal.callGemini_=callGemini_;global.getModel=()=>GEMINI_MODEL;');
+let ok=0,ng=0; const chk=(n,c)=>{c?ok++:ng++; console.log((c?'OK ':'NG ')+n)};
+plan=[{err:{code:404,status:'NOT_FOUND'}},{text:'7'}];
+chk('404 → 다음 모델', callGemini_({})==='7' && getModel()==='gemini-2.5-flash');
+plan=[{err:{code:429,status:'RESOURCE_EXHAUSTED'}}];
+let e=''; try{callGemini_({})}catch(x){e=String(x)} chk('429 → QUOTA_STOP', e.indexOf('QUOTA_STOP')>=0);
+plan=[{err:{code:404,status:'NOT_FOUND'}},{err:{code:404,status:'NOT_FOUND'}}];
+e=''; try{callGemini_({})}catch(x){e=String(x)} chk('마지막 모델도 404면 오류 그대로 (무한 반복 없음)', e.indexOf('404')>=0 && getModel()==='gemini-3.1-flash-lite');
+let A=[ok,ng];
+(function(){
+let src=fs.readFileSync(SRC,'utf8');
+let store={}; let now=0; let plan=[]; let log=[];
+global.PropertiesService={getScriptProperties:()=>({getProperty:k=>store[k]||null,setProperty:(k,v)=>{store[k]=v}})};
+global.Logger={log:()=>{}}; global.Utilities={sleep:ms=>{now+=ms}};
+const realNow=Date.now; Date.now=()=>now;
+global.UrlFetchApp={fetch:()=>{now+=10000; const r=plan.shift()||{text:'[]'}; return {getContentText:()=>JSON.stringify(r.err?{error:r.err}:{candidates:[{content:{parts:[{text:r.text}]}}]})}}};
+eval(src+`
+readCategories_=()=>Array.from({length:56},(_,i)=>({key:'c'+i,region:'r',q:'q'}));
+readExcludeList_=()=>[]; writeResults_=()=>{}; sendEmail_=()=>{};
+verifyResults_=d=>({confirmed:d,review:[]});
+writeLog_=(a,b,c,d,errors)=>{log.push(errors)};
+global.coreRun_=coreRun_;`);
+let ok=0,ng=0; const chk=(n,c,x)=>{c?ok++:ng++; console.log((c?'OK ':'NG ')+n+(c?'':' '+JSON.stringify(x)))};
+coreRun_('x','일일');
+chk('5분에 멈추고 다음 자리 기억', store.RADAR_NEXT && +store.RADAR_NEXT>0 && +store.RADAR_NEXT<56 && log[0].some(e=>e.indexOf('시간 한도')>=0), [store,log[0]]);
+const first=+store.RADAR_NEXT; now=0; log=[];
+coreRun_('x','일일');
+chk('다음 실행은 이어서', log[0].some(e=>e.indexOf('시간 한도')>=0) && +store.RADAR_NEXT===(first*2)%56, [store,first]);
+now=0; log=[]; store={}; plan=[{text:'[]'},{err:{code:429,status:'RESOURCE_EXHAUSTED'}}];
+coreRun_('x','일일');
+chk('429 면 두 번째에서 멈추고 그 자리 기억', log[0].length===1 && log[0][0].indexOf('한도 초과로 1/56')===0 && store.RADAR_NEXT==='1', [store,log[0]]);
+console.log('통과',ok+A[0],'실패',ng+A[1]); process.exit(ng+A[1]?1:0);
+})();
