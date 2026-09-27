@@ -6,9 +6,14 @@
    (9/27 웹 검색 : cloudzero · pecollective · 구글 개발자 포럼. ai.google.dev 는 작업 환경에서 막혀 직접 못 봄 — 차장님 화면 ai.dev/rate-limit 이 정답)
    ① 모델을 차례로 : gemini-2.5-flash-lite → gemini-2.5-flash → gemini-3.1-flash-lite.
       모델이 없어지면(404, 2.5 계열은 10월 중순 이후 종료 예고 글 있음) 스스로 다음 것으로 넘어간다
-   ② 429(한도)가 나면 남은 곳을 계속 부르지 않고 그 자리에서 멈춘다 → 실행로그 오류 칸에 「한도 초과로 N/56 에서 멈춤」
-   ③ 앱스 스크립트 한 번 실행 6분 한도 : 5분이 되면 멈추고, 다음 실행은 멈춘 곳부터 이어서 돈다(스크립트 속성 RADAR_NEXT).
-      56곳을 하루에 다 못 돌아도 이틀에 걸쳐 빠짐없이 돈다. 간격 1.5초는 그대로(호출이 몇 초씩 걸려 분당 한도 안쪽)
+   ② 429(한도)가 두 번 연속이면 남은 곳을 계속 부르지 않고 멈춘다 → 실행로그 오류 칸에 「한도 초과로 N/56 에서 멈춤」
+   ※ 아래 v8·6차 설명의 「GEMINI_MODEL = 'gemini-3.1-flash-lite'」 는 옛 이력이다. v9 의 실제 모델은 GEMINI_MODELS 줄
+   ③ 앱스 스크립트 한 번 실행 6분 한도 : 4분이 되면 새 호출을 멈추고(마지막 호출·자체검증·시트 기록 몫을 남김),
+      다음 실행은 멈춘 곳부터 이어서 돈다(스크립트 속성 RADAR_NEXT_일일 / RADAR_NEXT_월간정밀 — 매일·매월이 따로).
+      이어 돌 자리는 시트 기록이 끝난 뒤에만 저장 → 도중에 끊기면 다음 날 같은 구간을 다시 볼 뿐 빠지지 않는다.
+      56곳을 하루에 다 못 돌아도 이틀에 걸쳐 빠짐없이 돈다. 간격 1.5초는 그대로
+      429 가 나면 60초 쉬고 한 번 더 → 또 429 면 그날은 멈춤 (분당 한도와 하루 한도를 구분 못 하므로)
+   (독립 감사 9/27 반영 : 6분 넘김 위험 · 매일/매월 자리 공유 · 분당 429 에 하루 전체 멈춤)
    ④ radarSelfTest() 가 검색 연동까지 한 번 시험한다 (v8 은 검색 없는 호출이라 통과했는데 실제 실행은 막혔다)
    ⑤ 나머지(카테고리·프롬프트·자체검증·시트 기록·메일 끔)는 v8 그대로
  ★ v8 (2026-09-26) — 차장님 「고쳐야 할 것이 있으면 수정해서 줘」
@@ -202,34 +207,43 @@ function coreRun_(lookbackPhrase, runLabel) {
  let rawResults = [];
  // v9 : 6분 한도 — 멈춘 곳부터 이어서 돈다
  const props = PropertiesService.getScriptProperties();
+ const nextKey = 'RADAR_NEXT_' + runLabel; // v9 : 매일·매월이 따로 이어 돈다
  const n = categories.length;
- let start = parseInt(props.getProperty('RADAR_NEXT') || '0', 10);
+ let start = parseInt(props.getProperty(nextKey) || '0', 10);
  if (!(start >= 0 && start < n)) start = 0;
  const t0 = Date.now();
  let done = 0;
+ let nextPtr = start; // 기록이 끝난 뒤에만 저장한다
  for (let k = 0; k < n; k++) {
  const ci = (start + k) % n;
- if (Date.now() - t0 > 5 * 60 * 1000) {
- errors.push('시간 한도(5분)로 ' + done + '/' + n + ' 곳까지 봄. 다음 실행은 ' + (ci + 1) + '번째부터');
- props.setProperty('RADAR_NEXT', String(ci));
+ nextPtr = ci;
+ if (Date.now() - t0 > 4 * 60 * 1000) {
+ errors.push('시간 한도(4분)로 ' + done + '/' + n + ' 곳까지 봄. 다음 실행은 ' + (ci + 1) + '번째부터');
  break;
  }
  const cat = categories[ci];
+ let stop = false;
+ for (let tryNo = 0; tryNo < 2; tryNo++) {
  try {
  const prompt = buildPrompt_(lookbackPhrase, cat.region, cat.q, excludeList);
  const hits = callGeminiWithSearch_(prompt);
  hits.forEach(h => { h.카테고리 = cat.key; });
  rawResults = rawResults.concat(hits);
+ break;
  } catch (e) {
- if (String(e).indexOf('QUOTA_STOP') >= 0) { // v9 : 한도면 남은 곳을 두드리지 않는다
+ if (String(e).indexOf('QUOTA_STOP') >= 0) { // v9 : 분당 한도일 수 있어 60초 쉬고 한 번 더, 또 막히면 그날은 멈춤
+ if (tryNo === 0 && Date.now() - t0 < 3 * 60 * 1000) { Utilities.sleep(60000); continue; }
  errors.push('한도 초과로 ' + done + '/' + n + ' 곳까지 보고 멈춤 (모델 ' + GEMINI_MODEL + ') : ' + e);
- props.setProperty('RADAR_NEXT', String(ci));
+ stop = true;
  break;
  }
  errors.push(cat.key + ': ' + e);
+ break;
  }
+ }
+ if (stop) break;
  done++;
- if (done === n) props.setProperty('RADAR_NEXT', '0');
+ nextPtr = (done === n) ? 0 : (ci + 1) % n;
  Utilities.sleep(1500); // API 과부하 방지
  }
 
@@ -248,6 +262,7 @@ function coreRun_(lookbackPhrase, runLabel) {
  writeResults_(verified.review, TAB_REVIEW, true, runLabel);
  sendEmail_(verified.confirmed, verified.review, runLabel);
  writeLog_(rawCount, deduped.length, verified.confirmed.length, verified.review.length, errors, runLabel);
+ props.setProperty(nextKey, String(nextPtr)); // v9 : 여기까지 왔을 때만 앞으로 옮긴다
 }
 
 // ===================== 규칙 읽기 =====================

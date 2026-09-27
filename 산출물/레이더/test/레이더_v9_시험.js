@@ -18,25 +18,34 @@ e=''; try{callGemini_({})}catch(x){e=String(x)} chk('마지막 모델도 404면 
 let A=[ok,ng];
 (function(){
 let src=fs.readFileSync(SRC,'utf8');
-let store={}; let now=0; let plan=[]; let log=[];
+let store={}; let now=0; let plan=[]; let log=[]; let failWrite=false;
 global.PropertiesService={getScriptProperties:()=>({getProperty:k=>store[k]||null,setProperty:(k,v)=>{store[k]=v}})};
 global.Logger={log:()=>{}}; global.Utilities={sleep:ms=>{now+=ms}};
-const realNow=Date.now; Date.now=()=>now;
+Date.now=()=>now;
 global.UrlFetchApp={fetch:()=>{now+=10000; const r=plan.shift()||{text:'[]'}; return {getContentText:()=>JSON.stringify(r.err?{error:r.err}:{candidates:[{content:{parts:[{text:r.text}]}}]})}}};
 eval(src+`
 readCategories_=()=>Array.from({length:56},(_,i)=>({key:'c'+i,region:'r',q:'q'}));
-readExcludeList_=()=>[]; writeResults_=()=>{}; sendEmail_=()=>{};
+readExcludeList_=()=>[]; writeResults_=()=>{ if (failWrite) throw new Error('6분 강제 종료 흉내'); }; sendEmail_=()=>{};
 verifyResults_=d=>({confirmed:d,review:[]});
 writeLog_=(a,b,c,d,errors)=>{log.push(errors)};
 global.coreRun_=coreRun_;`);
-let ok=0,ng=0; const chk=(n,c,x)=>{c?ok++:ng++; console.log((c?'OK ':'NG ')+n+(c?'':' '+JSON.stringify(x)))};
+const K='RADAR_NEXT_일일';
 coreRun_('x','일일');
-chk('5분에 멈추고 다음 자리 기억', store.RADAR_NEXT && +store.RADAR_NEXT>0 && +store.RADAR_NEXT<56 && log[0].some(e=>e.indexOf('시간 한도')>=0), [store,log[0]]);
-const first=+store.RADAR_NEXT; now=0; log=[];
+chk('4분에 새 호출을 멈추고 다음 자리 기억', +store[K]>0 && +store[K]<56 && log[0].some(e=>e.indexOf('시간 한도(4분)')>=0), [store,log[0]]);
+const first=+store[K]; now=0; log=[];
 coreRun_('x','일일');
-chk('다음 실행은 이어서', log[0].some(e=>e.indexOf('시간 한도')>=0) && +store.RADAR_NEXT===(first*2)%56, [store,first]);
-now=0; log=[]; store={}; plan=[{text:'[]'},{err:{code:429,status:'RESOURCE_EXHAUSTED'}}];
+chk('다음 실행은 이어서', +store[K]===(first*2)%56, [store,first]);
+now=0; log=[]; store={}; plan=[{text:'[]'},{err:{code:429,status:'RESOURCE_EXHAUSTED'}},{err:{code:429,status:'RESOURCE_EXHAUSTED'}}];
 coreRun_('x','일일');
-chk('429 면 두 번째에서 멈추고 그 자리 기억', log[0].length===1 && log[0][0].indexOf('한도 초과로 1/56')===0 && store.RADAR_NEXT==='1', [store,log[0]]);
-console.log('통과',ok+A[0],'실패',ng+A[1]); process.exit(ng+A[1]?1:0);
+chk('429 두 번이면 멈추고 그 자리 기억 (60초 한 번 쉼)', log[0].length===1 && log[0][0].indexOf('한도 초과로 1/56')===0 && store[K]==='1', [store,log[0]]);
+now=0; log=[]; store={}; plan=[{err:{code:429,status:'RESOURCE_EXHAUSTED'}},{text:'[]'}];
+coreRun_('x','일일');
+chk('429 한 번(분당 한도)은 60초 쉬고 계속', !log[0].some(e=>e.indexOf('한도 초과')>=0) && +store[K]>1, [store,log[0]]);
+now=0; log=[]; store={}; 
+coreRun_('x','월간정밀');
+chk('매월 실행은 따로 (일일 자리 안 건드림)', store[K]===undefined && +store['RADAR_NEXT_월간정밀']>0, store);
+now=0; log=[]; store={'RADAR_NEXT_일일':'10'}; failWrite=true;
+try { coreRun_('x','일일'); } catch(e) {}
+chk('기록 전에 끊기면 자리를 안 옮김 (다음 날 같은 구간 다시)', store[K]==='10', store);
+console.log('통과',ok,'실패',ng); process.exit(ng?1:0);
 })();
