@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v10 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v11 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """deck_core - 회사 표준 서식으로 슬라이드를 그리는 부품. 메뉴 번호 없음.
 
 54번(t54_deck)이 이것을 불러 쓴다. 단독으로 실행하지 않는다.
@@ -98,16 +98,16 @@ def _fit(text, w, h, size, bold=True, min_size=12, space=2):
     재는 법은 deck_check(맑은 고딕 폭)와 같다. deck_check 가 없으면 원래 크기 그대로."""
     try:
         import deck_check as dc
+        s = float(size)
+        paras = str(text).split('\n')
+        while s > min_size:
+            n = sum(len(dc._wrap(pp, w, s, bold)) for pp in paras)
+            if n * dc._lh(s, bold) + (len(paras) - 1) * space / 72.0 <= h + 0.01:
+                return s
+            s -= 1
+        return float(min_size)
     except Exception:
-        return size
-    s = float(size)
-    paras = str(text).split('\n')
-    while s > min_size:
-        n = sum(len(dc._wrap(pp, w, s, bold)) for pp in paras)
-        if n * dc._lh(s, bold) + (len(paras) - 1) * space / 72.0 <= h + 0.01:
-            return s
-        s -= 1
-    return float(min_size)
+        return size          # 재지 못하면 원래 크기 그대로 (제안서 만들기는 멈추지 않는다)
 
 
 def _page_title(slide, title_text, eyebrow=None, pill=None):
@@ -394,21 +394,26 @@ def s_request(slide, d):
 
 
 def s_toc(slide, d):
+    """목차. 항목이 많아 한 줄 높이가 낮아지면(현장 물량 장이 끼면 6~7개) 글자를 줄여
+    설명 글이 구분선을 넘지 않게 한다 (2026-09-27 실제 엔진 렌더에서 찾음)."""
     y = _page_title(slide, d.get('title', '목차'), d.get('eyebrow', 'CONTENTS'))
     items = d.get('items', [])
     n = max(1, len(items))
     h = min(0.72, (5.0 - y) / n)
+    tight = h < 0.62
+    ts, ds = (11.5, 8.5) if tight else (12.5, 9.5)
+    ty, dy = (0.03, 0.26) if tight else (0.06, 0.34)
     for i, it in enumerate(items):
         yy = y + i * h
         _rect(slide, ML, yy + 0.04, 0.42, h - 0.14, fill=NAVY)
         _tb(slide, ML, yy + 0.08, 0.42, h - 0.22, '%02d' % (i + 1), size=11,
             color=WHITE, bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
-        _tb(slide, ML + 0.58, yy + 0.06, 5.4, 0.3, it.get('text', ''), size=12.5,
+        _tb(slide, ML + 0.58, yy + ty, 5.4, 0.26, it.get('text', ''), size=ts,
             color=NAVY, bold=True)
         if it.get('desc'):
-            _tb(slide, ML + 0.58, yy + 0.34, 5.4, 0.26, it['desc'], size=9.5, color=GRAY_TX)
+            _tb(slide, ML + 0.58, yy + dy, 5.4, 0.2, it['desc'], size=ds, color=GRAY_TX, space=0)
         if it.get('page'):
-            _tb(slide, ML + MW - 1.2, yy + 0.08, 1.2, 0.28, str(it['page']), size=10.5,
+            _tb(slide, ML + MW - 1.2, yy + ty + 0.02, 1.2, 0.28, str(it['page']), size=10.5,
                 color=BLUE, bold=True, align=PP_ALIGN.RIGHT)
         _rect(slide, ML, yy + h - 0.06, MW, 0.01, fill=LINE)
 
@@ -477,7 +482,42 @@ def fill(obj, mapping):
     return obj
 
 
+def resolve_toc(slides):
+    """목차 쪽번호를 손으로 적지 않고 만들 때 센다 (2026-09-27 : 손으로 적은 번호가 3건에서 틀려 있었다).
+    목차 항목의 goto 와 제목이 같은 장(없으면 goto 가 제목에 든 장)의 쪽번호를 넣는다.
+    못 찾으면 번호를 비운다 - 틀린 번호보다 없는 것이 낫다. 못 찾은 항목 목록을 돌려준다."""
+    pages, n = [], 0
+    for sl in slides:
+        if sl.get('type') in ('cover', 'request'):
+            pages.append(None)
+        else:
+            n += 1
+            pages.append(n)
+    miss = []
+    for ti, sl in enumerate(slides):
+        if sl.get('type') != 'toc':
+            continue
+        for it in sl.get('items', []):
+            key = (it.get('goto') or '').strip()
+            if not key:
+                continue                                  # goto 없는 옛 형식은 적힌 번호 그대로
+            hit = None
+            for want_exact in (True, False):
+                for j in range(ti + 1, len(slides)):
+                    t = (slides[j].get('title') or '').strip()
+                    if pages[j] and ((t == key) if want_exact else (key in t)):
+                        hit = pages[j]
+                        break
+                if hit:
+                    break
+            it['page'] = hit
+            if not hit:
+                miss.append(it.get('text', key))
+    return miss
+
+
 def build(spec, out_path):
+    resolve_toc(spec.get('slides', []))
     prs = Presentation()
     prs.slide_width = Inches(SLIDE_W)
     prs.slide_height = Inches(SLIDE_H)
@@ -505,7 +545,7 @@ def load_specs():
             continue
         p = os.path.join(SPECS, name)
         try:
-            d = json.loads(io.open(p, encoding='utf-8').read())
+            d = json.loads(io.open(p, encoding='utf-8-sig').read())   # 메모장이 붙이는 BOM 도 읽는다
             out.append((p, d))
         except Exception as e:
             print('  건너뜀 : %s (%s)' % (name, e))
@@ -513,47 +553,21 @@ def load_specs():
 
 
 def run():
-    title('26. 제안서 PPT (미리 써 둔 내용을 회사 서식으로)')
-    specs = load_specs()
-    if not specs:
-        print('제안서_내용 폴더에 json 이 없습니다.')
-        print('위치 : %s' % SPECS)
-        return
-    print('')
-    print('만들 수 있는 제안서 %s건' % won(len(specs)))
-    cur = ''
-    for i, (p, d) in enumerate(specs, 1):
-        g = d.get('요일', '')
-        if g != cur:
-            cur = g
-            print('')
-            print(' -- %s --' % (g or '기타'))
-        print(' %2d. %s  (%d장)' % (i, d.get('title', '?'), len(d.get('slides', []))))
-    print('')
-    sel = ask('번호 (엔터=전부 만들기) > ')
-    pick = [specs[int(sel) - 1]] if sel.isdigit() and 1 <= int(sel) <= len(specs) else specs
-    site = ask('현장명 (엔터 = 현장명 없는 범용 표준본) > ').strip()
-    od = outdir('제안서PPT')
-    mapping = {'{{현장}}': site if site else '귀사',
-               '{{현장_제목}}': (site + ' ') if site else '',
-               '{{날짜}}': today().strftime('%Y. %m. %d')}
-    print('')
-    made = 0
-    for p, d in pick:
-        d2 = fill(d, mapping)
-        base = '%s_%s_%s_r1.pptx' % (safe_name(site or '표준'),
-                                     safe_name(d2.get('파일명', d2.get('title', '제안서'))[:30]),
-                                     ymd6())
-        f = os.path.join(od, base)
-        try:
-            n = build(d2, f)
-            print('만듦 : %s  (%d장)' % (f, n))
-            made += 1
-        except Exception as e:
-            print('실패 : %s  (%s)' % (d2.get('title'), e))
-    print('')
-    print('%s건 완료. 대외 제출 전 반드시 한 번 열어 확인하십시오.' % won(made))
-    log('제안서PPT', '%d건 %s' % (made, site or '범용'))
+    """부품이라 단독으로 돌리지 않는다. 옛 「26번」 길로 들어와도 54번(t54_deck)으로 보낸다
+    - 만드는 길이 둘이면 한쪽만 고쳐지는 일이 생긴다 (2026-09-27 감사)."""
+    import t54_deck
+    t54_deck.run()
+
+
+def next_free(folder, stem, ext='.pptx'):
+    """덮어쓰지 않는다 (프로님 규칙). 같은 이름이 있으면 _r2, _r3 ...
+    파워포인트가 잡고 있는 파일(~$ 잠금 파일이 있는 것)도 피한다."""
+    n = 1
+    while True:
+        f = os.path.join(folder, '%s_r%d%s' % (stem, n, ext))
+        if not os.path.exists(f) and not os.path.exists(os.path.join(folder, '~$' + os.path.basename(f))):
+            return f
+        n += 1
 
 
 if __name__ == '__main__':

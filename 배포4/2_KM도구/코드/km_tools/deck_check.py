@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v10 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v11 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """deck_check - 만든 제안서 pptx 의 글자 넘침·겹침·붙음·표 밀림을 잰다. 토큰 0. 메뉴 번호 없음(부품).
 
 왜 만들었나
@@ -69,9 +69,21 @@ def _font(bold):
 def _w(text, size_pt, bold):
     """글자 폭 (인치)"""
     f = _font(bold)
-    if not f:
-        return sum((1.0 if ord(c) > 0x2E80 else 0.55) for c in text) * size_pt / 72.0
-    return f.getlength(text) * size_pt / 100.0 / 72.0
+    if f:
+        try:
+            return f.getlength(text) * size_pt / 100.0 / 72.0          # Pillow 8 이상
+        except Exception:
+            pass
+        try:
+            b = f.getbbox(text)                                          # Pillow 8 이상 다른 길
+            return (b[2] - b[0]) * size_pt / 100.0 / 72.0
+        except Exception:
+            pass
+        try:
+            return f.getsize(text)[0] * size_pt / 100.0 / 72.0           # 옛 Pillow (10 에서 없어짐)
+        except Exception:
+            pass
+    return sum((1.0 if ord(c) > 0x2E80 else 0.55) for c in text) * size_pt / 72.0
 
 
 def _lh(size_pt, bold):
@@ -254,7 +266,8 @@ def check(path, skip_copied=True):
                 if ext[0] >= fb[0] - 0.005 and ext[2] <= fb[2] + 0.005 and ext[1] >= fb[1] - 0.005 and ext[3] <= fb[3] + 0.005:
                     continue                                   # 그 도형 안에 든 글자
                 ox, oy = _inter(ext, fb)
-                if oy > 0.02 and ox > -TOUCH:
+                # 얇은 선(구분선 0.01in)을 글자가 가로지르는 것도 잡는다 - 2026-09-27 목차 7줄에서 실제로 났다
+                if oy > min(0.02, (fb[3] - fb[1]) * 0.5) and ox > -TOUCH:
                     probs.append((si, '붙음', '「%s」 가 다른 도형에 걸침/붙음' % label))
                     break
     note = '글꼴 %s 로 잼' % FONT_USED
@@ -288,11 +301,11 @@ def run(paths=None):
             root = os.path.join(cfg('out'), '제안서PPT')
         except Exception:
             root = ''
-        days = sorted(glob.glob(os.path.join(root, '*'))) if root else []
+        days = sorted(d for d in glob.glob(os.path.join(glob.escape(root), '*')) if os.path.isdir(d)) if root else []
         if not days:
             print('점검할 제안서가 없습니다. 먼저 1번으로 만드십시오.')
             return
-        paths = sorted(glob.glob(os.path.join(days[-1], '*.pptx')))
+        paths = sorted(glob.glob(os.path.join(glob.escape(days[-1]), '*.pptx')))
         print('점검 폴더 : %s  (%d개)' % (days[-1], len(paths)))
     total = 0
     for p in paths:
@@ -308,8 +321,12 @@ def run(paths=None):
 
 
 if __name__ == '__main__':
+    try:                                   # 슬라이드 글자에 cp949 에 없는 글자(–·✓)가 있어도 멈추지 않게
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
     args = sys.argv[1:]
     ps = []
     for a in args:
-        ps += sorted(glob.glob(os.path.join(a, '*.pptx'))) if os.path.isdir(a) else [a]
+        ps += sorted(glob.glob(os.path.join(glob.escape(a), '*.pptx'))) if os.path.isdir(a) else [a]
     run(ps or None)
