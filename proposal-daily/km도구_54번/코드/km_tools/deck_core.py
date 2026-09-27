@@ -349,7 +349,55 @@ def s_toc(slide, d):
                 color=BLUE, bold=True, align=PP_ALIGN.RIGHT)
         _rect(slide, ML, yy + h - 0.06, MW, 0.01, fill=LINE)
 
-KIND = {'cover': s_cover, 'toc': s_toc, 'conclusion': s_conclusion, 'table': s_table, 'items': s_items,
+
+YELLOW = RGBColor(0xFF, 0xF8, 0xDC)
+
+
+def s_reply(slide, d):
+    """질의 · 당사 답변 · 귀사 회신란(빈칸). 협의서는 답이 돌아와야 완성이다."""
+    y = _page_title(slide, d.get('title', '질의 · 답변'), d.get('eyebrow'), d.get('pill'))
+    rows = d.get('rows', [])
+    heads = ['No', '질의 · 협의 항목', '당사 답변', '귀사 회신']
+    colw = [0.45, 2.55, 3.4, 2.6]
+    nrow = len(rows) + 1
+    avail = 5.0 - y - (0.32 if d.get('note') else 0)
+    rh = max(0.3, min(0.78, avail / nrow))
+    tbl = slide.shapes.add_table(nrow, 4, Inches(ML), Inches(y), Inches(sum(colw)),
+                                 Inches(rh * nrow)).table
+    for j, w in enumerate(colw):
+        tbl.columns[j].width = Inches(w)
+    for i in range(nrow):
+        tbl.rows[i].height = Inches(rh)
+    data = [heads] + [[str(k + 1), r.get('item', ''), r.get('ours', ''), r.get('theirs', '')]
+                      for k, r in enumerate(rows)]
+    for i, row in enumerate(data):
+        for j, val in enumerate(row):
+            c = tbl.cell(i, j)
+            c.margin_left = c.margin_right = Inches(0.07)
+            c.vertical_anchor = MSO_ANCHOR.MIDDLE
+            c.fill.solid()
+            if i == 0:
+                c.fill.fore_color.rgb = NAVY
+            elif j == 3:
+                c.fill.fore_color.rgb = YELLOW
+            else:
+                c.fill.fore_color.rgb = WHITE if i % 2 else RGBColor(0xF7, 0xF9, 0xFC)
+            tf = c.text_frame
+            tf.word_wrap = True
+            for k, ln in enumerate(str(val).split('\n')):
+                para = tf.paragraphs[0] if k == 0 else tf.add_paragraph()
+                r = para.add_run()
+                r.text = ln
+                r.font.name = FONT
+                r.font.size = Pt(9 if i == 0 else 8.5)
+                r.font.bold = (i == 0 or j == 0)
+                r.font.color.rgb = WHITE if i == 0 else BODY
+                if j == 0:
+                    para.alignment = PP_ALIGN.CENTER
+    if d.get('note'):
+        _tb(slide, ML, y + rh * nrow + 0.08, MW, 0.3, '※ ' + d['note'], size=8.5, color=GRAY_TX)
+
+KIND = {'cover': s_cover, 'toc': s_toc, 'reply': s_reply, 'conclusion': s_conclusion, 'table': s_table, 'items': s_items,
         'diagram': s_diagram, 'split': s_split, 'request': s_request}
 
 
