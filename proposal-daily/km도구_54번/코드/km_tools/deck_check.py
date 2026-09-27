@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v11 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v12 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """deck_check - 만든 제안서 pptx 의 글자 넘침·겹침·붙음·표 밀림을 잰다. 토큰 0. 메뉴 번호 없음(부품).
 
 왜 만들었나
@@ -24,7 +24,7 @@
   import deck_check; probs, note = deck_check.check('제안서.pptx')
   python deck_check.py 파일.pptx [폴더 ...]
 """
-import os, sys, glob
+import os, sys, glob, re
 
 from pptx import Presentation
 from pptx.util import Emu
@@ -246,6 +246,8 @@ def check(path, skip_copied=True):
             if not ext:
                 continue
             label = sh.text_frame.text.strip().replace('\n', ' ')[:18]
+            if re.search(r'\[\s*\[|\]\s*\]', sh.text_frame.text):
+                probs.append((si, '글자', '「%s」 괄호가 겹침' % label))
             over = need - sh.height / EMU_IN
             if over > 0.06:
                 probs.append((si, '넘침', '「%s」 상자보다 %.2fin 김' % (label, over)))
