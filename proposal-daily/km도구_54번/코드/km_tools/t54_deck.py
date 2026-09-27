@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# 54판 v6 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """54. 제안서 PPT - 회사 제안서의 고정 장을 그대로 가져오고, 현장 내용만 새로 만들어 붙인다.
 
 왜 이렇게 하는가
@@ -74,15 +75,21 @@ def scan_source(path):
 def find_sources():
     """원틀\\제안서 폴더에서 pptx 를 찾는다. 없으면 _원틀 전체에서 '제안' 들어간 것."""
     cands = []
-    base = cfg('tpl') if 'tpl' in (cfg('tpl') or '') else None
     roots = []
-    for key in ('tpl', 'out', 'plaud'):
+    # 원틀 폴더 (설정.ini 의 template, 기본 _원틀) + 공통사용\원틀\제안서
+    for key in ('template', 'base'):
         try:
             v = cfg(key)
         except Exception:
             v = None
-        if v:
+        if not v:
+            continue
+        if key == 'base':
+            for sub in (('3_공통사용', '원틀', '제안서'), ('3_공통사용', '원틀'), ('_원틀', '제안서')):
+                roots.append(os.path.join(v, *sub))
+        else:
             roots.append(v)
+    # _도구결과 는 보지 않는다 - 54번이 만든 합본이 다시 원본으로 잡히면 안 된다
     roots.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
     seen = set()
     for r in roots:
@@ -94,8 +101,9 @@ def find_sources():
             for f in files:
                 if f.lower().endswith('.pptx') and not f.startswith('~$'):
                     p = os.path.join(dirpath, f)
-                    if p not in seen:
-                        seen.add(p)
+                    key = os.path.normcase(os.path.realpath(p))
+                    if key not in seen:
+                        seen.add(key)
                         cands.append(p)
     return sorted(cands)
 
