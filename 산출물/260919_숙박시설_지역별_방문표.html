@@ -1,0 +1,296 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>숙박시설 착공 방문표</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#666;--line:#dcdfe3;--grn:#1d7a4d;--red:#c0272d;--yel:#a8770a;--blu:#1f5fa9}
+*{box-sizing:border-box}
+body{margin:0 auto;padding:0 14px 50px;max-width:1080px;background:var(--bg);color:var(--fg);
+ font:14px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+h1{font-size:20px;margin:18px 0 3px}
+.sub{color:var(--mut);font-size:12.5px;margin-bottom:16px}
+.big{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}
+.big div{flex:1;min-width:96px;background:#f6f7f9;border:1px solid var(--line);border-radius:8px;padding:9px 10px;text-align:center}
+.big b{display:block;font-size:19px;color:var(--blu)} .big span{font-size:11px;color:var(--mut)}
+.zone{margin:26px 0 0;page-break-before:always}
+.zone:first-of-type{page-break-before:auto}
+h2{font-size:17px;margin:0 0 8px;padding:7px 10px;background:#eef2f7;border-left:6px solid var(--blu);border-radius:3px}
+h2 small{font-weight:400;color:var(--mut);font-size:12px;margin-left:8px}
+table{width:100%;border-collapse:collapse;font-size:11.8px;margin:0 0 6px}
+th,td{border:1px solid var(--line);padding:4px 6px;vertical-align:top}
+th{background:#f2f3f5;font-weight:600;white-space:nowrap;font-size:11px}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.c{text-align:center;white-space:nowrap}
+tr.has td{background:#f0f8f3}
+tr.non td{background:#fafafa;color:#555}
+.tag{display:inline-block;font-size:10px;padding:1px 5px;border-radius:8px;white-space:nowrap}
+.t1{background:#dff0e6;color:var(--grn)} .t2{background:#fdecec;color:var(--red)} .t3{background:#fbf2dc;color:var(--yel)}
+.chk{display:inline-block;width:12px;height:12px;border:1.4px solid #999;border-radius:2px;vertical-align:-1px}
+.q{background:#fff8e1;border:1px solid #f0dfa8;border-radius:8px;padding:11px 13px;margin:14px 0;font-size:13px}
+.q b{color:#8a6d0b}
+footer{margin-top:30px;padding-top:12px;border-top:1px solid var(--line);color:var(--mut);font-size:11.5px}
+@media print{body{max-width:none;padding:0;font-size:10.5px}
+ table{font-size:9.6px} th,td{padding:3px 4px} h1{font-size:16px} h2{font-size:13px}
+ .big,.q{display:none} .zone{page-break-before:always}
+ @page{size:A4 landscape;margin:9mm}}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17181a;--fg:#e8e8e8;--mut:#9a9a9a;--line:#333;--grn:#5cc98d;--red:#ff8a8f;--yel:#e0b64a;--blu:#7fb0f0}
+:root:not([data-theme="light"]) th{background:#26282c} :root:not([data-theme="light"]) h2{background:#22262b}
+:root:not([data-theme="light"]) .big div{background:#1f2124}
+:root:not([data-theme="light"]) tr.has td{background:#1b2721} :root:not([data-theme="light"]) tr.non td{background:#1c1d1f;color:#999}
+:root:not([data-theme="light"]) .q{background:#2a2617;border-color:#4a4122}}
+</style></head><body>
+<h1>숙박시설 착공 현장 — 지역별 방문표</h1>
+<div class="sub">2026-09-19 · 원자료 「숙박시설 착공목록」 304건 중 <b>연면적 1,500㎡ 이상 142곳</b>만 담았습니다 · 지역 14개<br>가로(A4 가로)로 인쇄하시면 지역마다 새 장에서 시작합니다.</div>
+<div class="big"><div><b>142</b><span>가야 할 곳</span></div><div><b>49</b><span>시공사 정해짐</span></div><div><b>93</b><span>시공사 미정</span></div><div><b>2,321,065</b><span>합계 연면적 ㎡</span></div><div><b>14</b><span>지역</span></div></div>
+<div class="q"><b>보시는 법</b> —
+<span class="tag t1">초록 줄</span> 시공사가 정해진 곳입니다. <b>시공사로 바로 가시면 됩니다.</b>
+흰 줄은 아직 시공사가 없어 <b>설계사나 건축주</b>를 통해야 합니다(설계 단계라 오히려 먼저 들어갈 수 있습니다).
+회색 줄은 셋 다 없어 <b>시·군·구 건축과</b>에 물어야 합니다.<br>
+<b>「경과」</b>는 착공 후 몇 개월인지입니다. 음수는 아직 착공 전입니다.</div>
+<div class="zone" style="page-break-before:auto"><h2 style="border-left-color:#c0272d;background:#fdecec">지금 급한 곳 — 착공 전 ~ 착공 6개월 이내 <small>25곳 · 설계·발주가 지금 도는 시점</small></h2>
+<table><tr><th style="width:18px"></th><th>경과</th><th>착공일</th><th>현장명</th><th>지역</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c"><b style="color:#c0272d">착공전 14개월</b></td><td class="c">27.11.13</td><td>별내동 990 생활숙박시설 개발사업 (에스피남양주별내피에프…</td><td class="c">경기도</td><td class="n">99,547</td><td>설계사 (주)정림건축종합건축사사무소</td><td>경기도 남양주시 별내동 990번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c"><b style="color:#c0272d">착공전 3개월</b></td><td class="c">26.12.14</td><td>학교면 곡창리 1-196 외 3필지 생활숙박시설 (유한회사 에스…</td><td class="c">전라남도</td><td class="n">20,188</td><td>설계사 (주)유탑건축사사무소</td><td>전라남도 함평군 학교면 곡창리 1-196번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c"><b style="color:#c0272d">착공전 3개월</b></td><td class="c">26.12.24</td><td>제부리 숙박시설</td><td class="c">경기도</td><td class="n">2,772</td><td>설계사 (주)스페셜파트너건축사사무소</td><td>경기도 화성시 서신면 해안길 272</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c"><b style="color:#c0272d">착공전 2개월</b></td><td class="c">26.11.29</td><td>광희동1가 생활숙박시설 신축공사</td><td class="c">서울특별시</td><td class="n">8,426</td><td>설계사 (주)종합건축사사무소도우건축</td><td>서울특별시 중구 광희동1가 72-4번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c"><b style="color:#c0272d">착공전 1개월</b></td><td class="c">26.10.30</td><td>일운면 소동리 19-1 숙박시설 (주식회사 아레포즈거제)</td><td class="c">경상남도</td><td class="n">111,820</td><td>설계사 (주)종합건축사사무소건원</td><td>경상남도 거제시 일운면 소동리 19-1번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">0개월</td><td class="c">26.09.14</td><td>조양동 1558-3 생활숙박시설</td><td class="c">강원특별자치도</td><td class="n">14,868</td><td>설계사 (주)파인드건축사사무소</td><td>강원특별자치도 속초시 조양동 1558-3번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">0개월</td><td class="c">26.09.25</td><td>울릉읍 사동리 574-1 관광숙박시설</td><td class="c">경상북도</td><td class="n">5,431</td><td>설계사 건축사사무소아살공</td><td>경상북도 울릉군 울릉읍 울릉순환로 772</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">0개월</td><td class="c">26.09.14</td><td>대소면 성본리 115-5 숙박시설</td><td class="c">충청북도</td><td class="n">2,596</td><td>설계사 태건축사사무소</td><td>충청북도 음성군 대소면 성본리 산115-5번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">0개월</td><td class="c">26.10.02</td><td>원북면 신두리 1210-14 숙박시설 및 근린생활시설</td><td class="c">충청남도</td><td class="n">2,038</td><td>설계사 주건축사사무소</td><td>충청남도 태안군 원북면 신두로 712-16</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">1개월</td><td class="c">26.08.17</td><td>명동2가 95-1 생활숙박시설 신축공사</td><td class="c">서울특별시</td><td class="n">6,095</td><td>설계사 (주)야손건축사사무소</td><td>서울특별시 중구 남대문로 64 (명동2가)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">1개월</td><td class="c">26.08.08</td><td>배방읍 공수리 1666 일반숙박시설</td><td class="c">충청남도</td><td class="n">1,811</td><td>설계사 건축사사무소휴먼아트</td><td>충청남도 아산시 배방읍 공수리 1666번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">2개월</td><td class="c">26.07.31</td><td>부산시 중구 남포동3가 생활형숙박시설</td><td class="c">부산광역시</td><td class="n">14,453</td><td>설계사 (주)상지이앤에이건축사사무소</td><td>부산광역시 중구 남포길 16 (남포동3가)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">2개월</td><td class="c">26.07.15</td><td>종로5가 193-17 ,3 번지 관광숙박시설</td><td class="c">서울특별시</td><td class="n">4,482</td><td>설계사 (주)아이디아키텍츠건축사사무소</td><td>서울특별시 종로구 종로 228 (종로5가)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">2개월</td><td class="c">26.07.06</td><td>부전동 숙박시설</td><td class="c">부산광역시</td><td class="n">2,000</td><td>설계사 이진건축사사무소</td><td>부산광역시 부산진구 중앙대로680번가길 56-9 (부전동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">2개월</td><td class="c">26.07.23</td><td>경서동 경서3구역 11블록 2로트 숙박시설 (***)</td><td class="c">인천광역시</td><td class="n">1,995</td><td>설계사 건축사무소 고강</td><td>인천광역시 서해구 경서동 블록</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">3개월</td><td class="c">26.06.16</td><td>삼례읍 수계리 1256-3 숙박시설</td><td class="c">전북특별자치도</td><td class="n">5,417</td><td>설계사 건축사사무소태솔</td><td>전북특별자치도 완주군 삼례읍 수계리 1256-3번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td class="c">3개월</td><td class="c">26.06.24</td><td>경운동 96-18 관광숙박시설</td><td class="c">서울특별시</td><td class="n">3,642</td><td>시공사 희상건설(주)</td><td>서울특별시 종로구 율곡로 58 (경운동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">3개월</td><td class="c">26.06.07</td><td>안덕면 사계리 153-1 (B.L1-14) 관광숙박시설</td><td class="c">제주특별자치도</td><td class="n">2,964</td><td>설계사 건축사사무소우건축</td><td>제주특별자치도 서귀포시 안덕면 사계리 153-1번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">4개월</td><td class="c">26.05.09</td><td>양양군 연창리 생활숙박시설 신축공사</td><td class="c">강원특별자치도</td><td class="n">33,796</td><td>설계사 (주)종합건축사사무소지엔에이</td><td>강원특별자치도 양양군 양양읍 연창리 180-19번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">4개월</td><td class="c">26.06.04</td><td>안덕면 서광리 24-8 숙박시설 (람정제주개발 주식회사)</td><td class="c">제주특별자치도</td><td class="n">10,831</td><td>설계사 (주)삼우종합건축사사무소</td><td>제주특별자치도 서귀포시 안덕면 서광리 산24-8번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">4개월</td><td class="c">26.05.25</td><td>우동 649-5 번지 관광숙박시설</td><td class="c">부산광역시</td><td class="n">8,688</td><td>설계사 (주)라라호호건축사사무소</td><td>부산광역시 해운대구 우동 649-5번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">4개월</td><td class="c">26.05.22</td><td>보은읍 죽전리 123-1 생활형 숙박시설</td><td class="c">충청북도</td><td class="n">6,201</td><td>설계사 우상현건축사사무소</td><td>충청북도 보은군 보은읍 죽전4길 23</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">4개월</td><td class="c">26.05.26</td><td>숙박시설</td><td class="c">충청남도</td><td class="n">5,570</td><td>설계사 팀에이종합건축사사무소(주)</td><td>충청남도 예산군 덕산면 사동리 360번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">5개월</td><td class="c">26.04.10</td><td>골드힐카운티리조트 생활숙박시설 21부지</td><td class="c">충청남도</td><td class="n">2,967</td><td>설계사 더나인건축사사무소(주)</td><td>충청남도 천안시 서북구 입장면 기로리 산16-1번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">5개월</td><td class="c">26.04.13</td><td>강구면 삼사리 9-90 일반숙박시설</td><td class="c">경상북도</td><td class="n">1,567</td><td>설계사 알에이케이건축사사무소</td><td>경상북도 영덕군 강구면 삼사리 9-90번지</td></tr>
+</table>
+<div class="q" style="page-break-inside:avoid"><b>이 25곳 중 두 곳은 이미 아시는 이름입니다.</b><br>· <b>광희동1가 생활숙박시설</b> (서울 중구 · 8,426㎡ · <b>착공 2026-11-29, 두 달 남음</b>) — 견적서 원틀을 이 현장 이름으로 갖고 계십니다. 설계사는 (주)종합건축사사무소도우건축입니다.<br>· <b>양양군 연창리 생활숙박시설</b> (강원 양양 · 33,796㎡ · 착공 4개월) — 양양쏠비치 옆 동네입니다.</div>
+</div>
+<div class="zone"><h2 style="border-left-color:#a8770a;background:#fbf2dc">그 다음 — 착공 6~18개월 <small>35곳 · 골조가 올라가는 중, 외함·속판 협의가 시작될 무렵</small></h2>
+<table><tr><th style="width:18px"></th><th>경과</th><th>현장명</th><th>지역</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">16개월</td><td>시화 MTV 거북섬상업 4-1, 4-2블럭 생활숙박시설</td><td class="c">경기도</td><td class="n">109,940</td><td>설계사 (주)지에이건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">15개월</td><td>우동 636-6 숙박시설 (마스턴제107호해운대2피에프브이주식…)</td><td class="c">부산광역시</td><td class="n">80,917</td><td>설계사 (주)종합건축사사무소건원</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">17개월</td><td>낙산 더뷰 컨시어지 호텔 (양양군 강현면 전진리 7-14외 5필지…)</td><td class="c">강원특별자치도</td><td class="n">80,772</td><td>설계사 (주)엠오플러스건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">8개월</td><td>인천광역시 중구 중산동 1960-10번지 오피스텔 및 생활숙박시설</td><td class="c">인천광역시</td><td class="n">39,880</td><td>설계사 (주)기안건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">8개월</td><td>인천광역시 중구 중산동 1960-9번지 오피스텔 및 생활숙박시설</td><td class="c">인천광역시</td><td class="n">36,635</td><td>설계사 (주)기안건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">8개월</td><td>인천광역시 중구 중산동 1960-8번지 오피스텔 및 생활숙박시설</td><td class="c">인천광역시</td><td class="n">36,582</td><td>설계사 (주)기안건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">9개월</td><td>안현동 201-16 관광숙박시설(휴양콘도미니엄)</td><td class="c">강원특별자치도</td><td class="n">34,622</td><td>설계사 (주)에스엔비건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">6개월</td><td>거제빅아일랜드 4BL 생활숙박시설</td><td class="c">경상남도</td><td class="n">34,584</td><td>설계사 (주)종합건축사사무소동일건축</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">6개월</td><td>고현동 1110 거제빅아일랜드 5-2BL 관광숙박시설</td><td class="c">경상남도</td><td class="n">30,790</td><td>설계사 (주)종합건축사사무소동일건축</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">11개월</td><td>양양군 조산리 생활숙박시설</td><td class="c">강원특별자치도</td><td class="n">29,060</td><td>설계사 (주)종합건축사사무소지엔에이</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">12개월</td><td>북방면 소매곡리 35외5필지 숙박시설 (유한회사 성은라이프)</td><td class="c">강원특별자치도</td><td class="n">26,746</td><td>설계사 (주)디자인그룹이루건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">6개월</td><td>거제빅아일랜드 5-1BL 생활숙박시설</td><td class="c">경상남도</td><td class="n">25,130</td><td>설계사 (주)종합건축사사무소동일건축</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">9개월</td><td>숙박시설 (왕희숙)</td><td class="c">부산광역시</td><td class="n">22,601</td><td>설계사 (주)한미건축종합건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">11개월</td><td>범방동 1898-7 생활숙박시설</td><td class="c">부산광역시</td><td class="n">22,409</td><td>(정보 없음 — 시·군·구 건축과)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">9개월</td><td>산양읍 연화리 1850000 숙박시설 (우람개발(***)</td><td class="c">경상남도</td><td class="n">14,895</td><td>설계사 한솔건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">9개월</td><td>영등포동3가 5-10 숙박시설 ((주) 영등포중앙기업)</td><td class="c">서울특별시</td><td class="n">13,748</td><td>설계사 에스브이건축건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">15개월</td><td>일광면 삼성리 716-11 숙박시설 (호텔코티에르일광 주식회사)</td><td class="c">부산광역시</td><td class="n">13,696</td><td>설계사 (주)루원건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">14개월</td><td>죽왕면 삼포리 315 외 2필지 관광숙박시설</td><td class="c">강원특별자치도</td><td class="n">12,591</td><td>설계사 (주)에스오엠이건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">6개월</td><td>대교동1가 41번지 OO생활숙박시설</td><td class="c">부산광역시</td><td class="n">12,142</td><td>설계사 (주)비전21건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">10개월</td><td>숙박시설 (주식회사 대산1)</td><td class="c">대구광역시</td><td class="n">10,680</td><td>설계사 (주)파랑건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">11개월</td><td>소원면 의항리 1128 숙박시설 (***)</td><td class="c">충청남도</td><td class="n">9,665</td><td>설계사 건축사사무소벧엘건축</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">10개월</td><td>평창군 횡계리 350 생활숙박시설</td><td class="c">강원특별자치도</td><td class="n">7,565</td><td>설계사 (주)탑씨엔디도시건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">10개월</td><td>변산면 도청리 612-68 숙박시설 ((유)지온림)</td><td class="c">전북특별자치도</td><td class="n">7,187</td><td>설계사 건축사사무소예현</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">13개월</td><td>대전시 동구 정동 생활숙박시설 신축공사</td><td class="c">대전광역시</td><td class="n">6,423</td><td>설계사 (주)우리창우종합건축사사무소</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">13개월</td><td>태안 곰섬 숙박시설</td><td class="c">충청남도</td><td class="n">4,939</td><td>설계사 (주)종합건축사사무소케이엔피</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td class="c">13개월</td><td>암남동 131-2 관광숙박시설</td><td class="c">부산광역시</td><td class="n">3,245</td><td>시공사 (주)루원산업개발</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">11개월</td><td>응봉면 노화리 220 숙박시설</td><td class="c">충청남도</td><td class="n">3,114</td><td>설계사 종합건축사사무소 소헌</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td class="c">12개월</td><td>오창읍 주성리 634 일반숙박시설</td><td class="c">충청북도</td><td class="n">2,933</td><td>시공사 지율건설(주)</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td class="c">6개월</td><td>오창읍 양청리 숙박시설</td><td class="c">충청북도</td><td class="n">2,923</td><td>시공사 제이건설(주)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td class="c">12개월</td><td>대전리 생활형숙박시설(***)</td><td class="c">경상북도</td><td class="n">2,681</td><td>설계사 한길건축사사무소</td></tr>
+</table><div class="q">연면적 큰 순서로 30곳만 담았습니다. 나머지는 아래 지역별 표에 전부 있습니다.</div></div>
+<div class="zone"><h2>서울특별시 <small>6곳 · 시공사 정해짐 2곳 · 합계 40,923㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>영등포구</td><td>영등포동3가 5-10 숙박시설 ((주) 영등포중앙기업)</td><td class="c">25.12.23</td><td class="c">9</td><td class="n">13,748</td><td>설계사 에스브이건축건축사사무소</td><td>에스브이건축건축사사무소</td><td>(주)영등포중앙기업</td><td>서울특별시 영등포구 영등포로 228 (영등포동3가)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>종로구</td><td>종로5가 193-17 ,3 번지 관광숙박시설</td><td class="c">26.07.15</td><td class="c">2</td><td class="n">4,482</td><td>설계사 (주)아이디아키텍츠건축사사무소</td><td>(주)아이디아키텍츠건축사사무소</td><td>태재연구재단</td><td>서울특별시 종로구 종로 228 (종로5가)</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>종로구</td><td>경운동 96-18 관광숙박시설</td><td class="c">26.06.24</td><td class="c">3</td><td class="n">3,642</td><td>시공사 희상건설(주)</td><td>제로투엔건축사사무소종합건설(주)</td><td>(주)코람코라이프인프라위탁관리부…</td><td>서울특별시 종로구 율곡로 58 (경운동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>중구</td><td>광희동1가 생활숙박시설 신축공사</td><td class="c">26.11.29</td><td class="c"><b style="color:#c0272d">착공전 2</b></td><td class="n">8,426</td><td>설계사 (주)종합건축사사무소도우건축</td><td>(주)종합건축사사무소도우건축</td><td>(주)교보자산신탁</td><td>서울특별시 중구 광희동1가 72-4번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>중구</td><td>명동2가 95-1 생활숙박시설 신축공사</td><td class="c">26.08.17</td><td class="c">1</td><td class="n">6,095</td><td>설계사 (주)야손건축사사무소</td><td>(주)야손건축사사무소</td><td>(주)시경개발</td><td>서울특별시 중구 남대문로 64 (명동2가)</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>중구</td><td>광희동2가 40-1번지 외 5필지 일반숙박시설</td><td class="c">24.04.15</td><td class="c">29</td><td class="n">4,530</td><td>시공사 도시건축종합건설(주)</td><td>비욘드건축</td><td>시에이1010(주)</td><td>서울특별시 중구 광희동2가 40-1번지</td></tr>
+</table></div>
+<div class="zone"><h2>인천광역시 <small>8곳 · 시공사 정해짐 3곳 · 합계 260,924㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>검단구</td><td>인천 검단신도시 101 역세권 개발사업 C9-2블록 숙박시설</td><td class="c">23.06.09</td><td class="c">39</td><td class="n">126,473</td><td>시공사 롯데건설(주)</td><td>(주)건축사사무소광장</td><td>넥스트브이시티피에프브이(주)</td><td>인천광역시 검단구 원당동 블록</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>부평구</td><td>부평동 531-3 오피스텔 및 생활숙박시설</td><td class="c">24.12.06</td><td class="c">21</td><td class="n">14,679</td><td>시공사 (주)황산종합건설</td><td>(주)충일건축사사무소</td><td></td><td>인천광역시 부평구 장제로83번길 6 (부평동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>서해구</td><td>경서동 경서3구역 11블록 2로트 숙박시설 (***)</td><td class="c">26.07.23</td><td class="c">2</td><td class="n">1,995</td><td>설계사 건축사무소 고강</td><td>건축사무소 고강</td><td></td><td>인천광역시 서해구 경서동 블록</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>옹진군</td><td>영흥면 내리 1212-4 숙박시설</td><td class="c">22.07.22</td><td class="c">50</td><td class="n">1,991</td><td>시공사 엠에스종합건설(주)</td><td>반달건축사사무소</td><td></td><td>인천광역시 옹진군 영흥면 영흥서로380번길 101-37</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>중구</td><td>인천광역시 중구 중산동 1960-10번지 오피스텔 및 생활숙박시설</td><td class="c">26.01.12</td><td class="c">8</td><td class="n">39,880</td><td>설계사 (주)기안건축사사무소</td><td>(주)기안건축사사무소</td><td>우리자산신탁(주)</td><td>인천광역시 중구 중산동 1960-10번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>중구</td><td>인천광역시 중구 중산동 1960-9번지 오피스텔 및 생활숙박시설</td><td class="c">26.01.12</td><td class="c">8</td><td class="n">36,635</td><td>설계사 (주)기안건축사사무소</td><td>(주)기안건축사사무소</td><td>우리자산신탁(주)</td><td>인천광역시 중구 중산동 1960-9번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>중구</td><td>인천광역시 중구 중산동 1960-8번지 오피스텔 및 생활숙박시설</td><td class="c">26.01.12</td><td class="c">8</td><td class="n">36,582</td><td>설계사 (주)기안건축사사무소</td><td>(주)기안건축사사무소</td><td>우리자산신탁(주)</td><td>인천광역시 중구 중산동 1960-8번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>중구</td><td>덕교동 81-3 숙박시설</td><td class="c">24.04.22</td><td class="c">29</td><td class="n">2,689</td><td>설계사 (주)충일건축사사무소</td><td>(주)충일건축사사무소</td><td></td><td>인천광역시 중구 덕교동 81-3번지</td></tr>
+</table></div>
+<div class="zone"><h2>경기도 <small>22곳 · 시공사 정해짐 11곳 · 합계 456,179㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>가평군</td><td>가평읍 복장리 66-6 숙박시설 (주식회사아아난티)</td><td class="c">23.03.29</td><td class="c">42</td><td class="n">30,232</td><td>시공사 (주)아난티</td><td>(주)에스케이엠건축사사무소</td><td>(주)아난티</td><td>경기도 가평군 가평읍 복장리 66-6번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>가평군</td><td>숙박시설-생활숙박시설(관광농원) - 농업회사법인(주)초원관…</td><td class="c">23.06.23</td><td class="c">39</td><td class="n">4,235</td><td>시공사 (주)인정종합건설</td><td>기준건축사사무소</td><td></td><td>경기도 가평군 조종면 현등사길 55-430</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>가평군</td><td>설악면 위곡리 255 생활형숙박시설 테라스형 변경</td><td class="c">25.02.14</td><td class="c">19</td><td class="n">2,343</td><td>시공사 (주)루영건설</td><td></td><td></td><td>경기도 가평군 설악면 위곡리 256번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>가평군</td><td>설악 설곡리 736-4 숙박시설 (***)</td><td class="c">23.05.11</td><td class="c">40</td><td class="n">2,137</td><td>시공사 (주)청우개발종합건설</td><td>건축사무소명성</td><td></td><td>경기도 가평군 설악면 설곡리 736-4번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>가평군</td><td>상면 상동리 370000 숙박시설 (에이피엘시스템(***))</td><td class="c">22.11.16</td><td class="c">46</td><td class="n">1,969</td><td>설계사 (주)삼우건축사사무소</td><td>(주)삼우건축사사무소</td><td>에이피엘시스템(주)</td><td>경기도 가평군 상면 도야울길 88-33</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>가평군</td><td>상면 임초리 206 숙박시설 (***)</td><td class="c">22.01.13</td><td class="c">56</td><td class="n">1,575</td><td>설계사 한성건축사사무소</td><td>한성건축사사무소</td><td></td><td>경기도 가평군 상면 임초방안골로 119-100</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>남양주시</td><td>별내동 990 생활숙박시설 개발사업 (에스피남양주별내피에프…</td><td class="c">27.11.13</td><td class="c"><b style="color:#c0272d">착공전 14</b></td><td class="n">99,547</td><td>설계사 (주)정림건축종합건축사사무소</td><td>(주)정림건축종합건축사사무소</td><td>에스피남양주별내피에프브이(주)</td><td>경기도 남양주시 별내동 990번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>시흥시</td><td>시화 MTV 거북섬상업 4-1, 4-2블럭 생활숙박시설</td><td class="c">25.05.24</td><td class="c">16</td><td class="n">109,940</td><td>설계사 (주)지에이건축사사무소</td><td>(주)지에이건축사사무소</td><td>신한자산신탁(주)</td><td>경기도 시흥시 거북섬로 113 (정왕동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>시흥시</td><td>정왕동 시화MT 거북섬 상업 1블록 숙박시설 (케이비부동산신…</td><td class="c">24.12.20</td><td class="c">21</td><td class="n">99,409</td><td>설계사 (주)정림건축종합건축사사무소</td><td>(주)정림건축종합건축사사무소</td><td>케이비부동산신탁(주)</td><td>경기도 시흥시 정왕동 2723번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>양평군</td><td>용문면 마룡리 179-2 관광숙박시설</td><td class="c">23.03.30</td><td class="c">42</td><td class="n">3,569</td><td>시공사 (주)태림건설</td><td>(주)크리트건축사사무소</td><td>포인트컨설팅(주)</td><td>경기도 양평군 용문면 마룡리 179-2번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>양평군</td><td>옥천면 신복리 665-21 숙박시설 (주식회사에이치엔케이투)</td><td class="c">24.05.20</td><td class="c">28</td><td class="n">2,146</td><td>시공사 (주)아일종합건설</td><td>더나인건축사사무소(주)</td><td>(주)에이치엔케이투</td><td>경기도 양평군 옥천면 신복리 665-21번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>용인시</td><td>이동읍 화산리 643-16 숙박시설 (***)</td><td class="c">23.11.23</td><td class="c">34</td><td class="n">3,586</td><td>시공사 (주)이도이엔씨</td><td>(주)혜림건축사사무소</td><td></td><td>경기도 용인시 처인구 이동읍 화산리 643-16번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>용인시</td><td>화산리 숙박시설 신축공사</td><td class="c">23.07.10</td><td class="c">38</td><td class="n">1,510</td><td>시공사 (주)아이엠종합건설</td><td>정음건축사사무소</td><td></td><td>경기도 용인시 처인구 이동읍 화산리 670-1번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>파주시</td><td>대동리 관광숙박시설</td><td class="c">23.09.08</td><td class="c">36</td><td class="n">4,668</td><td>시공사 (주)어반씨앤디</td><td>건축사사무소예담</td><td></td><td>경기도 파주시 탄현면 새오리로 167-19</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>평택시</td><td>평택시 팽성읍 안정리 169-19 생활숙박시설</td><td class="c">24.08.26</td><td class="c">25</td><td class="n">5,834</td><td>시공사 (주)젠건축사사무소</td><td>빌더스플랜(주)</td><td></td><td>경기도 평택시 팽성읍 안정리 169-19번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>평택시</td><td>신장동 208-22 일반숙박시설 및 근생시설</td><td class="c">21.11.19</td><td class="c">58</td><td class="n">4,962</td><td>시공사 (주)지오종합건설</td><td>(주)정헌섭건축사사무소</td><td></td><td>경기도 평택시 신장동 208-22번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>평택시</td><td>고덕면 동청리 34-4 숙박시설</td><td class="c">21.11.09</td><td class="c">58</td><td class="n">1,973</td><td>설계사 아키원건축사사무소</td><td>아키원건축사사무소</td><td></td><td>경기도 평택시 고덕면 청원로 661-15</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>평택시</td><td>지제동 302-20 숙박시설 (***)</td><td class="c">24.01.08</td><td class="c">32</td><td class="n">1,569</td><td>설계사 (주)정석건축사사무소</td><td>(주)정석건축사사무소</td><td></td><td>경기도 평택시 남북대로 233-25 (지제동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>포천시</td><td>영북면 산정리 460 숙박시설-2부지 (주식회사리얼투게더)</td><td class="c">24.06.30</td><td class="c">27</td><td class="n">1,676</td><td>건축주 (주)리얼투게더</td><td></td><td>(주)리얼투게더</td><td>경기도 포천시 영북면 산정리 460번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>화성시</td><td>화성병점 복합타운 8BL 생활숙박시설</td><td class="c">24.11.29</td><td class="c">22</td><td class="n">40,550</td><td>설계사 (주)종합건축사사무소건원</td><td>(주)종합건축사사무소건원</td><td>(주)원희캐슬병점</td><td>경기도 화성시 진안동 943-3번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>화성시</td><td>화성 병점복합타운 숙박시설</td><td class="c">24.12.01</td><td class="c">22</td><td class="n">29,977</td><td>설계사 (주)종합건축사사무소건원</td><td>(주)종합건축사사무소건원</td><td>(주)원희캐슬병점</td><td>경기도 화성시 진안동 944-1번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>화성시</td><td>제부리 숙박시설</td><td class="c">26.12.24</td><td class="c"><b style="color:#c0272d">착공전 3</b></td><td class="n">2,772</td><td>설계사 (주)스페셜파트너건축사사무소</td><td>(주)스페셜파트너건축사사무소</td><td>이레레저개발(주)</td><td>경기도 화성시 서신면 해안길 272</td></tr>
+</table></div>
+<div class="zone"><h2>강원특별자치도 <small>20곳 · 시공사 정해짐 5곳 · 합계 405,035㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>강릉시</td><td>안현동 201-16 관광숙박시설(휴양콘도미니엄)</td><td class="c">25.12.30</td><td class="c">9</td><td class="n">34,622</td><td>설계사 (주)에스엔비건축사사무소</td><td>(주)에스엔비건축사사무소</td><td>케이비부동산신탁(주)</td><td>강원특별자치도 강릉시 안현동 201-16번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>강릉시</td><td>주문진읍 교항리 171-7 숙박시설</td><td class="c">22.04.12</td><td class="c">53</td><td class="n">14,611</td><td>시공사 신화건설(주)</td><td>(주)가온아키건축사사무소</td><td></td><td>강원특별자치도 강릉시 주문진읍 시장길 9</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>고성군</td><td>토성면 성천리 6-2 숙박시설</td><td class="c">22.12.21</td><td class="c">45</td><td class="n">14,478</td><td>시공사 흥익건설(주)</td><td>(주)삼희건축사사무소</td><td></td><td>강원특별자치도 고성군 토성면 성천리 6-2번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>고성군</td><td>죽왕면 삼포리 315 외 2필지 관광숙박시설</td><td class="c">25.07.25</td><td class="c">14</td><td class="n">12,591</td><td>설계사 (주)에스오엠이건축사사무소</td><td>(주)에스오엠이건축사사무소</td><td>오션개발(주)</td><td>강원특별자치도 고성군 죽왕면 봉수대길 16</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>고성군</td><td>토성면 아야진리 247-5 숙박시설 ((주)에스비산업개발)</td><td class="c">25.04.06</td><td class="c">17</td><td class="n">2,088</td><td>설계사 (주)건축사사무소수</td><td>(주)건축사사무소수</td><td>(주)에스비산업개발</td><td>강원특별자치도 고성군 토성면 아야진리 247-5번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>속초시</td><td>조양동 1558-3 생활숙박시설</td><td class="c">26.09.14</td><td class="c">0</td><td class="n">14,868</td><td>설계사 (주)파인드건축사사무소</td><td>(주)파인드건축사사무소</td><td></td><td>강원특별자치도 속초시 조양동 1558-3번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>양양군</td><td>낙산 더뷰 컨시어지 호텔 (양양군 강현면 전진리 7-14외 5필지…)</td><td class="c">25.04.28</td><td class="c">17</td><td class="n">80,772</td><td>설계사 (주)엠오플러스건축사사무소</td><td>(주)엠오플러스건축사사무소</td><td></td><td>강원특별자치도 양양군 강현면 해맞이길 24</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>양양군</td><td>손양면 상양혈리 154-14 숙박시설 (주식회사 새서울레저)</td><td class="c">23.07.07</td><td class="c">38</td><td class="n">46,567</td><td>시공사 (주)마노건설</td><td>(주)간삼건축종합건축사사무소</td><td>(주)새서울레저</td><td>강원특별자치도 양양군 손양면 상양혈리 154-14번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>양양군</td><td>양양군 연창리 생활숙박시설 신축공사</td><td class="c">26.05.09</td><td class="c">4</td><td class="n">33,796</td><td>설계사 (주)종합건축사사무소지엔에이</td><td>(주)종합건축사사무소지엔에이</td><td>코리아신탁(주)</td><td>강원특별자치도 양양군 양양읍 연창리 180-19번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>양양군</td><td>양양군 조산리 생활숙박시설</td><td class="c">25.10.11</td><td class="c">11</td><td class="n">29,060</td><td>설계사 (주)종합건축사사무소지엔에이</td><td>(주)종합건축사사무소지엔에이</td><td>코리아신탁(주)</td><td>강원특별자치도 양양군 해맞이길 84</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>양양군</td><td>양양군 손양면 수여리 생활숙박시설</td><td class="c">24.04.07</td><td class="c">29</td><td class="n">23,667</td><td>설계사 (주)무한종합건축사사무소</td><td>(주)무한종합건축사사무소</td><td>(주)은민에스엔디</td><td>강원특별자치도 양양군 손양면 수여리 산 25번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>양양군</td><td>현북면 하광정리 613-9 숙박시설 (주식회사 하조베이비치앤리…)</td><td class="c">24.04.05</td><td class="c">30</td><td class="n">4,998</td><td>설계사 건축사사무소노드아키텍스</td><td>건축사사무소노드아키텍스</td><td>(주)하조베이비치앤리조트</td><td>강원특별자치도 양양군 현북면 하광정리 613-9번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>춘천시</td><td>퇴계동 4 숙박시설 (패밀리주식회사대표박종관)</td><td class="c">24.04.26</td><td class="c">29</td><td class="n">9,425</td><td>설계사 종합건축사사무소원건축</td><td>종합건축사사무소원건축</td><td>패밀리(주)</td><td>강원특별자치도 춘천시 칠전동 산4번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>춘천시</td><td>남면 박암리 23-4 생활숙박시설</td><td class="c">25.01.09</td><td class="c">20</td><td class="n">4,998</td><td>설계사 건축사사무소이엘</td><td>건축사사무소이엘</td><td>웨스트아일랜드</td><td>강원특별자치도 춘천시 남면 박암리 23-4번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>춘천시</td><td>삼천동 71-14 숙박시설 (***)</td><td class="c">23.12.14</td><td class="c">33</td><td class="n">4,983</td><td>시공사 (주)일정개발</td><td></td><td></td><td>강원특별자치도 춘천시 스포츠타운길 338 (삼천동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>평창군</td><td>대관령면 용산리 생활숙박시설</td><td class="c">25.02.28</td><td class="c">19</td><td class="n">16,871</td><td>설계사 (주)파랑건축사사무소</td><td>(주)파랑건축사사무소</td><td></td><td>강원특별자치도 평창군 대관령면 용산리 394-27번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>평창군</td><td>평창군 횡계리 350 생활숙박시설</td><td class="c">25.11.28</td><td class="c">10</td><td class="n">7,565</td><td>설계사 (주)탑씨엔디도시건축사사무소</td><td>(주)탑씨엔디도시건축사사무소</td><td></td><td>강원특별자치도 평창군 대관령면 송천2길 2</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>홍천군</td><td>북방면 소매곡리 35외5필지 숙박시설 (유한회사 성은라이프)</td><td class="c">25.09.30</td><td class="c">12</td><td class="n">26,746</td><td>설계사 (주)디자인그룹이루건축사사무소</td><td>(주)디자인그룹이루건축사사무소</td><td>(유)성은라이프</td><td>강원특별자치도 홍천군 북방면 온천길 182</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>홍천군</td><td>서면 대곡리 349-6 숙박시설 (도영철)</td><td class="c">22.09.08</td><td class="c">48</td><td class="n">19,738</td><td>시공사 (주)일군토건</td><td>(주)예공종합건축사사무소</td><td></td><td>강원특별자치도 홍천군 서면 대곡리 349-6번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>횡성군</td><td>저층형 생활숙박시설</td><td class="c">25.03.01</td><td class="c">19</td><td class="n">2,591</td><td>설계사 (주)마이건축사사무소</td><td>(주)마이건축사사무소</td><td>(주)미지엔리조트</td><td>강원특별자치도 횡성군 서원면 석화리 산261-1번지</td></tr>
+</table></div>
+<div class="zone"><h2>충청남도 <small>15곳 · 시공사 정해짐 4곳 · 합계 420,853㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>계룡시</td><td>엄사면 엄사리 177-3 숙박시설 (종단대순진리회성주회)</td><td class="c">23.10.22</td><td class="c">35</td><td class="n">1,994</td><td>설계사 미당건축사사무소</td><td>미당건축사사무소</td><td>종단대순진리회성주회</td><td>충청남도 계룡시 엄사면 번영1길 6-5</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>논산시</td><td>은진면 토양리 50-1 숙박시설</td><td class="c">24.12.23</td><td class="c">21</td><td class="n">2,055</td><td>설계사 대동건축사사무소</td><td>대동건축사사무소</td><td>(주)논산고무신호텔</td><td>충청남도 논산시 은진면 안심로277번길 14</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>당진시</td><td>석문면 장고항리 1335 숙박시설 (주식회사 석문산업개발)</td><td class="c">24.03.07</td><td class="c">30</td><td class="n">4,913</td><td>설계사 아이디에스(IDS)건축사사무소</td><td>아이디에스(IDS)건축사사무소</td><td>(주)엠에스미소산업</td><td>충청남도 당진시 석문면 장고항리 1335번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>보령시</td><td>충청남도 보령시 신흑동 2208-1번지 외 2필지 숙박시설 신축…</td><td class="c">25.02.07</td><td class="c">19</td><td class="n">99,938</td><td>설계사 (주)기안건축사사무소</td><td>(주)기안건축사사무소</td><td>(주)디에스개발</td><td>충청남도 보령시 신흑동 2208-1번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>보령시</td><td>주교면 주교리 24-4 숙박시설 (***)</td><td class="c">24.12.13</td><td class="c">21</td><td class="n">2,513</td><td>시공사 아람종합건설(주)</td><td>해인이엔씨건축사사무소</td><td></td><td>충청남도 보령시 주교면 주교리 24-4번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>아산시</td><td>아산배방지구 11BL 생활숙박시설 개발사업</td><td class="c">22.03.24</td><td class="c">54</td><td class="n">274,379</td><td>시공사 (주)한화</td><td>(주)해안종합건축사사무소</td><td>(주)코람코자산신탁</td><td>충청남도 아산시 배방읍 아산녹로 10</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>아산시</td><td>배방읍 공수리 1666 일반숙박시설</td><td class="c">26.08.08</td><td class="c">1</td><td class="n">1,811</td><td>설계사 건축사사무소휴먼아트</td><td>건축사사무소휴먼아트</td><td></td><td>충청남도 아산시 배방읍 공수리 1666번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>예산군</td><td>숙박시설</td><td class="c">26.05.26</td><td class="c">4</td><td class="n">5,570</td><td>설계사 팀에이종합건축사사무소(주)</td><td>팀에이종합건축사사무소(주)</td><td>신성종합개발(주)</td><td>충청남도 예산군 덕산면 사동리 360번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>예산군</td><td>응봉면 노화리 220 숙박시설</td><td class="c">25.10.05</td><td class="c">11</td><td class="n">3,114</td><td>설계사 종합건축사사무소 소헌</td><td>종합건축사사무소 소헌</td><td></td><td>충청남도 예산군 응봉면 운곡사당골길 23</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>예산군</td><td>응봉면 평촌리 92-2 숙박시설 (최지원 외 1인)</td><td class="c">24.04.03</td><td class="c">30</td><td class="n">1,865</td><td>시공사 (주)근영종합건설</td><td>(주)한라건축사사무소</td><td></td><td>충청남도 예산군 응봉면 평촌리 92-2번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>천안시</td><td>골드힐카운티리조트 생활숙박시설 21부지</td><td class="c">26.04.10</td><td class="c">5</td><td class="n">2,967</td><td>설계사 더나인건축사사무소(주)</td><td>더나인건축사사무소(주)</td><td>(주)버드우드대부</td><td>충청남도 천안시 서북구 입장면 기로리 산16-1번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>태안군</td><td>소원면 의항리 1128 숙박시설 (***)</td><td class="c">25.10.30</td><td class="c">11</td><td class="n">9,665</td><td>설계사 건축사사무소벧엘건축</td><td>건축사사무소벧엘건축</td><td></td><td>충청남도 태안군 소원면 만리포2길 208</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>태안군</td><td>태안 곰섬 숙박시설</td><td class="c">25.09.01</td><td class="c">13</td><td class="n">4,939</td><td>설계사 (주)종합건축사사무소케이엔피</td><td>(주)종합건축사사무소케이엔피</td><td>(주)세움디엠씨</td><td>충청남도 태안군 남면 신온리 888-1번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>태안군</td><td>원북면 신두리 1210-14 숙박시설 및 근린생활시설</td><td class="c">26.10.02</td><td class="c">0</td><td class="n">2,038</td><td>설계사 주건축사사무소</td><td>주건축사사무소</td><td>(주)미림</td><td>충청남도 태안군 원북면 신두로 712-16</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>홍성군</td><td>서부면 남당리 620-2 숙박시설 (***)</td><td class="c">21.10.21</td><td class="c">59</td><td class="n">3,092</td><td>시공사 (주)신동양종합건설</td><td>한우리건축사사무소</td><td></td><td>충청남도 홍성군 서부면 남당리 620-2번지</td></tr>
+</table></div>
+<div class="zone"><h2>충청북도 <small>6곳 · 시공사 정해짐 3곳 · 합계 19,786㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>보은군</td><td>보은읍 죽전리 123-1 생활형 숙박시설</td><td class="c">26.05.22</td><td class="c">4</td><td class="n">6,201</td><td>설계사 우상현건축사사무소</td><td>우상현건축사사무소</td><td>이도리브앳디보은(주)</td><td>충청북도 보은군 보은읍 죽전4길 23</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>음성군</td><td>대소면 성본리 910 숙박시설</td><td class="c">25.01.20</td><td class="c">20</td><td class="n">2,996</td><td>시공사 명림건설(주)</td><td>건축사사무소명성</td><td>(주)골드</td><td>충청북도 음성군 대소면 성본상가로 33</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>음성군</td><td>대소면 성본리 115-5 숙박시설</td><td class="c">26.09.14</td><td class="c">0</td><td class="n">2,596</td><td>설계사 태건축사사무소</td><td>태건축사사무소</td><td></td><td>충청북도 음성군 대소면 성본리 산115-5번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>제천시</td><td>화산동 197-1 숙박시설 (***)</td><td class="c">25.08.24</td><td class="c">13</td><td class="n">2,137</td><td>설계사 건축사사무소미래</td><td>건축사사무소미래</td><td></td><td>충청북도 제천시 화산동 197-1번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>청주시</td><td>오창읍 주성리 634 일반숙박시설</td><td class="c">25.09.08</td><td class="c">12</td><td class="n">2,933</td><td>시공사 지율건설(주)</td><td>태건축사사무소</td><td></td><td>충청북도 청주시 청원구 오창읍 주성리 634번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>청주시</td><td>오창읍 양청리 숙박시설</td><td class="c">26.03.25</td><td class="c">6</td><td class="n">2,923</td><td>시공사 제이건설(주)</td><td>이음건축사사무소</td><td></td><td>충청북도 청주시 청원구 오창읍 중심상업로 51-11</td></tr>
+</table></div>
+<div class="zone"><h2>대전광역시 <small>1곳 · 시공사 정해짐 0곳 · 합계 6,423㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>동구</td><td>대전시 동구 정동 생활숙박시설 신축공사</td><td class="c">25.08.09</td><td class="c">13</td><td class="n">6,423</td><td>설계사 (주)우리창우종합건축사사무소</td><td>(주)우리창우종합건축사사무소</td><td>아이에스지(주)</td><td>대전광역시 동구 중앙로203번길 60 (정동)</td></tr>
+</table></div>
+<div class="zone"><h2>경상북도 <small>11곳 · 시공사 정해짐 4곳 · 합계 34,952㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>경주시</td><td>감포읍 대본리 372 숙박시설 (***)</td><td class="c">24.05.24</td><td class="c">28</td><td class="n">6,591</td><td>설계사 (주)예조종합건축사사무소</td><td>(주)예조종합건축사사무소</td><td>지에스개발(주)</td><td>경상북도 경주시 감포읍 동해안로 1618</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>경주시</td><td>성건동 408-1 숙박시설 (주식회사소노테크)</td><td class="c">24.12.24</td><td class="c">21</td><td class="n">5,920</td><td>시공사 동부이끌림(주)</td><td>건축사사무소원일</td><td></td><td>경상북도 경주시 화랑로 2 (성건동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>경주시</td><td>진현동 700-25 숙박시설 (***)</td><td class="c">22.02.22</td><td class="c">55</td><td class="n">3,917</td><td>설계사 이공건축사사무소</td><td>이공건축사사무소</td><td></td><td>경상북도 경주시 불국신단지1길 31 (진현동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>영덕군</td><td>강구면 하저리 467-4 숙박시설 (***)</td><td class="c">24.08.31</td><td class="c">25</td><td class="n">1,998</td><td>설계사 알에이케이건축사사무소</td><td>알에이케이건축사사무소</td><td></td><td>경상북도 영덕군 강구면 하저리 467-4번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>영덕군</td><td>병곡리 4 숙박시설 (***)</td><td class="c">24.04.05</td><td class="c">30</td><td class="n">1,783</td><td>시공사 (주)진홍종합건설</td><td>짓다건축사사무소</td><td></td><td>경상북도 영덕군 병곡면 병곡리 4번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>영덕군</td><td>강구면 삼사리 9-90 일반숙박시설</td><td class="c">26.04.13</td><td class="c">5</td><td class="n">1,567</td><td>설계사 알에이케이건축사사무소</td><td>알에이케이건축사사무소</td><td></td><td>경상북도 영덕군 강구면 삼사리 9-90번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>울릉군</td><td>울릉읍 사동리 574-1 관광숙박시설</td><td class="c">26.09.25</td><td class="c">0</td><td class="n">5,431</td><td>설계사 건축사사무소아살공</td><td>건축사사무소아살공</td><td></td><td>경상북도 울릉군 울릉읍 울릉순환로 772</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>청도군</td><td>대전리 생활형숙박시설(***)</td><td class="c">25.09.07</td><td class="c">12</td><td class="n">2,681</td><td>설계사 한길건축사사무소</td><td>한길건축사사무소</td><td></td><td>경상북도 청도군 이서면 대전리 332번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>포항시</td><td>관광숙박시설(호스텔)</td><td class="c">25.03.18</td><td class="c">18</td><td class="n">1,795</td><td>시공사 (주)주원이앤씨</td><td>(주)최성민건축사사무소</td><td></td><td>경상북도 포항시 남구 구룡포읍 동해안로 4248</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>포항시</td><td>오천읍 문덕리 316-4 숙박시설 증축 공사</td><td class="c">26.03.16</td><td class="c">6</td><td class="n">1,726</td><td>설계사 동해건축사사무소</td><td>동해건축사사무소</td><td></td><td>경상북도 포항시 남구 오천읍 문덕로37번길 9</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>포항시</td><td>장기면 계원리 177 숙박시설 (***)</td><td class="c">21.08.10</td><td class="c">61</td><td class="n">1,543</td><td>시공사 (주)대명종합건설</td><td>알에이케이건축사사무소</td><td>금채개발</td><td>경상북도 포항시 남구 장기면 동해안로 3081-31</td></tr>
+</table></div>
+<div class="zone"><h2>대구광역시 <small>3곳 · 시공사 정해짐 1곳 · 합계 14,888㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>군위군</td><td>군위읍 오곡리 109-9 숙박시설 (***)</td><td class="c">26.03.23</td><td class="c">6</td><td class="n">1,996</td><td>설계사 건축사무소대명원</td><td>건축사무소대명원</td><td></td><td>대구광역시 군위군 군위읍 오곡리 산109-9번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>달성군</td><td>숙박시설 (주식회사 대산1)</td><td class="c">25.11.06</td><td class="c">10</td><td class="n">10,680</td><td>설계사 (주)파랑건축사사무소</td><td>(주)파랑건축사사무소</td><td>(주)대산1</td><td>대구광역시 달성군 구지면 응암리 1240-3번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>북구</td><td>서변동 1779-8 숙박시설 (***)</td><td class="c">22.04.14</td><td class="c">53</td><td class="n">2,212</td><td>시공사 (주)일성건설</td><td>건축사사무소예지</td><td></td><td>대구광역시 북구 호국로 239 (서변동)</td></tr>
+</table></div>
+<div class="zone"><h2>경상남도 <small>14곳 · 시공사 정해짐 5곳 · 합계 268,222㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>거제시</td><td>일운면 소동리 19-1 숙박시설 (주식회사 아레포즈거제)</td><td class="c">26.10.30</td><td class="c"><b style="color:#c0272d">착공전 1</b></td><td class="n">111,820</td><td>설계사 (주)종합건축사사무소건원</td><td>(주)종합건축사사무소건원</td><td>(주)아레포즈거제</td><td>경상남도 거제시 일운면 소동리 19-1번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>거제시</td><td>거제빅아일랜드 4BL 생활숙박시설</td><td class="c">26.03.10</td><td class="c">6</td><td class="n">34,584</td><td>설계사 (주)종합건축사사무소동일건축</td><td>(주)종합건축사사무소동일건축</td><td>(주)더봄플러스</td><td>경상남도 거제시 고현동 1118번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>거제시</td><td>고현동 1110 거제빅아일랜드 5-2BL 관광숙박시설</td><td class="c">26.03.10</td><td class="c">6</td><td class="n">30,790</td><td>설계사 (주)종합건축사사무소동일건축</td><td>(주)종합건축사사무소동일건축</td><td>(주)더봄플러스</td><td>경상남도 거제시 고현동 1110번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>거제시</td><td>거제빅아일랜드 5-1BL 생활숙박시설</td><td class="c">26.03.10</td><td class="c">6</td><td class="n">25,130</td><td>설계사 (주)종합건축사사무소동일건축</td><td>(주)종합건축사사무소동일건축</td><td>(주)더봄플러스</td><td>경상남도 거제시 고현동 1113번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>남해군</td><td>창선면 대벽리 178-43 숙박시설 ((주)카프리)</td><td class="c">25.01.15</td><td class="c">20</td><td class="n">4,933</td><td>설계사 건축사사무소돌</td><td>건축사사무소돌</td><td>(주)카프리</td><td>경상남도 남해군 창선면 대벽리 178-43번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>남해군</td><td>고현면 갈화리 20-3 숙박시설 (파라다이스건설(***))</td><td class="c">22.02.07</td><td class="c">55</td><td class="n">3,692</td><td>시공사 (주)휘성종합건설</td><td>(주)비전21건축사사무소</td><td></td><td>경상남도 남해군 고현면 남서대로 3198-33</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>남해군</td><td>남면 석교리 203숙박시설 (대성에너지(주))</td><td class="c">24.10.16</td><td class="c">23</td><td class="n">1,897</td><td>시공사 (주)한을</td><td>민건축사사무소</td><td>대성홀딩스(주)</td><td>경상남도 남해군 남면 남면로 161-58</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>밀양시</td><td>밀양 에스파크리조트 숙박시설(단독형)</td><td class="c">24.02.08</td><td class="c">31</td><td class="n">5,808</td><td>시공사 창성종합건설(주)</td><td>제이에이치엔건축사사무소</td><td>밀양관광단지조성사업단(주)</td><td>경상남도 밀양시 산외면 다죽리 1363번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>사천시</td><td>서금동 9-3 숙박시설 (옥경희)</td><td class="c">24.09.25</td><td class="c">24</td><td class="n">1,886</td><td>설계사 건축사사무소가인</td><td>건축사사무소가인</td><td></td><td>경상남도 사천시 팔포3길 17-8 (서금동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>통영시</td><td>산양읍 연화리 1850000 숙박시설 (우람개발(***)</td><td class="c">25.12.12</td><td class="c">9</td><td class="n">14,895</td><td>설계사 한솔건축사사무소</td><td>한솔건축사사무소</td><td>우람개발(주)</td><td>경상남도 통영시 산양읍 산양일주로 1203-34</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>통영시</td><td>용남면 장평리 00 관광숙박시설</td><td class="c">25.02.16</td><td class="c">19</td><td class="n">3,101</td><td>설계사 (주)예성토탈건축사사무소</td><td>(주)예성토탈건축사사무소</td><td></td><td>경상남도 통영시 용남면 견유1길 159</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>통영시</td><td>도산면 법송리 1190-2 숙박시설 (***)</td><td class="c">26.03.25</td><td class="c">6</td><td class="n">1,506</td><td>설계사 (주)바우하우스건축사사무소</td><td>(주)바우하우스건축사사무소</td><td></td><td>경상남도 통영시 도산면 수월길 33</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>하동군</td><td>화개면 정금리 생활숙박시설 B단지</td><td class="c">24.02.28</td><td class="c">31</td><td class="n">2,398</td><td>시공사 (주)씨엠종합건설</td><td>건축사사무소창명</td><td>(주)우리명가디엔씨</td><td>경상남도 하동군 화개면 쌍계로 268</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>합천군</td><td>용주면 가호리 4180000 숙박시설 (합천관광개발 유한회사)</td><td class="c">22.10.25</td><td class="c">47</td><td class="n">25,782</td><td>시공사 일광이앤씨(주)</td><td>건축사사무소눅</td><td></td><td>경상남도 합천군 용주면 합천호수로 757</td></tr>
+</table></div>
+<div class="zone"><h2>부산광역시 <small>10곳 · 시공사 정해짐 2곳 · 합계 184,126㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class="non"><td class="c"><span class="chk"></span></td><td>강서구</td><td>범방동 1898-7 생활숙박시설</td><td class="c">25.10.31</td><td class="c">11</td><td class="n">22,409</td><td>(정보 없음 — 시·군·구 건축과)</td><td></td><td></td><td>부산광역시 강서구 범방동 1898-7번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>기장군</td><td>일광면 삼성리 716-11 숙박시설 (호텔코티에르일광 주식회사)</td><td class="c">25.06.24</td><td class="c">15</td><td class="n">13,696</td><td>설계사 (주)루원건축사사무소</td><td>(주)루원건축사사무소</td><td>호텔코티에르일광(주)</td><td>부산광역시 기장군 일광읍 삼성리 716-11번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>기장군</td><td>기장읍 시랑리 616-3 관광숙박시설 신축공사</td><td class="c">25.02.26</td><td class="c">19</td><td class="n">3,975</td><td>시공사 (주)종합건설현범</td><td>(주)지엔건축사사무소</td><td>(주)넥스트앤파트너스</td><td>부산광역시 기장군 기장읍 시랑리 616-3번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>부산진구</td><td>부전동 숙박시설</td><td class="c">26.07.06</td><td class="c">2</td><td class="n">2,000</td><td>설계사 이진건축사사무소</td><td>이진건축사사무소</td><td></td><td>부산광역시 부산진구 중앙대로680번가길 56-9 (부전동)</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>서구</td><td>암남동 131-2 관광숙박시설</td><td class="c">25.08.25</td><td class="c">13</td><td class="n">3,245</td><td>시공사 (주)루원산업개발</td><td>(주)루원건축사사무소</td><td></td><td>부산광역시 서구 송도해변로 141 (암남동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>영도구</td><td>대교동1가 41번지 OO생활숙박시설</td><td class="c">26.03.06</td><td class="c">6</td><td class="n">12,142</td><td>설계사 (주)비전21건축사사무소</td><td>(주)비전21건축사사무소</td><td></td><td>부산광역시 영도구 태종로 45 (대교동1가)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>중구</td><td>부산시 중구 남포동3가 생활형숙박시설</td><td class="c">26.07.31</td><td class="c">2</td><td class="n">14,453</td><td>설계사 (주)상지이앤에이건축사사무소</td><td>(주)상지이앤에이건축사사무소</td><td>(주)평광이앤씨</td><td>부산광역시 중구 남포길 16 (남포동3가)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>해운대구</td><td>우동 636-6 숙박시설 (마스턴제107호해운대2피에프브이주식…)</td><td class="c">25.06.20</td><td class="c">15</td><td class="n">80,917</td><td>설계사 (주)종합건축사사무소건원</td><td>(주)종합건축사사무소건원</td><td>마스턴제107호해운대2피에프브이(주)</td><td>부산광역시 해운대구 우동 636-6번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>해운대구</td><td>숙박시설 (왕희숙)</td><td class="c">25.12.14</td><td class="c">9</td><td class="n">22,601</td><td>설계사 (주)한미건축종합건축사사무소</td><td>(주)한미건축종합건축사사무소</td><td>(주)무궁화신탁</td><td>부산광역시 해운대구 송정동 297-83번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>해운대구</td><td>우동 649-5 번지 관광숙박시설</td><td class="c">26.05.25</td><td class="c">4</td><td class="n">8,688</td><td>설계사 (주)라라호호건축사사무소</td><td>(주)라라호호건축사사무소</td><td>(주)무궁화신탁</td><td>부산광역시 해운대구 우동 649-5번지</td></tr>
+</table></div>
+<div class="zone"><h2>전라남도 <small>11곳 · 시공사 정해짐 7곳 · 합계 139,491㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>담양군</td><td>금성면 대성리 24 생활형 숙박시설</td><td class="c">22.11.30</td><td class="c">46</td><td class="n">6,553</td><td>시공사 (주)마노건설</td><td>대진건축사사무소</td><td>(주)라도산업</td><td>전라남도 담양군 금성면 금성산성길 280</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>목포시</td><td>율도동 10000 숙박시설 (주식회사쉼)</td><td class="c">24.11.01</td><td class="c">23</td><td class="n">47,700</td><td>설계사 건축사사무소아키플랜</td><td>건축사사무소아키플랜</td><td>(주)쉼</td><td>전라남도 목포시 장좌도길 362 (율도동)</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>목포시</td><td>해안동1가 10-1 숙박시설 (㈜청린)</td><td class="c">22.08.19</td><td class="c">49</td><td class="n">1,520</td><td>시공사 (주)더조은종합건설</td><td>(주)케이와이케이건축사사무소</td><td>(주)청린</td><td>전라남도 목포시 해안로188번길 23 (해안동1가)</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>무안군</td><td>청계면 서호리 934-4 숙박시설 (남화산업(***))</td><td class="c">22.11.24</td><td class="c">46</td><td class="n">18,385</td><td>시공사 남화토건(주)</td><td></td><td>남화산업(주)</td><td>전라남도 무안군 청계면 서호로 300</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>여수시</td><td>봉산동 275-7 숙박시설 (케이비부동산신탁(***))</td><td class="c">22.03.28</td><td class="c">54</td><td class="n">17,621</td><td>시공사 한양산업개발(주)</td><td>(주)포인엔지니어링건축사사무소</td><td>케이비부동산신탁(주)</td><td>전라남도 여수시 봉산남8길 11 (봉산동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>여수시</td><td>학동 200-21 숙박시설 (주식회사 디오션홀딩스)</td><td class="c">24.04.12</td><td class="c">29</td><td class="n">16,852</td><td>설계사 건축사사무소가인</td><td>건축사사무소가인</td><td>(주)디오션홀딩스</td><td>전라남도 여수시 시청서6길 9 (학동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>여수시</td><td>돌산읍 평사리 1318-58 숙박시설 (주식회사 토정)</td><td class="c">24.06.01</td><td class="c">28</td><td class="n">3,741</td><td>설계사 건축사사무소세움</td><td>건축사사무소세움</td><td>(주)토정</td><td>전라남도 여수시 돌산읍 평사리 1318-58번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>여수시</td><td>돌산읍 평사리 1266-45 관광숙박시설 (주원산업개발주식회…)</td><td class="c">23.03.13</td><td class="c">42</td><td class="n">2,603</td><td>시공사 부광종합건설(주)</td><td>건축사사무소대경</td><td>주원산업개발(주)</td><td>전라남도 여수시 돌산읍 평사리 1266-45번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>장흥군</td><td>안양면 기산리 642-3 숙박시설 (***)</td><td class="c">23.10.05</td><td class="c">36</td><td class="n">2,120</td><td>시공사 강호종합건설(주)</td><td>건축사사무소도담</td><td></td><td>전라남도 장흥군 안양면 남부관광로 322</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>함평군</td><td>학교면 곡창리 1-196 외 3필지 생활숙박시설 (유한회사 에스…</td><td class="c">26.12.14</td><td class="c"><b style="color:#c0272d">착공전 3</b></td><td class="n">20,188</td><td>설계사 (주)유탑건축사사무소</td><td>(주)유탑건축사사무소</td><td>(유)에스케이공업</td><td>전라남도 함평군 학교면 곡창리 1-196번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>화순군</td><td>도곡면 천암리 8190000 숙박시설 (한주실업주식회사)</td><td class="c">22.02.11</td><td class="c">55</td><td class="n">2,208</td><td>시공사 더원종합건설산업(주)</td><td>에스에이치건축사사무소</td><td>한주실업(주)</td><td>전라남도 화순군 도곡면 천암리 819번지</td></tr>
+</table></div>
+<div class="zone"><h2>전북특별자치도 <small>10곳 · 시공사 정해짐 2곳 · 합계 47,415㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>고창군</td><td>고창읍 주곡리 60-29 숙박시설 (***)</td><td class="c">24.01.21</td><td class="c">32</td><td class="n">2,517</td><td>설계사 (주)이루안건축사사무소</td><td>(주)이루안건축사사무소</td><td></td><td>전북특별자치도 고창군 고창읍 주곡리 60-29번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>군산시</td><td>신영동 3-14 숙박시설,근린생활시설</td><td class="c">24.02.15</td><td class="c">31</td><td class="n">7,501</td><td>설계사 건축사사무소두울</td><td>건축사사무소두울</td><td></td><td>전북특별자치도 군산시 죽성로 45 (신영동)</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>김제시</td><td>백산면 부거리 1592-8 숙박시설 (***)</td><td class="c">25.03.24</td><td class="c">18</td><td class="n">1,682</td><td>설계사 삼아씨엠건축사사무소</td><td>삼아씨엠건축사사무소</td><td></td><td>전북특별자치도 김제시 백산면 부거리 1592-8번지</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>무주군</td><td>설천면 삼공리 숙박시설</td><td class="c">24.10.25</td><td class="c">23</td><td class="n">2,254</td><td>시공사 (주)디에이치건설</td><td>(주)아키후드건축사사무소</td><td>(주)호진</td><td>전북특별자치도 무주군 설천면 삼공리 산92-5번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>부안군</td><td>변산면 도청리 612-68 숙박시설 ((유)지온림)</td><td class="c">25.11.28</td><td class="c">10</td><td class="n">7,187</td><td>설계사 건축사사무소예현</td><td>건축사사무소예현</td><td>(유)지온림</td><td>전북특별자치도 부안군 변산면 궁항로 82-17</td></tr>
+<tr class="has"><td class="c"><span class="chk"></span></td><td>부안군</td><td>진서면 곰소리 1006 (일반숙박시설)</td><td class="c">24.04.25</td><td class="c">29</td><td class="n">2,435</td><td>시공사 (주)중원종합건설</td><td>건축사사무소더공감건축</td><td></td><td>전북특별자치도 부안군 진서면 곰소리 1006번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>완주군</td><td>삼례읍 수계리 1256-5 숙박시설 (유한회사라우렌)</td><td class="c">25.03.31</td><td class="c">18</td><td class="n">14,242</td><td>설계사 건축사사무소예헌</td><td>건축사사무소예헌</td><td>(유)라우렌</td><td>전북특별자치도 완주군 삼례읍 수계리 1256-5번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>완주군</td><td>삼례읍 수계리 1256-3 숙박시설</td><td class="c">26.06.16</td><td class="c">3</td><td class="n">5,417</td><td>설계사 건축사사무소태솔</td><td>건축사사무소태솔</td><td>(주)가온누리개발</td><td>전북특별자치도 완주군 삼례읍 수계리 1256-3번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>완주군</td><td>봉동읍 둔산리 900-4 숙박시설 (***)</td><td class="c">24.07.27</td><td class="c">26</td><td class="n">2,499</td><td>설계사 건축사사무소이음플러스</td><td>건축사사무소이음플러스</td><td></td><td>전북특별자치도 완주군 봉동읍 둔산리 900-4번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>완주군</td><td>삼례읍 삼례리 1309-3 숙박시설</td><td class="c">24.03.12</td><td class="c">30</td><td class="n">1,681</td><td>설계사 건축사사무소뿌리</td><td>건축사사무소뿌리</td><td></td><td>전북특별자치도 완주군 삼례읍 만경하서길 1-5</td></tr>
+</table></div>
+<div class="zone"><h2>제주특별자치도 <small>5곳 · 시공사 정해짐 0곳 · 합계 21,848㎡</small></h2>
+<table><tr><th style="width:18px"></th><th>시·군·구</th><th>현장명</th><th>착공일</th><th>경과</th><th>연면적㎡</th><th>가실 곳 (접촉처)</th><th>설계사</th><th>건축주</th><th>주소</th></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>서귀포시</td><td>안덕면 서광리 24-8 숙박시설 (람정제주개발 주식회사)</td><td class="c">26.06.04</td><td class="c">4</td><td class="n">10,831</td><td>설계사 (주)삼우종합건축사사무소</td><td>(주)삼우종합건축사사무소</td><td>람정제주개발(주)</td><td>제주특별자치도 서귀포시 안덕면 서광리 산24-8번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>서귀포시</td><td>안덕면 사계리 153-1 (B.L1-14) 관광숙박시설</td><td class="c">26.06.07</td><td class="c">3</td><td class="n">2,964</td><td>설계사 건축사사무소우건축</td><td>건축사사무소우건축</td><td>(주)하이드어웨이</td><td>제주특별자치도 서귀포시 안덕면 사계리 153-1번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>제주시</td><td>한림읍 협재리 2697-1 숙박시설 (양위환)</td><td class="c">24.10.29</td><td class="c">23</td><td class="n">3,022</td><td>설계사 건축사사무소지음</td><td>건축사사무소지음</td><td></td><td>제주특별자치도 제주시 한림읍 협재리 2697-1번지</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>제주시</td><td>애월읍 상귀리 1229-1 숙박시설 (***)</td><td class="c">22.01.06</td><td class="c">56</td><td class="n">2,986</td><td>설계사 (주)가람영산건축사사무소</td><td>(주)가람영산건축사사무소</td><td></td><td>제주특별자치도 제주시 애월읍 예소길 49-1</td></tr>
+<tr class=""><td class="c"><span class="chk"></span></td><td>제주시</td><td>한림읍 협재리 2446-3 숙박시설 (***)</td><td class="c">24.07.13</td><td class="c">26</td><td class="n">2,045</td><td>설계사 (주)종합건축사사무소아키인</td><td>(주)종합건축사사무소아키인</td><td></td><td>제주특별자치도 제주시 한림읍 한림로 339</td></tr>
+</table></div>
+<footer>한국마이크로닉(주) · 배성윤 차장 · 2026-09-19 · 원자료 : 건축 인허가 조회 캡처(2026-09-18 작성)<br>연면적 1,500㎡ 미만 162곳은 엑셀 「2.작은 곳」 시트에 있습니다. 「예상 객실수·예상 금액」은 엑셀 <b>0.입력칸</b>에 숫자를 넣으시면 저절로 계산됩니다.</footer></body></html>

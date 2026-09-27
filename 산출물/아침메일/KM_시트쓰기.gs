@@ -1,0 +1,225 @@
+/**
+ * KM_시트쓰기 v4 (2026-09-27) — v4 : oldStrip (옛 시트 통찰 칸 끝 「/ =====」 구분선 지우기) · 옛 시트 읽기 허용 (확인용)
+ * KM_시트쓰기 v3 (2026-09-25)  — 클로드가 부르는 웹 앱. Zapier 없이 0원·무제한.
+ *   v3 : read·batch 를 「Google Sheets API」 서비스(편집기 왼쪽 서비스 + 에서 추가)로 — UrlFetch 는 프로젝트에서 API 를 켜야 해서 403 이 났다
+ *   v2 : oldMerge 추가 — 차장님 지시 「예전에 잘못 만들어진 이름은 합쳐야 돼」 (옛 탭 이름 바꾸기, 이미 있으면 줄 옮기기. 지우지 않는다)
+ *   ping   : 연결 확인
+ *   read   : 「26년 회의록2」·「신규 현장 레이더」 읽기 (값 그대로)
+ *   batch  : 「26년 회의록2」 에 줄 덧붙이기·병합·체크박스·▼ (t53 --write 가 만든 본문 그대로)
+ *   old26  : 옛 「26년 회의록」 현장 탭에 회의 기록 덧붙이기 + 「0.전체 반영모음」 맨 위에 한 줄
+ *   oldMerge : 옛 탭 합치기 {merges:[{from,to}]} — to 가 없으면 from 을 to 로 이름 바꿈 / to 가 있으면 from 의 줄(3행~)을 to 끝에 옮기고 from 은 「(합침) from」 으로 이름만 바꿈
+ *
+ * ★ 지우는 기능은 없다. 허용한 요청 종류만 받는다. 암호(KM_TOKEN)가 맞을 때만 움직인다.
+ * ★ 설치 : 확장 프로그램 → Apps Script → 왼쪽 「서비스 +」 → Google Sheets API 추가(식별자 Sheets) → 이 전문 붙여넣기 → KM_TOKEN 칸에 클로드가 드린 암호
+ *          → 배포 → 새 배포 → 유형 「웹 앱」 → 실행 : 나 / 액세스 : 모든 사용자 → 배포 → 권한 허용 → 주소 복사해 클로드에게
+ */
+
+var KM_TOKEN = '';   // ← 클로드가 드린 암호를 따옴표 안에 (저장소에는 비워 둔다 — 공개 저장소)
+
+var KM_IDS = {
+  new2:  '1S02QcwHnRNiJJbq3qfSPs9sRtR1UDtTMSUPhLy4_Ckk',   // 26년 회의록2 (읽기·쓰기)
+  radar: '1LWK3fmXgf2_aG12B3cunutLUHnSqNMDf_sr3lXOyr-c',   // 신규 현장 레이더 (읽기만)
+  old:   '1RzDj_mm3fY6l42hF9AJ-r5KY50OCVIV7IwSIQeh3rms'    // 옛 26년 회의록 (old26 로만 쓴다)
+};
+
+// batch 에서 받는 요청 종류 — delete* · clear* · 탭 지우기는 없다
+var KM_BATCH_OK = ['updateCells', 'mergeCells', 'repeatCell', 'setDataValidation',
+                   'appendDimension', 'updateDimensionProperties'];
+
+// 옛 시트 : 새 현장 탭은 이 탭 바로 앞(현장 구역 끝)에 만든다 — 관리 탭은 늘 맨 뒤 (km-11 §4-8)
+var KM_OLD_FIRST_ADMIN = '현장 갑지';
+var KM_OLD_HEADER_FROM = '연합기숙사';          // 새 탭의 1·2행 머리 모양을 가져올 탭
+var KM_OLD_MASTER = '0.전체 반영모음';
+
+
+function doPost(e) {
+  var body;
+  try { body = JSON.parse(e.postData.contents); } catch (err) { return km_out_({ok: false, error: '본문이 JSON 이 아님'}); }
+  if (!KM_TOKEN || body.token !== KM_TOKEN) return km_out_({ok: false, error: '암호 틀림'});
+  try {
+    if (body.action === 'ping')  return km_out_({ok: true, version: 'v4 2026-09-27', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
+    if (body.action === 'read')  return km_out_(km_read_(body));
+    if (body.action === 'batch') return km_out_(km_batch_(body));
+    if (body.action === 'old26') return km_out_(km_old26_(body));
+    if (body.action === 'oldMerge') return km_out_(km_oldMerge_(body));
+    if (body.action === 'oldStrip') return km_out_(km_oldStrip_(body));
+    return km_out_({ok: false, error: '모르는 action : ' + body.action});
+  } catch (err) {
+    return km_out_({ok: false, error: String(err && err.stack || err)});
+  }
+}
+
+function km_out_(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/** read : {which:'new2'|'radar', ranges:["'답요청'!A1:G2000", ...]} → valueRanges (Zapier batchGet 과 같은 모양)
+ *   Google Sheets API 서비스(Sheets) 를 쓴다. 서비스가 안 붙어 있으면 그 말을 돌려준다 */
+function km_read_(body) {
+  var id = KM_IDS[body.which];
+  if (!id) return {ok: false, error: '읽을 수 없는 시트'};   // v4 : old 도 읽기 허용 (확인용)
+  if (typeof Sheets === 'undefined') return {ok: false, error: '편집기 왼쪽 「서비스 +」 에서 Google Sheets API 를 추가해 주십시오'};
+  var d = Sheets.Spreadsheets.Values.batchGet(id, {ranges: body.ranges || []});
+  return {ok: true, valueRanges: d.valueRanges || []};
+}
+
+/** batch : {requests:[…]} → 26년 회의록2 batchUpdate (허용 종류만) */
+function km_batch_(body) {
+  var reqs = body.requests || [];
+  for (var i = 0; i < reqs.length; i++) {
+    var k = Object.keys(reqs[i])[0];
+    if (KM_BATCH_OK.indexOf(k) < 0) return {ok: false, error: '허용 안 된 요청 : ' + k};
+  }
+  if (!reqs.length) return {ok: true, skipped: '요청 없음'};
+  if (typeof Sheets === 'undefined') return {ok: false, error: '편집기 왼쪽 「서비스 +」 에서 Google Sheets API 를 추가해 주십시오'};
+  Sheets.Spreadsheets.batchUpdate({requests: reqs}, KM_IDS.new2);
+  return {ok: true, n: reqs.length};
+}
+
+/** old26 : {records:[{tab, rows:[[A..G],…], person, preview}]}
+ *   탭이 없으면 현장 구역 끝(「현장 갑지」 앞)에 새로 만든다. 같은 날짜+담당자+내용 앞부분이 이미 있으면 건너뛴다.
+ *   흰 바탕, 줄바꿈. A열은 글자(6자리 날짜가 숫자로 바뀌지 않게). 반영모음은 2행에 끼워 넣는다(최신이 위). */
+function km_old26_(body) {
+  var ss = SpreadsheetApp.openById(KM_IDS.old);
+  var out = [];
+  (body.records || []).forEach(function (rec) {
+    var one = {tab: rec.tab, ok: false};
+    try {
+      var sh = ss.getSheetByName(rec.tab);
+      if (!sh) { sh = km_newTab_(ss, rec.tab); one.created = true; }
+      var last = km_lastRow_(sh, 7);
+      var rows = rec.rows || [];
+      if (!rows.length) { one.ok = true; one.skipped = '줄 없음'; out.push(one); return; }
+      if (km_dup_(sh, last, rows[0])) { one.ok = true; one.skipped = '이미 있음'; out.push(one); return; }
+      var r0 = Math.max(last + 1, 3);
+      var rg = sh.getRange(r0, 1, rows.length, 7);
+      sh.getRange(r0, 1, rows.length, 1).setNumberFormat('@');
+      rg.setValues(rows.map(function (r) { var x = r.slice(0, 7); while (x.length < 7) x.push(''); return x; }));
+      rg.setWrap(true).setBackground('#ffffff').setVerticalAlignment('top');
+      one.ok = true; one.firstRow = r0; one.lastRow = r0 + rows.length - 1;
+      one.link = 'https://docs.google.com/spreadsheets/d/' + KM_IDS.old + '/edit#gid=' + sh.getSheetId() + '&range=A' + r0;
+      km_master_(ss, rec, one.link);
+    } catch (err) { one.error = String(err); }
+    out.push(one);
+  });
+  return {ok: out.every(function (o) { return o.ok; }), results: out};
+}
+
+/** oldMerge : {merges:[{from:'조선호텔 리뉴얼 ', to:'조선호텔'}, …]}  순서대로. 차장님 표(옛시트_탭이름.json _합치기) 그대로 */
+function km_oldMerge_(body) {
+  var ss = SpreadsheetApp.openById(KM_IDS.old);
+  var out = [];
+  (body.merges || []).forEach(function (m) {
+    var one = {from: m.from, to: m.to, ok: false};
+    try {
+      var src = ss.getSheetByName(m.from);
+      if (!src) { one.error = '탭 없음 : ' + m.from; out.push(one); return; }
+      if (!m.to || m.to === m.from) { one.error = '바꿀 이름 없음'; out.push(one); return; }
+      var dst = ss.getSheetByName(m.to);
+      if (!dst) {
+        src.setName(m.to); one.ok = true; one.did = '이름 바꿈';
+      } else {
+        var last = km_lastRow_(src, 7);
+        var n = last - 2;
+        if (n > 0) {
+          var vals = src.getRange(3, 1, n, 7).getValues();
+          var dl = km_lastRow_(dst, 7);
+          var r0 = Math.max(dl + 1, 3);
+          dst.getRange(r0, 1, 1, 1).setNumberFormat('@');
+          dst.getRange(r0, 1, n, 1).setNumberFormat('@');
+          dst.getRange(r0, 1, n, 7).setValues(vals).setWrap(true).setBackground('#ffffff').setVerticalAlignment('top');
+          one.moved = n; one.firstRow = r0;
+        }
+        var keep = '(합침) ' + m.from;
+        if (!ss.getSheetByName(keep)) src.setName(keep);
+        one.ok = true; one.did = '줄 옮기고 (합침) 표시';
+      }
+    } catch (err) { one.error = String(err); }
+    out.push(one);
+  });
+  return {ok: out.every(function (o) { return o.ok; }), results: out};
+}
+
+/** oldStrip (v4, 2026-09-27 차장님 「맞다고 생각한 것은 다 해」) :
+ *   옛 「26년 회의록」 현장 탭 F칸(통찰) 끝에 t53_old26 v1 이 잘못 붙인 「/ ===================」 를 지운다.
+ *   고치는 것 : 날짜(A)가 2609 로 시작하는 줄의 F칸만, 끝이 「=」 3개 이상으로 끝나는 것만. 셀 끝 빈 줄 3개는 그대로 둔다. 지우는 줄·다른 칸 없음.
+ *   {dry:true} 면 세기만 한다 */
+function km_oldStrip_(body) {
+  var ss = SpreadsheetApp.openById(KM_IDS.old);
+  var fixed = 0, tabs = [];
+  ss.getSheets().forEach(function (sh) {
+    var name = sh.getName();
+    if (name.indexOf('0.') === 0 || name === KM_OLD_FIRST_ADMIN || name === '할 일 모음' || name === '업무일지') return;
+    var last = sh.getLastRow();
+    if (last < 3) return;
+    var a = sh.getRange(3, 1, last - 2, 1).getDisplayValues();
+    var f = sh.getRange(3, 6, last - 2, 1).getValues();
+    var n = 0;
+    for (var i = 0; i < f.length; i++) {
+      if (String(a[i][0]).trim().indexOf('2609') !== 0) continue;
+      var v = String(f[i][0]);
+      var m = v.match(/^([\s\S]*?)(\s*\/\s*={3,}|\n?그 밖의 할 일 : ={3,})(\s*)$/);
+      if (!m) continue;
+      var tail = /\n\s*$/.test(v) ? '\n\n\n' : '';
+      f[i][0] = m[1].replace(/\s+$/, '') + tail;
+      n++;
+    }
+    if (n) {
+      if (!body.dry) sh.getRange(3, 6, last - 2, 1).setValues(f);
+      fixed += n; tabs.push(name + ' ' + n);
+    }
+  });
+  return {ok: true, dry: !!body.dry, fixed: fixed, tabs: tabs};
+}
+
+
+function km_lastRow_(sh, ncol) {
+  var n = sh.getLastRow();
+  if (n < 1) return 0;
+  var v = sh.getRange(1, 1, n, ncol).getDisplayValues();
+  for (var i = v.length - 1; i >= 0; i--) {
+    for (var j = 0; j < ncol; j++) if (String(v[i][j]).trim() !== '' && String(v[i][j]) !== 'FALSE') return i + 1;
+  }
+  return 0;
+}
+
+function km_dup_(sh, last, row) {
+  if (last < 3) return false;
+  var key = function (a, b, c) { return String(a).trim() + '|' + String(b).trim() + '|' + String(c).replace(/\s+/g, '').slice(0, 40); };
+  var want = key(row[0], row[1], row[2]);
+  var v = sh.getRange(3, 1, last - 2, 3).getDisplayValues();
+  for (var i = 0; i < v.length; i++) if (key(v[i][0], v[i][1], v[i][2]) === want) return true;
+  return false;
+}
+
+function km_newTab_(ss, name) {
+  var admin = ss.getSheetByName(KM_OLD_FIRST_ADMIN);
+  var idx = admin ? admin.getIndex() - 1 : ss.getSheets().length;   // getIndex 는 1부터, insertSheet 는 0부터
+  var sh = ss.insertSheet(name, idx);
+  var src = ss.getSheetByName(KM_OLD_HEADER_FROM);
+  if (src) {
+    src.getRange('A1:G2').copyTo(sh.getRange('A1:G2'));
+    for (var c = 1; c <= 7; c++) sh.setColumnWidth(c, src.getColumnWidth(c));
+  } else {
+    sh.getRange('A2:G2').setValues([['날짜', '담당자', '내용', '캔린더1', '캔린더2', '담당에게 확인해야 할 사항', '회의록']]);
+  }
+  return sh;
+}
+
+function km_master_(ss, rec, link) {
+  var m = ss.getSheetByName(KM_OLD_MASTER);
+  if (!m) return;
+  m.insertRowBefore(2);
+  var content = '[신규] ' + String(rec.preview || '').slice(0, 320);
+  m.getRange(2, 1, 1, 8).setValues([['', '', new Date(), rec.tab, rec.person || '', content, link, '']]);
+  m.getRange(2, 1, 1, 8).setBackground('#ffffff').setWrap(true);
+}
+
+/** 설치 뒤 한 번 눌러 보는 시험 (편집기 위 ▶ 실행). 시트를 바꾸지 않는다 */
+function km_selfTest() {
+  var ss = SpreadsheetApp.openById(KM_IDS.old);
+  Logger.log('옛 시트 탭 수 : ' + ss.getSheets().length + ' / 현장 갑지 위치 : ' + (ss.getSheetByName(KM_OLD_FIRST_ADMIN) || {getIndex: function () { return '없음'; }}).getIndex());
+  Logger.log('회의록2 : ' + SpreadsheetApp.openById(KM_IDS.new2).getName());
+  Logger.log('암호 넣음 : ' + (KM_TOKEN ? '예' : '아니오 — 암호 칸이 비어 있음'));
+  Logger.log('Sheets API 서비스 : ' + (typeof Sheets !== 'undefined' ? '붙어 있음' : '없음 — 왼쪽 서비스 + 에서 Google Sheets API 추가'));
+}

@@ -1,0 +1,130 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>카톡 비서 설치</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#666;--line:#e0e3e7;--card:#f7f8fa;--blu:#1f5fa9;--grn:#1d7a4d;--red:#c0272d;--yel:#a8770a}
+*{box-sizing:border-box}
+body{margin:0 auto;padding:0 16px 60px;max-width:840px;background:var(--bg);color:var(--fg);
+ font:15px/1.65 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+h1{font-size:21px;margin:22px 0 4px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:20px}
+h2{font-size:17px;margin:32px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--fg)}
+.step{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+.step .n{display:inline-block;background:var(--blu);color:#fff;width:24px;height:24px;border-radius:12px;
+ text-align:center;line-height:24px;font-size:13px;font-weight:700;margin-right:8px}
+.step b.t{font-size:15.5px}
+.step ul{margin:9px 0 0 6px;padding-left:18px}
+.step li{margin:4px 0;font-size:14px}
+.min{color:var(--mut);font-size:12.5px;float:right}
+code{background:#eceff3;padding:1px 6px;border-radius:4px;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace}
+pre{background:#22262b;color:#e6e6e6;padding:12px 14px;border-radius:8px;overflow-x:auto;font-size:12.5px;line-height:1.6}
+.q{background:#fff8e1;border:1px solid #f0dfa8;border-radius:8px;padding:12px 14px;margin:14px 0;font-size:14px}
+.q b{color:#8a6d0b}
+.warn{background:#fdecec;border:1px solid #f0c0c0;border-radius:8px;padding:12px 14px;margin:14px 0;font-size:14px}
+.warn b{color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+th{background:#f2f3f5;font-weight:600;white-space:nowrap}
+.kk{background:#fee500;color:#191919;border-radius:8px;padding:10px 13px;margin:8px 0;font-size:14px;font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap}
+.kk.me{background:#fff;border:1px solid var(--line);margin-left:60px}
+footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);color:var(--mut);font-size:12.5px}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17181a;--fg:#e8e8e8;--mut:#9a9a9a;--line:#333;--card:#1f2124;--blu:#7fb0f0;--grn:#5cc98d;--red:#ff8a8f;--yel:#e0b64a}
+:root:not([data-theme="light"]) th{background:#26282c} :root:not([data-theme="light"]) code{background:#2a2e33}
+:root:not([data-theme="light"]) .q{background:#2a2617;border-color:#4a4122}
+:root:not([data-theme="light"]) .warn{background:#2d2022;border-color:#4a2a2c}
+:root:not([data-theme="light"]) .kk.me{background:#1f2124}}
+</style></head><body>
+
+<h1>카톡 비서 설치 — 30분</h1>
+<div class="sub">2026-09-19 · 카카오톡 채널 + 오픈빌더 + 구글 Apps Script<br>
+끝나면 카톡 친구 목록에 <b>「KM 비서」</b>가 생기고, 거기에 <code>3 완료</code> 치시면 저에게 옵니다.</div>
+
+<h2>다 되면 이렇게 됩니다</h2>
+<div class="kk me">3 완료</div>
+<div class="kk">접수했습니다.
+
+KM-003 → 완료
+
+대장에 반영하고 결과는 아침 한 장에 올려 드리겠습니다.</div>
+<div class="kk me">할일</div>
+<div class="kk">오늘 할 것 3건입니다.
+
+1 연합기숙사 타공도 재송부 (오늘까지)
+2 도어락 자재승인원 파일 송부 (오늘까지)
+3 CB외함 회신 — 시공사 (오늘까지)</div>
+<div class="q"><b>「할일」은 제가 미리 채워 둔 답이라 즉시 나옵니다.</b> 메일을 안 여셔도 카톡에서 오늘 할 일을 보실 수 있습니다.</div>
+
+<h2>순서 — 넷뿐입니다</h2>
+
+<div class="step"><span class="min">5분</span><span class="n">1</span><b class="t">카카오톡 채널 만들기</b>
+<ul>
+<li><a href="https://center-pf.kakao.com">center-pf.kakao.com</a> 접속 → 카카오 계정으로 로그인</li>
+<li><b>새 채널 만들기</b> → 이름은 <b>「KM 비서」</b> 같이 (나중에 바꿀 수 있습니다)</li>
+<li>검색 허용은 <b>꺼 두십시오.</b> 차장님만 쓰실 것이라 남이 찾을 필요가 없습니다</li>
+<li>만들어지면 <b>채널 검색용 ID</b>를 적어 두십시오</li>
+</ul></div>
+
+<div class="step"><span class="min">10분</span><span class="n">2</span><b class="t">구글 Apps Script 올리기 — 이게 서버입니다</b>
+<ul>
+<li><a href="https://script.google.com">script.google.com</a> → <b>새 프로젝트</b></li>
+<li>이름을 <b>KM 카톡 비서</b>로</li>
+<li>기존 코드를 <b>전부 지우고</b>, 드린 <code>KM_카톡봇.gs</code> 내용을 <b>통째로 붙여넣기</b></li>
+<li>맨 위 <code>var TOKEN = 'km2026change';</code> 의 <b>km2026change 를 아무도 모르는 글자</b>로 바꾸십시오 (예: <code>bsy0924km</code>)</li>
+<li>저장 → 함수 목록에서 <b>설치확인</b>을 고르고 <b>실행</b> → 권한 허용 (「안전하지 않음」 경고가 나오면 <b>고급 → 이동</b>)</li>
+<li>메일이 한 통 오고 구글드라이브에 <b>KM_카톡</b> 시트가 생기면 성공입니다</li>
+<li><b>배포 → 새 배포 → 유형 「웹 앱」</b><br>
+　실행 사용자 = <b>나</b> / 액세스 권한 = <b>모든 사용자</b> → 배포</li>
+<li>나온 주소를 복사하고 <b>뒤에 <code>?k=바꾸신TOKEN</code>을 붙이십시오</b><br>
+　<code>https://script.google.com/macros/s/AKfy.../exec?k=bsy0924km</code></li>
+</ul></div>
+
+<div class="step"><span class="min">10분</span><span class="n">3</span><b class="t">오픈빌더에서 챗봇 만들고 주소 넣기</b>
+<ul>
+<li><a href="https://i.kakao.com">i.kakao.com</a> → 로그인 → <b>새 봇 만들기 → 카카오톡 챗봇</b></li>
+<li>왼쪽 <b>스킬</b> → <b>생성</b> → 이름 <code>KM회신</code> → <b>URL 칸에 2번에서 만든 주소(?k= 붙은 것)</b>를 넣고 저장</li>
+<li>왼쪽 <b>시나리오 → 폴백 블록</b>(무슨 말을 해도 걸리는 자리)을 엽니다</li>
+<li>파라미터 설정 아래 <b>스킬</b>에서 방금 만든 <code>KM회신</code>을 고릅니다</li>
+<li>응답은 <b>「스킬데이터 사용」</b>으로 바꾸십시오 (직접 쓰지 마십시오)</li>
+<li>오른쪽 위 <b>배포</b></li>
+<li><b>설정 → 카카오톡 채널 연결</b> → 1번에서 만든 채널을 고릅니다</li>
+</ul></div>
+
+<div class="step"><span class="min">5분</span><span class="n">4</span><b class="t">카톡에서 확인</b>
+<ul>
+<li>카톡에서 채널 ID로 검색해 <b>친구 추가</b></li>
+<li>채팅방에 <code>도움말</code>이라고 보내 보십시오 → 안내가 나오면 <b>끝났습니다</b></li>
+<li><code>3 완료</code>도 보내 보십시오 → <b>「접수했습니다」</b>가 오고, 저에게 메일이 옵니다</li>
+</ul></div>
+
+<h2>제가 할 일</h2>
+<table>
+<tr><th>언제</th><th>제가 하는 것</th></tr>
+<tr><td>차장님이 카톡을 보내면</td><td><code>KM_카톡</code> 시트와 제 메일함 두 곳에 남습니다. 제가 <b>「카톡 봐」</b> 한마디에 전부 읽어 대장에 반영합니다</td></tr>
+<tr><td>아침마다</td><td><code>보낼말</code> 시트의 <b>할일</b> 칸을 그날 것으로 채워 둡니다. 차장님이 카톡에 「할일」 치시면 즉시 나옵니다</td></tr>
+<tr><td>열쇠말 추가</td><td><code>보낼말</code> 시트에 줄만 늘리면 새 열쇠말이 생깁니다. 「조용」 「찾아갈곳」 「이번주」 같은 것을 제가 채워 두겠습니다</td></tr>
+</table>
+
+<h2>미리 말씀드리는 세 가지</h2>
+<div class="warn"><b>하나 · 카카오는 5초 안에 답해야 합니다.</b>
+그래서 봇은 <b>「접수했습니다」</b>만 즉시 답하고, <b>제 진짜 답은 그 다음</b>에 나옵니다.
+「할일」처럼 제가 <b>미리 채워 둔 것만</b> 즉시 나옵니다.</div>
+<div class="warn"><b>둘 · 배포 주소는 공개 주소입니다.</b>
+그래서 <code>?k=TOKEN</code>을 붙였습니다. <b>TOKEN을 꼭 바꾸시고 남에게 보여주지 마십시오.</b>
+주소가 새면 그때 TOKEN만 바꿔 다시 배포하면 됩니다.</div>
+<div class="warn"><b>셋 · 회사 승인이 필요할 수 있습니다.</b>
+회사 이름으로 채널을 만드시면 마케팅·홍보 부서와 겹칠 수 있습니다.
+<b>개인 이름으로 「KM 비서」</b>처럼 만드시고 검색을 꺼 두시는 게 안전합니다.</div>
+
+<h2>막히면</h2>
+<table>
+<tr><th>증상</th><th>보실 곳</th></tr>
+<tr><td>2번 실행에서 권한 경고</td><td><b>고급 → 이동(안전하지 않음)</b>. 차장님 본인 스크립트라 정상입니다</td></tr>
+<tr><td>카톡이 답을 안 함</td><td>브라우저에 배포 주소 <code>?k=TOKEN</code>을 그대로 쳐 보십시오. <b>「살아 있습니다」</b>가 나와야 합니다</td></tr>
+<tr><td>「열쇠가 맞지 않습니다」</td><td>오픈빌더 스킬 URL 뒤에 <code>?k=</code>가 빠졌거나 TOKEN이 다릅니다</td></tr>
+<tr><td>그래도 안 되면</td><td>화면을 찍어 저에게 주십시오. 어디서 막혔는지 보고 고쳐 드리겠습니다</td></tr>
+</table>
+
+<footer>한국마이크로닉(주) · 배성윤 차장 · 2026-09-19<br>
+코드 : <code>KM_카톡봇.gs</code> (같이 드립니다) · 서버 비용 0원 · 카카오 채널·오픈빌더 0원<br>
+카카오가 예전에 요구하던 「AI 챗봇 전환 심사」(2~3일)는 폐지되어 만들자마자 바로 붙습니다.</footer>
+</body></html>

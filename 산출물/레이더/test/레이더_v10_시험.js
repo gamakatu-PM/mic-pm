@@ -1,0 +1,51 @@
+// 구글AI_레이더_v9.gs 모의 시험 (node test/레이더_v9_시험.js). 구글·시트 없이 404·429·5분 이어 돌기를 본다
+const path=require('path'); const SRC=path.join(__dirname,'..','구글AI_레이더_v9.gs');
+const fs=require('fs'); let src=fs.readFileSync(SRC,'utf8');
+let calls=[]; let plan=[];
+global.Logger={log:m=>calls.push('LOG '+m)};
+global.Utilities={sleep:()=>{}};
+global.UrlFetchApp={fetch:(url,o)=>{const m=url.split('/models/')[1].split(':')[0]; calls.push('FETCH '+m); const r=plan.shift()||{text:'[]'};
+ if(r.err) return {getContentText:()=>JSON.stringify({error:r.err})};
+ return {getContentText:()=>JSON.stringify({candidates:[{content:{parts:[{text:r.text}]}}]})};}};
+eval(src+'\nglobal.callGemini_=callGemini_;global.getModel=()=>GEMINI_MODEL;');
+let ok=0,ng=0; const chk=(n,c)=>{c?ok++:ng++; console.log((c?'OK ':'NG ')+n)};
+plan=[{err:{code:404,status:'NOT_FOUND'}},{text:'7'}];
+chk('404 → 다음 모델', callGemini_({})==='7' && getModel()==='gemini-2.5-flash');
+plan=[{err:{code:429,status:'RESOURCE_EXHAUSTED'}}];
+let e=''; try{callGemini_({})}catch(x){e=String(x)} chk('429 → QUOTA_STOP', e.indexOf('QUOTA_STOP')>=0);
+plan=[{err:{code:404,status:'NOT_FOUND'}},{err:{code:404,status:'NOT_FOUND'}}];
+e=''; try{callGemini_({})}catch(x){e=String(x)} chk('마지막 모델도 404면 오류 그대로 (무한 반복 없음)', e.indexOf('404')>=0 && getModel()==='gemini-3.1-flash-lite');
+let A=[ok,ng];
+(function(){
+let src=fs.readFileSync(SRC,'utf8');
+let store={}; let now=0; let plan=[]; let log=[]; let failWrite=false;
+global.PropertiesService={getScriptProperties:()=>({getProperty:k=>store[k]||null,setProperty:(k,v)=>{store[k]=v}})};
+global.Logger={log:()=>{}}; global.Utilities={sleep:ms=>{now+=ms}};
+Date.now=()=>now;
+global.UrlFetchApp={fetch:()=>{now+=10000; const r=plan.shift()||{text:'[]'}; return {getContentText:()=>JSON.stringify(r.err?{error:r.err}:{candidates:[{content:{parts:[{text:r.text}]}}]})}}};
+eval(src+`
+readCategories_=()=>Array.from({length:56},(_,i)=>({key:'c'+i,region:'r',q:'q'}));
+readExcludeList_=()=>[]; writeResults_=()=>{ if (failWrite) throw new Error('6분 강제 종료 흉내'); }; sendEmail_=()=>{};
+verifyResults_=d=>({confirmed:d,review:[]});
+writeLog_=(a,b,c,d,errors)=>{log.push(errors)};
+global.coreRun_=coreRun_;`);
+const K='RADAR_NEXT_일일';
+coreRun_('x','일일');
+chk('4분에 새 호출을 멈추고 다음 자리 기억', +store[K]>0 && +store[K]<56 && log[0].some(e=>e.indexOf('시간 한도(4분)')>=0), [store,log[0]]);
+const first=+store[K]; now=0; log=[];
+coreRun_('x','일일');
+chk('다음 실행은 이어서', +store[K]===(first*2)%56, [store,first]);
+now=0; log=[]; store={}; plan=[{text:'[]'},{err:{code:429,status:'RESOURCE_EXHAUSTED'}},{err:{code:429,status:'RESOURCE_EXHAUSTED'}}];
+coreRun_('x','일일');
+chk('429 두 번이면 멈추고 그 자리 기억 (60초 한 번 쉼)', log[0].length===1 && log[0][0].indexOf('한도 초과로 1/56')===0 && store[K]==='1', [store,log[0]]);
+now=0; log=[]; store={}; plan=[{err:{code:429,status:'RESOURCE_EXHAUSTED'}},{text:'[]'}];
+coreRun_('x','일일');
+chk('429 한 번(분당 한도)은 60초 쉬고 계속', !log[0].some(e=>e.indexOf('한도 초과')>=0) && +store[K]>1, [store,log[0]]);
+now=0; log=[]; store={}; 
+coreRun_('x','월간정밀');
+chk('매월 실행은 따로 (일일 자리 안 건드림)', store[K]===undefined && +store['RADAR_NEXT_월간정밀']>0, store);
+now=0; log=[]; store={'RADAR_NEXT_일일':'10'}; failWrite=true;
+try { coreRun_('x','일일'); } catch(e) {}
+chk('기록 전에 끊기면 자리를 안 옮김 (다음 날 같은 구간 다시)', store[K]==='10', store);
+console.log('통과',ok,'실패',ng); process.exit(ng?1:0);
+})();

@@ -1,0 +1,127 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>KM 손바닥</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="km.css">
+
+<div class="app">
+<header class="top">
+  <div><h1 id="hTitle">오늘</h1><div class="sub" id="hSub"></div></div>
+  <span class="badge" id="dbBadge">연결 확인 중</span>
+</header>
+
+<main>
+<!-- 여정 -->
+<section class="view" id="v-map"><div id="mapBody"></div></section>
+
+<!-- 오늘 -->
+<section class="view" id="v-today">
+  <div class="chips" id="todayChips"></div>
+  <div id="todayBody"></div>
+</section>
+
+<!-- 현장 -->
+<section class="view" id="v-sites" hidden>
+  <div id="sitesList">
+    <input class="search" id="siteSearch" placeholder="현장 찾기" autocomplete="off">
+    <div class="list" id="siteCards"></div>
+    <div class="btns"><button class="b" id="btnAddSite">+ 현장 추가</button></div>
+  </div>
+  <div id="siteDetail" hidden></div>
+</section>
+
+<!-- 결정·질문 창고 -->
+<section class="view" id="v-ask" hidden><div id="askBody"></div></section>
+
+<!-- 회의 -->
+<section class="view" id="v-meet" hidden>
+  <div id="meetBody"></div>
+</section>
+
+<!-- 설정 -->
+<section class="view" id="v-set" hidden>
+  <div class="card">
+    <div class="t">앱 내용 고치기 <span class="small">재발행 없이 바로 반영</span></div>
+    <div class="m">공정 단계·열쇠 문장·품목 목록을 프로님이 직접 고치십니다. 고친 것은 제 쪽에도 그대로 갑니다. 지금 판 <b id="cfgVerNow">0</b>.</div>
+    <div class="btns"><button class="b pri" onclick="editQuests()">고치기 열기</button></div>
+  </div>
+  <div class="card">
+    <div class="t">PC에서 붙여넣기 <span class="small">회의록·대장 → 앱 (PC 도구 49번, 비용 0)</span></div>
+    <div class="m">PC에서 <b>49번 앱피드</b>를 누르면 회의록·대장을 읽어 클립보드에 복사됩니다. 여기에 붙여넣고 「받기」 를 누르십시오. 같은 것을 두 번 넣어도 늘어나지 않습니다.</div>
+    <textarea id="feedText" placeholder="PC 49번이 복사한 것을 여기에"></textarea>
+    <div class="btns"><button class="b pri" id="btnFeed">받기</button></div>
+  </div>
+  <div class="card">
+    <div class="t">아침 한 장 가져오기</div>
+    <div class="m">PC가 보낸 [KM] 아침 한 장 메일(또는 _아침한장.md)의 글을 전부 복사해 아래에 붙이고 「가져오기」. 같은 번호는 덮어쓰지 않고 새 내용만 더합니다.</div>
+    <textarea id="importText" placeholder="여기에 붙여넣기"></textarea>
+    <div class="btns"><button class="b pri" id="btnImport">가져오기</button></div>
+  </div>
+  <div class="card">
+    <div class="t">PC로 보내는 메일</div>
+    <label class="f">받는 주소 (48번 회신 읽기가 보는 메일함)</label>
+    <input id="setMailTo" placeholder="gamakatu0924@gmail.com">
+    <label class="f">사본</label>
+    <input id="setCc" placeholder="bsy@micronic.co.kr (선택)">
+    <label class="f"><input type="checkbox" id="setBig" style="width:auto"> 글자 크게</label>
+    <div class="btns"><button class="b pri" id="btnSaveSet">저장</button></div>
+  </div>
+  <div class="card">
+    <div class="t">연동 상태 <span class="small">쌓이는 데이터가 앱으로 들어온 기록</span></div>
+    <div id="srcList" class="src"></div>
+    <div class="small" style="margin-top:8px">제가 새 대장·회의록을 읽을 때마다 여기 날짜가 바뀌고, 채운 것은 여정 맨 위에 뜹니다.</div>
+  </div>
+  <div class="card">
+    <div class="t">제가 반영한 것 <span class="small" id="inbCount"></span></div>
+    <div id="inbList" class="small"></div>
+  </div>
+  <div class="card">
+    <div class="t">결론 대장 <span class="small" id="decCount"></span></div>
+    <div class="m">앱에서 정해진 것이 지워지지 않고 쌓이는 곳입니다. 창고의 「정해진 것」 이 이것을 보여 줍니다.</div>
+    <div class="btns"><button class="b" onclick="view='ask';render()">창고에서 보기</button></div>
+  </div>
+  <div class="card">
+    <div class="t">보낸 줄 이력 <span class="small" id="logCount"></span></div>
+    <div id="logList" class="small"></div>
+    <div class="btns"><button class="b pri" id="btnCsv">확정 대장으로 내보내기</button><button class="b" id="btnExport">전체 내보내기(JSON)</button><button class="b ghost" id="btnReset">전부 지우기</button></div>
+  </div>
+  <div class="card small">
+    <div class="t">이 앱</div>
+    KM 손바닥 v7.2 (v7.0 에서 오류·보기 고침) · 2026-09-20<br>
+    저장 : 이 폰 + 클로드가 읽는 공유 저장소(연결되면 상단에 표시). PC 도구로는 「보내기」 메일 한 통으로 갑니다.<br>
+    한 줄 문법은 PC 48번 회신 읽기 것을 그대로 씁니다. 금액·수량·요율은 앱이 정하지 않습니다.
+  </div>
+</section>
+</main>
+
+<button class="fab" id="fab" hidden>보내기 0건</button>
+
+<nav class="tabbar">
+  <button data-v="map" class="on"><span class="n">⛳</span>여정</button>
+  <button data-v="today"><span class="n">☀</span>오늘</button>
+  <button data-v="sites"><span class="n">▦</span>현장</button>
+  <button data-v="ask"><span class="n">?</span>창고</button>
+  <button data-v="meet"><span class="n">◎</span>회의</button>
+  <button data-v="set"><span class="n">⚙</span>설정</button>
+</nav>
+
+<div class="sheet" id="sheet" hidden><div class="box" id="sheetBox"></div></div>
+<div class="toast" id="toast"></div>
+</div>
+
+
+<script src="10-core.js"></script>
+<script src="11-ui.js"></script>
+<script src="12-router.js"></script>
+<script src="13-outbox.js"></script>
+<script src="15-feed.js"></script>
+<script src="20-quests.js"></script>
+<script src="30-map.js"></script>
+<script src="40-today.js"></script>
+<script src="45-ask.js"></script>
+<script src="50-sites.js"></script>
+<script src="60-meet.js"></script>
+<script src="70-settings.js"></script>
+<script src="71-edit.js"></script>
+<script src="99-boot.js"></script>
+
+</body></html>
