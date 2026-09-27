@@ -175,6 +175,7 @@ def build_merged(spec, src_path, fixed_nos, out_path, mapping):
     prs.slide_height = Inches(deck.SLIDE_H)
     foot = spec.get('footer', '한국마이크로닉(주)')
     made = 0
+    page = 0
     for sl in spec.get('slides', []):
         fn = deck.KIND.get(sl.get('type'))
         if not fn:
@@ -182,7 +183,8 @@ def build_merged(spec, src_path, fixed_nos, out_path, mapping):
         s = prs.slides.add_slide(prs.slide_layouts[6])
         fn(s, sl)
         if sl.get('type') not in ('cover', 'request'):
-            deck._footer(s, foot)
+            page += 1
+            deck._footer(s, foot, page)
         made += 1
     copied = 0
     if src_path and fixed_nos:

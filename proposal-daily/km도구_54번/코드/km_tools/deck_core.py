@@ -85,8 +85,11 @@ def _blank(prs):
     return prs.slides.add_slide(prs.slide_layouts[6])
 
 
-def _footer(slide, note):
-    _tb(slide, ML, 5.22, MW, 0.25, note or '한국마이크로닉(주)', size=8, color=GRAY_TX)
+def _footer(slide, note, page=None):
+    _tb(slide, ML, 5.22, MW - 0.6, 0.25, note or '한국마이크로닉(주)', size=8, color=GRAY_TX)
+    if page:
+        _tb(slide, ML + MW - 0.6, 5.22, 0.6, 0.25, str(page), size=8.5, color=NAVY,
+            bold=True, align=PP_ALIGN.RIGHT)
 
 
 def _page_title(slide, title_text, eyebrow=None, pill=None):
@@ -157,7 +160,7 @@ def s_table(slide, d):
     note_h = 0.34 if d.get('note') else 0.0
     avail = 5.05 - y - note_h
     nrow = len(rows) + 1
-    rh = max(0.24, min(0.62, avail / nrow))
+    rh = max(0.24, min(0.80, avail / nrow))
     shape = slide.shapes.add_table(nrow, len(headers), Inches(ML), Inches(y),
                                    Inches(sum(colw)), Inches(rh * nrow))
     tbl = shape.table
@@ -325,7 +328,28 @@ def s_request(slide, d):
         _tb(slide, 0.9, 4.9, 8.4, 0.3, d['contact'], size=10, color=SKY)
 
 
-KIND = {'cover': s_cover, 'conclusion': s_conclusion, 'table': s_table, 'items': s_items,
+
+
+def s_toc(slide, d):
+    y = _page_title(slide, d.get('title', '목차'), d.get('eyebrow', 'CONTENTS'))
+    items = d.get('items', [])
+    n = max(1, len(items))
+    h = min(0.72, (5.0 - y) / n)
+    for i, it in enumerate(items):
+        yy = y + i * h
+        _rect(slide, ML, yy + 0.04, 0.42, h - 0.14, fill=NAVY)
+        _tb(slide, ML, yy + 0.08, 0.42, h - 0.22, '%02d' % (i + 1), size=11,
+            color=WHITE, bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+        _tb(slide, ML + 0.58, yy + 0.06, 5.4, 0.3, it.get('text', ''), size=12.5,
+            color=NAVY, bold=True)
+        if it.get('desc'):
+            _tb(slide, ML + 0.58, yy + 0.34, 5.4, 0.26, it['desc'], size=9.5, color=GRAY_TX)
+        if it.get('page'):
+            _tb(slide, ML + MW - 1.2, yy + 0.08, 1.2, 0.28, str(it['page']), size=10.5,
+                color=BLUE, bold=True, align=PP_ALIGN.RIGHT)
+        _rect(slide, ML, yy + h - 0.06, MW, 0.01, fill=LINE)
+
+KIND = {'cover': s_cover, 'toc': s_toc, 'conclusion': s_conclusion, 'table': s_table, 'items': s_items,
         'diagram': s_diagram, 'split': s_split, 'request': s_request}
 
 
@@ -347,6 +371,7 @@ def build(spec, out_path):
     prs.slide_width = Inches(SLIDE_W)
     prs.slide_height = Inches(SLIDE_H)
     foot = spec.get('footer', '한국마이크로닉(주)')
+    page = 0
     for i, sl in enumerate(spec.get('slides', [])):
         fn = KIND.get(sl.get('type'))
         if not fn:
@@ -354,7 +379,8 @@ def build(spec, out_path):
         slide = _blank(prs)
         fn(slide, sl)
         if sl.get('type') not in ('cover', 'request'):
-            _footer(slide, foot)
+            page += 1
+            _footer(slide, foot, page)
     prs.save(out_path)
     return len(spec.get('slides', []))
 
