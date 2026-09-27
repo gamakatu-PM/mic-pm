@@ -335,7 +335,17 @@ footer{padding:14px; text-align:center; color:var(--gray); font-size:11px}
         <button onclick="pickDir3()" id="dirBtn3">저장 폴더 정하기</button>
       </div>
       <button class="big4" onclick="saveAll4(this)">① 표지 ② 구성도 ③ 배치도 ④ 공사한계 — 한 번에 저장</button>
-      <div class="hint">폴더를 정하시면 <b>현장명 폴더를 만들어 4장 + 현장카드.txt</b> 를 한꺼번에 넣습니다(PC 크롬·엣지). 폴더를 안 정하시면 4장이 차례로 내려받아집니다. 같은 폴더에 덮어쓰지 않고 <b>날짜가 붙은 새 폴더</b>로 나갑니다.</div>
+      <div class="hint">폴더를 정하시면 <b>현장명 폴더를 만들어 4장 + 현장카드.txt + 54번 json</b> 을 한꺼번에 넣습니다(PC 크롬·엣지). 폴더를 안 정하시면 4장이 차례로 내려받아집니다. 같은 폴더에 덮어쓰지 않고 <b>날짜가 붙은 새 폴더</b>로 나갑니다.</div>
+    </div>
+
+    <div class="row" style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px">
+      <div class="lab">PC 54번 「제안서 PPT」로 넘기기 <i>편집 가능한 도형</i></div>
+      <div class="btns sm">
+        <button onclick="saveJSON54(this)">구성도 json 내보내기</button>
+      </div>
+      <div class="hint">여기 PNG는 <b>회의에서 바로 보여주는 용</b>입니다. 제안서에 넣을 때는 이 json을 PC의
+        <b>2_KM도구 ＼ 제안서_내용</b> 폴더에 넣고 <b>★제안서_PPT.py</b> 를 누르십시오 —
+        구성도가 <b>파워포인트에서 고칠 수 있는 도형</b>으로 들어갑니다. 그림이 아니라 도형이라 갑이 직접 수정합니다.</div>
     </div>
 
     <div class="row" style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px">
@@ -360,7 +370,7 @@ footer{padding:14px; text-align:center; color:var(--gray); font-size:11px}
 
 </div><!-- /wrap -->
 
-<footer>제안서 디자인 스튜디오 v5 · 2026-09-20 · 모든 처리는 이 브라우저 안에서만 일어나며 사진은 어디로도 전송되지 않습니다.</footer>
+<footer>제안서 디자인 스튜디오 v6 · 2026-09-27 · 모든 처리는 이 브라우저 안에서만 일어나며 사진은 어디로도 전송되지 않습니다.</footer>
 
 <script>
 /* ===================== 공통 ===================== */
@@ -1806,6 +1816,10 @@ function infoTxt(folder){
     : '※ 미확정 없음 — 4장 모두 값이 채워진 판입니다.');
   L.push('※ 이 폴더는 덮어쓰지 않습니다. 값이 바뀌면 날짜가 붙은 새 폴더로 다시 나갑니다.');
   L.push('※ 조명 스위치 구수는 전기설계 확정 후 결정되므로 배치도에는 「L」로만 표기됩니다.');
+  L.push('');
+  L.push('[ 5_54번_구성도.json ] 이 폴더에 같이 들어 있습니다.');
+  L.push('  PC 의  2_KM도구 \\ 제안서_내용  폴더에 넣고 ★제안서_PPT.py 를 누르시면');
+  L.push('  계통 구성도가 파워포인트에서 고칠 수 있는 도형으로 들어갑니다(그림이 아닙니다).');
   return L.join('\r\n');
 }
 function saveAll4(btn){
@@ -1837,6 +1851,7 @@ function saveAll4(btn){
 
   blobs(function(list){
     list.push({ name:'_현장카드.txt', blob:new Blob(['﻿' + txt], {type:'text/plain;charset=utf-8'}) });
+    list.push({ name:'5_54번_구성도.json', blob:json54Blob() });
     if(DIR3){
       DIR3.getDirectoryHandle(folder, {create:true}).then(function(sub){
         var i = 0;
@@ -1873,6 +1888,113 @@ try{
     }).catch(function(){});
   }).catch(function(){});
 }catch(e){}
+
+/* ============ 54번 제안서 PPT 도구로 넘기기 (편집 가능한 도형) ============
+   PC 도구 ★제안서_PPT.py 의 s_diagram 규격에 맞춘 json 을 만든다.
+   PNG 는 그대로 두고(회의에서 바로 보여주기), PPT 에는 도형으로 들어가게 하는 것이 목적. */
+function diagramSpec(){
+  parsePrompt();
+  var ext  = G.items.filter(function(d){ return d.g === 'ext'; });
+  var cen  = G.items.filter(function(d){ return d.g === 'center'; });
+  var room = G.items.filter(function(d){ return d.g === 'room'; });
+  if(!cen.length) cen = [{t:'중앙 관제 PC'}];
+  if(!room.length) room = DICT.filter(function(d){ return ['KEY','CHIME','TEMP','LSW'].indexOf(d.k) >= 0; });
+  var hasFIP = G.items.some(function(d){ return d.k === 'FIP'; });
+  var floors = G.floorsIn || G.floors, rooms = G.roomsIn || G.rooms;
+  var miss = [];
+  if(!floors) miss.push('층수');
+  if(!rooms) miss.push('실수');
+  if(!G.netUp) miss.push('중앙↔층 규격');
+  if(!G.netDn) miss.push('층↔객실 규격');
+  var BL = '[    ]';
+
+  var EW = ext.length ? 1.85 : 0;
+  var MW = 10 - (EW ? EW + 0.25 : 0), cx = MW/2;
+  var Y = [0.00, 0.85, 1.62, 2.44], H = [0.58, 0.54, 0.62, 0.50];
+  var boxes = [], links = [];
+
+  /* 중앙 */
+  var cw = Math.min(2.30, (MW - 0.60)/cen.length), cgap = 0.22;
+  var tot = cen.length*cw + (cen.length-1)*cgap;
+  cen.forEach(function(d, i){
+    boxes.push({ id:'c'+i, x:+(cx - tot/2 + i*(cw+cgap)).toFixed(2), y:Y[0], w:+cw.toFixed(2), h:H[0],
+                 title:d.t, lines:['방재실 · 1 EA'], style:'main', fs:9 });
+  });
+  for(var i=1;i<cen.length;i++) links.push({ from:'c'+i, to:'c0', style:'comm' });
+
+  /* 층 */
+  boxes.push({ id:'fip', x:+(cx-1.60).toFixed(2), y:Y[1], w:3.20, h:H[1],
+               title: hasFIP ? 'FIP (층 제어반)' : '층 분배반',
+               lines:['각 층 린넨실 · ' + (floors ? '총 ' + floors + ' EA' : '각 층 1 EA')],
+               style:'device', fs:9 });
+  links.push({ from:'c0', to:'fip', style:'comm', label:'중앙↔층  ' + (G.netUp || BL) });
+
+  /* 강전 인입 · 객실 CB */
+  boxes.push({ id:'pow', x:0.00, y:+(Y[2]+0.06).toFixed(2), w:1.35, h:0.50,
+               title:'강전 인입', lines:['전기업체 시공'], style:'sub', fs:8 });
+  boxes.push({ id:'cb', x:+(cx-2.10).toFixed(2), y:Y[2], w:4.20, h:H[2],
+               title:'CB 제어분전함',
+               lines:['RCU · 차단기 · 릴레이 내장',
+                      (rooms ? rooms + '실' : BL + '실') + ' · 1실 1 EA'],
+               style:'main', fs:9 });
+  links.push({ from:'fip', to:'cb', style:'comm', label:'층↔객실  ' + (G.netDn || BL) });
+  links.push({ from:'pow', to:'cb', style:'power' });
+
+  /* 기구물 */
+  var MAXR = 7, show = room.slice(0, MAXR).map(function(d){ return d.t; });
+  if(room.length > MAXR) show.push('외 ' + (room.length - MAXR) + '종');
+  var gp = 0.14, iw = (MW - gp*(show.length-1))/show.length;
+  show.forEach(function(t, i){
+    var id = 'r'+i;
+    boxes.push({ id:id, x:+(i*(iw+gp)).toFixed(2), y:Y[3], w:+iw.toFixed(2), h:H[3],
+                 title:t, style:'sub', fs:8 });
+    links.push({ from:'cb', to:id, style:'low' });
+  });
+
+  /* 외부 연동 */
+  ext.forEach(function(d, i){
+    var id = 'e'+i, eh = 0.52;
+    boxes.push({ id:id, x:+(MW+0.25).toFixed(2), y:+(Y[1] + i*(eh+0.16)).toFixed(2),
+                 w:EW, h:eh, title:d.t, style:'sub', fs:8 });
+    links.push({ from:'cb', to:id, style:'low' });
+  });
+
+  var sub = [siteName(), rooms && rooms + '실', floors && '지상 ' + floors + '층', G.star + '성급']
+              .filter(Boolean).join('  ·  ');
+  var lead = '파랑 = 통신(당사) · 빨강 = 강전(전기업체) · 회색 = 약전(당사) 및 타 설비 연동.'
+           + (miss.length ? '   ※ ' + BL + ' 는 미확정 ' + miss.length + '곳 : ' + miss.join(' / ') : '');
+
+  return { type:'diagram', title:'객실관리 시스템 계통 구성도',
+           eyebrow: siteName() || '', pill: sub || null, lead: lead,
+           canvas:[10.0, 3.0], boxes: boxes, links: links };
+}
+function specFile(){
+  return { '요일':'제안서 그림 (스튜디오에서 보냄)',
+           'footer':'한국마이크로닉(주)',
+           'slides':[ diagramSpec() ] };
+}
+function json54Blob(){
+  return new Blob([JSON.stringify(specFile(), null, 2)], {type:'application/json;charset=utf-8'});
+}
+function json54Name(){
+  return safeName(siteName()) + '_구성도_' + fileStamp() + '.json';
+}
+function saveJSON54(btn){
+  var o = btn.textContent;
+  var b = json54Blob(), nm = json54Name();
+  function ok(){ btn.textContent = '내보냄'; setTimeout(function(){ btn.textContent = o; }, 1800); }
+  if(DIR3){
+    DIR3.getFileHandle(nm, {create:true}).then(function(fh){
+      return fh.createWritable().then(function(w){ return w.write(b).then(function(){ return w.close(); }); });
+    }).then(ok).catch(function(e){ alert('저장 실패: ' + e.message); });
+  } else {
+    var a = document.createElement('a');
+    a.download = nm; a.href = URL.createObjectURL(b);
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+    ok();
+  }
+}
 
 /* ===================== 시작 ===================== */
 buildBtns1(); syncFxText(); render1();
