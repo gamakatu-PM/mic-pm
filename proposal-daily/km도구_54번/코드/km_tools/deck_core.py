@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v8 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v9 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """deck_core - 회사 표준 서식으로 슬라이드를 그리는 부품. 메뉴 번호 없음.
 
 54번(t54_deck)이 이것을 불러 쓴다. 단독으로 실행하지 않는다.
@@ -235,13 +235,19 @@ def s_diagram(slide, d):
     if d.get('lead'):
         _tb(slide, ML, y, MW, 0.3, d['lead'], size=10, color=GRAY_TX)
         y += 0.34
-    STYLE = {'main': (NAVY, WHITE), 'device': (SKY, NAVY), 'sub': (GRAY_BG, GRAY_TX)}
+    STYLE = {'main': (NAVY, WHITE), 'device': (SKY, NAVY), 'sub': (GRAY_BG, GRAY_TX),
+             'alert': (RED, WHITE)}                      # alert = 법적 의무 등 빠지면 안 되는 것
     canvas = d.get('canvas', [10.0, 3.0])
     steps = d.get('steps', [])
     ch = (1.55 if steps else 2.9)
     sx, sy = MW / canvas[0], ch / canvas[1]
     pos = {}
-    for b in d.get('boxes', []):
+    boxes = d.get('boxes', [])
+
+    def _holds(o, i):                                     # o 가 i 를 품는가 (방 안의 표시)
+        return (o is not i and o['x'] <= i['x'] and o['y'] <= i['y']
+                and i['x'] + i['w'] <= o['x'] + o['w'] + 1e-6 and i['y'] + i['h'] <= o['y'] + o['h'] + 1e-6)
+    for b in boxes:
         x = ML + b['x'] * sx
         yy = y + b['y'] * sy
         w, h = b['w'] * sx, b['h'] * sy
@@ -251,6 +257,11 @@ def s_diagram(slide, d):
         body = b.get('title', '')
         for ln in b.get('lines', []):
             body += '\n' + ln
+        if any(_holds(b, o) for o in boxes):
+            # 방처럼 다른 표시를 품은 상자 : 이름을 오른쪽 아래 구석으로 (가운데 두면 표시와 겹친다)
+            _tb(slide, x + 0.06, yy + h - 0.3, w - 0.14, 0.26, body, size=b.get('fs', 9),
+                color=tx, bold=True, align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.BOTTOM, space=0)
+            continue
         _tb(slide, x + 0.06, yy + 0.05, w - 0.12, h - 0.1, body, size=b.get('fs', 9),
             color=tx, bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space=0)
     for lk in d.get('links', []):

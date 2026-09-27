@@ -21,7 +21,7 @@ AI 사용량 0. 인터넷도 쓰지 않습니다.
 """
 import os, sys, io, re, shutil, datetime, traceback, hashlib
 
-PKG = 8          # 이 파일이 품은 54번 판. 파일 둘째 줄 「# 54판 vN」 과 맞춘다
+PKG = 9          # 이 파일이 품은 54번 판. 파일 둘째 줄 「# 54판 vN」 과 맞춘다
 SRC = __SRC__
 SPECS = __SPECS__
 OLD_SPECS = set(__OLDSPEC__)   # 전에 내보낸 판의 지문. PC 파일이 이것과 같으면 안 고친 것
