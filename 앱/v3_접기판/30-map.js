@@ -14,10 +14,10 @@ function renderMap(){
   const totalOpen=Object.values(S.items).filter(i=>!['done','confirmed','cancel','requested'].includes(i.status)).length;
   el.innerHTML=renderFeedBar()+`<div class="notice">현장마다 9단계 여정입니다. 단계를 누르면 <b>무엇이 필요하고 · 지금 어디까지 왔고 · 제가 무엇을 만들어 드릴 수 있는지</b>가 나옵니다. 열쇠(필요한 것)를 채우면 단계가 닫힙니다.</div>
   <div class="chips">${['급한순','조용한순','진행순','이름순'].map(k=>`<button class="chip ${sortBy===k?'sel':''}" onclick="S.mapSort='${k}';persist();render()">${k}</button>`).join('')}</div>
-  <div class="chips"><span class="chip acc">현장 ${arr.length}</span><span class="chip ask">미결 ${totalOpen}</span><span class="chip">열쇠 ${arr.reduce((a,s)=>a+siteProg(s).done,0)} / ${arr.reduce((a,s)=>a+siteProg(s).total,0)}</span></div>
+  <div class="chips"><span class="chip acc">현장 ${arr.length}</span><span class="chip ask">미결 ${totalOpen}</span><span class="chip">열쇠 ${arr.reduce((a,s)=>a+siteProg(s).done,0)} / ${arr.reduce((a,s)=>a+siteProg(s).total,0)}</span>${(()=>{const n=arr.filter(s=>!s.due).length;return n?`<span class="chip warn" title="준공일이 있어야 마감 역산이 돕니다">준공일 없음 ${n}</span>`:''})()}</div>
   ${arr.map(s=>{const p=siteProg(s);const qi=currentQuest(s);const m=nextMove(s);
     return `<div class="card jcard" onclick="curSite='${s.id}';render()">
-      <div class="jhead"><div><div class="t" style="font-size:1.05rem;margin:0">${esc(s.name)} ${idlePill(s)}</div><div class="small">${s.rooms?esc(s.rooms)+'실 · ':''}${s.due?'준공 '+esc(s.due):'준공일 [ ]'}${s.lastMeeting?' · 회의 '+esc(s.lastMeeting):''}${s.calls?' · 통화 '+esc(String(s.calls))+'건':''}${s.mainWho?' · '+esc(s.mainWho.slice(0,26)):''}</div></div><div class="pct">${p.pct}%</div></div>
+      <div class="jhead"><div><div class="t" style="font-size:1.05rem;margin:0">${esc(s.name)} ${idlePill(s)}</div><div class="small">${[s.rooms?esc(s.rooms)+'실':'',s.due?'준공 '+esc(s.due):'',s.lastMeeting?'회의 '+esc(s.lastMeeting):'',s.calls?'통화 '+esc(String(s.calls))+'건':'',s.mainWho?esc(s.mainWho.slice(0,26)):''].filter(Boolean).join(' · ')}</div></div><div class="pct">${p.pct}%</div></div>
       <div class="trail-mini">${QUESTS.map((q,i)=>{const st=questStatus(s,i);return `<span class="tm ${st.cls}" title="${esc(q.n)}">${i===qi?'●':questProg(s,q).done===q.req.length?'✓':''}</span>`}).join('<i></i>')}</div>
       <div class="small" style="margin-top:6px"><b>${esc(QUESTS[qi].n)}</b> · 다음 한 수 : ${m?esc(m.r.n):'없음'}${(()=>{const n=Object.values(S.items).filter(i=>i.site===s.name&&!['done','confirmed','cancel','requested'].includes(i.status)).length;return n?` · <span class="pill p-ask">할 일 ${n}</span>`:''})()}</div>
     </div>`}).join('')}`;
@@ -25,7 +25,7 @@ function renderMap(){
 function journeyHtml(s){
   const p=siteProg(s);const qi=currentQuest(s);const m=nextMove(s);
   let h=`<div class="btns" style="margin-top:0"><button class="b ghost" onclick="curSite=null;render()">‹ 현장 지도</button><button class="b ghost" onclick="view='sites';siteTab='기록';render()">기록 · 사람 · 돈</button></div>
-  <div class="card"><div class="jhead"><div><div class="t" style="font-size:1.15rem;margin:0">${esc(s.name)}</div><div class="small">${s.rooms?esc(s.rooms)+'실 · ':''}${s.due?'준공 '+esc(s.due):'준공일 [ ] · 「정보 고치기」 에서'}</div></div><div class="pct">${p.pct}%</div></div>
+  <div class="card"><div class="jhead"><div><div class="t" style="font-size:1.15rem;margin:0">${esc(s.name)}</div><div class="small">${s.rooms?esc(s.rooms)+'실 · ':''}${s.due?'준공 '+esc(s.due):'<span class="nodue">준공일 없음</span>'}</div></div><div class="pct">${p.pct}%</div></div>
     <div class="bar"><i style="width:${p.pct}%"></i></div>
     <div class="small" style="margin-top:4px">열쇠 ${p.done} / ${p.total} · 지금 <b>${esc(QUESTS[qi].n)}</b> (${qi+1}/9)</div></div>`;
   const lateHere=lateList().filter(x=>x.s.id===s.id);

@@ -9,7 +9,7 @@
   --acc:#0a5f57; --acc-ink:#ffffff; --acc-soft:#cfe8e4;
   --ok:#1f7a3d; --ok-soft:#d6efdd; --warn:#8a5600; --warn-soft:#fbe9c7;
   --off:#5f6a6c; --off-soft:#e2e7e6; --ask:#a32b22; --ask-soft:#fadcd8;
-  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",monospace;
   --sans:"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --fs:17px; --gap:12px;
 }
@@ -81,7 +81,7 @@ h2.sec small{font-weight:400;font-size:.85rem;color:var(--ink2)}
 /* 카드 — 경계 뚜렷, 안은 넉넉히 */
 .card{background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:16px 18px;
   margin-bottom:var(--gap);box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.card .id{font-family:var(--mono);font-size:.82rem;color:var(--ink2);display:flex;gap:10px;
+.card .id{font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:.82rem;color:var(--ink2);display:flex;gap:10px;
   align-items:center;flex-wrap:wrap;margin-bottom:6px}
 .card .t{font-weight:700;font-size:1.12rem;line-height:1.5;margin:4px 0 6px;letter-spacing:-.01em}
 .card .m{color:var(--ink2);font-size:.95rem;white-space:pre-wrap;line-height:1.65;
@@ -225,7 +225,7 @@ label.f{display:block;font-size:.92rem;color:var(--ink2);margin:14px 0 6px;font-
 .askmine{border-left:6px solid var(--warn)}
 .deci{padding:14px 4px;border-bottom:1px solid var(--line);font-size:1rem;line-height:1.6}
 .deci .h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:4px}
-.deci .d{font-family:var(--mono);font-size:.85rem;color:var(--ink2)}
+.deci .d{font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:.85rem;color:var(--ink2)}
 .deci .v{font-weight:700}
 .opt{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .opt button{font-size:1rem;padding:12px 18px;border-radius:12px;border:2px solid var(--acc);
@@ -237,7 +237,7 @@ label.f{display:block;font-size:.92rem;color:var(--ink2);margin:14px 0 6px;font-
 .tl .st{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:14px 0 14px 20px;
   border-left:4px solid var(--line);margin-left:8px;position:relative;font-size:1rem;cursor:pointer;min-height:60px}
 .tl .st .dot{position:absolute;left:-9px}
-.tl .st .dt{font-family:var(--mono);font-size:.88rem;color:var(--ink2)}
+.tl .st .dt{font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:.88rem;color:var(--ink2)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));
   background:var(--ink);color:var(--bg);padding:14px 22px;border-radius:999px;font-size:1rem;font-weight:600;
   z-index:30;opacity:0;transition:opacity .2s;max-width:88%;text-align:center;line-height:1.5}
@@ -247,3 +247,6 @@ label.f{display:block;font-size:.92rem;color:var(--ink2);margin:14px 0 6px;font-
 @media (prefers-reduced-motion: reduce){.rec{animation:none}.b:active{transform:none}}
 :focus-visible{outline:3px solid var(--acc);outline-offset:3px}
 .tw{overflow-x:auto}
+
+/* v7.2 (다른 창 9/20) 에서 가져옴 : 준공일이 없는 곳을 조용히 표시 (카드마다 반복하지 않는다) */
+.nodue{color:var(--ink2);opacity:.65}
