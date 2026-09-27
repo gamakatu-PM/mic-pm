@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v9 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v10 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """54. 제안서 PPT - 회사 제안서의 고정 장을 그대로 가져오고, 현장 내용만 새로 만들어 붙인다.
 
 왜 이렇게 하는가
@@ -287,6 +287,7 @@ def run():
                '{{현장_제목}}': (site + ' ') if site else '',
                '{{날짜}}': today().strftime('%Y. %m. %d')}
     print('')
+    checked = []                       # (파일, 문제 목록, 메모) - 만든 뒤 바로 점검 (deck_check)
     for p, d in pick:
         d2 = deck.fill(d, mapping)
         if qrows:
@@ -302,12 +303,61 @@ def run():
             made, copied = build_merged(d2, src_path, fixed_nos, f, mapping)
             print('만듦 : %s  (새로 %d장 + 원본에서 %d장 = %d장)'
                   % (f, made, copied, made + copied))
+            checked.append(f)
+            deck_check_report(f, checked)
         except Exception as e:
             print('실패 : %s  (%s)' % (d2.get('title'), e))
     print('')
+    deck_check_summary(checked, od)
     print('대외 제출 전 반드시 한 번 열어 확인하십시오.')
     log('제안서PPT', '%d건 %s' % (len(pick), site or '범용'))
 
+
+
+# ---------- 만든 뒤 바로 점검 (deck_check : 글자 넘침·겹침·붙음·표 밀림) ----------
+_CHECK = {}
+
+
+def deck_check_report(f, checked):
+    """한 파일 점검. deck_check 가 없거나 실패해도 제안서 만들기는 멈추지 않는다."""
+    try:
+        import deck_check
+        probs, note = deck_check.check(f)
+    except Exception as e:
+        _CHECK[f] = (None, '점검 못 함 (%s)' % e)
+        print('  점검 : 못 함 (%s)' % e)
+        return
+    _CHECK[f] = (probs, note)
+    if not probs:
+        print('  점검 : 이상 없음')
+    else:
+        print('  점검 : 확인할 곳 %d군데' % len(probs))
+        for si, kind, msg in probs:
+            print('     %2d장 %-4s %s' % (si, kind, msg))
+
+
+def deck_check_summary(checked, od):
+    """모아서 한 줄 + 점검결과 txt (창을 닫아도 남게)"""
+    if not checked:
+        return
+    bad = [(f, _CHECK.get(f, (None, ''))) for f in checked]
+    n = sum(len(v[0]) for f, v in bad if v[0])
+    lines = ['제안서 점검 %s  (%s)' % (today().strftime('%Y-%m-%d'), next((v[1] for f, v in bad if v[1]), ''))]
+    for f, (probs, note) in bad:
+        if probs is None:
+            lines.append('%s : 점검 못 함' % os.path.basename(f))
+        elif probs:
+            lines.append('%s : 확인할 곳 %d군데' % (os.path.basename(f), len(probs)))
+            lines += ['   %2d장 %s  %s' % (si, kind, msg) for si, kind, msg in probs]
+        else:
+            lines.append('%s : 이상 없음' % os.path.basename(f))
+    print('점검 : %s' % ('전부 이상 없음 (%d개)' % len(checked) if not n else
+                         '확인할 곳 %d군데 - 위 장 번호를 파워포인트에서 열어 보십시오' % n))
+    try:
+        with io.open(os.path.join(od, '_점검결과_%s.txt' % ymd6()), 'w', encoding='utf-8-sig') as fp:
+            fp.write('\r\n'.join(lines) + '\r\n')
+    except Exception:
+        pass
 
 def parse_nos(s):
     out = []

@@ -85,6 +85,8 @@
 [2026-09-27 저녁 - 최우선 6개 확정]
   km-32-session-start      v3   v2 + 7절 「최우선 6개」 (잊지 않기·회의->작업의뢰서·도면->돈·레이더·수금·제안서 PPT). 옛 판은 버전\km-32-session-start_v2.skill
 
+[2026-09-27 밤 - 제안서 창]
+  km-31-hyeonjang-tools    v19  v18 + PC 검사기 deck_check 절 (54번이 만든 뒤 저절로 점검 · ★제안서_PPT 4번). v18 은 버전\km-31-hyeonjang-tools_v18.skill
 [2026-09-27 밤 - 앱 창(KM 손바닥) 합류]
   km-35-app.skill          v2   새 스킬 - 처음 저장. 앱 「KM 손바닥」 정본 (주소 : 3호 8fzZyExskHKVgSBK1WtVtR · 2호 JL1QWi1yBx9N9WS8RyiN4Y · 1호 Mg52NGzLvSegFJYXhuzHwH · 여는 법 WdZapd4CHbYq6mArPS5fku)
                                  저장소 구조 · 여정 9단계x열쇠 41 · 계약 게이트 · 마감 역산 · 결론 대장 · PC 49/50번 · 화면별 파일 지도 · 자가시험 35개 · 고치는 법
