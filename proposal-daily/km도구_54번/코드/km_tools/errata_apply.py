@@ -90,6 +90,10 @@ def fix(src, dst=None):
     if dst is None:
         base, ext = os.path.splitext(src)
         dst = base + '_점유율80' + ext
+        n = 2
+        while os.path.exists(dst):              # 덮어쓰지 않는다 - 두 번째부터 _점유율80_2, _3 ...
+            dst = '%s_점유율80_%d%s' % (base, n, ext)
+            n += 1
     prs.save(dst)
     with io.open(os.path.splitext(dst)[0] + '_바꾼곳.csv', 'w', encoding='utf-8-sig', newline='') as f:
         w = csv.writer(f)

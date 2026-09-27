@@ -295,10 +295,10 @@ def run():
             at = 1 if sl and sl[0].get('type') == 'cover' else 0
             for k, extra in enumerate(qty_slides(site, qrows, os.path.basename(qcsv))):
                 sl.insert(at + k, extra)
-        base = '%s_%s_%s_r1.pptx' % (safe_name(site or '표준'),
-                                     safe_name(d2.get('파일명', d2.get('title', '제안서'))[:30]),
-                                     ymd6())
-        f = os.path.join(od, base)
+        stem = '%s_%s_%s' % (safe_name(site or '표준'),
+                             safe_name(d2.get('파일명', d2.get('title', '제안서'))[:30]),
+                             ymd6())
+        f = next_free(od, stem)
         try:
             made, copied = build_merged(d2, src_path, fixed_nos, f, mapping)
             print('만듦 : %s  (새로 %d장 + 원본에서 %d장 = %d장)'
@@ -312,6 +312,17 @@ def run():
     print('대외 제출 전 반드시 한 번 열어 확인하십시오.')
     log('제안서PPT', '%d건 %s' % (len(pick), site or '범용'))
 
+
+
+def next_free(folder, stem, ext='.pptx'):
+    """덮어쓰지 않는다 (프로님 규칙). 같은 날 같은 현장을 다시 뽑으면 _r2, _r3 ...
+    파워포인트에 열려 있어 잠긴 파일도 건드리지 않게 된다."""
+    n = 1
+    while True:
+        f = os.path.join(folder, '%s_r%d%s' % (stem, n, ext))
+        if not os.path.exists(f) and not os.path.exists(os.path.join(folder, '~$' + os.path.basename(f))):
+            return f
+        n += 1
 
 
 # ---------- 만든 뒤 바로 점검 (deck_check : 글자 넘침·겹침·붙음·표 밀림) ----------
