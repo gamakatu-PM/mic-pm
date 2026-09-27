@@ -23,6 +23,10 @@ def meta(site, ymd, hm, dept_lines, todos=(), decisions=(), company='가나건�
                     '2': {'타부서 전달 사항': list(dept_lines), '할 일': list(todos)}}}
 
 
+def _fid(fn):
+    return '%04x' % (sum(ord(c) * (i + 1) for i, c in enumerate(fn)) % 65536)
+
+
 def fake_template(path):
     """원틀과 같은 칸 구조만 흉내 낸 시험용 서식 (회사 원틀 아님)."""
     import openpyxl
@@ -54,7 +58,16 @@ def main():
     ok('표시 없는 줄은 None', T.parse_line('3. 전기 — 차단기 용량 확인') is None)
     ok('「작업 의뢰서」 띄어쓰기', T.parse_line('1. 개발 — 매핑 확인 → 작업 의뢰서') == ('개발', '매핑 확인'))
     ok('내용 속 「-」 는 안 자름', T.parse_line('1. 설계 — RS-485 변환 검토 → 작업의뢰서') == ('설계', 'RS-485 변환 검토'))
-    ok('부서 묶음 키', T.dept_key('설비(난방)') == '설비' and T.dept_key('전기/현장') == '전기')
+    ok('부서 묶음 키 (괄호만 뗌)', T.dept_key('설비(난방)') == '설비' and T.dept_key('설계/개발') == '설계/개발' and T.dept_key(' 설계 ') == '설계')
+    print('== 1-1. 감사 지적 (v2)')
+    ok('「설계/개발 · 매핑」 부서 = 설계/개발', T.parse_line('3. 설계/개발 · 매핑 → 작업의뢰서') == ('설계/개발', '매핑'), T.parse_line('3. 설계/개발 · 매핑 → 작업의뢰서'))
+    ok('「전기·통신 — 확인」 부서 = 전기·통신', T.parse_line('7. 전기·통신 — 확인 → 작업의뢰서') == ('전기·통신', '확인'))
+    ok('「설비(난방/급수) — 확인」', T.parse_line('13. 설비(난방/급수) — 확인 → 작업의뢰서') == ('설비(난방/급수)', '확인'))
+    ok('「2) 제작: 외함 400*900*90」', T.parse_line('2) 제작: 외함 400*900*90 → 작업의뢰서') == ('제작', '외함 400*900*90'))
+    ok('「A/B 비교」 내용 속 / 는 안 자름', T.parse_line('1. 설계 — A/B 비교 → 작업의뢰서') == ('설계', 'A/B 비교'))
+    for v in ('→ 작업의뢰서 필요', '→ 작업의뢰서.', '-> 작업의뢰서', '(→ 작업의뢰서)', '→작업의뢰서 작성'):
+        ok('태그 변형 받음 : %s' % v, T.parse_line('1. 설계 — 회로 비교 ' + v) == ('설계', '회로 비교'), T.parse_line('1. 설계 — 회로 비교 ' + v))
+    ok('붙어 있는 복합회의도 현장 아님', not T.is_site('복합회의 (앵커·연합)') and not T.is_site('_삭제요망_가나'))
     ok('사내 부서', T.inhouse('설계') == '디자인&설계' and T.inhouse('AS') == '고객지원' and T.inhouse('통신') == '')
     ok('현장 아님', not T.is_site('복합회의') and not T.is_site('확인 필요') and T.is_site('가나호텔'))
     ok('전화 모양', T.phone_fmt('01012345678') == '010-1234-5678')
@@ -122,7 +135,7 @@ def main():
     ok('의뢰서 장 수 = 7 (가나 2+1+1 · 복합 1 · 다라 1 · 사아 1)', rep['sheets'] == 7 and rep['made'] == 7, rep)
     fs = sorted(f for f in os.listdir(out) if f.startswith('작업의뢰서초안_가나호텔_260921') and f.endswith('.xlsx'))
     ok('같은 현장·날·부서 회의 3건 = 파일 3개 (시각·상대로 가름)', fs == ['작업의뢰서초안_가나호텔_260921_1726_설계.xlsx', '작업의뢰서초안_가나호텔_260921_1726_제작.xlsx',
-        '작업의뢰서초안_가나호텔_260921_1905_설계.xlsx', '작업의뢰서초안_가나호텔_260921_이영희_설계.xlsx'], fs)
+        '작업의뢰서초안_가나호텔_260921_1905_설계.xlsx', '작업의뢰서초안_가나호텔_260921_이영희_%s_설계.xlsx' % _fid('가나호텔__260921_h__meta.json')], fs)
     import openpyxl
     xp = os.path.join(out, '작업의뢰서초안_가나호텔_260921_1726_설계.xlsx')
     ok('파일 이름', os.path.exists(xp), os.listdir(out))
@@ -147,11 +160,13 @@ def main():
     xb = os.path.join(out, '작업의뢰서초안_현장확인_260922_0900_개발.xlsx')
     wsb = openpyxl.load_workbook(xb).worksheets[0]
     ok('복합회의 : 현장명 비움 · 시트 현장확인', wsb['E12'].value is None and wsb.title == '현장확인(개발)')
+    ok('복합회의 : G6 도 비움 (=E12 → 0 으로 안 보이게)', wsb['G6'].value is None)
     xl = os.path.join(out, '작업의뢰서초안_사아현장_260920_1500_설계.xlsx')
     wsl = openpyxl.load_workbook(xl).worksheets[0]
     n_long = len(T.body_lines([p for p in ps if p['rec']['site'] == '사아현장'][0]))
     ok('17줄 넘으면 행을 늘림 (20건 전부 들어감)', wsl['B%d' % (19 + n_long - 1)].value == '수고하세요.', n_long)
     ok('늘린 행도 B:R 병합', any(str(m) == 'B%d:R%d' % (19 + n_long - 1, 19 + n_long - 1) for m in wsl.merged_cells.ranges))
+    ok('늘려도 본문 뒤 빈 줄 2개', wsl.print_area.endswith('$R$%d' % (19 + n_long + 2)), wsl.print_area)
 
     print('== 5. 덮어쓰지 않음 · 모음 · 대장')
     rep2 = T.run(md, out=out, template=tpl, today='260927')
@@ -163,6 +178,23 @@ def main():
     rows = list(_csv.reader(io.open(rep['csv'], encoding='utf-8-sig')))
     ok('대장 머리 + 7줄', rows[0][:4] == ['회의날', '현장', '부서', '요청'] and len(rows) == 8, len(rows))
     ok('자가진단 json', os.path.exists(os.path.join(out, '작업의뢰서초안_자가진단_260927.json')))
+
+    print('== 5-1. 감사 지적 : 이름이 순서에 안 흔들림 · 날짜 폴더 · 못 읽은 줄')
+    md2 = os.path.join(tmp, 'meta2'); os.makedirs(md2)
+    def put2(fn, j):
+        io.open(os.path.join(md2, fn), 'w', encoding='utf-8').write(json.dumps(j, ensure_ascii=False))
+    put2('b__meta.json', meta('가나호텔', '260921', '', ['1. 설계 — 비 → 작업의뢰서'], phone=''))
+    put2('c__meta.json', meta('가나호텔', '260921', '', ['1. 설계 — 씨 → 작업의뢰서'], phone=''))
+    base2 = os.path.join(tmp, 'o2')
+    r1 = T.run(md2, out=os.path.join(base2, '260927'), template=tpl, today='260927')
+    put2('a0__meta.json', meta('가나호텔', '260921', '', ['1. 설계 — 에이 → 작업의뢰서', '2. 제작 → 의뢰서 검토 부탁'], phone=''))
+    r2 = T.run(md2, out=os.path.join(base2, '260928'), template=tpl, today='260928')
+    ok('첫날 2장 만듦', r1['made'] == 2, r1)
+    ok('다음 날 새 회의 a0 만 만듦 (b·c 는 어제 폴더에 있어 「이미 있음」)', r2['made'] == 1 and r2['same'] == 2, r2)
+    new = [f for f in os.listdir(os.path.join(base2, '260928')) if f.endswith('.xlsx')]
+    ok('새로 만든 것이 a0 의 것', len(new) == 1 and _fid('a0__meta.json') in new[0], new)
+    t2 = io.open(r2['txt'], encoding='utf-8').read()
+    ok('「의뢰서」 는 있는데 모양이 다른 줄은 모음에 알림', '표시 모양이 달라' in t2 and '의뢰서 검토 부탁' in t2 and r2['odd'] == 1)
 
     print('== 6. 원틀이 없을 때')
     out3 = os.path.join(tmp, 'out3')

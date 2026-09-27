@@ -31,17 +31,22 @@ from __future__ import print_function
 import os, sys, io, re, json, csv, glob, shutil, datetime
 from copy import copy
 
-VERSION = 'v1 2026-09-27'
+VERSION = 'v2 2026-09-27'   # v2 : 독립 감사 지적 고침 (부서 글자 · 태그 변형 · 현장 아님 0 · 이름 충돌 · 행 높이 · 날짜 폴더)
+# v1 2026-09-27
 
-TAG_RE = re.compile(r'→\s*작업\s*의뢰서\s*$')
-# 「1. 설계 / 내용 → 작업의뢰서」 「2. 제작 — 내용」 「3. 설계 · 내용」 「4. 설계: 내용」 「1. 설비(난방) — 내용」
-LINE_RE = re.compile(r'^\s*[-·•]?\s*(?:\d+\s*[.)]\s*)?(?P<dept>[^—–/·:\-|]{1,14}?)\s*(?:—|–|/|·|:|-|\|)\s*(?P<what>.+?)\s*$')
+# 줄 끝 「→ 작업의뢰서」. v2 : 「-> 작업의뢰서」 「→ 작업의뢰서 필요」 「(→ 작업의뢰서)」 「→ 작업의뢰서.」 도 받는다 (감사 지적)
+TAG_RE = re.compile(r'\(?\s*(?:→|->|=>|⇒)\s*작업\s*의뢰서\s*(?:필요|요청|발행|작성)?\s*[.)\]]*\s*$')
+# 「1. 설계 / 내용」 「2. 제작 — 내용」 「3. 설계 · 내용」 「4. 설계: 내용」 「1. 설비(난방) — 내용」
+# v2 : 구분자 뒤에 빈칸이 있어야 자른다 → 「설계/개발 · 매핑」 은 부서 「설계/개발」, 「전기·통신 — 확인」 은 「전기·통신」,
+#      「설비(난방/급수) — 확인」 은 「설비(난방/급수)」 (감사 지적 : 부서 글자가 잘려 다른 부서 요청이 섞였다)
+LINE_RE = re.compile(r'^\s*[-·•]?\s*(?:\d+\s*[.)]\s*)?(?P<dept>[^\s:][^:]{0,19}?)\s*(?:(?:—|–|/|·|-|\|)\s+|\s(?:—|–|/|·|-|\|)|:\s*)(?P<what>.+?)\s*$')
 
 # 회사 서식 수신부서 칸에 있는 부서 (체크는 차장님이 하신다. 여기서는 「사내 부서인가」 표시만)
 INHOUSE = {'설계': '디자인&설계', '디자인': '디자인&설계', '개발': '개발', '구매': '구매', '제작': '제작',
            '시공': '시공', '영업': '영업', 'AS': '고객지원', '고객지원': '고객지원'}
 
 NOT_A_SITE = ('복합회의', '확인필요', '확인 필요', '현장미정', '미정', '수금채크', '수금체크', '삭제요망')
+NOT_A_SITE_IN = ('복합회의', '확인필요', '현장미정', '삭제요망', '수금채크', '수금체크')   # v2 : 「복합회의 (앵커·연합)」 처럼 붙어 있어도
 
 CHECK_CELLS = ('F5', 'C7', 'C8', 'C9', 'C10', 'C14')
 LINE_LIMIT = 116          # km-work-order : 실작성 최대 폭. 132 넘으면 인쇄에서 잘린다
@@ -76,7 +81,9 @@ def clear_checks(s):
 
 def is_site(name):
     n = re.sub(r'\s+', '', name or '')
-    return bool(n) and all(n != re.sub(r'\s+', '', x) for x in NOT_A_SITE)
+    if not n or any(x in n for x in NOT_A_SITE_IN):
+        return False
+    return all(n != re.sub(r'\s+', '', x) for x in NOT_A_SITE)
 
 
 def parse_line(line):
@@ -93,8 +100,10 @@ def parse_line(line):
 
 
 def dept_key(dept):
-    """「설비(난방)」 → 「설비」, 「전기/현장」 → 「전기」. 묶는 데만 쓴다 (글자는 원문대로 남긴다)."""
-    return re.split(r'[(\s/]', dept.strip())[0] or dept.strip()
+    """묶는 데만 쓴다 (글자는 원문대로 남긴다). 괄호 안과 빈칸만 뗀다.
+    「설비(난방)」 → 「설비」 / 「설계/개발」 → 「설계/개발」 (v2 : 설계 장에 개발 요청이 섞이지 않게)"""
+    k = re.sub(r'\s+', '', re.sub(r'\(.*?\)', '', dept or ''))
+    return k or (dept or '').strip()
 
 
 def inhouse(dept):
@@ -136,11 +145,13 @@ def read_one(path):
     s1 = (d.get('sec') or {}).get('1') or {}
     s2 = (d.get('sec') or {}).get('2') or {}
     site = (m.get('site') or s1.get('현장') or '').strip()
-    reqs = []
+    reqs, odd = [], []
     for ln in _list(s2.get('타부서 전달 사항')):
         p = parse_line(ln)
         if p:
             reqs.append(p)
+        elif '의뢰서' in ln:
+            odd.append(ln)          # v2 : 「의뢰서」 는 있는데 표시 모양이 달라 못 읽은 줄 — 조용히 버리지 않고 모음·대장에 알린다
     todos = []
     for ln in _list(s2.get('할 일')):
         parts = [x.strip() for x in ln.split('|')]
@@ -155,7 +166,7 @@ def read_one(path):
     return {'file': os.path.basename(path), 'site': site, 'ymd': (m.get('ymd') or '').strip(),
             'hm': (m.get('hm') or '').strip(), 'who': counterpart(m), 'who_short': counterpart(dict(m, phone='')),
             'person': (m.get('person') or '').strip(), 'name': (m.get('name') or '').strip(),
-            'reqs': reqs, 'todos': todos, 'decisions': decisions}
+            'reqs': reqs, 'odd': odd, 'todos': todos, 'decisions': decisions}
 
 
 def collect(meta_dir, d_from=None, d_to=None):
@@ -318,7 +329,7 @@ def fill_xlsx(tpl, out_path, p, lines):
     ws['O5'] = '=IF($O$4="","",$O$4)'
     ws['O16'] = '=IF($O$4="","",$O$4)'
     ws['E12'] = r['site'] if p['site_ok'] else None
-    ws['G6'] = '=E12'
+    ws['G6'] = '=E12' if p['site_ok'] else None     # v2 : 현장이 아닐 때 =E12 는 「0」 으로 보인다 (감사 지적)
     if r['who']:
         ws['D16'] = r['who']
     # 체크박스(F5·C7·C8·C9·C10·C14) : 전부 빈 괄호로. 차장님이 V 를 넣으신다 (km-30)
@@ -336,11 +347,15 @@ def fill_xlsx(tpl, out_path, p, lines):
         flat.extend((None, x) for x in parts[1:])
 
     last_body = 35
-    if len(flat) > 17:                        # km-work-order make_workorder 와 같은 순서 (병합 → 삽입 → 서식 → 로고)
-        extra = len(flat) - 17
+    if len(flat) > 15:                        # km-work-order make_workorder 와 같은 순서 (병합 → 삽입 → 서식 → 로고)
+        extra = len(flat) - 15                # v2 : 본문 뒤 빈 줄 2개도 남게 (감사 지적)
         for mg in [mg for mg in ws.merged_cells.ranges if mg.min_row >= 19]:
             ws.unmerge_cells(str(mg))
+        # v2 : insert_rows 는 행 높이를 안 옮긴다 → 35행부터 아래 높이를 적어 두었다가 밀린 자리에 다시 준다
+        below = dict((rr, ws.row_dimensions[rr].height) for rr in range(35, ws.max_row + 1))
         ws.insert_rows(35, extra)
+        for rr, hgt in sorted(below.items(), reverse=True):
+            ws.row_dimensions[rr + extra].height = hgt
         src = 34
         for rr in range(35, 35 + extra):
             ws.row_dimensions[rr].height = ws.row_dimensions[src].height or 25.2
@@ -404,17 +419,22 @@ def run(meta_dir, d_from=None, d_to=None, out=None, template=None, today=None):
         lines = body_lines(p)
         site_lbl = r['site'] if p['site_ok'] else '현장확인'
         # 같은 현장·같은 날·같은 부서 회의가 여러 건일 수 있다 (2026-09-21 앵커호텔 설계 3건) → 시각·상대로 가른다
-        tag = re.sub(r'\D', '', r['hm']) or _safe(r['name'] or r['person'].split(' ')[0], 10)
+        # v2 : 이름이 회의마다 늘 같게 (감사 지적 : -2·-3 을 순서로 붙이면 회의가 늘 때 다른 회의 파일을 「이미 있음」 으로 봤다)
+        #      시각이 있으면 시각, 없으면 상대 이름 + 회의록 파일 표식 4자리(회의록 파일 이름에서 나옴 → 늘 같다)
+        fid = '%04x' % (sum(ord(c) * (i + 1) for i, c in enumerate(r['file'])) % 65536)
+        hm = re.sub(r'\D', '', r['hm'])
+        tag = hm or '%s_%s' % (_safe(r['name'] or r['person'].split(' ')[0], 10), fid)
         name = '작업의뢰서초안_%s_%s_%s_%s' % (_safe(site_lbl, 20), r['ymd'], tag, _safe(p['key'], 10))
-        base, k = name, 2
-        while name in used:                    # 그래도 겹치면 (같은 시각·같은 상대) 뒤에 -2, -3
-            name = '%s-%d' % (base, k)
-            k += 1
+        if name in used:                       # 같은 시각·같은 부서 회의 두 건 (중복 올림 등) → 표식을 붙인다
+            name = '%s_%s' % (name, fid)
         used.add(name)
         xp = os.path.join(out, name + '.xlsx')
+        # v2 : 결과 폴더가 날짜별이라 다음 날 다시 돌리면 같은 초안을 또 만들었다 → 옆 날짜 폴더도 본다
+        before = [q for q in glob.glob(os.path.join(os.path.dirname(os.path.abspath(out)), '*', name + '.xlsx'))
+                  if os.path.dirname(os.path.abspath(q)) != os.path.abspath(out)]
         state = ''
         if tpl:
-            if os.path.exists(xp):
+            if os.path.exists(xp) or before:
                 state = '이미 있음'
                 skipped_same += 1
             else:
@@ -439,6 +459,13 @@ def run(meta_dir, d_from=None, d_to=None, out=None, template=None, today=None):
             for i, part in enumerate(split_line(t)):
                 txt.append('%3s  %s' % (no if (no and i == 0) else '', part))
         txt.append('')
+    odd = [(r, ln) for r in recs for ln in r.get('odd', [])]
+    if odd:
+        txt.append('━━ 「의뢰서」 는 있는데 표시 모양이 달라 초안을 안 만든 줄 %d개 — 보시고 필요하면 말씀해 주십시오' % len(odd))
+        for r, ln in odd:
+            txt.append('   %s %s : %s' % (r['ymd'], r['site'], ln))
+            rows.append([r['ymd'], r['site'], '', ln, r['who'], r['file'], '', '못 읽음 (표시 모양)', '「→ 작업의뢰서」 모양이 아님'])
+        txt.append('')
     head = ['[KM] 작업의뢰서 초안 %s  —  회의 %d건 중 「→ 작업의뢰서」 %d장' % (today, len(recs), len(plans)),
             '원틀 : %s' % (os.path.basename(tpl) if tpl else '없음 → xlsx 안 만듦. 아래 본문을 그룹웨어 원틀에 붙여 넣으십시오'),
             '넣으실 것 : 납기일(O4 노란칸 하나만 치면 출고요청일·현장납기일이 따라옵니다) · 업체명 · 객실수 · 체크박스 V · 수량·규격 [   ]',
@@ -450,7 +477,7 @@ def run(meta_dir, d_from=None, d_to=None, out=None, template=None, today=None):
         w = csv.writer(f)
         w.writerow(['회의날', '현장', '부서', '요청', '상대', '회의록', '파일', '상태', '확인할 것'])
         w.writerows(rows)
-    rep = {'version': VERSION, 'today': today, 'meetings': len(recs), 'sheets': len(plans), 'made': made,
+    rep = {'version': VERSION, 'today': today, 'meetings': len(recs), 'sheets': len(plans), 'made': made, 'odd': len(odd),
            'same': skipped_same, 'template': tpl or '', 'skipped': skipped, 'out': out, 'txt': tp, 'csv': cp}
     io.open(os.path.join(out, '작업의뢰서초안_자가진단_%s.json' % today), 'w', encoding='utf-8').write(
         json.dumps(rep, ensure_ascii=False, indent=1))
