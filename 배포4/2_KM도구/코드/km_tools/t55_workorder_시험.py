@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""54번 작업의뢰서 초안 시험. 가짜 회의록(실제 현장·사람 아님)으로 돌린다.
-    python t54_workorder_시험.py
+"""55번 작업의뢰서 초안 시험. 가짜 회의록(실제 현장·사람 아님)으로 돌린다.
+    python t55_workorder_시험.py
 """
 from __future__ import print_function
 import os, sys, io, json, shutil, tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import t54_workorder as T
+import t55_workorder as T
 
 R = []
 

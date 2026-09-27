@@ -19,18 +19,18 @@ chk('월 9', G.norm_month('9', T) == ('260901', '260930'))
 chk('월 2026-02', G.norm_month('2026-02', T) == ('260201', '260228'))
 
 print('--- 품은 54번')
-chk('버튼 안 54번이 저장소 54번과 같다',
-    G.T54_SRC == io.open(os.path.join(HERE, '코드', 'km_tools', 't54_workorder.py'), encoding='utf-8').read(),
-    '저장소 t54 를 고쳤으면 버튼을 다시 지어야 합니다')
+chk('버튼 안 55번이 저장소 55번과 같다',
+    G.T55_SRC == io.open(os.path.join(HERE, '코드', 'km_tools', 't55_workorder.py'), encoding='utf-8').read(),
+    '저장소 t55 를 고쳤으면 버튼을 다시 지어야 합니다')
 
 d = tempfile.mkdtemp()
 try:
     print('--- 도구 넣기 (없는 폴더 · 옛 판)')
     tools = os.path.join(d, '코드', 'km_tools'); os.makedirs(tools)
-    io.open(os.path.join(tools, 't54_workorder.py'), 'w', encoding='utf-8').write("VERSION = 'v0 옛것'\n")
-    n1 = G.ensure_tool(tools, 't54_workorder')
-    chk('옛 54번 덮어씀', 'v0 → v3' in n1, n1)
-    chk('다시 하면 안 건드림', G.ensure_tool(tools, 't54_workorder') == '')
+    io.open(os.path.join(tools, 't55_workorder.py'), 'w', encoding='utf-8').write("VERSION = 'v0 옛것'\n")
+    n1 = G.ensure_tool(tools, 't55_workorder')
+    chk('옛 55번 덮어씀', 'v0 → v3' in n1, n1)
+    chk('다시 하면 안 건드림', G.ensure_tool(tools, 't55_workorder') == '')
 
     print('--- 통째로 돌리기 (가짜 드라이브)')
     drive = os.path.join(d, 'drive'); meta = os.path.join(drive, '회의록', 'incoming'); os.makedirs(meta)
