@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v10 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v11 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """errata_apply - 회사 제안서 pptx 의 5성급 점유율을 「해외스펙 제외 80% 이상」 으로 통일한다. 토큰 0.
 
 왜 만들었나
@@ -21,7 +21,7 @@ import os, re, sys, io, csv
 
 from pptx import Presentation
 
-PCT = re.compile(r'7[05]\s*%')          # 70% · 75% (70%+ 도 여기서 걸린다)
+PCT = re.compile(r'(?<![\d.])7[05]\s*%')   # 70% · 75% (70%+ 도). 170% · 0.75% 는 안 건드린다
 NEED = ('점유', '5성급', '5 성급', '10곳')  # 이 말이 든 문단만 본다
 SCOPE = '(해외스펙 제외)'
 
@@ -42,7 +42,7 @@ def _paras(prs):
 
 
 ALONE = re.compile(r'^\s*7[05]\s*%\s*\+?\s*$')          # 「70%+」 처럼 숫자만 있는 큰 글씨
-WITH_TAIL = re.compile(r'7[05](\s*)%((?:\s*이상)?(?:\s*(?:점유|설치))?)')
+WITH_TAIL = re.compile(r'(?<![\d.])7[05](\s*)%((?:\s*이상)?(?:\s*(?:점유|설치))?)')
 
 
 def fix(src, dst=None):
@@ -76,6 +76,7 @@ def fix(src, dst=None):
         if not any(k in text for k in NEED) or not PCT.search(text):
             continue
         has_scope = '해외' in text
+        before_log = len(log)
         for r in p.runs:
             if PCT.search(r.text):
                 before = r.text
@@ -87,6 +88,9 @@ def fix(src, dst=None):
                     r.text = PCT.sub('80%', r.text)
                     has_scope = True
                 log.append([si, before, r.text])
+        if len(log) == before_log:
+            # 숫자가 글자 조각 두 개로 나뉘어 있어(「7」+「0%」) 못 바꾼 것 - 버리지 않고 남긴다
+            log.append([si, text, '(못 바꿈 - 파워포인트에서 직접 고쳐 주십시오)'])
     if dst is None:
         base, ext = os.path.splitext(src)
         dst = base + '_점유율80' + ext
@@ -129,4 +133,8 @@ def run(path=None):
 
 
 if __name__ == '__main__':
+    try:                                   # 슬라이드 글자에 cp949 에 없는 글자가 있어도 멈추지 않게
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
     run(sys.argv[1] if len(sys.argv) > 1 else None)

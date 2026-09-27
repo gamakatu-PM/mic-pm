@@ -23,7 +23,7 @@ AI 사용량 0. 인터넷도 쓰지 않습니다.
 """
 import os, sys, io, re, shutil, datetime, traceback, hashlib
 
-PKG = 10          # 이 파일이 품은 54번 판. 파일 둘째 줄 「# 54판 vN」 과 맞춘다
+PKG = 11          # 이 파일이 품은 54번 판. 파일 둘째 줄 「# 54판 vN」 과 맞춘다
 SRC = __SRC__
 SPECS = __SPECS__
 OLD_SPECS = set(__OLDSPEC__)   # 전에 내보낸 판의 지문. PC 파일이 이것과 같으면 안 고친 것
@@ -56,46 +56,73 @@ def _ver(text):
     return int(m.group(1)) if m else 0
 
 
+def _backup(tools, p, name):
+    """옛 파일을 _54번_이전판 에 남긴다. 이름에 초까지 붙여 겹치지 않게."""
+    bak = os.path.join(tools, '_54번_이전판')
+    os.makedirs(bak, exist_ok=True)
+    shutil.copy2(p, os.path.join(bak, '%s.%s' % (name, datetime.datetime.now().strftime('%y%m%d_%H%M%S'))))
+
+
+def _write(p, text):
+    """임시 파일에 다 쓴 뒤 한 번에 바꾼다 - 쓰다 끊겨도 반쪽 파일이 남지 않는다."""
+    tmp = p + '.tmp54'
+    with io.open(tmp, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(text)
+    os.replace(tmp, p)
+
+
 def install(tools):
-    """54번 파일을 넣는다. 없거나 옛 판일 때만. 더 새 판이 있으면 그대로 둔다."""
+    """54번 파일을 넣는다. 없거나 옛 판일 때만. 더 새 판이 있으면 그대로 둔다.
+    한 파일이 잠겨 있어도(열려 있음) 나머지는 계속 넣고, 못 넣은 것은 화면에 알린다."""
     did = []
     for name, text in SRC.items():
         p = os.path.join(tools, name)
         old = ''
-        if os.path.isfile(p):
-            try:
-                old = io.open(p, 'r', encoding='utf-8').read()
-            except Exception:
-                old = ''
-            if _ver(old) >= PKG:
-                continue
-            bak = os.path.join(tools, '_54번_이전판')
-            os.makedirs(bak, exist_ok=True)
-            shutil.copy2(p, os.path.join(bak, '%s.%s' % (name, datetime.datetime.now().strftime('%y%m%d_%H%M'))))
-        with io.open(p, 'w', encoding='utf-8', newline='\n') as f:
-            f.write(text)
-        did.append('%s %s' % (name, '새 판으로' if old else '새로'))
+        try:
+            if os.path.isfile(p):
+                try:
+                    old = io.open(p, 'r', encoding='utf-8').read()
+                except Exception:
+                    old = ''
+                if _ver(old) >= PKG:
+                    continue
+                _backup(tools, p, name)
+            _write(p, text)
+            did.append('%s %s' % (name, '새 판으로' if old else '새로'))
+        except Exception as e:
+            did.append('%s 못 넣음 (%s) - 창을 닫고 다시 누르십시오' % (name, e))
     sd = os.path.join(tools, '제안서_내용')
     os.makedirs(sd, exist_ok=True)
+    # 넣은 적 있는 제안서 목록 - 프로님이 지우신 것은 다시 만들지 않는다
+    rec_p = os.path.join(sd, '_54번_넣은목록.txt')
+    try:
+        rec = set(x.strip() for x in io.open(rec_p, encoding='utf-8') if x.strip())
+    except Exception:
+        rec = set()
     n = m = 0
     for name, text in SPECS.items():
         p = os.path.join(sd, name)
-        if os.path.isfile(p):
-            # 프로님이 고친 파일은 덮지 않는다. 전에 내가 낸 판 그대로일 때만 새 판으로
-            try:
+        try:
+            if os.path.isfile(p):
+                # 프로님이 고친 파일은 덮지 않는다. 전에 내가 낸 판 그대로일 때만 새 판으로
                 cur = io.open(p, 'rb').read().replace(b'\r\n', b'\n')
-            except Exception:
-                continue
-            if cur.decode('utf-8', 'replace') == text or hashlib.sha1(cur).hexdigest() not in OLD_SPECS:
-                continue
-            bak = os.path.join(tools, '_54번_이전판')
-            os.makedirs(bak, exist_ok=True)
-            shutil.copy2(p, os.path.join(bak, '%s.%s' % (name, datetime.datetime.now().strftime('%y%m%d_%H%M'))))
-            m += 1
-        else:
-            n += 1
-        with io.open(p, 'w', encoding='utf-8', newline='\n') as f:
-            f.write(text)
+                if cur.decode('utf-8', 'replace') == text or hashlib.sha1(cur).hexdigest() not in OLD_SPECS:
+                    rec.add(name)
+                    continue
+                _backup(tools, p, name)
+                m += 1
+            else:
+                if name in rec:
+                    continue                  # 지우신 것
+                n += 1
+            _write(p, text)
+            rec.add(name)
+        except Exception as e:
+            did.append('제안서 %s 못 넣음 (%s)' % (name, e))
+    try:
+        _write(rec_p, '\n'.join(sorted(rec)) + '\n')
+    except Exception:
+        pass
     if n:
         did.append('제안서 내용 %d건 새로' % n)
     if m:
@@ -144,10 +171,14 @@ def patch_t33(tools):
         compile(s2, p, 'exec')
     except Exception:
         return '33번에 ⑧ 칸을 넣으면 문법이 깨져 넣지 않았습니다'
-    shutil.copy2(p, p + '.bak_54')
-    with io.open(p, 'w', encoding='utf-8', newline='\n') as f:
-        f.write(s2)
-    return '33번 현황판에 ⑧ 현장별 한 곳에 칸을 다시 넣음 (원본 t33_dashboard.py.bak_54)'
+    bak = p + '.bak_54'
+    k = 2
+    while os.path.exists(bak):                      # 전 백업을 덮지 않는다
+        bak = '%s.bak_54_%d' % (p, k)
+        k += 1
+    shutil.copy2(p, bak)
+    _write(p, s2)
+    return '33번 현황판에 ⑧ 현장별 한 곳에 칸을 다시 넣음 (원본 %s)' % os.path.basename(bak)
 
 
 def main():
