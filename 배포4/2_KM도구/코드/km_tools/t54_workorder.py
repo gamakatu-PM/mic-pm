@@ -31,7 +31,8 @@ from __future__ import print_function
 import os, sys, io, re, json, csv, glob, shutil, datetime
 from copy import copy
 
-VERSION = 'v2 2026-09-27'   # v2 : 독립 감사 지적 고침 (부서 글자 · 태그 변형 · 현장 아님 0 · 이름 충돌 · 행 높이 · 날짜 폴더)
+VERSION = 'v3 2026-09-27'   # v3 : 실제 회의록 44건으로 돌려 본 뒤 — 태그 뒤 괄호 설명(「→ 작업의뢰서 (70~80개 …)」)을 내용으로 받음 · 「작업의뢰서 불요」 는 못 읽은 줄로 안 셈
+# v2 : 독립 감사 지적 고침 (부서 글자 · 태그 변형 · 현장 아님 0 · 이름 충돌 · 행 높이 · 날짜 폴더)
 # v1 2026-09-27
 
 # 줄 끝 「→ 작업의뢰서」. v2 : 「-> 작업의뢰서」 「→ 작업의뢰서 필요」 「(→ 작업의뢰서)」 「→ 작업의뢰서.」 도 받는다 (감사 지적)
@@ -86,12 +87,21 @@ def is_site(name):
     return all(n != re.sub(r'\s+', '', x) for x in NOT_A_SITE)
 
 
+TAG_TAIL_RE = re.compile(r'(?:→|->|=>|⇒)\s*작업\s*의뢰서\s*(\([^()]*\))\s*$')   # v3 : 태그 뒤 괄호 설명
+NOT_REQ_RE = re.compile(r'의뢰서\s*(?:불요|불필요|필요\s*없|없음|해당\s*없)|(?:불요|불필요)')     # v3 : 「작업의뢰서 불요」 는 의뢰가 아니다
+
+
 def parse_line(line):
     """타부서 한 줄 → (부서, 요청) 또는 None (작업의뢰서 표시가 없는 줄)"""
     s = _txt(line)
-    if not TAG_RE.search(s):
+    m = TAG_TAIL_RE.search(s)
+    if m:                                   # 「… → 작업의뢰서 (70~80개, 약 1파렛트)」 → 「… (70~80개, 약 1파렛트)」
+        s = (s[:m.start()].rstrip() + ' ' + m.group(1) + ' → 작업의뢰서').strip()
+        body = s[:s.rfind('→')].strip()
+    elif TAG_RE.search(s):
+        body = TAG_RE.sub('', s).strip()
+    else:
         return None
-    body = TAG_RE.sub('', s).strip()
     m = LINE_RE.match(body)
     if not m:
         return ('확인필요', re.sub(r'^\d+\s*[.)]\s*', '', body))
@@ -150,7 +160,7 @@ def read_one(path):
         p = parse_line(ln)
         if p:
             reqs.append(p)
-        elif '의뢰서' in ln:
+        elif '의뢰서' in ln and not NOT_REQ_RE.search(ln):
             odd.append(ln)          # v2 : 「의뢰서」 는 있는데 표시 모양이 달라 못 읽은 줄 — 조용히 버리지 않고 모음·대장에 알린다
     todos = []
     for ln in _list(s2.get('할 일')):

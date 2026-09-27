@@ -29,7 +29,7 @@ try:
     tools = os.path.join(d, '코드', 'km_tools'); os.makedirs(tools)
     io.open(os.path.join(tools, 't54_workorder.py'), 'w', encoding='utf-8').write("VERSION = 'v0 옛것'\n")
     n1 = G.ensure_tool(tools, 't54_workorder')
-    chk('옛 54번 덮어씀', 'v0 → v2' in n1, n1)
+    chk('옛 54번 덮어씀', 'v0 → v3' in n1, n1)
     chk('다시 하면 안 건드림', G.ensure_tool(tools, 't54_workorder') == '')
 
     print('--- 통째로 돌리기 (가짜 드라이브)')
