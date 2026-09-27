@@ -34,6 +34,14 @@ try:
     chk('안 쓰는 칸 버림 (phone·date_iso·전체 협의 내용)', 'phone' not in j['meta'] and '전체 협의 내용' not in j['sec']['2'])
     chk('이중 탈출 따옴표 풀림', j['sec']['1']['안건목록'][0]['bullets'][0] == '"한번만 더" 발언 — 확인 필요', j['sec']['1']['안건목록'][0]['bullets'])
     chk('할 일 그대로', j['sec']['2']['할 일'] == ['- 260922 | 권 매니저 방문 목적 확인 | 배성윤 → 권 매니저'])
+    chk('v1.1 타부서 전달 사항 칸이 있음 (없으면 빈 목록)', j['sec']['2'].get('타부서 전달 사항') == [])
+    j2 = U.parse_one('{"meta": {"site": "가나", "phone": "01012345678"}, "sec": {"2": {"타부서 전달 사항": ["1. 설계 — 비교 → 작업의뢰서"]}}}')
+    chk('v1.1 타부서 전달 사항 남김 · 전화는 계속 버림', j2['sec']['2']['타부서 전달 사항'] == ['1. 설계 — 비교 → 작업의뢰서'] and 'phone' not in j2['meta'])
+    import t55_workorder as W
+    dd = os.path.join(d, 'o2'); os.makedirs(dd)
+    io.open(os.path.join(dd, 'x__meta.json'), 'w', encoding='utf-8').write(json.dumps(j2, ensure_ascii=False))
+    r54 = W.collect(dd)[0]
+    chk('55번이 푼 파일에서 의뢰서 줄을 읽음', len(r54) == 1 and r54[0]['reqs'] == [('설계', '비교')], r54)
     chk('일정 그대로', j['sec']['1']['일정'] == ['- 협의 | 260922 | 방문'])
     chk('unescape 낱개', U.unescape('a\\_b \\[c\\] \\-d') == 'a_b [c] -d')
     # 53번이 그대로 읽을 수 있는가

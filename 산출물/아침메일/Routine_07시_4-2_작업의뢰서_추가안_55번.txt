@@ -1,0 +1,18 @@
+07:00 Routine (trig_01HyAqCBd7dCLTZqHUxwnyc5) 지시문에 더할 것 — 2026-09-27 작성
+이 Routine 은 session_01XbEMq9Cxz5QShdk2JJd6NB 에 묶여 있어서 그 창에서만 지시문을 고칠 수 있다
+(다른 창에서 update_trigger 하면 거절된다. 지우고 새로 만들지 않는다 — 실행 이력이 사라진다).
+PR #11 (claude/three-priorities-drttpa → bohllt) 이 합쳐진 뒤, 그 창에서 아래 두 곳을 더한다. 나머지 글자는 한 자도 바꾸지 않는다.
+
+(1) 머리 괄호 줄 아래에 한 줄
+(v14 2026-09-27 : 4-2) 작업의뢰서 초안(55번) 추가 — K/t55_workorder.py 가 있을 때만. 메일 모양은 그대로.)
+
+(2) 4-1) 블록 바로 아래, 5) 앞에
+4-2) 작업의뢰서 초안 (55번, 2026-09-27 차장님 「네가 맞다고 생각하는 작업들은 다 해」) — K/t55_workorder.py 가 있을 때만. 없으면 건너뛰고 아무것도 적지 않는다.
+     python3 K/t55_workorder.py W/meta --from <어제YYMMDD> --to <어제YYMMDD> --out W/wo --today <오늘YYMMDD>
+     (W/meta 는 t53_unpack v1.1 이상이 풀어야 「타부서 전달 사항」 칸이 있다. v1 이면 0장이 정상)
+     의뢰서가 1장 이상이면 W/wo 의 xlsx 전부와 작업의뢰서초안_모음_<오늘>.txt 를 SendUserFile 로 이 창에 올린다 (attach).
+     메일에는 넣지 않는다 (메일 모양 3-2 그대로). 원틀을 새로 그리지 않는다. 손으로 고치지 않는다.
+     6)에 「작업의뢰서 초안 N장(못 읽은 줄 N)」 을 덧붙인다.
+
+(3) 6) 한 줄 끝 「문제가 있었으면 한 줄 더.」 앞에
+4-2) 를 돌렸으면 「· 작업의뢰서 초안 N장」.
