@@ -1,0 +1,86 @@
+<!doctype html><meta charset="utf-8">
+<title>현장별 한 곳에</title><style>
+:root{--bg:#F2F4F7;--card:#fff;--ink:#18212E;--ink2:#43505F;--muted:#77838F;
+ --line:#DCE1E8;--navy:#1F3864;--blue:#2E74B5;--sky:#E7EEF7;--warn:#C77B2B}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55;
+ font-family:"맑은 고딕","Malgun Gothic",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+h1{font-size:23px;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tools input{flex:1 1 260px;padding:9px 12px;border:1px solid var(--line);border-radius:4px;font-size:14px}
+.site{background:var(--card);border:1px solid var(--line);border-radius:5px;margin-bottom:12px;overflow:hidden}
+.site>summary{cursor:pointer;padding:12px 16px;font-weight:700;font-size:15px;
+ display:flex;gap:10px;align-items:center;list-style:none;background:var(--card)}
+.site>summary::-webkit-details-marker{display:none}
+.site[open]>summary{border-bottom:1px solid var(--line);background:var(--sky)}
+.cnt{margin-left:auto;font-weight:400;font-size:12px;color:var(--muted)}
+.body{padding:6px 16px 14px}
+.kind{margin-top:10px}
+.kind h3{font-size:12px;letter-spacing:.06em;color:var(--navy);margin:0 0 5px;
+ border-left:3px solid var(--blue);padding-left:7px}
+.f{display:flex;gap:10px;padding:5px 0 5px 10px;border-bottom:1px dotted var(--line);font-size:13px}
+.f:last-child{border-bottom:0}
+.f a{color:var(--ink2);text-decoration:none;flex:1;word-break:break-all}
+.f a:hover{color:var(--blue);text-decoration:underline}
+.f .d{color:var(--muted);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.f .t{color:var(--muted);font-size:11px;white-space:nowrap}
+.note{background:#FAF0E2;border:1px solid var(--warn);border-radius:5px;padding:12px 15px;
+ font-size:13px;color:var(--ink2);margin-top:20px}
+.note b{color:var(--warn)}
+.empty{color:var(--muted);padding:24px;text-align:center;background:var(--card);
+ border:1px dashed var(--line);border-radius:5px}
+</style>
+<div class="wrap">
+<h1>현장별 한 곳에</h1>
+<div class="sub">2026-09-27 기준 · 결과 원본은 _도구결과 안에 그대로 있습니다. 이 화면은 현장별로 묶어 보여줄 뿐 파일을 옮기지 않습니다.</div>
+<div class="tools"><input id="q" placeholder="현장 이름을 치면 걸러집니다" oninput="kmFilter(this.value)"></div>
+<details class="site" data-k="연합기숙사"><summary>연합기숙사<span class="cnt">산출 · 견적 · 실행 · 사진 · 파일 4개</span></summary><div class="body">
+<div class="kind"><h3>산출</h3>
+<div class="f"><a href="file:///_도구결과/도면수량/260917/연합기숙사_도면수량_260917.csv">연합기숙사_도면수량_260917.csv</a><span class="t">도면수량</span><span class="d">09-27</span></div>
+</div>
+<div class="kind"><h3>견적</h3>
+<div class="f"><a href="file:///_도구결과/견적서채우기/260918/연합기숙사_견적서_Rev2_260918.xlsx">연합기숙사_견적서_Rev2_260918.xlsx</a><span class="t">견적서채우기</span><span class="d">09-27</span></div>
+</div>
+<div class="kind"><h3>실행</h3>
+<div class="f"><a href="file:///_도구결과/단가붙이기/260919/연합기숙사_실행산출_v5_260919.xlsx">연합기숙사_실행산출_v5_260919.xlsx</a><span class="t">단가붙이기</span><span class="d">09-27</span></div>
+</div>
+<div class="kind"><h3>사진</h3>
+<div class="f"><a href="file:///_도구결과/사진대지/260920/연합기숙사_사진대지_260920.xlsx">연합기숙사_사진대지_260920.xlsx</a><span class="t">사진대지</span><span class="d">09-27</span></div>
+</div>
+</div></details>
+<details class="site" data-k="청담pj"><summary>청담PJ<span class="cnt">산출 · 견적 · 제안서 · 회의록 · 일정 · 파일 6개</span></summary><div class="body">
+<div class="kind"><h3>산출</h3>
+<div class="f"><a href="file:///_도구결과/도면수량/260917/청담PJ_도면수량_260917.csv">청담PJ_도면수량_260917.csv</a><span class="t">도면수량</span><span class="d">09-27</span></div>
+</div>
+<div class="kind"><h3>견적</h3>
+<div class="f"><a href="file:///_도구결과/견적서채우기/260918/청담PJ_견적서_Rev1_260918.xlsx">청담PJ_견적서_Rev1_260918.xlsx</a><span class="t">견적서채우기</span><span class="d">09-27</span></div>
+</div>
+<div class="kind"><h3>제안서</h3>
+<div class="f"><a href="file:///_도구결과/제안서PPT/260927/청담PJ_공사한계%20업무스코프_260927_r1.pptx">청담PJ_공사한계 업무스코프_260927_r1.pptx</a><span class="t">제안서PPT</span><span class="d">09-27</span></div>
+<div class="f"><a href="file:///_도구결과/제안서PPT/260927/청담PJ_4-5성급%20운영시나리오_260927_r1.pptx">청담PJ_4-5성급 운영시나리오_260927_r1.pptx</a><span class="t">제안서PPT</span><span class="d">09-27</span></div>
+</div>
+<div class="kind"><h3>회의록</h3>
+<div class="f"><a href="file:///_도구결과/회의록/260922/청담PJ_회의록_260922.docx">청담PJ_회의록_260922.docx</a><span class="t">회의록</span><span class="d">09-27</span></div>
+</div>
+<div class="kind"><h3>일정</h3>
+<div class="f"><a href="file:///_도구결과/납기역산/260921/청담PJ_역산_260921.xlsx">청담PJ_역산_260921.xlsx</a><span class="t">납기역산</span><span class="d">09-27</span></div>
+</div>
+</div></details>
+<details class="site" data-k="현장미상"><summary>현장을 못 읽은 파일<span class="cnt">파일 1개</span></summary><div class="body">
+<div class="kind"><h3>회의록</h3>
+<div class="f"><a href="file:///_도구결과/회의록/260922/메모_260922.txt">메모_260922.txt</a><span class="t">회의록</span></div>
+</div>
+</div></details>
+<div class="note"><b>파일은 움직이지 않았습니다.</b> 원본은 도구별 폴더에 그대로 있고, 이 화면이 현장 이름으로 묶어 링크만 겁니다. 현장 이름은 파일 이름 앞머리에서 읽습니다 — 「현장을 못 읽은 파일」에 들어간 것은 파일 이름이 현장명으로 시작하지 않는 것입니다.</div>
+</div><script>
+function kmFilter(v){
+  v=(v||'').trim().toLowerCase();
+  document.querySelectorAll('.site').forEach(function(d){
+    var hit = !v || d.dataset.k.indexOf(v)>=0;
+    d.style.display = hit?'':'none';
+    if(v && hit) d.open = true;
+  });
+}
+</script>
