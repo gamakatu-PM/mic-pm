@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v7 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v8 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """deck_core - 회사 표준 서식으로 슬라이드를 그리는 부품. 메뉴 번호 없음.
 
 54번(t54_deck)이 이것을 불러 쓴다. 단독으로 실행하지 않는다.
@@ -259,22 +259,45 @@ def s_diagram(slide, d):
             continue
         col = BLUE if lk.get('style', 'comm') == 'comm' else (
             RED if lk['style'] == 'power' else GRAY_TX)
-        if abs(a[1] - b[1]) < 0.05:                       # 가로
-            x1 = min(a[0] + a[2], b[0] + b[2]) if a[0] < b[0] else b[0] + b[2]
+        ac, bc = a[0] + a[2] / 2, b[0] + b[2] / 2
+        y_over = max(a[1], b[1]) < min(a[1] + a[3], b[1] + b[3])
+        x_over = max(a[0], b[0]) < min(a[0] + a[2], b[0] + b[2])
+        if abs(a[1] - b[1]) < 0.05 or (y_over and not x_over):   # 가로
             x1 = (a[0] + a[2]) if a[0] < b[0] else (b[0] + b[2])
             x2 = b[0] if a[0] < b[0] else a[0]
-            yy = a[1] + a[3] / 2
+            if abs(a[1] - b[1]) < 0.05:
+                yy = a[1] + a[3] / 2
+            else:
+                yy = (max(a[1], b[1]) + min(a[1] + a[3], b[1] + b[3])) / 2
             _rect(slide, x1, yy - 0.01, max(0.02, x2 - x1), 0.025, fill=col)
             if lk.get('label'):
                 _tb(slide, x1, yy - 0.28, max(0.5, x2 - x1), 0.24, lk['label'], size=8,
                     color=col, bold=True, align=PP_ALIGN.CENTER)
-        else:                                             # 세로
-            xx = a[0] + a[2] / 2
+        elif x_over:                                      # 세로
+            if b[0] <= ac <= b[0] + b[2]:
+                xx = ac
+            elif a[0] <= bc <= a[0] + a[2]:
+                xx = bc
+            else:
+                xx = (max(a[0], b[0]) + min(a[0] + a[2], b[0] + b[2])) / 2
             y1 = (a[1] + a[3]) if a[1] < b[1] else (b[1] + b[3])
             y2 = b[1] if a[1] < b[1] else a[1]
             _rect(slide, xx - 0.01, y1, 0.025, max(0.02, y2 - y1), fill=col)
             if lk.get('label'):
                 _tb(slide, xx + 0.08, y1, 2.4, 0.22, lk['label'], size=8, color=col, bold=True)
+        else:                                             # 대각 자리 -> ㄱ자로 꺾는다
+            top, low = (a, b) if a[1] < b[1] else (b, a)
+            tx = top[0] + top[2] / 2                      # 위 상자 아래 가운데에서 내려와
+            my = low[1] + low[3] / 2                      # 아래 상자 가운데 높이에서 꺾는다
+            _rect(slide, tx - 0.01, top[1] + top[3], 0.025, max(0.02, my - top[1] - top[3]), fill=col)
+            if low[0] > tx:
+                x1, x2 = tx, low[0]
+            else:
+                x1, x2 = low[0] + low[2], tx
+            _rect(slide, x1 - 0.01, my - 0.01, max(0.02, x2 - x1) + 0.02, 0.025, fill=col)
+            if lk.get('label'):
+                _tb(slide, x1, my - 0.28, max(0.5, x2 - x1), 0.24, lk['label'], size=8,
+                    color=col, bold=True, align=PP_ALIGN.CENTER)
     if steps:
         by = 5.05 - 1.15
         n = len(steps)
@@ -294,18 +317,26 @@ def s_diagram(slide, d):
 
 
 def s_split(slide, d):
+    """좌우 비교. 박스 높이는 줄 수에 맞춘다 (빈 박스가 아래로 길게 남지 않게)."""
     y = _page_title(slide, d.get('title', ''), d.get('eyebrow'), d.get('pill'))
     cw = (MW - 0.24) / 2
+    n = max([len(d.get(sd, {}).get('lines', [])) for sd in ('left', 'right')] + [1])
+    step = 0.42
+    h = min(5.0 - y, 0.66 + n * step + 0.18)
     for i, side in enumerate(('left', 'right')):
         blk = d.get(side, {})
         x = ML + i * (cw + 0.24)
-        h = 5.0 - y
         _rect(slide, x, y, cw, h, fill=(GRAY_BG if i == 0 else SKY), line=LINE)
-        _tb(slide, x + 0.16, y + 0.14, cw - 0.32, 0.3, blk.get('label', ''), size=11.5,
+        _rect(slide, x, y, cw, 0.05, fill=(GRAY_TX if i == 0 else BLUE))
+        _tb(slide, x + 0.18, y + 0.16, cw - 0.36, 0.32, blk.get('label', ''), size=12.5,
             color=(GRAY_TX if i == 0 else NAVY), bold=True)
         for j, ln in enumerate(blk.get('lines', [])):
-            _tb(slide, x + 0.28, y + 0.56 + j * 0.34, cw - 0.5, 0.3, '· ' + ln, size=10,
+            _tb(slide, x + 0.3, y + 0.66 + j * step, cw - 0.5, 0.34, '· ' + ln, size=11,
                 color=BODY)
+    if d.get('note') and y + h + 0.7 <= 5.05:
+        _rect(slide, ML, y + h + 0.2, MW, 0.5, fill=GREEN_BG)
+        _tb(slide, ML + 0.2, y + h + 0.2, MW - 0.4, 0.5, d['note'], size=11, color=NAVY,
+            bold=True, anchor=MSO_ANCHOR.MIDDLE)
 
 
 def s_request(slide, d):

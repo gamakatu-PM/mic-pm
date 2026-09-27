@@ -17,13 +17,14 @@ AI 사용량 0. 인터넷도 쓰지 않습니다.
     누를 때마다 km_tools 에 54번 파일이 빠졌거나 옛 판이면 스스로 새 판을 넣습니다.
     33번 현황판에 「⑧ 현장별 한 곳에」 칸이 빠져 있으면 그것도 다시 넣습니다(원본은 .bak_54 로 남김).
 
-제안서 내용(제안서_내용\*.json)은 없을 때만 넣습니다. 고쳐 쓰신 것은 덮지 않습니다.
+제안서 내용(제안서_내용\*.json)은 없거나, 전에 드린 판 그대로일 때만 새 판으로 바꿉니다. 고쳐 쓰신 것은 덮지 않습니다.
 """
-import os, sys, io, re, shutil, datetime, traceback
+import os, sys, io, re, shutil, datetime, traceback, hashlib
 
-PKG = 7          # 이 파일이 품은 54번 판. 파일 둘째 줄 「# 54판 vN」 과 맞춘다
+PKG = 8          # 이 파일이 품은 54번 판. 파일 둘째 줄 「# 54판 vN」 과 맞춘다
 SRC = __SRC__
 SPECS = __SPECS__
+OLD_SPECS = set(__OLDSPEC__)   # 전에 내보낸 판의 지문. PC 파일이 이것과 같으면 안 고친 것
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 NOTE = []
@@ -74,15 +75,29 @@ def install(tools):
         did.append('%s %s' % (name, '새 판으로' if old else '새로'))
     sd = os.path.join(tools, '제안서_내용')
     os.makedirs(sd, exist_ok=True)
-    n = 0
+    n = m = 0
     for name, text in SPECS.items():
         p = os.path.join(sd, name)
-        if not os.path.isfile(p):
-            with io.open(p, 'w', encoding='utf-8', newline='\n') as f:
-                f.write(text)
+        if os.path.isfile(p):
+            # 프로님이 고친 파일은 덮지 않는다. 전에 내가 낸 판 그대로일 때만 새 판으로
+            try:
+                cur = io.open(p, 'rb').read().replace(b'\r\n', b'\n')
+            except Exception:
+                continue
+            if cur.decode('utf-8', 'replace') == text or hashlib.sha1(cur).hexdigest() not in OLD_SPECS:
+                continue
+            bak = os.path.join(tools, '_54번_이전판')
+            os.makedirs(bak, exist_ok=True)
+            shutil.copy2(p, os.path.join(bak, '%s.%s' % (name, datetime.datetime.now().strftime('%y%m%d_%H%M'))))
+            m += 1
+        else:
             n += 1
+        with io.open(p, 'w', encoding='utf-8', newline='\n') as f:
+            f.write(text)
     if n:
         did.append('제안서 내용 %d건 새로' % n)
+    if m:
+        did.append('제안서 내용 %d건 새 판으로 (고치신 것은 그대로 둠)' % m)
     return did
 
 
