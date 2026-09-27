@@ -8,13 +8,13 @@
     python t53_unpack.py <검색결과.txt 또는 .json> <나올 폴더>
 
 구글이 본문에 붙이는 마크다운 탈출(\\_ \\[ \\] \\- \\. 와 \\\\" 이중 탈출)을 되돌린다.
-53번이 쓰는 칸만 남긴다 : meta(site·ymd·hm·person·company·name·rank) · 안건목록 · 일정 · 할 일.
+53번이 쓰는 칸만 남긴다 : meta(site·ymd·hm·person·company·name·rank) · 안건목록 · 일정 · 할 일 · 타부서 전달 사항(54번, v1.1).
 현장명(meta.site)은 한 글자도 바꾸지 않는다.
 """
 from __future__ import print_function
 import os, sys, io, json, re
 
-VERSION = 'v1 2026-09-23'
+VERSION = 'v1.1 2026-09-27'   # v1.1 : 54번(작업의뢰서 초안)이 쓰는 「타부서 전달 사항」 칸도 남긴다 (전화는 그대로 버림) (더하기만. 기존 칸 그대로)
 KEEP_META = ('site', 'ymd', 'hm', 'person', 'company', 'name', 'rank')
 
 
@@ -31,7 +31,8 @@ def slim(j):
     return {'meta': dict((k, m.get(k, '')) for k in KEEP_META),
             'sec': {'1': {'현장': s1.get('현장', ''), '안건목록': s1.get('안건목록') or [],
                           '일정': s1.get('일정') or []},
-                    '2': {'할 일': s2.get('할 일') or []}}}
+                    '2': {'할 일': s2.get('할 일') or [],
+                          '타부서 전달 사항': s2.get('타부서 전달 사항') or []}}}
 
 
 def parse_one(snippet):
