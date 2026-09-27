@@ -37,7 +37,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v12.1 2026-09-27'  # v12.1 : 답요청 A열 「날짜 미상」 을 날짜로 받아 ① 맨 끝에 「날짜 미상」 머리줄로 (옛 할 일 모음 중 회의한 날을 못 찾은 것, 차장님 「다 넣어」)
+VERSION = 'v12.2 2026-09-27'  # v12.2 : --since YYMMDD — 월요일에 금·토·일 회의를 「어제」 로 함께 (주말 회의가 메일·시트에서 빠지던 것)
+# v12.1 2026-09-27  # v12.1 : 답요청 A열 「날짜 미상」 을 날짜로 받아 ① 맨 끝에 「날짜 미상」 머리줄로 (옛 할 일 모음 중 회의한 날을 못 찾은 것, 차장님 「다 넣어」)
 # v12 2026-09-24  # v12 : 한 곳·한 통·두 동작 (차장님 「1번으로」) — 시트 E열 ▼고르기(진행중·아니야·맞아·만들어줘)·F열 메모·G열 현장(걸러보기) / 메일 맨 위 자료 상태·급한 것 5줄·▼고르신 것
 # v11 2026-09-23  # v11 : 체크가 곧 소통 — 체크 안 한 것은 계속 적는다. ① 기한 없는 지난 할 일 · ② 기한 지난 할 일(원래 기한 아래) · ⑤ 앞으로 할 것 + 시트 4번째 탭 「앞으로 할일」
 # v10 2026-09-23  # v10 : 「26년 회의록2」 에 들어가는 것 전부 — ①② 메일·시트 답요청·오늘 할일 : 「- 」 + 담당 괄호 뺌. 기간 메일은 그대로
@@ -59,6 +60,7 @@ FUTURE_HEAD = ['기한', '현장', '할일', '완료']
 EXTRA_HEAD = ['고르기', '메모', '현장(걸러보기)']   # v12 : E·F·G 열 (답요청·오늘 할일·앞으로 할일)
 PICKS = ('진행중', '아니야', '맞아', '만들어줘')    # v12 : E열 ▼ 목록. 완료는 D열 체크로만
 _PICK = {}            # v12 : run() 이 시트에서 읽어 채운다. key -> (고르기, 메모)
+_SPAN = []   # v12.2 : [since, yy] — 여러 날을 「어제」 로 볼 때
 UNKNOWN_DATE = '날짜 미상'   # v12.1 : 답요청 A열에 이 글이면 「회의한 날 모름」 (정렬하면 ① 맨 끝)
 _BOARD_TABS = set()   # v12 : 읽은 탭 (자료 상태 줄)
 _TODAY_ITEMS = []     # v12 : ② 줄 (급한 것 5줄 재료)   # v11 차장님 (2026-09-23) : 앞으로 날짜가 있는 할 일 — 체크할 때까지 계속
@@ -525,7 +527,7 @@ def build_yesterday(recs_y, yday):
 
     n = 0
     if not recs_y:
-        L.append('(%s 회의록 없음)' % _iso(yday.strftime('%y%m%d')))
+        L.append('(%s 회의록 없음)' % (_span_d() if (_SPAN and _SPAN[0] != _SPAN[1]) else _iso(yday.strftime('%y%m%d'))))
     for name in sites:
         n += 1
         one(n, name, bag[name])
@@ -542,6 +544,22 @@ def build_yesterday(recs_y, yday):
 def _kday(ymd):
     """260922 -> 26년 09월 22일"""
     return '%s년 %s월 %s일' % (ymd[:2], ymd[2:4], ymd[4:6])
+
+
+def _span_d():
+    """v12.2 : 「9/27」 또는 「9/25~9/27」"""
+    if _SPAN and _SPAN[0] != _SPAN[1]:
+        return '%s~%s' % (T52._d(_SPAN[0]), T52._d(_SPAN[1]))
+    return T52._d(_SPAN[1]) if _SPAN else ''
+
+
+def span_title(yy, n):
+    """v12.2 : 여러 날이면 「26년 09월 25일~09월 27일_회의 N건」"""
+    if _SPAN and _SPAN[0] != _SPAN[1]:
+        a = _kday(_SPAN[0])
+        b = _kday(_SPAN[1])
+        return '%s~%s_회의 %d건' % (a, b[b.index('년') + 2:] if '년' in b else b, n)
+    return meet_title(yy, n)
 
 
 def meet_title(yy, n):
@@ -572,9 +590,13 @@ def sheet_plan(rows, picked, recs_y, today, yday, new_future=None):
                      'values': [[r['날짜'], r['현장'], r['할일'], '', '', '', r['현장']] for r in rows]}   # v12 : G = 현장(걸러보기)
     plan['오늘 할일'] = {'kind': 'date', 'cols': 4,
                       'values': [[_iso(ty), site, '- ' + what, '', '', '', site] for site, what, _k in picked]}
-    mr = meet_rows(recs_y)
-    plan['회의록'] = {'kind': 'title', 'cols': len(MEET_HEAD),
-                    'values': ([[meet_title(yy, len(recs_y))] + [''] * (len(MEET_HEAD) - 1)] + mr) if mr else []}
+    vals = []
+    for d in sorted(set(r['ymd'] for r in recs_y)):            # v12.2 : 날짜마다 제목줄 (하루면 전과 같음)
+        rd = [r for r in recs_y if r['ymd'] == d]
+        mr = meet_rows(rd)
+        if mr:
+            vals += [[meet_title(d, len(rd))] + [''] * (len(MEET_HEAD) - 1)] + mr
+    plan['회의록'] = {'kind': 'title', 'cols': len(MEET_HEAD), 'values': vals}
     plan['앞으로 할일'] = {'kind': 'date', 'cols': 4,
                         'values': [[due, site, '- ' + what, '', '', '', site] for due, site, what in (new_future or [])]}
     return plan
@@ -806,7 +828,8 @@ def build_status(recs_y, yday, rstat, board_on):
     """v12 : 자료 상태 — 옛 메일의 [ 자료 상태 ] 를 되살림 (9/23 새 메일로 바뀌며 빠졌던 것). 문제가 있으면 줄 앞에 ※"""
     L = []
     n = len(recs_y)
-    L.append('%s어제(%s) 회의록 %d건%s' % ('※ ' if not n else '', T52._d(yday.strftime('%y%m%d')), n,
+    L.append('%s%s(%s) 회의록 %d건%s' % ('※ ' if not n else '', '어제' if not (_SPAN and _SPAN[0] != _SPAN[1]) else '지난 근무일 뒤',
+             _span_d() or T52._d(yday.strftime('%y%m%d')), n,
              ' — 통화·회의가 있었는데 한방에를 안 누르셨으면 빠진 것입니다' if not n else ''))
     if board_on:
         miss = [t for t in ('답요청', '오늘 할일', '앞으로 할일') if t not in _BOARD_TABS]
@@ -858,7 +881,7 @@ def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url='', t4=No
         L += ['━━ 급한 것 ━━  기한이 가장 오래된 것부터 (2번에도 있습니다)', '', urgent, '']
     if picks:
         L += ['━━ ▼ 고르신 것 ━━', '', picks, '']
-    L.append('━━ 1. 답해 주십시오 ━━  %s 회의에서 생긴 할 일 %d건%s' % (T52._d(yy), len(rows), (' · 체크 안 한 지난 할 일 %d건' % n1c) if n1c else ''))
+    L.append('━━ 1. 답해 주십시오 ━━  %s 회의에서 생긴 할 일 %d건%s' % (_span_d() or T52._d(yy), len(rows), (' · 체크 안 한 지난 할 일 %d건' % n1c) if n1c else ''))
     L.append('')
     L.append(t1_body)
     L.append('')
@@ -866,7 +889,7 @@ def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url='', t4=No
     L.append('')
     L.append(t2.rstrip('\n'))
     L.append('')
-    L.append('━━ 3. 어제 있었던 일 ━━  %s' % meet_title(yy, len(recs_y)))
+    L.append('━━ 3. 어제 있었던 일 ━━  %s' % span_title(yy, len(recs_y)))
     L.append('')
     L.append(t3.rstrip('\n'))
     if t4 is not None:
@@ -884,12 +907,14 @@ def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url='', t4=No
 
 
 # ── 한 번에 ───────────────────────────────────────────────
-def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path=''):
+def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='', since=None):
     today = today or datetime.date.today()
     yday = today - datetime.timedelta(days=1)
     yy = yday.strftime('%y%m%d')
     recs_all, skipped = collect(meta_dir)
-    recs_y = [r for r in recs_all if r['ymd'] == yy]
+    since = since if (since and since < yy) else yy                # v12.2 : 월요일엔 금요일부터
+    _SPAN[:] = [since, yy]
+    recs_y = [r for r in recs_all if since <= r['ymd'] <= yy]
 
     _BOARD_TABS.clear()
     board = load_board(done_path) if done_path else None
@@ -1071,7 +1096,7 @@ def main(argv):
         ranges = dict(a.split('=', 1) for a in argv[3:] if '=' in a)
         print(json.dumps(merge_body(plan, ranges), ensure_ascii=False))
         return 0
-    meta_dir, today, out, sheet, radar, donep = argv[1], None, None, '', '', ''
+    meta_dir, today, out, sheet, radar, donep, since = argv[1], None, None, '', '', '', None
     d_from = d_to = None
     i = 2
     while i < len(argv):
@@ -1085,6 +1110,8 @@ def main(argv):
             radar = argv[i + 1]; i += 2
         elif argv[i] == '--done':                        # --done 답요청.json,오늘할일.json
             donep = argv[i + 1]; i += 2
+        elif argv[i] == '--since':                       # --since 260925  (월요일 : 금요일부터 어제까지를 「어제」 로)
+            since = argv[i + 1]; i += 2
         elif argv[i] == '--from':
             d_from = argv[i + 1]; i += 2
         elif argv[i] == '--to':
@@ -1100,7 +1127,7 @@ def main(argv):
         d_to = d_to or d_from
         _t, stat = run_range(meta_dir, d_from, d_to, out, sheet)
     else:
-        _t, stat = run(meta_dir, today, out, sheet, radar, donep)
+        _t, stat = run(meta_dir, today, out, sheet, radar, donep, since)
     print(json.dumps(stat, ensure_ascii=False, indent=1))
     return 0
 

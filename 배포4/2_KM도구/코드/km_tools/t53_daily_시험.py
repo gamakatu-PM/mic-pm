@@ -329,6 +329,29 @@ def _test_v121_unknown_date():
     assert [x[0] for x in c] == ['2026-09-01', '날짜 미상', '날짜 미상'], c
 
 
+# v12.2 --since : 월요일(9/28) 에 금(9/25)·토(9/26)·일(9/27) 회의를 함께
+d2 = tempfile.mkdtemp()
+try:
+    it2 = lambda t: {'title': t, 'bullets': ['내용'], 'decision': '', 'actions': []}
+    write(d2, 'f__meta.json', meta('연합기숙사', '260925', hm='10:00', items=[it2('금요일 안건')], todo=['- 미정 | 금요일 할 일 | 배성윤 → 건축']))
+    write(d2, 's__meta.json', meta('앵커호텔', '260927', hm='11:00', items=[it2('일요일 안건')], todo=['- 미정 | 일요일 할 일 | 배성윤']))
+    write(d2, 'o__meta.json', meta('조선호텔', '260924', hm='09:00', items=[it2('목요일 안건')], todo=['- 미정 | 목요일 할 일 | 배성윤']))
+    MON = datetime.date(2026, 9, 28)
+    (m1, m2, m3), sm = T.run(d2, MON, out=os.path.join(d2, 'o1'), since='260925')
+    chk('v12.2 --since : 금~일 회의 2건 (목요일 것은 뺌)', sm['어제회의'] == 2, str(sm['어제회의']))
+    chk('v12.2 ① 에 금요일 할 일 · 날짜는 금요일', '금요일 할 일' in m1 and '2026-09-25' in m1 and '목요일 할 일' not in m1, m1[:200])
+    chk('v12.2 ③ 에 금·일 둘 다', '금요일 안건' in m3 and '일요일 안건' in m3)
+    one = io.open(sm['파일']['오늘의정리'], encoding='utf-8').read()
+    chk('v12.2 ③ 머리 「26년 09월 25일~09월 27일_회의 2건」', '26년 09월 25일~09월 27일_회의 2건' in one, [l for l in one.split(chr(10)) if '3. 어제' in l])
+    pl = json.load(io.open(sm['파일']['시트계획'], encoding='utf-8'))
+    ti = [v[0] for v in pl['회의록']['values'] if len([x for x in v if x]) == 1]
+    chk('v12.2 시트 회의록 탭 날짜마다 제목줄', ti == ['26년 09월 25일_회의 1건', '26년 09월 27일_회의 1건'], str(ti))
+    chk('v12.2 답요청 줄 날짜 = 회의한 날', [v[0] for v in pl['답요청']['values']] == ['2026-09-25', '2026-09-27'], str([v[0] for v in pl['답요청']['values']]))
+    (n1, n2, n3), sn = T.run(d2, MON, out=os.path.join(d2, 'o2'))
+    chk('v12.2 --since 없으면 전과 같음 (일요일 1건)', sn['어제회의'] == 1 and '26년 09월 27일_회의 1건' in io.open(sn['파일']['오늘의정리'], encoding='utf-8').read())
+finally:
+    shutil.rmtree(d2)
+
 try:
     _test_v121_unknown_date()
     chk('v12.1 답요청 「날짜 미상」 은 위 날짜를 이어받지 않고 ① 맨 끝', True)
