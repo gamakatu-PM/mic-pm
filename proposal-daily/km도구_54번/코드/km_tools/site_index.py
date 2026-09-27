@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v6 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v7 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """site_index - 흩어진 결과를 「현장 하나당 한 곳」 으로 모아 보는 화면을 만든다. 토큰 0.
 
 왜 만들었나
@@ -58,18 +58,51 @@ def kind_of(tool):
     return '그 밖'
 
 
+# 도구가 파일 이름 앞에 붙이는 말 - 현장명이 아니다 (2026-09-27 미리보기에서 현장으로 잡혀 나옴)
+NOT_SITE = ('메일', '보낼메일', '자가시험', '미확인회의록', '회의변경수량', '현황판', '아침한장',
+            '총괄점검', '회의록정리', '오늘할것', '답해주십시오', '어제있었던일', '할일추가',
+            '현장별', '발송로그', '아침대장', '소통이력', '확정', '앞으로할것', '찾아갈곳')
+GENERIC = '표준 (현장명 없는 범용본)'
+
+
 def site_of(fname, tool):
     """파일 이름 앞머리에서 현장명을 뽑는다. 못 뽑으면 빈 값."""
     base = os.path.splitext(fname)[0]
     base = re.sub(r'_?\d{6}(_r\d+)?$', '', base)          # 뒤 날짜·판 제거
+    site = ''
     for tag in ('_도면수량', '_수량표', '_실행산출', '_견적서', '_제안서', '_증감',
                 '_사진대지', '_자재사양서', '_역산', '_초안'):
         if tag in base:
-            return base.split(tag)[0].strip(' _-')
-    parts = base.split('_')
-    if len(parts) >= 2 and len(parts[0]) >= 2:
-        return parts[0].strip(' _-')
-    return ''
+            site = base.split(tag)[0].strip(' _-')
+            break
+    if not site:
+        parts = base.split('_')
+        if len(parts) >= 2 and len(parts[0]) >= 2:
+            site = parts[0].strip(' _-')
+    site = re.sub(r'[_ ]*\d{6}$', '', site).strip(' _-')     # 「앵커호텔_260927」 -> 「앵커호텔」
+    if site in NOT_SITE:
+        return ''
+    if site == '표준':
+        return GENERIC
+    return site
+
+
+def _known_sites():
+    """도면 폴더의 현장 이름 (있으면). 이름 뒤쪽에 현장명이 붙은 파일을 찾는 데 쓴다."""
+    out = set()
+    try:
+        root = cfg('drawing')
+    except Exception:
+        return out
+    for base in [root] + [os.path.join(root, d) for d in (os.listdir(root) if os.path.isdir(root) else [])
+                          if re.match(r'^\d{2,4}년?$', d)]:
+        if not os.path.isdir(base):
+            continue
+        for d in os.listdir(base):
+            if os.path.isdir(os.path.join(base, d)) and not d.startswith(('_', '~')) \
+                    and not re.match(r'^\d{2,4}년?$', d):
+                out.add(d)
+    return out
 
 
 def scan():
@@ -77,6 +110,7 @@ def scan():
     root = cfg('out')
     found = collections.defaultdict(lambda: collections.defaultdict(list))
     loose = collections.defaultdict(list)
+    pending = []
     if not root or not os.path.isdir(root):
         return found, loose, root
     for tool in sorted(os.listdir(root)):
@@ -97,7 +131,15 @@ def scan():
             if site:
                 found[site][kind].append(rec)
             else:
-                loose[kind].append(rec)
+                pending.append((kind, rec))
+    # 현장명이 앞에 없는 파일 (보낼메일_도면요청_연합기숙사.txt 등) - 아는 현장 이름이 들어 있으면 그 현장으로
+    known = set(k for k in found if k != GENERIC) | _known_sites()
+    for kind, rec in pending:
+        hit = [k for k in known if k and k in rec[0]]
+        if len(hit) == 1:
+            found[hit[0]][kind].append(rec)
+        else:
+            loose[kind].append(rec)
     for site in found:
         for kind in found[site]:
             found[site][kind].sort(key=lambda r: (r[2] or datetime.date(1900, 1, 1)), reverse=True)

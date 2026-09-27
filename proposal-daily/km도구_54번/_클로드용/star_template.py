@@ -21,7 +21,7 @@ AI 사용량 0. 인터넷도 쓰지 않습니다.
 """
 import os, sys, io, re, shutil, datetime, traceback
 
-PKG = 6          # 이 파일이 품은 54번 판. 파일 둘째 줄 「# 54판 v6」 과 맞춘다
+PKG = 7          # 이 파일이 품은 54번 판. 파일 둘째 줄 「# 54판 vN」 과 맞춘다
 SRC = __SRC__
 SPECS = __SPECS__
 
