@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v10 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v11 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """54. 제안서 PPT - 회사 제안서의 고정 장을 그대로 가져오고, 현장 내용만 새로 만들어 붙인다.
 
 왜 이렇게 하는가
@@ -30,24 +30,37 @@ FIXED_KEYS = ('목차', '회사개요', '회사소개', '설립', '핵심경쟁�
 
 # ---------- 슬라이드 복사 ----------
 def copy_slide(src_slide, dst_prs, layout_idx=6):
+    """회사 원본의 한 장을 그대로 옮긴다.
+    - 관계 번호(rId)는 옛 번호 -> 새 번호 표를 먼저 만들고 한 번에 바꾼다
+      (하나씩 바꾸면 rId1->rId2, rId2->rId3 처럼 연달아 바뀌어 사진이 뒤바뀐다 - 2026-09-27 감사에서 찾음)
+    - 다른 장으로 가는 링크(목차 등)는 버린다. 따라오면 원본 장·틀이 통째로 딸려 와 파일이 깨진다."""
     dst = dst_prs.slides.add_slide(dst_prs.slide_layouts[layout_idx])
     for ph in list(dst.shapes):
         ph._element.getparent().remove(ph._element)
-    for shp in src_slide.shapes:
-        dst.shapes._spTree.append(copy.deepcopy(shp._element))
-    for rel in src_slide.part.rels.values():
-        if any(k in rel.reltype for k in SKIP_REL):
+    els = [copy.deepcopy(shp._element) for shp in src_slide.shapes]
+    rmap = {}
+    for rel in list(src_slide.part.rels.values()):
+        if any(k in rel.reltype for k in SKIP_REL) or rel.reltype.endswith('/slide'):
+            rmap[rel.rId] = None
             continue
         if rel.is_external:
-            new_rId = dst.part.rels.get_or_add_ext_rel(rel.reltype, rel.target_ref)
+            rmap[rel.rId] = dst.part.rels.get_or_add_ext_rel(rel.reltype, rel.target_ref)
         else:
-            new_rId = dst.part.relate_to(rel.target_part, rel.reltype)
-        if new_rId != rel.rId:
-            for el in dst.shapes._spTree.iter():
-                for k, v in list(el.attrib.items()):
-                    if v == rel.rId and (k.endswith('}embed') or k.endswith('}id')
-                                         or k.endswith('}link')):
-                        el.attrib[k] = new_rId
+            rmap[rel.rId] = dst.part.relate_to(rel.target_part, rel.reltype)
+    for root in els:
+        for el in list(root.iter()):
+            for k, v in list(el.attrib.items()):
+                if '}' not in k or v not in rmap or not k.endswith(('}embed', '}id', '}link')):
+                    continue
+                if rmap[v] is None:                       # 버린 관계를 가리키는 것
+                    tag = el.tag.split('}')[-1]
+                    if tag in ('hlinkClick', 'hlinkHover') and el.getparent() is not None:
+                        el.getparent().remove(el)
+                    else:
+                        del el.attrib[k]
+                else:
+                    el.attrib[k] = rmap[v]
+        dst.shapes._spTree.append(root)
     return dst
 
 
@@ -118,9 +131,10 @@ def find_qty_csv(site):
         return None
     if not os.path.isdir(root):
         return None
-    pat = os.path.join(root, '*', '*도면수량*.csv')
-    cands = [p for p in glob.glob(pat)
-             if (not site) or safe_name(site) in os.path.basename(p)]
+    pat = os.path.join(glob.escape(root), '*', '*도면수량*.csv')
+    want = safe_name(site) + '_도면수량'
+    # 「청담」 이 「청담PJ」 파일을 잡지 않게 - 파일 이름이 「현장명_도면수량」 으로 시작해야 한다
+    cands = [p for p in glob.glob(pat) if os.path.basename(p).startswith(want)]
     if not cands:
         return None
     cands.sort(key=lambda p: os.path.getmtime(p))
@@ -133,6 +147,7 @@ def read_qty(path):
     rows = []
     site = ''
     for enc in ('utf-8-sig', 'cp949', 'utf-8'):
+        rows, site = [], ''                          # 앞 글자판에서 읽다 만 줄이 섞이지 않게
         try:
             with io.open(path, encoding=enc) as fp:
                 for r in csv.reader(fp):
@@ -153,14 +168,21 @@ def read_qty(path):
 
 
 def qty_slides(site, rows, src_name=''):
-    """도면에서 읽은 물량으로 「그 현장 이야기」 2장을 만든다."""
+    """도면에서 읽은 물량으로 「그 현장 이야기」 를 만든다. 품목이 많으면 표를 9줄씩 여러 장으로 (빠뜨리지 않는다)."""
     head = ['품목', '수량', '근거']
-    body = [[a, b, c or '도면 판독'] for a, b, c in rows[:9]]
-    t = {'type': 'table', 'title': '%s 물량 (도면에서 읽은 값)' % (site or '본 현장'),
-         'eyebrow': '그 현장 이야기', 'pill': '도면 기준',
-         'headers': head, 'colW': [3.6, 1.8, 3.6], 'rows': body,
-         'note': '이 표는 도면을 기계로 읽어 센 값입니다. 발주처 수량표와 대조해 확정합니다.'
-                 + (('  (읽은 도면: %s)' % src_name) if src_name else '')}
+    body = [[a, b, c or '도면 판독'] for a, b, c in rows]
+    per = 9
+    chunks = [body[i:i + per] for i in range(0, len(body), per)] or [[]]
+    tables = []
+    for k, part in enumerate(chunks):
+        tt = '%s 물량 (도면에서 읽은 값)' % (site or '본 현장')
+        if len(chunks) > 1:
+            tt += ' %d/%d' % (k + 1, len(chunks))
+        tables.append({'type': 'table', 'title': tt,
+                       'eyebrow': '그 현장 이야기', 'pill': '도면 기준',
+                       'headers': head, 'colW': [3.6, 1.8, 3.6], 'rows': part,
+                       'note': '이 표는 도면을 기계로 읽어 센 값입니다. 발주처 수량표와 대조해 확정합니다.'
+                               + (('  (읽은 도면: %s)' % src_name) if src_name else '')})
     it = {'type': 'items', 'title': '%s 적용 범위' % (site or '본 현장'),
           'eyebrow': '그 현장 이야기',
           'lead': '위 물량을 기준으로 당사가 공급·시공하는 범위입니다.',
@@ -173,41 +195,54 @@ def qty_slides(site, rows, src_name=''):
               '조명 스위치 구수는 전등 설계가 나와야 확정됩니다. 도면에는 L 로만 표기합니다.',
               '도면에서 읽지 못한 기호는 별도 목록으로 정리해 두었습니다. 함께 확인 부탁드립니다.',
               '강전 결선과 외함 취부는 전기공사 범위입니다.']}}
-    return [t, it]
+    return tables + [it]
 
 
 # ---------- 조립 ----------
 def build_merged(spec, src_path, fixed_nos, out_path, mapping):
+    """새로 그린 장 + 회사 원본 고정 장. 회사 원본 장은 마지막 「요청드리는 사항」 장 바로 앞에 넣는다."""
     prs = Presentation()
     prs.slide_width = Inches(deck.SLIDE_W)
     prs.slide_height = Inches(deck.SLIDE_H)
     foot = spec.get('footer', '한국마이크로닉(주)')
     made = 0
     page = 0
-    for sl in spec.get('slides', []):
-        fn = deck.KIND.get(sl.get('type'))
-        if not fn:
-            continue
+    slides = [sl for sl in spec.get('slides', []) if deck.KIND.get(sl.get('type'))]
+    for m in deck.resolve_toc(slides):
+        print('  ※ 목차 「%s」 가 가리키는 장이 없어 쪽번호를 비웠습니다.' % m)
+    tail = []
+    if slides and slides[-1].get('type') == 'request':
+        tail = [slides.pop()]
+
+    def draw(sl):
+        nonlocal made, page
         s = prs.slides.add_slide(prs.slide_layouts[6])
-        fn(s, sl)
+        deck.KIND[sl.get('type')](s, sl)
         if sl.get('type') not in ('cover', 'request'):
             page += 1
             deck._footer(s, foot, page)
         made += 1
+    for sl in slides:
+        draw(sl)
     copied = 0
     if src_path and fixed_nos:
         src = Presentation(src_path)
+        if (src.slide_width, src.slide_height) != (prs.slide_width, prs.slide_height):
+            print('  ※ 회사 원본의 장 크기(%.2f x %.2f in)가 제안서(%.2f x %.2f in)와 달라 복사한 장이 어긋날 수 있습니다.'
+                  % (src.slide_width / 914400.0, src.slide_height / 914400.0, deck.SLIDE_W, deck.SLIDE_H))
         n = len(src.slides)
         for no in fixed_nos:
             if 1 <= no <= n:
                 copy_slide(src.slides[no - 1], prs)
                 copied += 1
+    for sl in tail:
+        draw(sl)
     prs.save(out_path)
     return made, copied
 
 
 def run():
-    title('39. 제안서 PPT (회사 원본 + 현장 내용 합본)')
+    title('54. 제안서 PPT (회사 원본 + 현장 내용 합본)')
     # 1) 원본 고르기
     srcs = find_sources()
     src_path = None
@@ -227,7 +262,14 @@ def run():
         print('지금은 현장 내용만 만듭니다.')
 
     if src_path:
-        prs, rows = scan_source(src_path)
+        try:
+            prs, rows = scan_source(src_path)
+        except Exception as e:
+            print('')
+            print('회사 제안서를 못 열었습니다 (%s). 암호가 걸렸거나 원드라이브에서 아직 안 받은 파일일 수 있습니다.' % e)
+            print('이번에는 현장 내용만 만듭니다.')
+            src_path, rows = None, []
+    if src_path:
         print('')
         print('%s : 모두 %s장' % (os.path.basename(src_path), won(len(rows))))
         auto = [r['no'] for r in rows if r['fixed']]
@@ -249,7 +291,7 @@ def run():
                 try:
                     specs.append((os.path.join(SPECS, name),
                                   json.loads(io.open(os.path.join(SPECS, name),
-                                                     encoding='utf-8').read())))
+                                                     encoding='utf-8-sig').read())))
                 except Exception as e:
                     print('  건너뜀 : %s (%s)' % (name, e))
     if not specs:
@@ -259,13 +301,21 @@ def run():
     print('현장 내용 %s건' % won(len(specs)))
     for i, (p, d) in enumerate(specs, 1):
         print(' %2d. %s  (%d장)' % (i, d.get('title', '?'), len(d.get('slides', []))))
-    sel = ask('\n번호 (엔터 = 전부) > ')
-    pick = [specs[int(sel) - 1]] if sel.isdigit() and 1 <= int(sel) <= len(specs) else specs
+    while True:
+        sel = ask('\n번호 (엔터 = 전부, 여러 개는 쉼표 예 3,5,21) > ').strip()
+        if not sel:
+            pick = specs
+            break
+        nos = [n for n in parse_nos(sel) if 1 <= n <= len(specs)]
+        if nos and len(nos) == len(parse_nos(sel)):
+            pick = [specs[n - 1] for n in nos]
+            break
+        print('  [%s] 는 없는 번호입니다. 1~%d 중에서 넣어 주십시오.' % (sel, len(specs)))
     site = ask('현장명 (엔터 = 현장명 없는 범용 표준본) > ').strip()
 
     # 27번 도면수량 결과가 있으면 「그 현장 이야기」 2장을 자동으로 끼운다
     qrows = []
-    qcsv = find_qty_csv(site)
+    qcsv = find_qty_csv(site) if site else None     # 범용본에 다른 현장 물량이 들어가지 않게
     if qcsv:
         qsite, qrows = read_qty(qcsv)
         if qrows:
@@ -293,12 +343,19 @@ def run():
         if qrows:
             sl = d2.setdefault('slides', [])
             at = 1 if sl and sl[0].get('type') == 'cover' else 0
-            for k, extra in enumerate(qty_slides(site, qrows, os.path.basename(qcsv))):
+            if at < len(sl) and sl[at].get('type') == 'toc':
+                at += 1                                   # 목차 바로 뒤에
+            extras = qty_slides(site, qrows, os.path.basename(qcsv))
+            for x in sl:
+                if x.get('type') == 'toc':                # 목차에도 한 줄 (쪽번호는 만들 때 센다)
+                    x['items'] = [{'text': '그 현장 물량 · 적용 범위', 'desc': '도면에서 읽은 값',
+                                   'goto': extras[0]['title']}] + x.get('items', [])
+            for k, extra in enumerate(extras):
                 sl.insert(at + k, extra)
-        base = '%s_%s_%s_r1.pptx' % (safe_name(site or '표준'),
-                                     safe_name(d2.get('파일명', d2.get('title', '제안서'))[:30]),
-                                     ymd6())
-        f = os.path.join(od, base)
+        stem = '%s_%s_%s' % (safe_name(site or '표준'),
+                             safe_name(d2.get('파일명', d2.get('title', '제안서'))[:30]),
+                             ymd6())
+        f = next_free(od, stem)
         try:
             made, copied = build_merged(d2, src_path, fixed_nos, f, mapping)
             print('만듦 : %s  (새로 %d장 + 원본에서 %d장 = %d장)'
@@ -313,6 +370,8 @@ def run():
     log('제안서PPT', '%d건 %s' % (len(pick), site or '범용'))
 
 
+
+next_free = deck.next_free       # 덮어쓰지 않는 이름 (_r1, _r2 ...)
 
 # ---------- 만든 뒤 바로 점검 (deck_check : 글자 넘침·겹침·붙음·표 밀림) ----------
 _CHECK = {}
@@ -354,7 +413,7 @@ def deck_check_summary(checked, od):
     print('점검 : %s' % ('전부 이상 없음 (%d개)' % len(checked) if not n else
                          '확인할 곳 %d군데 - 위 장 번호를 파워포인트에서 열어 보십시오' % n))
     try:
-        with io.open(os.path.join(od, '_점검결과_%s.txt' % ymd6()), 'w', encoding='utf-8-sig') as fp:
+        with io.open(next_free(od, '_점검결과_%s' % ymd6(), '.txt'), 'w', encoding='utf-8-sig') as fp:
             fp.write('\r\n'.join(lines) + '\r\n')
     except Exception:
         pass

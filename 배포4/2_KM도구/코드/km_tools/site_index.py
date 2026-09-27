@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v10 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v11 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """site_index - 흩어진 결과를 「현장 하나당 한 곳」 으로 모아 보는 화면을 만든다. 토큰 0.
 
 왜 만들었나
@@ -118,7 +118,7 @@ def scan():
         if not os.path.isdir(tdir) or tool.startswith('_'):
             continue
         kind = kind_of(tool)
-        for p in glob.glob(os.path.join(tdir, '*', '*')):
+        for p in glob.glob(os.path.join(glob.escape(tdir), '*', '*')):
             fn = os.path.basename(p)
             if os.path.isdir(p) or any(b in fn for b in BAD):
                 continue
@@ -151,7 +151,13 @@ def _esc(s):
 
 
 def _url(p):
-    return 'file:///' + p.replace('\\', '/').replace(' ', '%20')
+    """눌러 열 수 있는 주소. 이름에 띄어쓰기 · # · % 가 있어도 깨지지 않게 통째로 인코딩한다."""
+    try:
+        from common import file_url
+        return file_url(p)
+    except Exception:
+        import urllib.parse
+        return 'file:///' + urllib.parse.quote(os.path.abspath(p).replace('\\', '/'), safe='/:')
 
 
 CSS = """
