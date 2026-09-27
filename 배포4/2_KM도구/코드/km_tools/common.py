@@ -443,7 +443,10 @@ def finish_xlsx(path):
                             v = d[ref]
                             return '<c r="%s"%s><f>%s</f><v>%s</v></c>' % (ref, m.group(2), m.group(3), repr(float(v)) if v != int(v) else int(v))
                         return m.group(0)
-                    x = re.sub(r'<c r="([A-Z]+\d+)"([^>]*)><f>(.*?)</f><v></v></c>', rep, x)
+                    # v48 고침 (2026-09-27) : openpyxl 3.1 은 빈 값을 <v /> 로 쓴다. <v></v> 만 찾아서
+                    #   엑셀이 없는 곳(드라이브·미리보기)에서 금액 칸이 계속 비어 보였다. 세 모양 + <v> 없음 모두 받는다.
+                    #   수식 칸은 [^<]* 로 한 칸 안에서만 찾는다 (값이 이미 있는 칸을 넘어 옆 칸까지 삼키지 않게)
+                    x = re.sub(r'<c r="([A-Z]+\d+)"([^>]*)><f>([^<]*)</f>(?:<v></v>|<v\s*/>)?</c>', rep, x)
                     data = x.encode('utf-8')
                 zout.writestr(item, data)
         shutil.move(tmp, path)
