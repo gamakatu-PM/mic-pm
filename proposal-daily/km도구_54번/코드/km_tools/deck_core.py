@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v9 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v10 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """deck_core - 회사 표준 서식으로 슬라이드를 그리는 부품. 메뉴 번호 없음.
 
 54번(t54_deck)이 이것을 불러 쓴다. 단독으로 실행하지 않는다.
@@ -93,14 +93,33 @@ def _footer(slide, note, page=None):
             bold=True, align=PP_ALIGN.RIGHT)
 
 
+def _fit(text, w, h, size, bold=True, min_size=12, space=2):
+    """상자(w×h 인치)에 들어갈 때까지 글자 크기를 1pt 씩 줄인다. 현장명이 길 때 표지·제목이 넘치지 않게.
+    재는 법은 deck_check(맑은 고딕 폭)와 같다. deck_check 가 없으면 원래 크기 그대로."""
+    try:
+        import deck_check as dc
+    except Exception:
+        return size
+    s = float(size)
+    paras = str(text).split('\n')
+    while s > min_size:
+        n = sum(len(dc._wrap(pp, w, s, bold)) for pp in paras)
+        if n * dc._lh(s, bold) + (len(paras) - 1) * space / 72.0 <= h + 0.01:
+            return s
+        s -= 1
+    return float(min_size)
+
+
 def _page_title(slide, title_text, eyebrow=None, pill=None):
     y = MTOP
     if eyebrow:
         _tb(slide, ML, y, 6.0, 0.22, eyebrow, size=9, color=GRAY_TX)
         y += 0.24
-    _tb(slide, ML, y, 7.0, 0.42, title_text, size=19, color=NAVY, bold=True)
+    pw = min(3.2, 0.14 * len(pill) + 0.5) if pill else 0.0
+    tw = min(7.0, MW - pw - 0.15) if pill else 7.0
+    _tb(slide, ML, y, tw, 0.42, title_text, size=_fit(title_text, tw, 0.42, 19, True, 13), color=NAVY, bold=True)
     if pill:
-        w = min(3.2, 0.14 * len(pill) + 0.5)
+        w = pw
         _rect(slide, ML + MW - w, y + 0.04, w, 0.3, fill=SKY, line=None,
               shape=MSO_SHAPE.ROUNDED_RECTANGLE)
         _tb(slide, ML + MW - w, y + 0.08, w, 0.24, pill, size=9, color=NAVY,
@@ -115,7 +134,8 @@ def s_cover(slide, d):
     _rect(slide, 0, 0, SLIDE_W, SLIDE_H, fill=NAVY)
     _rect(slide, 0, 0, 0.18, SLIDE_H, fill=BLUE)
     _tb(slide, 1.0, 1.55, 8.2, 0.3, d.get('eyebrow', ''), size=11, color=SKY, bold=True)
-    _tb(slide, 1.0, 1.95, 8.2, 1.1, d.get('title', ''), size=30, color=WHITE, bold=True, space=4)
+    t = d.get('title', '')
+    _tb(slide, 1.0, 1.95, 8.2, 1.1, t, size=_fit(t, 8.2, 1.1, 30, True, 18, space=4), color=WHITE, bold=True, space=4)
     if d.get('subtitle'):
         _tb(slide, 1.0, 3.15, 8.2, 0.5, d['subtitle'], size=14, color=SKY)
     _rect(slide, 1.0, 3.85, 1.4, 0.03, fill=BLUE)

@@ -4,7 +4,7 @@
 import os, io, sys, glob
 HERE = os.path.dirname(os.path.abspath(__file__))
 KT = os.path.join(HERE, '..', '코드', 'km_tools')
-FILES = ['t54_deck.py', 'deck_core.py', 'site_index.py', 'errata_apply.py']
+FILES = ['t54_deck.py', 'deck_core.py', 'site_index.py', 'errata_apply.py', 'deck_check.py']
 src = {f: io.open(os.path.join(KT, f), encoding='utf-8').read() for f in FILES}
 specs = {os.path.basename(p): io.open(p, encoding='utf-8').read()
          for p in sorted(glob.glob(os.path.join(KT, '제안서_내용', '*.json')))}
