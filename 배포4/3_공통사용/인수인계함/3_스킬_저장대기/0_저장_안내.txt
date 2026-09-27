@@ -72,3 +72,9 @@
   km-31-hyeonjang-tools    v16  v15 + 54번 제안서 PPT(★제안서_PPT.py) + 현황판 8번 칸 「현장별 한 곳에」. 빠진 줄 0
   옛 판은 인수인계함\버전\ 에 km-00-first-read_v7.skill / km-31-hyeonjang-tools_v15.skill 로 남겼습니다.
   이중 저장 : 인수인계함\0_시작전_반드시_읽기_v8.md , 2_창이어가기_v33_260927.md
+
+[2026-09-27 오후 - 다른 창(작업의뢰서 초안) 작업 합류]
+  km-31-hyeonjang-tools    v17  v16 + 55번 작업의뢰서 초안 절 + common.finish_xlsx 절 + 표 한 줄. 빠진 줄 0
+  옛 판은 인수인계함\버전\km-31-hyeonjang-tools_v16.skill 로 옮겼습니다.
+  km-00-first-read 는 v8(다른 창) 그대로 - 이 창은 안 건드림. v7 파일을 받으셨으면 v8 을 저장하십시오.
+  자세한 것 : 인수인계함\2_창이어가기_v34_260927.md
