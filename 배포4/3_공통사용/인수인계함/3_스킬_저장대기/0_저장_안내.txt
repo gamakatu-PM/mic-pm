@@ -98,3 +98,4 @@
 
 [2026-09-27 밤 - 프로님 「스킬 저장 했어」]
   km-35-app.skill v2 -> 저장됨. 새 창은 다시 보내지 않는다 (스킬대조.py 가 v2 로 읽으면 맞음)
+  km-31-hyeonjang-tools    v21  v20 + 54판 v12 (매뉴얼 빠진 장 3개 · 겹괄호). v20 은 버전\km-31-hyeonjang-tools_v20.skill

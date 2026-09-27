@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v11 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v12 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """deck_core - 회사 표준 서식으로 슬라이드를 그리는 부품. 메뉴 번호 없음.
 
 54번(t54_deck)이 이것을 불러 쓴다. 단독으로 실행하지 않는다.
@@ -217,6 +217,12 @@ def s_table(slide, d):
         _tb(slide, ML, y + rh * nrow + 0.08, MW, 0.3, '※ ' + d['note'], size=8.5, color=GRAY_TX)
 
 
+def _bracket(t):
+    """「[ 전기공사 ]」 처럼 괄호를 씌운다. 이미 괄호가 있으면 그대로 (겹괄호 「[ [ … ] ]」 방지)."""
+    t = str(t or '').strip()
+    return t if (t.startswith('[') and t.endswith(']')) else '[ %s ]' % t
+
+
 def s_items(slide, d):
     y = _page_title(slide, d.get('title', ''), d.get('eyebrow'), d.get('pill'))
     if d.get('lead'):
@@ -237,7 +243,7 @@ def s_items(slide, d):
         _tb(slide, ML + 0.38, yy + 0.02, MW - 2.5, 0.28, it.get('text', ''), size=11,
             color=BODY, bold=True)
         if it.get('desc'):
-            _tb(slide, ML + MW - 2.0, yy + 0.04, 2.0, 0.26, '[ %s ]' % it['desc'],
+            _tb(slide, ML + MW - 2.0, yy + 0.04, 2.0, 0.26, _bracket(it['desc']),
                 size=9.5, color=BLUE, bold=True, align=PP_ALIGN.RIGHT)
     if box:
         by = 5.05 - box_h
@@ -342,7 +348,7 @@ def s_diagram(slide, d):
                 color=WHITE, bold=True, align=PP_ALIGN.CENTER)
             _tb(slide, x + 0.42, by + 0.12, cw - 0.52, 0.24, st.get('text', ''), size=9.5,
                 color=NAVY, bold=True)
-            _tb(slide, x + 0.1, by + 0.42, cw - 0.2, 0.22, '[ %s ]' % st.get('who', ''),
+            _tb(slide, x + 0.1, by + 0.42, cw - 0.2, 0.22, _bracket(st.get('who', '')),
                 size=8.5, color=BLUE, bold=True)
             _tb(slide, x + 0.1, by + 0.66, cw - 0.2, 0.4, st.get('desc', ''), size=8, color=BODY)
 
