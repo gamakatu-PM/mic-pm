@@ -31,6 +31,11 @@ function makeSheet(name, rows) {
         }
         return self;
       },
+      setValue: (v) => {
+        while (grid.length <= row - 1) grid.push([]);
+        grid[row - 1][col - 1] = v;
+        return self;
+      },
       clearContent: () => {
         for (let i = 0; i < numRows; i++) {
           const g = grid[row - 1 + i];
@@ -84,16 +89,18 @@ global.KM_TOKEN = 'x';
 
 eval(fs.readFileSync(path.join(__dirname, '..', 'KM_시트쓰기.gs'), 'utf8'));
 
-// ── 시험 1 : 기본 분류 + 세로 병합 이어채움 + 재병합 ──────────
+// ── 시험 1 : 기본 분류(4갈래) + 세로 병합 이어채움 + 재병합 ──────
 function setup1() {
   SHEETS = {};
   SHEETS['답요청'] = makeSheet('답요청', [
     ['날짜', '현장', '할일', '완료', '고르기', '메모', '현장(걸러보기)'],
-    ['2026-09-27', 'A현장', '할일1', '완료', '', '', 'A현장'],   // 완료 → 지워짐
+    ['2026-09-27', 'A현장', '할일1', '완료', '', '', 'A현장'],   // 완료 → 「완료 기록」
     ['', '', '할일2', '', '', '', 'A현장'],                      // 남음 (A·B 이어채움 필요)
-    ['', 'B현장', '할일3', '', '답 결정', '', 'B현장'],           // 답 결정 → 지워짐
+    ['', 'B현장', '할일3', '', '답 결정', '', 'B현장'],           // 답 결정 → 「답 결정」
+    ['', '', '할일3b', '', '아니야', '', 'B현장'],                // 아니야(v7) → 「삭제된 것」
     ['2026-09-28', 'C현장', '할일4', '', '', '', 'C현장'],        // 남음
-    ['', 'C현장', '할일5', '완료', '', '', 'C현장'],               // 완료 → 지워짐
+    ['', 'C현장', '할일5', '완료', '', '', 'C현장'],               // 완료 → 「완료 기록」
+    ['', 'C현장', '할일6', '', '제안서', '', 'C현장'],             // 제안서(v7) → 「만들 차례」
   ]);
 }
 
@@ -101,8 +108,11 @@ setup1();
 let out = km_sweep_({ tabs: ['답요청'], dry: false });
 let rec = out.tabs[0];
 chk('분류 : 완료 2건', rec.완료 === 2, JSON.stringify(rec));
+chk('분류 : 삭제(아니야) 1건 (v7)', rec.삭제 === 1, JSON.stringify(rec));
 chk('분류 : 답 결정 1건', rec.답결정 === 1, JSON.stringify(rec));
+chk('분류 : 만들차례(제안서) 1건 (v7)', rec.만들차례 === 1, JSON.stringify(rec));
 chk('분류 : 남김 2건', rec.남김 === 2, JSON.stringify(rec));
+chk('분류 : 전체 7건', rec.전체 === 7, JSON.stringify(rec));
 
 let g = SHEETS['답요청']._grid();
 chk('원본 탭 남은 줄 수 = 헤더+2', g.length === 3, '실제 ' + g.length);
@@ -110,22 +120,48 @@ chk('할일2 가 남고 날짜가 이어채워짐(2026-09-27)', g[1][0] === '202
 chk('할일4 가 남음(2026-09-28·C현장)', g[2][0] === '2026-09-28' && g[2][2] === '할일4', JSON.stringify(g[2]));
 
 let done = SHEETS['완료 기록'];
+let del = SHEETS['삭제된 것'];
 let pick = SHEETS['답 결정'];
+let make = SHEETS['만들 차례'];
 chk('완료 기록 탭이 만들어짐', !!done, '');
+chk('삭제된 것 탭이 만들어짐 (v7)', !!del, '');
 chk('답 결정 탭이 만들어짐', !!pick, '');
+chk('만들 차례 탭이 만들어짐 (v7)', !!make, '');
 if (done) {
   let dg = done._grid();
   chk('완료 기록 : 머리줄+2건', dg.length === 3, '실제 ' + dg.length);
   chk('완료 기록 : 할일1 이 날짜·현장 채워져서 옮겨감', dg[1][0] === '2026-09-27' && dg[1][1] === 'A현장' && dg[1][2] === '할일1', JSON.stringify(dg[1]));
   chk('완료 기록 : 원본탭·처리일 칸(H·I)', dg[1][7] === '답요청' && dg[1][8] === '2026-09-28', JSON.stringify(dg[1]));
 }
+if (del) {
+  let lg = del._grid();
+  chk('삭제된 것 : 머리줄+1건 (v7)', lg.length === 2, '실제 ' + lg.length);
+  chk('삭제된 것 : 할일3b 가 현장 채워져서 옮겨감 (v7)', lg[1][1] === 'B현장' && lg[1][2] === '할일3b', JSON.stringify(lg[1]));
+}
 if (pick) {
   let pg = pick._grid();
   chk('답 결정 : 머리줄+1건', pg.length === 2, '실제 ' + pg.length);
   chk('답 결정 : 할일3 이 현장 채워져서 옮겨감', pg[1][1] === 'B현장' && pg[1][2] === '할일3', JSON.stringify(pg[1]));
 }
+if (make) {
+  let mkg = make._grid();
+  chk('만들 차례 : 머리줄+1건 (v7)', mkg.length === 2, '실제 ' + mkg.length);
+  chk('만들 차례 : 할일6 이 고르기=제안서 그대로 옮겨감 (v7)', mkg[1][1] === 'C현장' && mkg[1][2] === '할일6' && mkg[1][4] === '제안서', JSON.stringify(mkg[1]));
+}
 let mg = SHEETS['답요청']._merges();
 chk('재병합 호출 있었음(남은 2줄은 날짜·현장이 서로 달라 병합 없음이 정상)', mg.length === 0, JSON.stringify(mg));
+
+// ── 시험 1-1 (v7) : 완료 체크가 가장 세다 — E열이 뭐든 완료면 완료 기록으로만 간다 ──
+SHEETS = {};
+SHEETS['오늘 할일'] = makeSheet('오늘 할일', [
+  ['날짜', '현장', '할일', '완료', '고르기', '메모', '현장(걸러보기)'],
+  ['2026-09-28', 'F현장', '완료+아니야', '완료', '아니야', '', 'F현장'],
+  ['', 'F현장', '완료+답결정', '완료', '답 결정', '', 'F현장'],
+  ['', 'F현장', '완료+제안서', '완료', '제안서', '', 'F현장'],
+]);
+let out11 = km_sweep_({ tabs: ['오늘 할일'], dry: true });
+let rec11 = out11.tabs[0];
+chk('완료 우선순위 (v7) : 3건 다 완료로만 잡힘', rec11.완료 === 3 && rec11.삭제 === 0 && rec11.답결정 === 0 && rec11.만들차례 === 0, JSON.stringify(rec11));
 
 // ── 시험 2 : 남은 줄끼리 같은 날짜·같은 현장이면 다시 병합됨 ──
 function setup2() {
@@ -150,8 +186,10 @@ let before = JSON.stringify(SHEETS['답요청']._grid());
 let out3 = km_sweep_({ tabs: ['답요청'], dry: true });
 let after = JSON.stringify(SHEETS['답요청']._grid());
 chk('dry:true 는 시트를 안 바꿈', before === after, '');
-chk('dry:true 도 개수는 셈(완료 2·답결정 1)', out3.tabs[0].완료 === 2 && out3.tabs[0].답결정 === 1, JSON.stringify(out3.tabs[0]));
-chk('dry:true 는 완료 기록·답 결정 탭도 안 만듦', !SHEETS['완료 기록'] && !SHEETS['답 결정'], '');
+chk('dry:true 도 개수는 셈(완료 2·삭제 1·답결정 1·만들차례 1)',
+    out3.tabs[0].완료 === 2 && out3.tabs[0].삭제 === 1 && out3.tabs[0].답결정 === 1 && out3.tabs[0].만들차례 === 1, JSON.stringify(out3.tabs[0]));
+chk('dry:true 는 새 탭 4개(완료 기록·삭제된 것·답 결정·만들 차례) 다 안 만듦',
+    !SHEETS['완료 기록'] && !SHEETS['삭제된 것'] && !SHEETS['답 결정'] && !SHEETS['만들 차례'], '');
 
 // ── 시험 4 : 완료·답결정 없으면 그대로 둠 ────────────────────
 SHEETS = {};
@@ -175,9 +213,13 @@ chk('실제 데이터 dry 시험 : 전체 1096행', out5.tabs[0].전체 === 1096
 setup1();
 TOASTS = [];
 onOpen({});
-chk('onOpen : 답요청·오늘 할일·앞으로 할일 3탭 다 처리(기본값)', SHEETS['완료 기록'] && SHEETS['답 결정'], '');
-chk('onOpen : 완료 2건·답결정 1건 실제로 옮겨짐', SHEETS['완료 기록']._grid().length === 3 && SHEETS['답 결정']._grid().length === 2, '');
-chk('onOpen : 토스트로 알림(완료 2건·답 결정 1건)', TOASTS.length === 1 && /완료 기록 2건/.test(TOASTS[0].msg) && /답 결정 1건/.test(TOASTS[0].msg), JSON.stringify(TOASTS));
+chk('onOpen : 새 탭 4개 다 만들어짐(기본값)', SHEETS['완료 기록'] && SHEETS['삭제된 것'] && SHEETS['답 결정'] && SHEETS['만들 차례'], '');
+chk('onOpen : 완료 2·삭제 1·답결정 1·만들차례 1 실제로 옮겨짐',
+    SHEETS['완료 기록']._grid().length === 3 && SHEETS['삭제된 것']._grid().length === 2 &&
+    SHEETS['답 결정']._grid().length === 2 && SHEETS['만들 차례']._grid().length === 2, '');
+chk('onOpen : 토스트로 알림(완료·삭제·답결정·만들차례 다 보임)',
+    TOASTS.length === 1 && /완료 기록 2건/.test(TOASTS[0].msg) && /삭제 1건/.test(TOASTS[0].msg) &&
+    /답 결정 1건/.test(TOASTS[0].msg) && /만들 차례 1건/.test(TOASTS[0].msg), JSON.stringify(TOASTS));
 
 // 옮길 게 없으면 토스트 없음(조용히 넘어감)
 SHEETS = {};
@@ -219,6 +261,23 @@ try { onOpen({}); } catch (e) { threw = true; }
 chk('onOpen : 내부에서 오류가 나도 밖으로 안 던짐(시트 열기를 막지 않음)', !threw, '');
 chk('onOpen : 오류면 오류 토스트라도 띄움', TOASTS.length === 1 && /오류/.test(TOASTS[0].msg), JSON.stringify(TOASTS));
 SpreadsheetApp.getActiveSpreadsheet = savedGetActive;
+
+// ── 시험 7 (v8) : 「만들 차례」 탭은 J열 「생성결과」 한 칸 더, 다른 새 탭은 9칸 그대로 ──
+setup1();
+km_sweep_({ tabs: ['답요청'], dry: false });
+let makeHead = SHEETS['만들 차례']._grid()[0];
+let doneHead = SHEETS['완료 기록']._grid()[0];
+chk('만들 차례 : 머리줄 10칸(J=생성결과) (v8)', makeHead.length === 10 && makeHead[9] === '생성결과', makeHead);
+chk('완료 기록 : 머리줄 9칸 그대로(J 없음)', doneHead.length === 9, doneHead);
+
+// ── 시험 8 (v8) : markQueue — 지정한 줄 J열에만 쓰고 다른 칸은 안 건드림 ──
+let mkOut = km_markQueue_({ tab: '만들 차례', marks: [{ row: 2, text: '만듦 · 작업의뢰서_대기_C현장_1.xlsx' }] });
+chk('markQueue : n=1 반환', mkOut.ok && mkOut.n === 1, JSON.stringify(mkOut));
+let mkGrid = SHEETS['만들 차례']._grid();
+chk('markQueue : 2행 J열(10번째)에 적힘', mkGrid[1][9] === '만듦 · 작업의뢰서_대기_C현장_1.xlsx', mkGrid[1]);
+chk('markQueue : 같은 줄의 다른 칸(할일)은 안 건드림', mkGrid[1][2] === '할일6', mkGrid[1]);
+let mkNotFound = km_markQueue_({ tab: '없는탭', marks: [] });
+chk('markQueue : 없는 탭이면 오류', mkNotFound.ok === false && /탭 없음/.test(mkNotFound.error), mkNotFound);
 
 console.log('\n합계 ' + (OK + NG.length) + '개 중 통과 ' + OK + ' · 실패 ' + NG.length);
 if (NG.length) { console.log('실패 : ' + NG.join(', ')); process.exit(1); }

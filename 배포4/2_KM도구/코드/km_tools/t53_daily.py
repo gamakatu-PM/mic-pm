@@ -37,7 +37,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v13 2026-09-28'  # v13 : E열 ▼ 목록에 「답 결정」 추가(고르면 웹 앱 sweep 이 답 결정 탭으로 옮김). 그 밖은 v12.2 그대로
+VERSION = 'v14 2026-09-28'  # v14 : 「만들어줘」→ 제안서·보고서·메일·작업의뢰서 4개로 쪼갬 / 「아니야」는 웹 앱 sweep 이 삭제(메모 이어붙이기 그만둠) / ▼고르신 것 절은 맞아만
+# v13 2026-09-28  # v13 : E열 ▼ 목록에 「답 결정」 추가(고르면 웹 앱 sweep 이 답 결정 탭으로 옮김). 그 밖은 v12.2 그대로
 # v12.2 2026-09-27  # v12.2 : --since YYMMDD — 월요일에 금·토·일 회의를 「어제」 로 함께 (주말 회의가 메일·시트에서 빠지던 것)
 # v12.1 2026-09-27  # v12.1 : 답요청 A열 「날짜 미상」 을 날짜로 받아 ① 맨 끝에 「날짜 미상」 머리줄로 (옛 할 일 모음 중 회의한 날을 못 찾은 것, 차장님 「다 넣어」)
 # v12 2026-09-24  # v12 : 한 곳·한 통·두 동작 (차장님 「1번으로」) — 시트 E열 ▼고르기(진행중·아니야·맞아·만들어줘)·F열 메모·G열 현장(걸러보기) / 메일 맨 위 자료 상태·급한 것 5줄·▼고르신 것
@@ -59,7 +60,11 @@ TABS = ('답요청', '오늘 할일', '회의록', '앞으로 할일')          
 TAB_ID = {'답요청': 0, '오늘 할일': 1, '회의록': 2, '앞으로 할일': 3}
 FUTURE_HEAD = ['기한', '현장', '할일', '완료']
 EXTRA_HEAD = ['고르기', '메모', '현장(걸러보기)']   # v12 : E·F·G 열 (답요청·오늘 할일·앞으로 할일)
-PICKS = ('진행중', '아니야', '맞아', '만들어줘', '답 결정')    # v13 (2026-09-28) : 「답 결정」 추가 — 고르면 답 결정 탭으로 이동(웹앱 sweep). 옛 값 : 진행중·아니야·맞아·만들어줘 4개
+PICKS = ('진행중', '아니야', '맞아', '답 결정', '제안서', '보고서', '메일', '작업의뢰서')
+DOC_PICKS = ('제안서', '보고서', '메일', '작업의뢰서')   # v14 : 고르면 웹앱 sweep 이 「만들 차례」 탭으로 옮기고 1시간마다 도는 Routine 이 만든다
+# v14 (2026-09-28 낮) : 「만들어줘」 를 4개로 쪼갬(제안서·보고서·메일·작업의뢰서) — 고르면 웹앱 sweep 이 「만들 차례」 탭으로 옮기고,
+#   1시간마다 도는 Routine 이 만든다. 「아니야」 는 v14 부터 삭제(웹앱 sweep 이 「삭제된 것」 탭으로 옮김) — 옛 값 : 「할일 → 메모」
+# v13 2026-09-28  # v13 : E열 ▼ 목록에 「답 결정」 추가(고르면 웹앱 sweep 이 답 결정 탭으로 옮김). 옛 값 : 진행중·아니야·맞아·만들어줘 4개
 _PICK = {}            # v12 : run() 이 시트에서 읽어 채운다. key -> (고르기, 메모)
 _SPAN = []   # v12.2 : [since, yy] — 여러 날을 「어제」 로 볼 때
 UNKNOWN_DATE = '날짜 미상'   # v12.1 : 답요청 A열에 이 글이면 「회의한 날 모름」 (정렬하면 ① 맨 끝)
@@ -339,19 +344,14 @@ def pick_map(board):
 
 
 def deco(site, text):
-    """v12 차장님 확정 (2026-09-24 「1번으로」) : ▼고르신 것을 메일 줄에 붙인다.
-         진행중 → 「(진행중) 할일」 · 아니야 → 「할일 → 메모」 · 맞아 → 「(맞아) 할일」 · 만들어줘 → 「(만들어줘) 할일」"""
+    """v14 (2026-09-28 낮 「아니야는 삭제로」) : ▼고르신 것을 메일 줄에 붙인다 — 어느 것이든 「(고르신 것) 할일」.
+         아니야는 곧 웹앱 sweep 이 「삭제된 것」 탭으로 옮기므로(메모 이어붙이기는 그만둠), 잠깐 남아 있는 동안은 다른 것과 같은 모양으로 보인다.
+         옛 값(v12) : 진행중 → 「(진행중) 할일」 · 아니야 → 「할일 → 메모」 · 맞아·만들어줘 → 「(고른것) 할일」"""
     p = _PICK.get(_key(site, text))
     if not p:
         return text
-    pick, memo = p
-    if pick == '진행중':
-        return '(진행중) ' + text
-    if pick == '아니야':
-        return (text + ' → ' + memo) if memo else '(아니야) ' + text
-    if pick in ('맞아', '만들어줘'):
-        return '(%s) %s' % (pick, text)
-    return text
+    pick, _memo = p
+    return '(%s) %s' % (pick, text)
 
 
 def _is_done(done, site, what):
@@ -853,20 +853,15 @@ def build_urgent(items, n=5):
 
 
 def build_picks():
-    """v12 : ▼고르신 것 — 만들어줘 : 제가 이렇게 만들겠습니다 (맞으면 ▼맞아) / 맞아 : 만들 차례"""
-    make = [(k, v) for k, v in _PICK.items() if v[0] == '만들어줘']
+    """v14 (2026-09-28 낮) : ▼고르신 것 — 맞아만 여기 나온다(제가 몰라서 여쭤본 것에 확인해 주신 것).
+         제안서·보고서·메일·작업의뢰서는 여기 안 나온다 — 웹앱 sweep 이 「만들 차례」 탭으로 옮기고 1시간마다 도는 Routine 이 만든다(메일과 별개 흐름)
+         옛 값(v12) : 만들어줘 : 제가 이렇게 만들겠습니다(맞으면 ▼맞아) / 맞아 : 만들 차례"""
     ok = [(k, v) for k, v in _PICK.items() if v[0] == '맞아']
-    L = []
-    if make:
-        L.append('만들어줘 %d건 — 제가 아래 할 일의 문안·서류를 만들겠습니다. 이대로면 ▼맞아 로 바꿔 주십시오' % len(make))
-        for (site, what), (_p, memo) in sorted(make):
-            L.append('  - %s · %s%s' % (site, what, ('  (메모 : %s)' % memo) if memo else ''))
-    if ok:
-        if L:
-            L.append('')
-        L.append('맞아 %d건 — 대화창에 「만들어」 한마디면 바로 만듭니다' % len(ok))
-        for (site, what), (_p, memo) in sorted(ok):
-            L.append('  - %s · %s' % (site, what))
+    if not ok:
+        return ''
+    L = ['맞아 %d건 — 확인해 주셨습니다' % len(ok)]
+    for (site, what), (_p, memo) in sorted(ok):
+        L.append('  - %s · %s' % (site, what))
     return '\n'.join(L)
 
 
@@ -980,7 +975,7 @@ def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='
             'meta전체': len(recs_all), '어제회의': len(recs_y),
             '어제_현장별': per_site,
             '①할일': len(rows), '②오늘': len(picked), '완료로뺌': n_done,
-            '①지난것': n1c, '▼고르신것': len(_PICK), '만들차례': len([1 for v in _PICK.values() if v[0] == '맞아']), '②기한지난것': n2c, '⑤앞으로': len(fut), '⑤새로시트에': len(new_fut),
+            '①지난것': n1c, '▼고르신것': len(_PICK), '만들차례': len([1 for v in _PICK.values() if v[0] in DOC_PICKS]), '②기한지난것': n2c, '⑤앞으로': len(fut), '⑤새로시트에': len(new_fut),
             '완료표시': len(done['pair']) if done else None,
             '건너뜀': skipped, '파일': paths}
     with io.open(os.path.join(out, '아침3통_%s.json' % st), 'w', encoding='utf-8') as f:

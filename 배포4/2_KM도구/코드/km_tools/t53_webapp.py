@@ -13,7 +13,8 @@
     python t53_webapp.py old26 <옛시트_YYMMDD.json>            (t53_old26 가 만든 본문 그대로)
     python t53_webapp.py merge <옛시트_탭이름.json>            (그 안의 "_합치기" [{from,to},…] 를 순서대로 — 차장님 표 그대로, C급 : 차장님 지시 뒤에만)
     python t53_webapp.py strip [--dry]                          (v3 : 옛 시트 9월 줄 통찰 칸 끝 「/ =====」 지우기 — 웹 앱 v4)
-    python t53_webapp.py sweep [--dry] [탭1 탭2 ...]              (v4 : 완료 체크·답 결정 고른 줄을 완료 기록·답 결정 탭으로 — 웹 앱 v5 필요. 탭 생략하면 답요청·오늘 할일·앞으로 할일 3개)
+    python t53_webapp.py sweep [--dry] [탭1 탭2 ...]              (v7 : 완료·아니야·답 결정·문서 4종 고른 줄을 각 탭으로 — 웹 앱 v7 필요. 탭 생략하면 답요청·오늘 할일·앞으로 할일 3개)
+    python t53_webapp.py markqueue <markqueue_YYMMDD.json>       (v5 : t56_makequeue 가 만든 marks 를 「만들 차례」 탭 J열에 적는다 — 웹 앱 v8 필요)
 
 read 결과는 Zapier batchGet 과 같은 {valueRanges:[{range, values}]} — t53_sheetmd 가 아니라 t53_daily --done/--radar 가 바로 읽는다.
    (values:batchGet 은 셀 「값」을 주므로 병합 아래 칸은 빈칸 → load_board 가 위 값을 내려 쓴다. 체크박스는 TRUE/FALSE 또는 「완료」)
@@ -22,7 +23,7 @@ read 결과는 Zapier batchGet 과 같은 {valueRanges:[{range, values}]} — t5
 from __future__ import print_function
 import os, sys, io, json
 
-VERSION = 'v4 2026-09-28'   # v4 : sweep (완료 체크·답 결정 → 완료 기록·답 결정 탭, 웹 앱 v5 필요) · v3 : strip · read old
+VERSION = 'v5 2026-09-28'   # v5 : markqueue (「만들 차례」 탭 J열 표시, 웹 앱 v8 필요) · v4 : sweep · v3 : strip · read old
 
 try:
     from urllib.request import Request, urlopen
@@ -85,6 +86,10 @@ def main(argv):
         if tabs:
             body['tabs'] = tabs
         out = call('sweep', body, timeout=300)
+    elif act == 'markqueue':
+        with io.open(argv[2], 'r', encoding='utf-8') as f:
+            body = json.load(f)          # {tab:'만들 차례', marks:[{row,text},...]} — t56_makequeue 결과 그대로
+        out = call('markQueue', body)
     elif act == 'merge':
         with io.open(argv[2], 'r', encoding='utf-8') as f:
             d = json.load(f)
