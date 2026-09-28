@@ -23,7 +23,7 @@ AI 사용량 0. 인터넷도 쓰지 않습니다.
 """
 import os, sys, io, re, shutil, datetime, traceback, hashlib
 
-PKG = 12          # 이 파일이 품은 54번 판. 파일 둘째 줄 「# 54판 vN」 과 맞춘다
+PKG = 13          # 이 파일이 품은 54번 판. 파일 둘째 줄 「# 54판 vN」 과 맞춘다
 SRC = __SRC__
 SPECS = __SPECS__
 OLD_SPECS = set(__OLDSPEC__)   # 전에 내보낸 판의 지문. PC 파일이 이것과 같으면 안 고친 것
@@ -181,6 +181,47 @@ def patch_t33(tools):
     return '33번 현황판에 ⑧ 현장별 한 곳에 칸을 다시 넣음 (원본 %s)' % os.path.basename(bak)
 
 
+def drop_std(tools):
+    """제안서PPT 결과 폴더의 범용본 이름 앞 「표준_」 을 뗀다 (2026-09-28 프로님 요청).
+    같은 이름이 이미 있거나 파일이 열려 있으면 그 파일은 그대로 두고 알린다.
+    바꾼 이름은 그 폴더 _이름바꿈_기록.txt 에 「전 → 후」 로 남긴다 (되돌리기용)."""
+    try:
+        if tools not in sys.path:
+            sys.path.insert(0, tools)
+        import common
+        root = os.path.join(common.cfg('out'), '제안서PPT')
+    except Exception:
+        return []
+    out = []
+    if not os.path.isdir(root):
+        return out
+    for day in sorted(os.listdir(root)):
+        d = os.path.join(root, day)
+        if not os.path.isdir(d):
+            continue
+        done = []
+        for fn in sorted(os.listdir(d)):
+            if not fn.startswith('표준_') or fn.startswith('~$'):
+                continue
+            new = fn[len('표준_'):]
+            if os.path.exists(os.path.join(d, new)):
+                out.append('%s\\%s : 같은 이름이 있어 그대로 둠' % (day, fn))
+                continue
+            try:
+                os.rename(os.path.join(d, fn), os.path.join(d, new))
+                done.append('%s → %s' % (fn, new))
+            except Exception:
+                out.append('%s\\%s : 열려 있어 못 바꿈 - 닫고 다시 누르십시오' % (day, fn))
+        if done:
+            try:
+                with io.open(os.path.join(d, '_이름바꿈_기록.txt'), 'a', encoding='utf-8-sig') as f:
+                    f.write('\n'.join(['[%s] 앞의 「표준_」 뗌' % datetime.datetime.now().strftime('%y%m%d %H:%M')] + done) + '\n')
+            except Exception:
+                pass
+            out.append('%s 폴더 : 이름 앞 「표준_」 뗌 %d개' % (day, len(done)))
+    return out
+
+
 def main():
     say('=' * 60)
     say(' ★제안서 PPT   (54번 v%d · AI 사용량 0)' % PKG)
@@ -189,7 +230,7 @@ def main():
     if not tools:
         say('★ 도구 폴더(km_tools)를 못 찾았습니다. 이 파일을 2_KM도구 폴더 바로 아래에 두십시오.')
         return
-    for x in install(tools) + [patch_t33(tools)]:
+    for x in install(tools) + [patch_t33(tools)] + drop_std(tools):
         if x:
             say(' 정비 : ' + x)
     if tools not in sys.path:

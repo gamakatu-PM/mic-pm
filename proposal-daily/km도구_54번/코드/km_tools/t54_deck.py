@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v12 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v13 2026-09-28  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """54. 제안서 PPT - 회사 제안서의 고정 장을 그대로 가져오고, 현장 내용만 새로 만들어 붙인다.
 
 왜 이렇게 하는가
@@ -352,9 +352,9 @@ def run():
                                    'goto': extras[0]['title']}] + x.get('items', [])
             for k, extra in enumerate(extras):
                 sl.insert(at + k, extra)
-        stem = '%s_%s_%s' % (safe_name(site or '표준'),
-                             safe_name(d2.get('파일명', d2.get('title', '제안서'))[:30]),
-                             ymd6())
+        # 현장명 없는 범용본은 이름 앞에 아무것도 붙이지 않는다 (2026-09-28 프로님 : 앞의 「표준」 삭제)
+        stem = '_'.join(([safe_name(site)] if site else [])
+                        + [safe_name(d2.get('파일명', d2.get('title', '제안서'))[:30]), ymd6()])
         f = next_free(od, stem)
         try:
             made, copied = build_merged(d2, src_path, fixed_nos, f, mapping)
