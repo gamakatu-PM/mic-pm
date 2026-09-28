@@ -101,3 +101,6 @@
   km-31-hyeonjang-tools    v21  v20 + 54판 v12 (매뉴얼 빠진 장 3개 · 겹괄호). v20 은 버전\km-31-hyeonjang-tools_v20.skill
   km-31-hyeonjang-tools    v22  v21 + 금6 인스펙터 기능 검토서(유지·삭제 결정용). v21 은 버전\km-31-hyeonjang-tools_v21.skill
   km-31-hyeonjang-tools    v23  v22 + 54번 v13 (25건 문체 다시 쓰기 · 종합 제안서 5성급 32장 · 범용본 이름 앞 「표준_」 삭제). v22 는 버전\km-31-hyeonjang-tools_v22.skill
+
+[2026-09-28 새벽 - 56번 수금대장 자동]
+  km-31-hyeonjang-tools    v24  v22 + 56번 수금대장 자동 채움 절 + 표 한 줄 + 36번 한 줄. 옛 판은 버전\km-31-hyeonjang-tools_v22.skill
