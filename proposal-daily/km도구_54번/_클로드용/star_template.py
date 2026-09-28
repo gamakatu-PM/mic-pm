@@ -3,7 +3,7 @@ r"""★제안서 PPT — 이 파일만 더블클릭하십시오. (2026-09-27)
 
 누르면 번호 세 개가 나옵니다.
 
-    1) 제안서 PPT 만들기      54번 : 미리 써 둔 제안서 25건 중 골라 회사 서식 pptx 로
+    1) 제안서 PPT 만들기      54번 : 미리 써 둔 제안서 27건 중 골라 회사 서식 pptx 로 (00번 = 5성급 종합 제안서)
                               (27번 도면수량을 먼저 돌려 두면 그 현장 물량표가 자동으로 들어감)
     2) 점유율 80% 로 고치기   회사 제안서 pptx 의 5성급 점유율을 「해외스펙 제외 80% 이상」 으로
     3) 현장별 한 곳에 보기    흩어진 결과(산출·견적·실행·단가장·제안서·회의록)를 현장별 한 장으로
@@ -183,7 +183,7 @@ def patch_t33(tools):
 
 def drop_std(tools):
     """제안서PPT 결과 폴더의 범용본 이름 앞 「표준_」 을 뗀다 (2026-09-28 프로님 요청).
-    같은 이름이 이미 있거나 파일이 열려 있으면 그 파일은 그대로 두고 알린다.
+    같은 이름이 이미 있으면 _r1 을 붙이고(덮지 않음), 파일이 열려 있으면 그대로 두고 알린다.
     바꾼 이름은 그 폴더 _이름바꿈_기록.txt 에 「전 → 후」 로 남긴다 (되돌리기용)."""
     try:
         if tools not in sys.path:
@@ -204,9 +204,11 @@ def drop_std(tools):
             if not fn.startswith('표준_') or fn.startswith('~$'):
                 continue
             new = fn[len('표준_'):]
-            if os.path.exists(os.path.join(d, new)):
-                out.append('%s\\%s : 같은 이름이 있어 그대로 둠' % (day, fn))
-                continue
+            stem, ext = os.path.splitext(new)
+            k = 1
+            while os.path.exists(os.path.join(d, new)):     # 같은 이름이 있으면 덮지 않고 _r1, _r2 …
+                new = '%s_r%d%s' % (stem, k, ext)
+                k += 1
             try:
                 os.rename(os.path.join(d, fn), os.path.join(d, new))
                 done.append('%s → %s' % (fn, new))
