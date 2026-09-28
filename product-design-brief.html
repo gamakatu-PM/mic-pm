@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KM 제품 디자인 요구서 — 레퍼런스 해부 v1</title>
+<style>
+:root{
+  --blue:#2A6099; --orange:#C77B2B; --purple:#6B4FA8; --red:#C0392B;
+  --gray:#8E99A4; --green:#2E7D5B; --brass:#A8853E;
+  --bg:#F2F4F7; --panel:#fff; --line:#DDE3EA; --ink:#1B2530; --ink2:#5A6675;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.68;
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",sans-serif;
+  -webkit-text-size-adjust:100%}
+.wrap{max-width:1000px;margin:0 auto;padding:0 16px 48px}
+header{background:var(--ink);color:#fff;padding:22px 0 24px}
+header .wrap{padding-bottom:0}
+header .eyebrow{font-size:11px;letter-spacing:2px;color:var(--brass);font-weight:800;margin-bottom:6px}
+header h1{font-size:22px;margin:0 0 5px;letter-spacing:-.4px}
+header p{margin:0;font-size:12.5px;color:#A9B4C0}
+h2{font-size:16px;margin:34px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--ink);
+  display:flex;align-items:baseline;gap:9px;letter-spacing:-.3px}
+h2 em{font-style:normal;color:var(--brass);font-weight:800;font-size:13px}
+h2 i{font-style:normal;color:var(--ink2);font-size:12px;font-weight:700}
+h3{font-size:14px;margin:20px 0 7px}
+.lead{background:#fff;border:1px solid var(--line);border-left:5px solid var(--brass);
+  border-radius:10px;padding:15px 17px;margin:18px 0 0}
+.lead b{font-size:16.5px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:13px;
+  border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:10px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#EEF2F7;font-size:11.5px;color:var(--ink2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td b{color:var(--ink)}
+.k{white-space:nowrap;font-weight:700;color:var(--ink2);width:130px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:820px){.two{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.card .hd{padding:12px 14px;color:#fff;background:var(--ink)}
+.card.f2 .hd{background:#4A5460}
+.card .hd b{display:block;font-size:15px}
+.card .hd span{font-size:11.5px;opacity:.85}
+.card table{border:0;border-radius:0}
+ol.rule{counter-reset:r;list-style:none;padding:0;margin:0}
+ol.rule li{counter-increment:r;background:#fff;border:1px solid var(--line);border-radius:10px;
+  padding:13px 15px 13px 52px;position:relative;margin-bottom:8px}
+ol.rule li::before{content:counter(r);position:absolute;left:14px;top:12px;width:25px;height:25px;
+  background:var(--brass);color:#fff;border-radius:50%;text-align:center;line-height:25px;
+  font-size:13px;font-weight:800}
+ol.rule b{display:block;font-size:14.5px;margin-bottom:2px}
+ol.rule span{font-size:13px;color:var(--ink2)}
+.gap{background:#FDF1EF;border:1px solid #EFC9C2;border-left:5px solid var(--red);border-radius:10px;
+  padding:13px 15px;margin-bottom:9px}
+.gap b{color:var(--red);display:block;margin-bottom:3px}
+.gap span{font-size:13.2px;color:var(--ink2)}
+.ask{background:#FFFDF2;border:1px solid #E8DFB8;border-radius:10px;padding:14px 16px}
+.ask ol{margin:8px 0 0;padding-left:20px}
+.ask li{margin-bottom:7px;font-size:13.5px}
+.ask .fix{background:#FDF1EF;border:1px solid #EFC9C2;border-radius:7px;padding:9px 11px;
+  margin:9px 0;font-size:13px}
+.ask .fix b{color:var(--red)}
+pre{background:#12161B;color:#D8DEE6;border-radius:9px;padding:13px 14px;overflow-x:auto;
+  font-size:11.8px;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:pre-wrap;word-break:break-word}
+pre b{color:var(--brass);font-weight:700}
+.note{margin-top:28px;background:#fff;border:1px dashed var(--gray);border-radius:10px;padding:14px 16px;
+  font-size:12.3px;color:var(--ink2)}
+.note b{color:var(--ink)}
+.note a{color:var(--blue)}
+.tag{display:inline-block;background:#EEF2F7;color:var(--ink2);border-radius:4px;padding:1px 6px;
+  font-size:10.5px;margin-left:4px;font-weight:700}
+.tag.ok{background:#E3F1EA;color:var(--green)}
+.tag.no{background:#FBE7E4;color:var(--red)}
+footer{text-align:center;color:var(--gray);font-size:11.5px;padding:26px 16px 44px}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <div class="eyebrow">한국마이크로닉(주) · 배성윤 차장</div>
+  <h1>제품 디자인 요구서 — 레퍼런스 해부 v1</h1>
+  <p>2026-09-13 · 목표 등급: 수작업 최고급(Meljac · Forbes &amp; Lomax 계열) · 대상: 조명스위치 · BSP 온도조절기 · 멀티아울렛 · 문 입구 3종</p>
+</div></header>
+
+<div class="wrap">
+
+<div class="lead">
+  <b>수준은 형태가 아니라 마감에서 나온다.</b><br>
+  최고급 스위치 두 회사를 뜯어보니 형태는 오히려 단순합니다. 값을 만드는 것은
+  <b>3mm 솔리드 판 · 나사 없는 고정 · 도금과 표면처리의 조합 · 시간이 지나며 변하는 마감</b>이었습니다.
+  형태를 무작위로 90가지 섞는 것이 아니라, <b>같은 사각판 하나를 마감으로 90가지 만드는 것</b>이 이 바닥의 방식입니다.
+</div>
+
+<h2>1. 레퍼런스 해부 <em>확인된 사실만</em> <i>출처는 맨 아래</i></h2>
+<div class="two">
+
+  <div class="card">
+    <div class="hd"><b>Meljac</b><span>프랑스 · 1995~ · 솔리드 황동 수작업</span></div>
+    <table>
+      <tr><td class="k">판 재질·두께</td><td>솔리드 <b>황동 3mm</b>. 「시장에서 가장 얇은 솔리드 황동 판」이라고 자사가 명시. 표준형·무나사형 공통</td></tr>
+      <tr><td class="k">고정</td><td><b>나사 안 보임</b>(screwless)</td></tr>
+      <tr><td class="k">생산</td><td>파리 외곽 자사 공장 · <b>손으로 마감</b></td></tr>
+      <tr><td class="k">도금</td><td>니켈 / 크롬 / 브론즈 메다이 / 구리 / 골드 / 거넛메탈</td></tr>
+      <tr><td class="k">표면처리</td><td><b>핸드 브러싱 · 샌드블라스팅 · 파티나</b></td></tr>
+      <tr><td class="k">파티나</td><td>밝은색 → 진한 갈색 <b>5단계</b></td></tr>
+      <tr><td class="k">특수 마감</td><td>그래나이트(콘템포러리) · 블루미러(욕실) · 앤티크 브라스(계속 진행) · <b>무도장</b>(주변과 함께 늙음)</td></tr>
+      <tr><td class="k">맞춤</td><td>기존 하드웨어(문손잡이·수전)에 <b>마감을 맞춰 주문 제작</b></td></tr>
+    </table>
+  </div>
+
+  <div class="card f2">
+    <div class="hd"><b>Forbes &amp; Lomax</b><span>영국 · 1987~ · Invisible Lightswitch®</span></div>
+    <table>
+      <tr><td class="k">판 재질·두께</td><td><b>3mm 베벨 가공 투명 아크릴</b>(100% 재생 Perspex). 로커형은 <b>2mm</b></td></tr>
+      <tr><td class="k">언더플레이트</td><td><b>0.5mm</b> — 칠하거나, <b>벽지를 끼우는 템플릿</b>으로 씀 → 벽 마감이 그대로 비침</td></tr>
+      <tr><td class="k">고정</td><td><b>나사 없음</b></td></tr>
+      <tr><td class="k">조작부</td><td>토글(dolly) / 로터리 디머 / 푸시버튼 / 스테인리스 로커</td></tr>
+      <tr><td class="k">금속 마감</td><td>무도장 황동 · 브러시드 황동 · 매트 황동 · 니켈실버 · 스테인리스 · 앤티크 브론즈</td></tr>
+      <tr><td class="k">마감 철학</td><td>솔리드 금속은 <b>무도장으로 둬서 산화·파티나가 진행되게</b> 함. 변색을 결함이 아니라 값으로 판매</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<h2>2. 「수준」을 만드는 여섯 가지 <em>추출한 원리</em></h2>
+<ol class="rule">
+  <li><b>얇을수록 고급이다</b><span>3mm 솔리드가 상한선입니다. 플라스틱 프레임 두께로는 절대 못 이깁니다. 우리 전면판 두께를 먼저 정해야 나머지가 정해집니다.</span></li>
+  <li><b>나사가 보이면 거기서 끝난다</b><span>무나사(screwless)가 입장료입니다. 두 회사 모두 예외가 없습니다.</span></li>
+  <li><b>형태가 아니라 마감이 제품이다</b><span>같은 사각판 하나에 도금 6종 × 표면처리 3종 × 파티나 5단 = 90가지가 나옵니다. 제가 형태를 90가지 만들려다 실패한 이유가 이것입니다.</span></li>
+  <li><b>살아있는 마감을 판다</b><span>무도장으로 두어 시간이 지나며 변색되는 것을 「결함」이 아니라 「값」으로 팝니다. 하자 조항을 어떻게 쓰느냐가 이 마감의 채택 여부를 가릅니다.</span></li>
+  <li><b>주변 하드웨어에 맞춘다</b><span>호텔은 인테리어 디자이너가 문손잡이·수전 마감을 먼저 정합니다. 거기에 <b>마감을 맞춰줄 수 있으면 채택됩니다.</b> 이것이 우리 영업의 진짜 무기입니다 — 형태 싸움이 아니라 마감 대응력 싸움입니다.</span></li>
+  <li><b>벽 마감을 살린다</b><span>Forbes &amp; Lomax는 판을 투명하게 만들어 벽지·페인트가 그대로 보이게 합니다. 「제품을 보이게 하지 않는 것」도 하나의 방향입니다.</span></li>
+</ol>
+
+<h2>3. 우리 제품으로 옮길 때의 간극 <em>먼저 말씀드립니다</em></h2>
+
+<div class="gap">
+  <b>① 뒤에 기판이 있습니다</b>
+  <span>우리는 RCU·약전 제어가 들어가야 해서 <b>3mm 솔리드 단판을 그대로 쓸 수 없습니다.</b>
+  「전면 3mm 황동판 + 후면 기구 캐리어」 2피스 구조가 필요하고,
+  <b>결합부가 정면에서 보이지 않게 하는 것</b>이 설계 난이도의 핵심입니다. 자석 고정 또는 클립 고정 중 선택이 필요합니다.</span>
+</div>
+<div class="gap">
+  <b>② 야간 식별 백라이트가 필요합니다</b>
+  <span>호텔 객실은 어두운 상태에서 스위치를 찾아야 합니다. 그런데 <b>솔리드 황동은 빛이 통하지 않습니다.</b>
+  방법은 셋뿐입니다 — ㉠ 레이저 각인 후 뒷면 확산체 ㉡ 파팅라인 라이트파이프 ㉢ 별도 인디케이터 창.
+  <b>이 셋 중 무엇을 쓰느냐가 디자인 전체를 결정합니다.</b></span>
+</div>
+<div class="gap">
+  <b>③ 수량이 다릅니다</b>
+  <span>Meljac은 개당 고가에 소량 수작업입니다. 우리는 한 현장에 1,000실이 넘습니다.
+  <b>수작업 파티나는 단가·납기가 안 맞습니다.</b> 현실선은 <b>도금 + 브러싱까지</b>이고,
+  파티나는 상위형(스위트·6성급) 한정으로 두는 것이 맞다고 봅니다.</span>
+</div>
+
+<h2>4. 제품별 디자인 요구서 <em>외주·개발팀에 그대로 전달</em></h2>
+
+<div class="scroll"><table>
+  <tr>
+    <th>제품</th><th>목표 인상</th><th>판</th><th>조작부</th><th>야간 표시</th><th>절대 금지</th>
+  </tr>
+  <tr>
+    <td><b>조명스위치<br>1~6구</b></td>
+    <td>벽에서 튀어나오지 않고 <b>벽에 박힌 금속 한 장</b>으로 보일 것</td>
+    <td>전면 솔리드 황동 3mm 목표<br>무나사 · 정면 결합부 노출 0</td>
+    <td>전면 로커 또는 토글.<br>구수는 전기설계 확정 후 → <b>구수가 바뀌어도 같은 판에서 해결되는 구조</b></td>
+    <td>각인 뒷면 확산 또는 파팅라인 (3안 중 결정 필요)</td>
+    <td>플라스틱 프레임 · 보이는 나사 · 원색 버튼 · 두꺼운 베젤</td>
+  </tr>
+  <tr>
+    <td><b>BSP<br>온도조절기<br>통합형</b></td>
+    <td>표시창이 <b>꺼지면 사라질 것</b>(히든 디스플레이)</td>
+    <td>전면 일체 · 표시창 경계선 없음</td>
+    <td>온도 ▲▼ + 조명 L + USB + 유니버셜 콘센트.<br><b>콘센트가 디자인을 망치지 않게 배치</b></td>
+    <td>표시창 자체가 야간 표시. 소등 시 완전 소멸</td>
+    <td>액자형 검은 유리창 · 표시창 테두리 · 상시 점등</td>
+  </tr>
+  <tr>
+    <td><b>멀티아울렛</b></td>
+    <td>소켓이 주인공이 아니라 <b>판이 주인공</b></td>
+    <td>연수 고정(1·2·3연) · 무나사</td>
+    <td>유니버셜 + 콘센트 2 + USB.<br>소켓 개구부를 같은 크기·같은 간격으로 정렬</td>
+    <td>USB 위치만 미세 표시 (선택)</td>
+    <td>소켓마다 다른 크기 · 삐뚤어진 간격 · USB 글자 크게</td>
+  </tr>
+  <tr>
+    <td><b>문 입구<br>K · DM · 챠임벨</b></td>
+    <td>복도에서 봤을 때 <b>도어락과 한 세트</b>로 보일 것</td>
+    <td>도어락 마감과 동일 마감이 가능해야 함 <span class="tag">영업 무기</span></td>
+    <td>K=카드 투입구 또는 탭존 / DM=렌즈 / 챠임벨=단일 대형 버튼</td>
+    <td>K 표시등 · 챠임벨 링 (은은하게)</td>
+    <td>도어락과 다른 마감 · 「KEY」 영문 대문자 강조 · 플라스틱 렌즈</td>
+  </tr>
+</table></div>
+
+<h2>5. 차장님만 답할 수 있는 것 <em>이것이 정해져야 다음이 나갑니다</em></h2>
+<div class="ask">
+  <div class="fix">
+    <b>먼저 제 오류를 정정합니다.</b> 이전 대화에서 제가 매입박스를 「1연 86×86 / 2연 86×146 / 3연 86×206」이라고 적었는데,
+    <b>확인하지 못한 값이었습니다.</b> 웹으로 재확인했으나 국내 규격이 제품·시공사마다 다르다는 것만 확인됐습니다.
+    이 값은 <b>차장님이 현장에서 확인해 주셔야 하는 값</b>입니다.
+  </div>
+  <ol>
+    <li><b>매입박스 실제 치수</b> — 우리가 쓰는 1연·2연·3연의 실측 mm</li>
+    <li><b>전면판 목표 단가</b> — 상위형 / 표준형 각각 (요율·금액은 제가 정하지 않습니다)</li>
+    <li><b>솔리드 황동 3mm가 단가·중량으로 가능한가</b> — 안 되면 알루미늄 CNC 또는 황동 도금 스틸로 내려야 합니다</li>
+    <li><b>수작업 파티나를 상위형에 쓸 수 있는가</b> — 하자 조항(변색)을 우리가 감당할 수 있는지 포함</li>
+    <li><b>야간 백라이트 3안 중 어디로</b> — 각인 확산 / 파팅라인 / 별도 창</li>
+    <li><b>터치인가 물리버튼인가</b> — 호텔 청소·오작동을 고려해 어느 쪽인지</li>
+    <li><b>기존 2000M 시리즈와의 관계</b> — 교체인가, 위에 얹는 상위 라인 신설인가</li>
+    <li><b>도어락 마감 매칭</b>을 우리가 제공할 수 있는가 — 가능하면 이것이 제일 큰 영업 무기입니다</li>
+  </ol>
+</div>
+
+<h2>6. AI 실사 렌더용 프롬프트 <em>이 해부서에서 그대로 뽑은 문장</em></h2>
+<p style="font-size:13.2px;color:var(--ink2);margin:0 0 10px">
+아래는 감으로 쓴 것이 아니라 위 1·2절의 확인된 사실을 그대로 문장으로 옮긴 것입니다.
+중계서버가 붙으면 이 문장이 그대로 들어갑니다.</p>
+
+<h3>① 조명스위치 3구 — Meljac 계열 (솔리드 황동)</h3>
+<pre>Photorealistic architectural product photograph of a luxury hotel guestroom
+light switch, 3-gang. <b>Solid unlacquered brass plate, 3mm thin</b>, single machined
+block, <b>flush-mounted with no visible screws</b> and no plastic frame, set into a
+pale limewash plaster wall. Three slim rocker bars milled from the same billet,
+hairline parting lines, hand-brushed surface, chamfered edge catching the light.
+Discreet engraved labels. Warm directional studio light from upper left, soft long
+shadow, 85mm macro, shallow depth of field, ultra detailed material texture.
+No text overlay, no watermark.</pre>
+
+<h3>② 조명스위치 3구 — Forbes &amp; Lomax 계열 (판이 사라지는 방식)</h3>
+<pre>Photorealistic product photograph of a luxury light switch with a <b>3mm bevelled
+clear acrylic plate</b> through which the wallpaper behind is fully visible, no
+screws, no frame — the plate reads as invisible. Centered <b>antique bronze toggle
+dollies</b>, unlacquered and naturally patinated. Soft daylight from a window,
+delicate bevel highlight along the plate edge, 100mm macro, shallow depth of
+field, English country-house interior. No text overlay, no watermark.</pre>
+
+<h3>③ BSP 온도조절기 통합형 — 히든 디스플레이</h3>
+<pre>Photorealistic product photograph of a luxury hotel room control panel, single
+<b>brushed brass plate, flush mounted, no screws</b>. A <b>hidden display</b> that appears to
+float in the metal surface — temperature glowing softly through <b>laser-etched
+micro-perforations</b>, no glass window, no visible screen border. Beside it two slim
+tactile keys and a discreet universal socket in the same finish. Dark hotel
+suite at night, single warm accent light, deep shadow, 85mm macro, ultra
+detailed. No text overlay, no watermark.</pre>
+
+<h3>④ 문 입구 세트 — 도어락 마감 매칭</h3>
+<pre>Photorealistic photograph of a luxury hotel corridor door entrance detail: an
+<b>RFID key card reader plate and a door monitor lens</b>, both in the <b>same unlacquered
+brushed brass finish as the door handle beside them</b>, flush mounted into dark
+walnut panelling, no visible screws. A single small amber indicator. Warm
+low corridor lighting, shallow depth of field, 50mm lens, editorial hotel
+photography. No text overlay, no watermark.</pre>
+
+<h2>7. A안 — 무인 자동 생성을 붙이는 순서 <em>개요</em></h2>
+<div class="scroll"><table>
+  <tr><th>순서</th><th>할 일</th><th>누가</th></tr>
+  <tr><td>①</td><td>이미지 생성 API 계정 개설 + 결제 등록 (Google AI Studio 또는 Replicate)</td><td><b>차장님</b> — 키 발급·결제는 대신 못 합니다</td></tr>
+  <tr><td>②</td><td>중계서버 배포 (Cloudflare Workers 무료 구간). 키는 서버에만 두고 브라우저에 노출하지 않음</td><td>제가 코드와 순서를 만듭니다</td></tr>
+  <tr><td>③</td><td>탐색기에 중계서버 주소 입력 → 위 6절 프롬프트가 자동으로 들어감</td><td>차장님이 주소 한 번 붙여넣기</td></tr>
+  <tr><td>④</td><td>일정 시간마다 1장 생성 → 지정 폴더 자동 저장</td><td>자동</td></tr>
+  <tr><td>⑤</td><td>♥ 고른 것만 남기고, 고른 것의 문장을 다음 프롬프트에 반영</td><td>차장님이 고르기만</td></tr>
+</table></div>
+<p style="font-size:13px;color:var(--red);margin-top:10px">
+※ <b>Gamma 계정으로는 더 못 합니다.</b> 시험 생성 1장에 70크레딧이 들었고 30크레딧만 남아 두 번째 장이 실패했습니다.
+자동 생성을 하려면 ①번이 반드시 먼저입니다.</p>
+
+<div class="note">
+  <b>출처 (2026-09-13 웹 확인)</b><br>
+  · Meljac — <a href="https://www.meljac.com/en/des-interrupteurs-sans-vis-apparentes/">무나사 스위치</a>,
+  <a href="https://meljac-na.com/custom-elements/">커스텀 마감</a>,
+  <a href="https://iahome.be/en/brands/meljac/">브랜드 소개</a><br>
+  · Forbes &amp; Lomax — <a href="https://forbesandlomax.com/uk/featured_item/invisible-lightswitch/">Invisible Lightswitch®</a>,
+  <a href="https://cassonhardware.com/collections/forbes-lomax-invisible-plates">Invisible Plates 사양</a><br>
+  · 그 밖에 확인한 브랜드 — Basalte(벨기에) · Black Nova(이탈리아, 대리석·금속·크리스탈) · Tense(벨기에, OLED) ·
+  Ekinex 20VENTI(이탈리아, Fenix 매트) · Jung LS990 · Gira E2 · Buster + Punch<br><br>
+
+  <b>이 문서에서 제가 지어낸 값 · 확신 없는 것</b><br>
+  · <b>매입박스 치수는 제가 앞서 적었던 86×86 / 86×146 / 86×206을 철회합니다.</b> 확인하지 못한 값이었습니다. (5절 참조)<br>
+  · 「1,000실 이상이면 수작업 파티나가 단가·납기에 안 맞는다」는 <b>제 판단이며 실제 견적을 받아본 값이 아닙니다.</b><br>
+  · 4절 요구서의 「목표 인상」과 「절대 금지」는 1·2절 원리에서 제가 도출한 것으로, 차장님 확인 전입니다.<br>
+  · 6절 프롬프트는 아직 <b>1장만 실제로 생성해봤고</b>(①번 계열), 저는 그 결과 이미지를 이 세션에서 열어보지 못했습니다.<br><br>
+
+  <b>변경 이력</b><br>
+  · v1 (2026-09-13) 최초 작성. 목표 등급 = 수작업 최고급(Meljac·Forbes &amp; Lomax), 차장님 선택.<br>
+  · 같은 날 탭④ 「제품 디자인 탐색기」 폐기 — 무작위 조합은 디자인이 아니라는 판단.
+  코드 전문은 <code>archive/proposal-design-v3_디자인탐색기포함_백업.html</code> 에 보관.
+</div>
+
+</div>
+<footer>KM 제품 디자인 요구서 — 레퍼런스 해부 v1 · 2026-09-13 · 5절이 채워지면 v2로 올립니다(덮어쓰지 않습니다)</footer>
+</body>
+</html>
