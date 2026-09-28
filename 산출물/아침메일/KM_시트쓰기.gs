@@ -1,4 +1,6 @@
 /**
+ * KM_시트쓰기 v6.1 (2026-09-28 낮) — v6.1 : 방금 붙이신 v6 이 그 자리에서 오류(「지정된 권한으로는 SpreadsheetApp.openById 을 호출할 수 없습니다」) —
+ *   onOpen(단순 트리거)은 openById 를 쓸 권한이 없다. km_sweep_ 에 ss 를 직접 넘길 수 있게 고치고, onOpen 은 getActiveSpreadsheet() 를 넘긴다. sweep 로직 자체는 안 바꿈
  * KM_시트쓰기 v6 (2026-09-28) — v6 : onOpen 추가 (차장님 「내가 원할 때 새로고침을 하면 옮겨지는 것으로 해」, 2026-09-28)
  *   onOpen : 「26년 회의록2」 를 열거나(브라우저 새로고침 포함) sweep({}) 을 자동으로 한 번 돌린다. 결과는 화면 아래 토스트로.
  *            07:00 자동 실행과는 별개 — 차장님이 체크하신 뒤 브라우저를 새로고침하는 순간마다 반영된다(정해진 시각을 기다리지 않는다)
@@ -48,7 +50,7 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) { return km_out_({ok: false, error: '본문이 JSON 이 아님'}); }
   if (!KM_TOKEN || body.token !== KM_TOKEN) return km_out_({ok: false, error: '암호 틀림'});
   try {
-    if (body.action === 'ping')  return km_out_({ok: true, version: 'v6 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
+    if (body.action === 'ping')  return km_out_({ok: true, version: 'v6.1 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
     if (body.action === 'read')  return km_out_(km_read_(body));
     if (body.action === 'batch') return km_out_(km_batch_(body));
     if (body.action === 'old26') return km_out_(km_old26_(body));
@@ -189,8 +191,9 @@ function km_oldStrip_(body) {
  *   답요청·오늘 할일·앞으로 할일 각 탭에서 완료 체크(D열='완료') 된 줄은 「완료 기록」 으로,
  *   고르기(E열)='답 결정' 인 줄은 「답 결정」 으로 옮기고 원본에서 지운다. 완료가 답 결정보다 세다(둘 다면 완료 기록).
  *   지운 뒤 A(날짜)·B(현장) 세로 병합을 다시 계산해 붙인다. {dry:true} 면 세기만 하고 시트를 바꾸지 않는다. */
-function km_sweep_(body) {
-  var ss = SpreadsheetApp.openById(KM_IDS.new2);
+function km_sweep_(body, ss) {
+  // ss 를 안 주면(doPost 경로) openById. onOpen(단순 트리거)은 openById 를 쓸 권한이 없어 getActiveSpreadsheet() 를 넘겨준다(9/28 오류로 발견)
+  ss = ss || SpreadsheetApp.openById(KM_IDS.new2);
   var names = body.tabs || ['답요청', '오늘 할일', '앞으로 할일'];
   var dry = !!body.dry;
   var doneTab = dry ? null : km_sweepTab_(ss, '완료 기록');
@@ -321,10 +324,12 @@ function km_master_(ss, rec, link) {
 /** onOpen (v6, 2026-09-28 차장님 「내가 원할 때 새로고침을 하면 옮겨지는 것으로 해」) :
  *   「26년 회의록2」 를 열 때마다(브라우저 새로고침도 「다시 열기」 라 포함) sweep({}) 을 자동으로 한 번 돌린다.
  *   07:00 자동 실행과 별개 — 중복으로 돌아도 옮길 게 없으면 그냥 아무 일도 안 한다. 옮긴 게 있을 때만 화면 아래 토스트로 알린다.
- *   실패해도 시트 자체는 문제없이 열리도록 통째로 감싼다(에러가 나도 열기를 막지 않는다) */
+ *   실패해도 시트 자체는 문제없이 열리도록 통째로 감싼다(에러가 나도 열기를 막지 않는다)
+ *   ★ v6-1 (2026-09-28 낮 오류 수정) : onOpen 은 「단순 트리거」 라 SpreadsheetApp.openById 를 쓸 권한이 없다(「지정된 권한으로는 호출할 수 없습니다」).
+ *     그래서 openById(KM_IDS.new2) 대신 이 시트 자체인 getActiveSpreadsheet() 를 km_sweep_ 에 직접 넘긴다 */
 function onOpen(e) {
   try {
-    var r = km_sweep_({});
+    var r = km_sweep_({}, SpreadsheetApp.getActiveSpreadsheet());
     var done = 0, pick = 0;
     (r.tabs || []).forEach(function (t) { done += t.완료 || 0; pick += t.답결정 || 0; });
     if (done + pick > 0) {

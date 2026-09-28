@@ -64,12 +64,19 @@ function makeSheet(name, rows) {
 
 let SHEETS = {};
 let TOASTS = [];
-global.SpreadsheetApp = {
-  openById: () => ({
+// 실제 구글시트 : openById 는 전체 권한(doPost 경로) · getActiveSpreadsheet 는 단순 트리거(onOpen)도 쓸 수 있는 제한 권한.
+// 둘 다 같은 시트(SHEETS)를 가리키되, ssObj 자체는 매번 새로 만들어 "openById 를 쓰면 안 되는 onOpen 이 실수로 openById 를 쓰면" 잡아낼 수 있게 한다.
+function ssObj(withToast) {
+  var o = {
     getSheetByName: (n) => SHEETS[n] || null,
     insertSheet: (n) => { SHEETS[n] = makeSheet(n, []); return SHEETS[n]; },
-  }),
-  getActiveSpreadsheet: () => ({ toast: (msg, title, sec) => TOASTS.push({ msg, title, sec }) }),
+  };
+  if (withToast) o.toast = (msg, title, sec) => TOASTS.push({ msg, title, sec });
+  return o;
+}
+global.SpreadsheetApp = {
+  openById: () => ssObj(false),
+  getActiveSpreadsheet: () => ssObj(true),
 };
 global.Utilities = { formatDate: () => '2026-09-28' };
 global.ContentService = { createTextOutput: (s) => ({ setMimeType: () => ({ text: s }) }), MimeType: { JSON: 'json' } };
@@ -182,15 +189,36 @@ TOASTS = [];
 onOpen({});
 chk('onOpen : 옮길 게 없으면 토스트 안 띄움', TOASTS.length === 0, JSON.stringify(TOASTS));
 
-// 시트를 못 열어도(오류) onOpen 자체는 죽지 않는다
+// ── 시험 6-1 (재발 방지, 9/28 낮 실제로 겪은 오류) : onOpen 은 openById 를 절대 부르면 안 된다 ──
+// 실제 구글시트에서 단순 트리거(onOpen)가 openById 를 부르면 "지정된 권한으로는 호출할 수 없습니다" 로 죽는다.
+// 여기서 openById 를 부르는 순간 예외가 나게 만들어 두고, onOpen 이 그래도 정상 작동하면(=openById 를 안 썼으면) 통과.
+setup1();
+TOASTS = [];
 const savedOpenById = SpreadsheetApp.openById;
-SpreadsheetApp.openById = () => { throw new Error('강제 오류'); };
+SpreadsheetApp.openById = () => { throw new Error('지정된 권한으로는 SpreadsheetApp.openById을(를) 호출할 수 없습니다.'); };
+let threwPerm = false;
+try { onOpen({}); } catch (e) { threwPerm = true; }
+chk('onOpen : openById 를 아예 안 써서 실제 권한 오류를 안 맞음', !threwPerm, '');
+chk('onOpen : openById 가 막혀 있어도 sweep 은 정상 완료(토스트로 확인)', TOASTS.length === 1 && /완료 기록 2건/.test(TOASTS[0].msg), JSON.stringify(TOASTS));
+SpreadsheetApp.openById = savedOpenById;
+
+// doPost 경로(웹 앱 sweep 명령)는 여전히 openById 를 그대로 쓴다 — ss 를 안 넘기면 openById 로 연다
+setup1();
+let outDopost = km_sweep_({ tabs: ['답요청'], dry: false });   // ss 인자 없음 = doPost 가 부르는 모양 그대로
+chk('doPost 경로(ss 인자 없음) : 여전히 openById 로 열어 정상 동작', outDopost.tabs[0].완료 === 2, JSON.stringify(outDopost.tabs[0]));
+
+// 시트 자체에서 뭔가 진짜로 깨져도(오류) onOpen 은 밖으로 안 던지고 오류 토스트만 띄운다
+setup1();
+const savedGetSheetByName = SHEETS['답요청'].getSheetByName;
 TOASTS = [];
 let threw = false;
+const brokenActive = { getSheetByName: () => { throw new Error('강제 오류'); }, insertSheet: () => { throw new Error('강제 오류'); }, toast: (msg, title, sec) => TOASTS.push({ msg, title, sec }) };
+const savedGetActive = SpreadsheetApp.getActiveSpreadsheet;
+SpreadsheetApp.getActiveSpreadsheet = () => brokenActive;
 try { onOpen({}); } catch (e) { threw = true; }
 chk('onOpen : 내부에서 오류가 나도 밖으로 안 던짐(시트 열기를 막지 않음)', !threw, '');
 chk('onOpen : 오류면 오류 토스트라도 띄움', TOASTS.length === 1 && /오류/.test(TOASTS[0].msg), JSON.stringify(TOASTS));
-SpreadsheetApp.openById = savedOpenById;
+SpreadsheetApp.getActiveSpreadsheet = savedGetActive;
 
 console.log('\n합계 ' + (OK + NG.length) + '개 중 통과 ' + OK + ' · 실패 ' + NG.length);
 if (NG.length) { console.log('실패 : ' + NG.join(', ')); process.exit(1); }
