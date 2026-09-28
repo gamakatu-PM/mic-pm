@@ -109,8 +109,8 @@ def run(quiet=False):
         except Exception:
             traceback.print_exc()
         try:
-            import t56_collect_auto as CA
-            CA.run(None, quiet=True)   # 56 수금대장 자동 채움 (확정 대장·견적서 → 빈칸만). 아침 한 장이 읽기 전에 (2026-09-28, 5번 수금 A안)
+            import t57_collect_auto as CA
+            CA.run(None, quiet=True)   # 57 수금대장 자동 채움 (확정 대장·견적서 → 빈칸만). 아침 한 장이 읽기 전에 (2026-09-28, 5번 수금 A안)
         except Exception:
             traceback.print_exc()
         try:

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-56. 수금대장이 스스로 채워짐  (km_tools / t56_collect_auto)
+57. 수금대장이 스스로 채워짐  (km_tools / t57_collect_auto)
 
 최우선 5번 「수금」 A안 (2026-09-28, 차장님이 설계 질문 8개에 답하신 대로). 클로드(AI)를 쓰지 않는다 → 사용량 0.
 
-    python t56_collect_auto.py [<meta폴더>] [--today 260928] [--quiet]
+    python t57_collect_auto.py [<meta폴더>] [--today 260928] [--quiet]
     (메타 폴더를 안 주면 회의록 쪽은 건너뛰고 확정 대장·견적서만 본다)
 
 차장님 답 (2026-09-27)
@@ -45,7 +45,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import *
 import facts as FX
 
-VERSION = 'v2 2026-09-28'   # v2 : 독립 감사 9건 반영 — 현장은 정확히 같을 때만(유일한 앞머리 일치만 허용) · 재저장 때 줄 안 지움 · 「소」「합」 품목 누락 · 결제조건/계약금액은 숫자만 · 특수문자 현장명 · --today 엉터리 · 폴더 날짜
+VERSION = 'v2.1 2026-09-28'   # v2.1 : 번호 56→57 (다른 창이 같은 날 t56_makequeue 를 먼저 냄, km-00 41번) · v2 : 독립 감사 9건 반영 — 현장은 정확히 같을 때만(유일한 앞머리 일치만 허용) · 재저장 때 줄 안 지움 · 「소」「합」 품목 누락 · 결제조건/계약금액은 숫자만 · 특수문자 현장명 · --today 엉터리 · 폴더 날짜
 # v1 2026-09-28
 TOOL = '수금'
 KINDS = ('외함', '속판', '기구물')
@@ -378,7 +378,7 @@ def run(meta_dir=None, today_ymd=None, quiet=False):
         print('※ --today %s 를 날짜로 못 읽어 오늘(%s)로 합니다' % (today_ymd, t0))
     _T0[0] = t0
     if not quiet:
-        title('56. 수금대장이 스스로 채워짐   (회의록·확정 대장·견적서 → 수금대장. 빈칸만. 토큰 0)')
+        title('57. 수금대장이 스스로 채워짐   (회의록·확정 대장·견적서 → 수금대장. 빈칸만. 토큰 0)')
     book = load_book()
     ratios = load_ratio()
     hist, notes = [], []

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""56번 수금대장 자동 채움 시험. 가짜 현장·가짜 금액 (실제 아님). 임시 폴더에서만 돈다.
-    python t56_collect_auto_시험.py
+"""57번 수금대장 자동 채움 시험. 가짜 현장·가짜 금액 (실제 아님). 임시 폴더에서만 돈다.
+    python t57_collect_auto_시험.py
 """
 from __future__ import print_function
 import os, sys, io, json, csv, shutil, tempfile, datetime
@@ -8,12 +8,12 @@ import os, sys, io, json, csv, shutil, tempfile, datetime
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import common
-tmp = tempfile.mkdtemp(prefix='t56_')
+tmp = tempfile.mkdtemp(prefix='t57_')
 os.makedirs(os.path.join(tmp, '_도구결과'))
 common.DEFAULTS.update({'base': tmp, 'out': os.path.join(tmp, '_도구결과'), 'template': os.path.join(tmp, '_원틀')})
 common.AUTO = True
 import facts as FX
-import t56_collect_auto as T
+import t57_collect_auto as T
 
 R = []
 
@@ -179,7 +179,7 @@ def main():
     ok('find_quote 「가나」 로는 못 찾음(후보 둘) · 「가나_별관호텔」 은 찾음', T.find_quote('가나') is None and T.find_quote('가나_별관호텔') is not None and T.find_quote('가나 호텔') is not None)
 
     print('== 7. 회의록 없이 · 대장 없이')
-    tmp2 = tempfile.mkdtemp(prefix='t56b_')
+    tmp2 = tempfile.mkdtemp(prefix='t57b_')
     os.makedirs(os.path.join(tmp2, '_도구결과'))      # 폴더가 없으면 cfg() 가 다른 곳을 찾아가므로 먼저 만든다
     common.DEFAULTS.update({'out': os.path.join(tmp2, '_도구결과')})
     rep3 = T.run(None, today_ymd='261010', quiet=True)
