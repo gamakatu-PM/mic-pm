@@ -56,15 +56,19 @@ function makeSheet(name, rows) {
     };
     return self;
   }
-  return {
+  const self2 = {
     getName: () => name,
+    setName: (n) => { name = n; return self2; },
     getLastRow: () => grid.length,
     setFrozenRows: () => {},
+    setColumnWidth: () => self2,
+    clearContents: () => { grid = []; return self2; },
     getRange: (r, c, nr, nc) => range(r, c, nr, nc),
     deleteRows: (startRow, numRows) => { grid.splice(startRow - 1, numRows); },
     _grid: () => grid,
     _merges: () => merges,
   };
+  return self2;
 }
 
 let SHEETS = {};
@@ -75,6 +79,7 @@ function ssObj(withToast) {
   var o = {
     getSheetByName: (n) => SHEETS[n] || null,
     insertSheet: (n) => { SHEETS[n] = makeSheet(n, []); return SHEETS[n]; },
+    getSheets: () => { if (!SHEETS['__first__']) SHEETS['__first__'] = makeSheet('Sheet1', []); return [SHEETS['__first__']]; },
   };
   if (withToast) o.toast = (msg, title, sec) => TOASTS.push({ msg, title, sec });
   return o;
@@ -308,6 +313,18 @@ chk('appendDoc + markTab/marks : 보고서 탭에도 실제로 들어감', SHEET
 
 let adNoMark = km_appendDoc_({ tab: '메일', rows: [['2026-09-28', 'x', 'x', 'x']], markTab: '없는탭', marks: [{ row: 2, text: 'x' }] });
 chk('appendDoc : markTab 이 없는 탭이면 marked=0(오류로 죽지 않음, append 는 됨)', adNoMark.ok && adNoMark.marked === 0, JSON.stringify(adNoMark));
+
+// ── 시험 10 (v10) : setHandover — 「KM 인수인계」 요약 1장, 누적 아니고 매번 덮어씀 ──
+SHEETS = {};
+let shOut1 = km_setHandover_({ rows: [['브랜치', 'claude/cowork-suggestions-bohllt'], ['최신 커밋', 'abc123 어떤 커밋'], ['안 한 것', '웹앱 v10 아직 안 붙임\n현장관리 캘린더 아직 없음']] });
+chk('setHandover : ok:true · n=3', shOut1.ok && shOut1.n === 3, JSON.stringify(shOut1));
+let hg1 = SHEETS['__first__']._grid();
+chk('setHandover : 항목·내용 2칸으로 들어감', hg1[0][0] === '브랜치' && hg1[0][1] === 'claude/cowork-suggestions-bohllt', hg1[0]);
+chk('setHandover : 줄바꿈 있는 칸도 그대로(지어내거나 자르지 않음)', hg1[2][1] === '웹앱 v10 아직 안 붙임\n현장관리 캘린더 아직 없음', hg1[2]);
+
+let shOut2 = km_setHandover_({ rows: [['브랜치', '다시 씀']] });
+let hg2 = SHEETS['__first__']._grid();
+chk('setHandover : 두 번째 호출은 누적이 아니라 덮어씀(1줄만 남음)', hg2.length === 1 && hg2[0][1] === '다시 씀', hg2);
 
 console.log('\n합계 ' + (OK + NG.length) + '개 중 통과 ' + OK + ' · 실패 ' + NG.length);
 if (NG.length) { console.log('실패 : ' + NG.join(', ')); process.exit(1); }

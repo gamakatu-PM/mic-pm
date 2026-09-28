@@ -1,4 +1,8 @@
 /**
+ * KM_시트쓰기 v10 (2026-09-28 밤) — v10 : setHandover 추가 (차장님 「새 창 만들 때마다 인수인계 준비하는 시트」, 2026-09-28 밤)
+ *   새 구글시트 「KM 인수인계」(KM_IDS.handover) 요약 1장에 지금 상태를 통째로 덮어쓴다 — 누적 안 함(항상 「지금」만 보여준다).
+ *   md 파일(2_창이어가기_vN)은 그대로 상세 기록으로 계속 쓴다 — 이 시트는 그 위에 얹는 "요약 1장"일 뿐, md 를 대신하지 않는다.
+ *   setHandover : {rows:[[항목,내용],...]} — 첫 탭을 통째로 지우고 그 rows 로 다시 쓴다(줄바꿈 있는 칸은 자동 줄바꿈).
  * KM_시트쓰기 v9 (2026-09-28 밤) — v9 : appendDoc 추가 (차장님 「메일·보고서도 구글시트에 탭 만들어서 날짜별로 누적」·「캘린더 1개 더」, 2026-09-28 밤)
  *   appendDoc : {tab:'메일'|'보고서', rows:[[날짜,현장,할일,본문],…], markTab, marks} — 그 탭에 4칸 줄을 덧붙이기만(덮어쓰지 않음, 탭 없으면 새로 만듦).
  *     markTab·marks 를 같이 주면 append 가 된 다음에만 그 탭 J열도 같이 표시한다 — 한 번의 요청으로 묶어서, 시트에 안 들어갔는데 「만듦」 표시만 되는 일이 없게 한다.
@@ -43,7 +47,8 @@ var KM_TOKEN = '';   // ← 클로드가 드린 암호를 따옴표 안에 (저�
 var KM_IDS = {
   new2:  '1S02QcwHnRNiJJbq3qfSPs9sRtR1UDtTMSUPhLy4_Ckk',   // 26년 회의록2 (읽기·쓰기)
   radar: '1LWK3fmXgf2_aG12B3cunutLUHnSqNMDf_sr3lXOyr-c',   // 신규 현장 레이더 (읽기만)
-  old:   '1RzDj_mm3fY6l42hF9AJ-r5KY50OCVIV7IwSIQeh3rms'    // 옛 26년 회의록 (old26 로만 쓴다)
+  old:   '1RzDj_mm3fY6l42hF9AJ-r5KY50OCVIV7IwSIQeh3rms',   // 옛 26년 회의록 (old26 로만 쓴다)
+  handover: '1kqRpOf_oqAA66Jg98nkjFDR2JYYoFaImmci8XohOOnA'  // v10 (2026-09-28 밤) KM 인수인계 — 요약 1장, setHandover 로만 쓴다
 };
 
 // batch 에서 받는 요청 종류 — delete* · clear* · 탭 지우기는 없다
@@ -61,7 +66,7 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) { return km_out_({ok: false, error: '본문이 JSON 이 아님'}); }
   if (!KM_TOKEN || body.token !== KM_TOKEN) return km_out_({ok: false, error: '암호 틀림'});
   try {
-    if (body.action === 'ping')  return km_out_({ok: true, version: 'v9 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
+    if (body.action === 'ping')  return km_out_({ok: true, version: 'v10 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
     if (body.action === 'read')  return km_out_(km_read_(body));
     if (body.action === 'batch') return km_out_(km_batch_(body));
     if (body.action === 'old26') return km_out_(km_old26_(body));
@@ -70,6 +75,7 @@ function doPost(e) {
     if (body.action === 'sweep') return km_out_(km_sweep_(body));
     if (body.action === 'markQueue') return km_out_(km_markQueue_(body));
     if (body.action === 'appendDoc') return km_out_(km_appendDoc_(body));
+    if (body.action === 'setHandover') return km_out_(km_setHandover_(body));
     return km_out_({ok: false, error: '모르는 action : ' + body.action});
   } catch (err) {
     return km_out_({ok: false, error: String(err && err.stack || err)});
@@ -326,6 +332,23 @@ function km_appendDoc_(body) {
     }
   }
   return {ok: true, tab: tab, n: n, firstRow: firstRow, marked: marked};
+}
+
+/** setHandover (v10) : {rows:[[항목,내용],...]} — 「KM 인수인계」 시트 첫 탭을 통째로 지우고 다시 쓴다.
+ *   누적하지 않는다(md 파일이 이미 상세 기록을 맡는다) — 이 시트는 "지금 이 순간"만 보여주는 요약 1장이라 매번 덮어쓰는 게 맞다. */
+function km_setHandover_(body) {
+  var rows = (body.rows || []).map(function (r) { return [String((r || [])[0] || ''), String((r || [])[1] || '')]; });
+  var ss = SpreadsheetApp.openById(KM_IDS.handover);
+  var sh = ss.getSheets()[0];
+  sh.clearContents();
+  sh.setName('요약');
+  if (rows.length) {
+    sh.getRange(1, 1, rows.length, 2).setValues(rows).setWrap(true).setVerticalAlignment('top');
+    sh.setColumnWidth(1, 160);
+    sh.setColumnWidth(2, 640);
+    sh.getRange(1, 1, rows.length, 1).setFontWeight('bold');
+  }
+  return {ok: true, n: rows.length, url: 'https://docs.google.com/spreadsheets/d/' + KM_IDS.handover + '/edit'};
 }
 
 function km_sweepAppend_(sh, fromName, rows) {
