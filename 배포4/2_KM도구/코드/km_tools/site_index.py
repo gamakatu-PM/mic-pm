@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 54판 v12 2026-09-27  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
+# 54판 v13 2026-09-28  (★제안서_PPT.py 가 이 줄의 v숫자로 새 판인지 가린다)
 """site_index - 흩어진 결과를 「현장 하나당 한 곳」 으로 모아 보는 화면을 만든다. 토큰 0.
 
 왜 만들었나
@@ -48,7 +48,7 @@ KIND = collections.OrderedDict([
 ORDER = ['산출', '견적', '실행', '단가장', '제안서', '회의록', '의뢰서',
          '일정', '돈', '도면', '사진', '부탁서', '그 밖']
 
-BAD = ('_클로드에게', '_모르는기호', '_읽은파일', '_쪼개서맞춘것', 'log', '.tmp', '~$')
+BAD = ('_이름바꿈_기록', '_점검결과', '_클로드에게', '_모르는기호', '_읽은파일', '_쪼개서맞춘것', 'log', '.tmp', '~$')
 
 
 def kind_of(tool):
@@ -82,8 +82,10 @@ def site_of(fname, tool):
     site = re.sub(r'[_ ]*\d{6}$', '', site).strip(' _-')     # 「앵커호텔_260927」 -> 「앵커호텔」
     if site in NOT_SITE:
         return ''
-    if site == '표준':
+    if site == '표준':                  # 2026-09-28 전에 만든 범용본 (표준_…)
         return GENERIC
+    if not site and '제안서PPT' in tool and '_' not in base and not base.startswith('~'):
+        return GENERIC                  # 지금 범용본 : 「인스펙터 기능 검토서_260928.pptx」 처럼 앞말 없음
     return site
 
 
