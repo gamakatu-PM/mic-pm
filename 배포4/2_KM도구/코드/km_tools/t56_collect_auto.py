@@ -45,7 +45,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import *
 import facts as FX
 
-VERSION = 'v1 2026-09-28'
+VERSION = 'v2 2026-09-28'   # v2 : 독립 감사 9건 반영 — 현장은 정확히 같을 때만(유일한 앞머리 일치만 허용) · 재저장 때 줄 안 지움 · 「소」「합」 품목 누락 · 결제조건/계약금액은 숫자만 · 특수문자 현장명 · --today 엉터리 · 폴더 날짜
+# v1 2026-09-28
 TOOL = '수금'
 KINDS = ('외함', '속판', '기구물')
 HEAD = ['현장', '구분(외함/속판/기구물)', '납품일', '금액', '계산서발행일', '입금일', '결제조건일수', '납품예정일', '근거']
@@ -61,12 +62,27 @@ FACT_RE = re.compile(r'^(납품|납품일|계산서|계산서발행|계산서발
 
 # ── 작은 도우미 ──────────────────────────────────────────────
 def _n(s):
-    return re.sub(r'[\s_·,.\-()]+', '', str(s or ''))
+    # 빈칸·문장부호·cp949 밖 글자(😀 등, write_csv 가 ? 로 바꿈)를 다 떼고 글자·숫자만 남긴다
+    return re.sub(r'[^0-9A-Za-z가-힣]', '', str(s or ''))
 
 
 def same_site(a, b):
+    """정확히 같은 현장만 True. (v2 : 「조선호텔」 ⊂ 「조선호텔 리뉴얼」 같은 부분일치는 오귀속 사고라 뺌 — CLAUDE.md 3-1)"""
     a, b = _n(a), _n(b)
-    return bool(a) and bool(b) and (a == b or a in b or b in a)
+    return bool(a) and a == b
+
+
+def pick_site(site, names):
+    """names 중 site 와 맞는 하나. 정확 일치 → 그것. 없으면 앞머리 일치(동구로초 ⊂ 동구로초등학교)가 **딱 하나**일 때만 그것.
+    둘 이상이면 None (어느 것인지 도구가 정하지 않는다)."""
+    n = _n(site)
+    if not n:
+        return None
+    exact = [x for x in names if _n(x) == n]
+    if exact:
+        return exact[0]
+    pre = [x for x in names if len(n) >= 3 and len(_n(x)) >= 3 and (_n(x).startswith(n) or n.startswith(_n(x)))]
+    return pre[0] if len(pre) == 1 else None
 
 
 def is_site(name):
@@ -102,8 +118,10 @@ def iso(dt):
 
 
 def money(s):
-    d = re.sub(r'[^\d]', '', str(s or ''))
-    return int(d) if d else None
+    """「90,000,000원」 「90000000」 만 숫자로. 「9천만원」「1.5억」「30일/60일」「선수금 30%」 처럼 숫자를 이어 붙이면 뜻이 바뀌는 글은 None."""
+    t = re.sub(r'[\s,]', '', str(s or ''))
+    t = re.sub(r'(원|일|VAT별도)$', '', t)
+    return int(t) if re.match(r'^\d+$', t) else None
 
 
 def kind_of(text):
@@ -176,7 +194,7 @@ def scan_meta(meta_dir):
 # ── 2. 확정 대장 → 납품일·계산서·입금·계약금액·결제조건 ──────
 def scan_facts():
     """{(현장,구분): {'납품일':date,'계산서발행일':date,'입금일':date, 근거…}} , {현장: 계약금액}, {현장: 결제조건}"""
-    got, contract, term = {}, {}, {}
+    got, contract, term, bad = {}, {}, {}, []
     try:
         rows = FX.load(active_only=True)
     except Exception:
@@ -185,16 +203,20 @@ def scan_facts():
         item = re.sub(r'\s+', '', r.get('항목') or '')
         site = (r.get('현장') or '').strip()
         val = (r.get('값') or '').strip()
-        if not site:
+        if not site or not is_site(site):
             continue
         if item == '계약금액':
             v = money(val)
-            if v is not None and site not in contract:
+            if v is None:
+                bad.append('%s 계약금액 「%s」 는 숫자만 받습니다 (예 90000000 · 90,000,000원)' % (site, val))
+            elif site not in contract:
                 contract[site] = (v, '확정 대장 %s' % (r.get('일자') or ''))
             continue
         if item in ('결제조건', '결제조건일수'):
             v = money(val)
-            if v is not None and site not in term:
+            if v is None:
+                bad.append('%s 결제조건 「%s」 는 일수 숫자만 받습니다 (예 30)' % (site, val))
+            elif site not in term:
                 term[site] = (v, '확정 대장 %s' % (r.get('일자') or ''))
             continue
         mm = FACT_RE.match(item)
@@ -209,7 +231,7 @@ def scan_facts():
         got.setdefault(key, {})
         if what not in got[key]:              # 최신이 앞이라 처음 것만
             got[key][what] = (dt, '확정 대장 %s 「%s」' % (r.get('일자') or '', r.get('항목') or ''))
-    return got, contract, term
+    return got, contract, term, bad
 
 
 # ── 3. 견적서 → 3회 비율 ────────────────────────────────────
@@ -231,7 +253,7 @@ def quote_split(path):
             sec = '중앙'; continue
         if re.match(r'^\d+\.\s*객실', a):
             sec = '객실'; continue
-        if not a or a.startswith('소') or a.startswith('합') or a.startswith('*') or a.startswith('-'):
+        if not a or re.match(r'^(소\s*계|합\s*계)$', a) or a.startswith('*') or a.startswith('-'):
             continue
         v = ws.cell(r, 11).value
         if not isinstance(v, (int, float)):
@@ -255,10 +277,15 @@ def quote_split(path):
 def find_quote(site):
     base = os.path.join(cfg('out'), '단가붙이기')
     cands = []
+    names = {}
     for p in glob.glob(os.path.join(base, '*', '*_견적서_v*.xlsx')):
-        if same_site(os.path.basename(p).split('_')[0], site):
-            cands.append(p)
-    return sorted(cands, key=os.path.getmtime)[-1] if cands else None
+        m = re.match(r'^(.*?)(?:_\d{6})?_견적서_v', os.path.basename(p))
+        if m:
+            names.setdefault(m.group(1), []).append(p)
+    hit = pick_site(site, list(names.keys()))
+    if not hit:
+        return None
+    return sorted(names[hit], key=os.path.getmtime)[-1]
 
 
 def ratio_path():
@@ -324,37 +351,46 @@ def book_path():
 
 
 def load_book():
+    """대장의 모든 줄(「예)」 줄·현장 빈칸 줄도) 그대로. 채우는 대상은 work() 가 고른다. 재저장 때 한 줄도 안 지운다 (v2)."""
     p = book_path()
     rows = []
     if os.path.exists(p):
         for r in _read_csv(p)[1:]:
             r = (r + [''] * 9)[:9]
-            if r[0].strip() and not r[0].startswith('예)'):
-                rows.append([c.strip() for c in r])
+            rows.append([c.strip() for c in r])
     return rows
 
 
+def workable(r):
+    return bool(r[0].strip()) and not r[0].startswith('예)')
+
+
+_T0 = [None]
+
+
 def hist_add(hist, site, kind, col, before, after, why):
-    hist.append([datetime.date.today().isoformat(), site, kind, col, before, after, why])
+    hist.append([iso(_T0[0] or datetime.date.today()), site, kind, col, before, after, why])
 
 
 def run(meta_dir=None, today_ymd=None, quiet=False):
-    t0 = d6(today_ymd) if today_ymd else today()
+    t0 = (d6(today_ymd) if today_ymd else None) or today()
+    if today_ymd and not d6(today_ymd):
+        print('※ --today %s 를 날짜로 못 읽어 오늘(%s)로 합니다' % (today_ymd, t0))
+    _T0[0] = t0
     if not quiet:
         title('56. 수금대장이 스스로 채워짐   (회의록·확정 대장·견적서 → 수금대장. 빈칸만. 토큰 0)')
     book = load_book()
     ratios = load_ratio()
     hist, notes = [], []
-    idx = {}
-    for r in book:
-        idx[(_n(r[0]), r[1].strip())] = r
-
-    def row_for(site, kind):
-        for (s, k), r in idx.items():
-            if k == kind and same_site(s, site):
-                return r
+    def row_for(site, kind, make=True):
+        names = sorted(set(r[0] for r in book if workable(r) and r[1].strip() == kind))
+        hit = pick_site(site, names)
+        if hit:
+            return next(r for r in book if r[0] == hit and r[1].strip() == kind)
+        if not make:
+            return None
         r = [site, kind, '', '', '', '', '', '', '']
-        book.append(r); idx[(_n(site), kind)] = r
+        book.append(r)
         hist_add(hist, site, kind, '줄', '', '새 줄', '자동')
         return r
 
@@ -381,7 +417,8 @@ def run(meta_dir=None, today_ymd=None, quiet=False):
         notes.append('현장 확인 : 「%s」 회의록의 납품 줄(%s %s) — 현장이 아닌 이름이라 넣지 않음 (%s)' % (site or '빈칸', dt, text[:30], fn[:22]))
 
     # 2) 확정 대장 → 납품일·계산서·입금·결제조건
-    got, contract, term = scan_facts()
+    got, contract, term, bad = scan_facts()
+    notes.extend(bad)
     n_fact = 0
     for (site, kind), d in got.items():
         r = row_for(site, kind)
@@ -392,19 +429,21 @@ def run(meta_dir=None, today_ymd=None, quiet=False):
             if fill(r, '납품일', iso(d['계산서발행일'][0]), '계산서 발행일 = 납품일 (차장님 답 1-다)'):
                 n_fact += 1
     for r in book:
-        site = r[0]
-        for s, (days, why) in term.items():
-            if same_site(s, site) and fill(r, '결제조건일수', str(days), why):
-                n_fact += 1
+        if not workable(r):
+            continue
+        hit = pick_site(r[0], list(term.keys()))
+        if hit and fill(r, '결제조건일수', str(term[hit][0]), term[hit][1]):
+            n_fact += 1
 
     # 3) 금액 = 계약금액 × 비율 (둘 다 있을 때만)
     n_amt = 0
     ratio_changed = False
     for r in book:
         site, kind = r[0], r[1]
-        if r[HEAD.index('금액')].strip() or kind not in KINDS:
+        if not workable(r) or r[HEAD.index('금액')].strip() or kind not in KINDS:
             continue
-        c = next(((v, w) for s, (v, w) in contract.items() if same_site(s, site)), None)
+        hit = pick_site(site, list(contract.keys()))
+        c = contract[hit] if hit else None
         if not c:
             notes.append('%s %s 금액 빈칸 — 확정 대장에 「계약금액」 이 없음 (43번 : 확정,%s,계약금액,금액)' % (site, kind, site))
             continue
@@ -421,6 +460,8 @@ def run(meta_dir=None, today_ymd=None, quiet=False):
 
     # 4) 근거 칸 갱신 + 저장
     for r in book:
+        if not workable(r):
+            continue
         why = [h[6] for h in hist if h[1] == r[0] and h[2] == r[1] and h[3] != '줄']
         if why:
             r[8] = (r[8] + ' / ' if r[8] else '') + ' / '.join(w[:60] for w in why[-3:])
@@ -435,9 +476,12 @@ def run(meta_dir=None, today_ymd=None, quiet=False):
         write_csv(hp, old + hist, HIST_HEAD)
 
     # 5) 경리 메일 본문 · 독촉 문안
-    od = outdir(TOOL)
+    od = os.path.join(cfg('out'), TOOL, ymd6(t0))
+    os.makedirs(od, exist_ok=True)
     mails, dun = [], []
     for r in book:
+        if not workable(r):
+            continue
         site, kind, dlv, amt, bill, paid, tm = r[:7]
         if dlv and not bill:
             p = os.path.join(od, '계산서요청_경리_%s_%s.txt' % (safe_name(site, 20), kind))
@@ -450,7 +494,7 @@ def run(meta_dir=None, today_ymd=None, quiet=False):
                 io.open(p, 'w', encoding='utf-8').write(dun_body(site, kind, bill, amt, tn))
                 dun.append(p)
             elif bd and tn is None:
-                notes.append('%s %s 입금 대기인데 결제조건이 없어 독촉 판단 못 함 (43번 : 확정,%s,결제조건,30)' % (site, kind, site))
+                notes.append('%s %s 입금 대기인데 결제조건이 없거나 숫자가 아니라(「%s」) 독촉 판단 못 함 (43번 : 확정,%s,결제조건,30)' % (site, kind, tm, site))
 
     rep = {'version': VERSION, 'today': iso(t0), '줄': len(book), '납품예정 채움': n_plan, '확정대장 채움': n_fact, '금액 채움': n_amt,
            '경리메일': [os.path.basename(x) for x in mails], '독촉': [os.path.basename(x) for x in dun], '못 채운 이유': notes,
