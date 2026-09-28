@@ -86,8 +86,12 @@ def _blank(prs):
     return prs.slides.add_slide(prs.slide_layouts[6])
 
 
+FOOTER_TEXT = False     # 프로님 정답본(2026-09-28 인스펙터 r2) : 매 장 회사명 바닥글 없이 쪽번호만
+
+
 def _footer(slide, note, page=None):
-    _tb(slide, ML, 5.22, MW - 0.6, 0.25, note or '한국마이크로닉(주)', size=8, color=GRAY_TX)
+    if FOOTER_TEXT and note:
+        _tb(slide, ML, 5.22, MW - 0.6, 0.25, note, size=8, color=GRAY_TX)
     if page:
         _tb(slide, ML + MW - 0.6, 5.22, 0.6, 0.25, str(page), size=8.5, color=NAVY,
             bold=True, align=PP_ALIGN.RIGHT)
@@ -207,11 +211,12 @@ def s_table(slide, d):
             for k, ln in enumerate(str(val).split('\n')):
                 p = tf.paragraphs[0] if k == 0 else tf.add_paragraph()
                 p.space_after = Pt(0)
+                p.alignment = PP_ALIGN.CENTER                  # 표는 가운데 정렬 (프로님 정답본)
                 r = p.add_run()
                 r.text = ln
                 r.font.name = FONT
                 r.font.size = Pt(9 if i == 0 else 8.5)
-                r.font.bold = (i == 0)
+                r.font.bold = (i == 0 or j == 0)          # 머리줄·첫 열 굵게 (프로님 정답본)
                 r.font.color.rgb = WHITE if i == 0 else BODY
     if d.get('note'):
         _tb(slide, ML, y + rh * nrow + 0.08, MW, 0.3, '※ ' + d['note'], size=8.5, color=GRAY_TX)
