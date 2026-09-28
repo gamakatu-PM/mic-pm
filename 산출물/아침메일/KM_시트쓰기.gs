@@ -1,4 +1,11 @@
 /**
+ * KM_시트쓰기 v8 (2026-09-28 낮) — v8 : markQueue 추가 — 「만들 차례」 탭 J열에 표시해 t56_makequeue 가 만든 것을 또 안 만들게 한다
+ *   markQueue : {tab, marks:[{row, text}]} — 그 칸만 쓴다. km_sweepTab_ 도 「만들 차례」 탭만 J「생성결과」 한 칸 더 만든다
+ * KM_시트쓰기 v7 (2026-09-28 낮) — v7 : sweep 이 두 갈래 더 처리(차장님 「아니야는 삭제로」·「만들어줘 4개로 나눠」, 2026-09-28)
+ *   고르기(E열)='아니야'  → 「삭제된 것」 탭으로 옮기고 원본에서 지운다 (필요 없는 내용)
+ *   고르기(E열)=제안서·보고서·메일·작업의뢰서 중 하나 → 「만들 차례」 탭으로 옮기고 원본에서 지운다
+ *     (실제로 만드는 것은 이 웹 앱이 아니라 1시간마다 도는 별도 Routine — 문서 내용 판단은 여기서 안 한다)
+ *   완료 > 아니야 > 답 결정 > 문서 4종 순으로 센다(한 줄이 여러 조건에 걸치면 앞선 것으로만 감). onOpen·doPost 양쪽 다 새 갈래를 그대로 씀
  * KM_시트쓰기 v6.1 (2026-09-28 낮) — v6.1 : 방금 붙이신 v6 이 그 자리에서 오류(「지정된 권한으로는 SpreadsheetApp.openById 을 호출할 수 없습니다」) —
  *   onOpen(단순 트리거)은 openById 를 쓸 권한이 없다. km_sweep_ 에 ss 를 직접 넘길 수 있게 고치고, onOpen 은 getActiveSpreadsheet() 를 넘긴다. sweep 로직 자체는 안 바꿈
  * KM_시트쓰기 v6 (2026-09-28) — v6 : onOpen 추가 (차장님 「내가 원할 때 새로고침을 하면 옮겨지는 것으로 해」, 2026-09-28)
@@ -50,13 +57,14 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) { return km_out_({ok: false, error: '본문이 JSON 이 아님'}); }
   if (!KM_TOKEN || body.token !== KM_TOKEN) return km_out_({ok: false, error: '암호 틀림'});
   try {
-    if (body.action === 'ping')  return km_out_({ok: true, version: 'v6.1 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
+    if (body.action === 'ping')  return km_out_({ok: true, version: 'v8 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
     if (body.action === 'read')  return km_out_(km_read_(body));
     if (body.action === 'batch') return km_out_(km_batch_(body));
     if (body.action === 'old26') return km_out_(km_old26_(body));
     if (body.action === 'oldMerge') return km_out_(km_oldMerge_(body));
     if (body.action === 'oldStrip') return km_out_(km_oldStrip_(body));
     if (body.action === 'sweep') return km_out_(km_sweep_(body));
+    if (body.action === 'markQueue') return km_out_(km_markQueue_(body));
     return km_out_({ok: false, error: '모르는 action : ' + body.action});
   } catch (err) {
     return km_out_({ok: false, error: String(err && err.stack || err)});
@@ -187,9 +195,15 @@ function km_oldStrip_(body) {
 }
 
 
-/** sweep (v5, 2026-09-28) : {tabs:['답요청','오늘 할일','앞으로 할일'], dry:true|false}
- *   답요청·오늘 할일·앞으로 할일 각 탭에서 완료 체크(D열='완료') 된 줄은 「완료 기록」 으로,
- *   고르기(E열)='답 결정' 인 줄은 「답 결정」 으로 옮기고 원본에서 지운다. 완료가 답 결정보다 세다(둘 다면 완료 기록).
+// v7 (2026-09-28 낮) : 고르기(E열) 4개 문서 종류 — 고르면 「만들 차례」 탭으로(1시간마다 도는 Routine 이 만든다). 「아니야」 는 「삭제된 것」 탭으로(필요 없는 내용, 차장님 확정)
+var KM_DOC_PICKS = ['제안서', '보고서', '메일', '작업의뢰서'];
+
+/** sweep (v7, 2026-09-28) : {tabs:['답요청','오늘 할일','앞으로 할일'], dry:true|false}
+ *   답요청·오늘 할일·앞으로 할일 각 탭에서, 세는 순서(세면 그 줄은 다른 걸로 안 셈) :
+ *     완료(D열 체크)               → 「완료 기록」 탭
+ *     고르기(E열)='아니야'         → 「삭제된 것」 탭 (v7, 필요 없는 내용)
+ *     고르기(E열)='답 결정'        → 「답 결정」 탭
+ *     고르기(E열)=문서 4종 중 하나 → 「만들 차례」 탭 (v7, 제안서·보고서·메일·작업의뢰서 — 1시간마다 도는 Routine 이 만든다)
  *   지운 뒤 A(날짜)·B(현장) 세로 병합을 다시 계산해 붙인다. {dry:true} 면 세기만 하고 시트를 바꾸지 않는다. */
 function km_sweep_(body, ss) {
   // ss 를 안 주면(doPost 경로) openById. onOpen(단순 트리거)은 openById 를 쓸 권한이 없어 getActiveSpreadsheet() 를 넘겨준다(9/28 오류로 발견)
@@ -197,52 +211,74 @@ function km_sweep_(body, ss) {
   var names = body.tabs || ['답요청', '오늘 할일', '앞으로 할일'];
   var dry = !!body.dry;
   var doneTab = dry ? null : km_sweepTab_(ss, '완료 기록');
+  var delTab = dry ? null : km_sweepTab_(ss, '삭제된 것');
   var pickTab = dry ? null : km_sweepTab_(ss, '답 결정');
+  var makeTab = dry ? null : km_sweepTab_(ss, '만들 차례');
   var out = [];
   names.forEach(function (name) {
     var sh = ss.getSheetByName(name);
     if (!sh) { out.push({tab: name, error: '탭 없음'}); return; }
     var last = sh.getLastRow();
     var n = last - 1;
-    if (n <= 0) { out.push({tab: name, 전체: 0, 완료: 0, 답결정: 0, 남김: 0}); return; }
+    if (n <= 0) { out.push({tab: name, 전체: 0, 완료: 0, 삭제: 0, 답결정: 0, 만들차례: 0, 남김: 0}); return; }
     var vals = sh.getRange(2, 1, n, 7).getValues();
     var lastA = '', lastB = '';                              // 세로 병합이라 이어지는 줄은 A·B가 빈칸 — 지우기 전에 채워 넣는다
     for (var f = 0; f < vals.length; f++) {
       if (vals[f][0] !== '') lastA = vals[f][0]; else vals[f][0] = lastA;
       if (vals[f][1] !== '') lastB = vals[f][1]; else vals[f][1] = lastB;
     }
-    var keep = [], doneRows = [], pickRows = [];
+    var keep = [], doneRows = [], delRows = [], pickRows = [], makeRows = [];
     for (var i = 0; i < vals.length; i++) {
-      var r = vals[i];
+      var r = vals[i], e = String(r[4]).trim();
       if (r[3] === true || r[3] === '완료') doneRows.push(r);
-      else if (String(r[4]).trim() === '답 결정') pickRows.push(r);
+      else if (e === '아니야') delRows.push(r);
+      else if (e === '답 결정') pickRows.push(r);
+      else if (KM_DOC_PICKS.indexOf(e) >= 0) makeRows.push(r);
       else keep.push(r);
     }
-    var rec = {tab: name, 전체: vals.length, 완료: doneRows.length, 답결정: pickRows.length, 남김: keep.length};
-    if (!dry && (doneRows.length || pickRows.length)) {
+    var rec = {tab: name, 전체: vals.length, 완료: doneRows.length, 삭제: delRows.length,
+               답결정: pickRows.length, 만들차례: makeRows.length, 남김: keep.length};
+    if (!dry && (doneRows.length || delRows.length || pickRows.length || makeRows.length)) {
       sh.getRange(2, 1, n, 2).breakApart();               // 옛 세로 병합 먼저 해제
       sh.getRange(2, 1, n, 7).clearContent();
       if (keep.length) sh.getRange(2, 1, keep.length, 7).setValues(keep);
       if (n > keep.length) sh.deleteRows(2 + keep.length, n - keep.length);
       km_reMerge_(sh, keep.length);
       if (doneRows.length) km_sweepAppend_(doneTab, name, doneRows);
+      if (delRows.length) km_sweepAppend_(delTab, name, delRows);
       if (pickRows.length) km_sweepAppend_(pickTab, name, pickRows);
+      if (makeRows.length) km_sweepAppend_(makeTab, name, makeRows);
     }
     out.push(rec);
   });
   return {ok: true, dry: dry, tabs: out};
 }
 
-/** 완료 기록 · 답 결정 탭 — 없으면 만든다(원본 7칸 + H 원본탭 + I 처리일) */
+/** 완료 기록 · 삭제된 것 · 답 결정 · 만들 차례 탭 — 없으면 만든다(원본 7칸 + H 원본탭 + I 처리일).
+ *   「만들 차례」 탭만 J 「생성결과」 한 칸 더(v8) — t56_makequeue 가 만든 뒤 markQueue 로 여기 적으면 다음엔 또 안 만든다 */
 function km_sweepTab_(ss, name) {
   var sh = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);
-    sh.getRange(1, 1, 1, 9).setValues([['날짜', '현장', '할일', '완료', '고르기', '메모', '현장(걸러보기)', '원본탭', '처리일']]);
-    sh.getRange(1, 1, 1, 9).setFontWeight('bold');
+    var head = ['날짜', '현장', '할일', '완료', '고르기', '메모', '현장(걸러보기)', '원본탭', '처리일'];
+    if (name === '만들 차례') head.push('생성결과');
+    sh.getRange(1, 1, 1, head.length).setValues([head]);
+    sh.getRange(1, 1, 1, head.length).setFontWeight('bold');
     sh.setFrozenRows(1);
   }
   return sh;
+}
+
+/** markQueue (v8) : {tab:'만들 차례', marks:[{row:2, text:'만듦 · 파일명'}, ...]}
+ *   지정한 탭의 J열(10번째)에 값을 쓴다. row 는 read 로 받은 값 배열 인덱스 + 2(머리줄 다음이 2행).
+ *   t56_makequeue 가 문서를 실제로 만든 뒤 「또 만들지 않도록」 표시하는 용도. 그 칸만 쓴다 — 다른 칸은 안 건드리고 지우지 않는다 */
+function km_markQueue_(body) {
+  var ss = SpreadsheetApp.openById(KM_IDS.new2);
+  var sh = ss.getSheetByName(body.tab || '');
+  if (!sh) return {ok: false, error: '탭 없음 : ' + body.tab};
+  var marks = body.marks || [];
+  marks.forEach(function (m) { sh.getRange(m.row, 10).setValue(m.text || ''); });
+  return {ok: true, n: marks.length};
 }
 
 function km_sweepAppend_(sh, fromName, rows) {
@@ -330,10 +366,14 @@ function km_master_(ss, rec, link) {
 function onOpen(e) {
   try {
     var r = km_sweep_({}, SpreadsheetApp.getActiveSpreadsheet());
-    var done = 0, pick = 0;
-    (r.tabs || []).forEach(function (t) { done += t.완료 || 0; pick += t.답결정 || 0; });
-    if (done + pick > 0) {
-      SpreadsheetApp.getActiveSpreadsheet().toast('완료 기록 ' + done + '건 · 답 결정 ' + pick + '건 정리했습니다', 'KM 자동 정리', 5);
+    var done = 0, del = 0, pick = 0, make = 0;
+    (r.tabs || []).forEach(function (t) {
+      done += t.완료 || 0; del += t.삭제 || 0; pick += t.답결정 || 0; make += t.만들차례 || 0;
+    });
+    if (done + del + pick + make > 0) {
+      var msg = '완료 기록 ' + done + '건 · 삭제 ' + del + '건 · 답 결정 ' + pick + '건';
+      if (make) msg += ' · 만들 차례 ' + make + '건(1시간 안에 만들어 드립니다)';
+      SpreadsheetApp.getActiveSpreadsheet().toast(msg, 'KM 자동 정리', 5);
     }
   } catch (err) {
     try { SpreadsheetApp.getActiveSpreadsheet().toast('자동 정리 중 오류 : ' + err, 'KM', 5); } catch (e2) { /* 토스트도 실패하면 조용히 넘어간다 */ }
