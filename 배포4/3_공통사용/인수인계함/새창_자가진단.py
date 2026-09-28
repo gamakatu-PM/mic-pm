@@ -17,6 +17,11 @@
   3) 그 파일의 "안 한 것 / 다음 창이 할 것" 절 원문 그대로
   4) 2_KM도구에서 번호가 가장 큰 사용법_vN.txt 파일명
   5) km_tools 안 t*.py 중 가장 큰 번호 (다음 새 도구가 몇 번부터인지)
+  6) 「3_스킬_저장대기」 폴더에 남아 있는 .skill 초안 목록 — 이건 제가 파일만 만들 수 있고
+     실제로 클로드 계정(설정 → Skills)에 올리는 건 차장님만 하실 수 있어서, 파일이 남아 있으면
+     "아직 안 올리셨을 수 있다"는 뜻이다(이미 올리시고 안 지우신 것일 수도 있어 확정은 못 함 — 그래서 매번 보여준다).
+     이게 없으면 이 저장소를 안 여는 다른 창(claude.ai 채팅 등)은 오늘 바뀐 규칙을 영영 모른다 — 차장님 2026-09-28 밤
+     「니가 나를 학습하는 게 중요하다」는 지적이 정확히 이 지점이라, 자가진단이 매번 이걸 다시 상기시킨다.
 
 새 창이 할 일 (CLAUDE.md 1절에 이 순서로 박아 둔다) :
   세션 시작 → 이 스크립트 실행 → 출력 그대로(요약하지 말고) 차장님께 보여주고 →
@@ -31,7 +36,9 @@ REPO = os.path.abspath(os.path.join(HERE, '..', '..', '..'))  # 저장소 루트
 TOOLS = os.path.join(REPO, '배포4', '2_KM도구', '코드', 'km_tools')
 USAGE_DIR = os.path.join(REPO, '배포4', '2_KM도구')
 
-VERSION = 'v1 2026-09-28'
+SKILL_WAIT = os.path.join(HERE, '3_스킬_저장대기')
+
+VERSION = 'v2 2026-09-28'  # v2 : [6] 스킬 저장대기 목록 추가 (차장님 「니가 나를 학습하는 게 중요」, 2026-09-28 밤)
 
 
 def _run(cmd):
@@ -108,6 +115,20 @@ def run():
             if m and int(m.group(1)) > best_tn:
                 best_tn, best_t = int(m.group(1)), fn
     L.append('%s (t%d 번)' % (best_t, best_tn) if best_t else '(못 찾음)')
+
+    L.append('')
+    L.append('[6] 「스킬 저장대기」 폴더 — 아직 클로드 설정에 안 올리셨을 수 있는 것 (있으면 확인)')
+    if os.path.isdir(SKILL_WAIT):
+        skip = ('0_저장_안내.txt', '여기에_옛날판을_넣으십시오.txt')
+        pending = sorted(f for f in os.listdir(SKILL_WAIT)
+                          if f not in skip and not f.startswith('.') and os.path.isfile(os.path.join(SKILL_WAIT, f)))
+        if pending:
+            for f in pending:
+                L.append('  - ' + f)
+        else:
+            L.append('  (없음 — 올리실 것 없음)')
+    else:
+        L.append('  (폴더 자체가 없음)')
 
     L.append('')
     L.append('=' * 60)
