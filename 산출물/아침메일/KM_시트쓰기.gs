@@ -1,4 +1,8 @@
 /**
+ * KM_시트쓰기 v9 (2026-09-28 밤) — v9 : appendDoc 추가 (차장님 「메일·보고서도 구글시트에 탭 만들어서 날짜별로 누적」·「캘린더 1개 더」, 2026-09-28 밤)
+ *   appendDoc : {tab:'메일'|'보고서', rows:[[날짜,현장,할일,본문],…], markTab, marks} — 그 탭에 4칸 줄을 덧붙이기만(덮어쓰지 않음, 탭 없으면 새로 만듦).
+ *     markTab·marks 를 같이 주면 append 가 된 다음에만 그 탭 J열도 같이 표시한다 — 한 번의 요청으로 묶어서, 시트에 안 들어갔는데 「만듦」 표시만 되는 일이 없게 한다.
+ *   KM_DOC_PICKS 에 「캘린더」 추가 — sweep 이 나머지 4종과 같이 「만들 차례」 탭으로 옮긴다. 구글캘린더 등록은 이 웹 앱이 아니라 1시간 Routine(대화창 도구)이 직접 한다.
  * KM_시트쓰기 v8 (2026-09-28 낮) — v8 : markQueue 추가 — 「만들 차례」 탭 J열에 표시해 t56_makequeue 가 만든 것을 또 안 만들게 한다
  *   markQueue : {tab, marks:[{row, text}]} — 그 칸만 쓴다. km_sweepTab_ 도 「만들 차례」 탭만 J「생성결과」 한 칸 더 만든다
  * KM_시트쓰기 v7 (2026-09-28 낮) — v7 : sweep 이 두 갈래 더 처리(차장님 「아니야는 삭제로」·「만들어줘 4개로 나눠」, 2026-09-28)
@@ -57,7 +61,7 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) { return km_out_({ok: false, error: '본문이 JSON 이 아님'}); }
   if (!KM_TOKEN || body.token !== KM_TOKEN) return km_out_({ok: false, error: '암호 틀림'});
   try {
-    if (body.action === 'ping')  return km_out_({ok: true, version: 'v8 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
+    if (body.action === 'ping')  return km_out_({ok: true, version: 'v9 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
     if (body.action === 'read')  return km_out_(km_read_(body));
     if (body.action === 'batch') return km_out_(km_batch_(body));
     if (body.action === 'old26') return km_out_(km_old26_(body));
@@ -65,6 +69,7 @@ function doPost(e) {
     if (body.action === 'oldStrip') return km_out_(km_oldStrip_(body));
     if (body.action === 'sweep') return km_out_(km_sweep_(body));
     if (body.action === 'markQueue') return km_out_(km_markQueue_(body));
+    if (body.action === 'appendDoc') return km_out_(km_appendDoc_(body));
     return km_out_({ok: false, error: '모르는 action : ' + body.action});
   } catch (err) {
     return km_out_({ok: false, error: String(err && err.stack || err)});
@@ -195,8 +200,9 @@ function km_oldStrip_(body) {
 }
 
 
-// v7 (2026-09-28 낮) : 고르기(E열) 4개 문서 종류 — 고르면 「만들 차례」 탭으로(1시간마다 도는 Routine 이 만든다). 「아니야」 는 「삭제된 것」 탭으로(필요 없는 내용, 차장님 확정)
-var KM_DOC_PICKS = ['제안서', '보고서', '메일', '작업의뢰서'];
+// v7 (2026-09-28 낮) : 고르기(E열) 문서 종류 — 고르면 「만들 차례」 탭으로(1시간마다 도는 Routine 이 만든다). 「아니야」 는 「삭제된 것」 탭으로(필요 없는 내용, 차장님 확정)
+// v9 (2026-09-28 밤) : 「캘린더」 추가 — 나머지 4종과 같은 「만들 차례」 탭으로 옮기고, 구글캘린더 등록은 Routine 이 직접 한다(이 웹 앱은 시트만 다룬다)
+var KM_DOC_PICKS = ['제안서', '보고서', '메일', '작업의뢰서', '캘린더'];
 
 /** sweep (v7, 2026-09-28) : {tabs:['답요청','오늘 할일','앞으로 할일'], dry:true|false}
  *   답요청·오늘 할일·앞으로 할일 각 탭에서, 세는 순서(세면 그 줄은 다른 걸로 안 셈) :
@@ -279,6 +285,47 @@ function km_markQueue_(body) {
   var marks = body.marks || [];
   marks.forEach(function (m) { sh.getRange(m.row, 10).setValue(m.text || ''); });
   return {ok: true, n: marks.length};
+}
+
+// v9 (2026-09-28 밤) : 메일·보고서 전용 탭 — 이 두 개만 허용(다른 탭 이름은 거절, 아무 데나 못 쓰게)
+var KM_DOC_TABS = ['메일', '보고서'];
+
+/** appendDoc (v9) : {tab:'메일'|'보고서', rows:[[날짜,현장,할일,본문],…], markTab, marks:[{row,text}]}
+ *   그 탭에 4칸 줄을 덧붙이기만 한다 — 날짜별로 누적, 덮어쓰지 않는다. 탭이 없으면 머리줄(날짜|현장|할일|본문)과 함께 새로 만든다.
+ *   markTab·marks 를 같이 주면(t56_makequeue 가 「만들 차례」 J열도 같이 표시하고 싶을 때) append 가 실제로 된 다음에만 그 탭 J열을 쓴다 —
+ *   한 번의 요청으로 묶어서 "시트엔 안 들어갔는데 표시만 됨(다시 안 만듦)" 이 생기지 않게 한다 */
+function km_appendDoc_(body) {
+  var tab = body.tab;
+  if (KM_DOC_TABS.indexOf(tab) < 0) return {ok: false, error: '허용 안 된 탭 : ' + tab};
+  var rows = (body.rows || []).map(function (r) {
+    var x = (r || []).slice(0, 4);
+    while (x.length < 4) x.push('');
+    return x;
+  });
+  var ss = SpreadsheetApp.openById(KM_IDS.new2);
+  var sh = ss.getSheetByName(tab);
+  if (!sh) {
+    sh = ss.insertSheet(tab);
+    sh.getRange(1, 1, 1, 4).setValues([['날짜', '현장', '할일', '본문']]);
+    sh.getRange(1, 1, 1, 4).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  var n = 0, firstRow = 0;
+  if (rows.length) {
+    var r0 = sh.getLastRow() + 1;
+    sh.getRange(r0, 1, rows.length, 1).setNumberFormat('@');
+    sh.getRange(r0, 1, rows.length, 4).setValues(rows).setWrap(true).setVerticalAlignment('top');
+    n = rows.length; firstRow = r0;
+  }
+  var marked = 0;
+  if (body.markTab && body.marks && body.marks.length) {
+    var msh = ss.getSheetByName(body.markTab);
+    if (msh) {
+      body.marks.forEach(function (m) { msh.getRange(m.row, 10).setValue(m.text || ''); });
+      marked = body.marks.length;
+    }
+  }
+  return {ok: true, tab: tab, n: n, firstRow: firstRow, marked: marked};
 }
 
 function km_sweepAppend_(sh, fromName, rows) {

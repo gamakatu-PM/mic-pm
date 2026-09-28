@@ -1,26 +1,34 @@
 # -*- coding: utf-8 -*-
 """
-56. 「만들 차례」 탭 → 실제 문서  (km_tools / t56_makequeue)   AI 사용량 0 (제안서는 안 만들고 대기만 남김)
+56. 「만들 차례」 탭 → 실제 문서·시트  (km_tools / t56_makequeue)   AI 사용량 0 (제안서는 안 만들고 대기만 남김)
 
-시트 답요청·오늘 할일·앞으로 할일 E열 ▼에서 제안서·보고서·메일·작업의뢰서 를 고르면
-웹앱(KM_시트쓰기.gs v7) sweep 이 「만들 차례」 탭으로 옮겨 놓는다. 1시간마다 도는 Routine 이
-이 탭을 읽어(t53_webapp.py read) 이 도구를 부르고, 만든 것은 웹앱 markQueue(v8) 로 J열에
-적어 다음 시간에 또 안 만든다.
+시트 답요청·오늘 할일·앞으로 할일 E열 ▼에서 제안서·보고서·메일·작업의뢰서·캘린더 를 고르면
+웹앱(KM_시트쓰기.gs v9) sweep 이 「만들 차례」 탭으로 옮겨 놓는다. 1시간마다 도는 Routine 이
+이 탭을 읽어(t53_webapp.py read) 이 도구를 부르고, 만든 것은 웹앱 markQueue(v8)·appendDoc(v9) 로
+표시해 다음 시간에 또 안 만든다.
 
     python t56_makequeue.py <만들차례_읽은결과.json> [--out 폴더] [--template 원틀.xlsx] [--today YYMMDD]
-    → 표준출력에 결과 json {made:[...], marks:[...], 제안서대기:N} — marks 를 웹앱 markQueue 로 보낸다
+    → 표준출력에 결과 json {made, marks, 제안서대기, 캘린더항목, 메일추가, 보고서추가, ...}
 
 만드는 것 (차장님 확정 2026-09-28 「내가 몰라서 질문하는 경우 말고는 그냥 만들어라」) :
     작업의뢰서 → _도구결과\\작업의뢰서초안\\YYMMDD\\작업의뢰서_대기_{현장}_{날짜}_{n}.xlsx
                  회사 원틀(MB-004, t55 와 같은 것)에 현장·날짜·본문(할일 그대로)만 채운다.
                  부서·업체명·객실수·계약No·체크박스·수량·규격은 비워 둔다 (km-30 확정 : 차장님이 채움)
-    메일       → _도구결과\\메일초안\\YYMMDD\\메일초안_{현장}_{n}.txt   보내지 않는다. 초안만
-    보고서     → _도구결과\\보고서\\YYMMDD\\보고서_{현장}_{n}.txt       자유 형식
+                 결과의 marks 에 바로 들어간다 — 로컬 파일이라 쓰는 순간 끝났기 때문.
+    메일       → 파일이 아니라 결과의 「메일추가」 로 — {tab:'메일', rows:[[날짜,현장,할일,본문]], markTab:'만들 차례', marks:[...]}
+                 (차장님 2026-09-28 밤 「내가 메일에서 담당을 직접 고를테니 범용으로 정중하게, 구글시트에 메일 탭 만들어서 날짜별 누적」)
+                 이 스크립트는 네트워크를 안 쓴다 — Routine 이 그대로 t53_webapp.py appenddoc 에 먹여야 실제로 시트에 들어가고,
+                 그때 성공한 것만 원자적으로 「만들 차례」 J열도 같이 표시된다(그래서 marks 에는 안 넣는다 — 넣었는데 시트엔 안 들어가는 사고 방지)
+    보고서     → 메일과 같은 방식, 결과의 「보고서추가」 로 (탭 이름만 「보고서」)
     제안서     → 만들지 않는다 — 범위·장수 등은 판단이 필요해서 대화창에서 직접 여쭤야 한다.
                  「만들 차례」 탭에 그대로 남는다(J열 안 채움). 07:00 메일이나 대화에서 처리.
+    캘린더     → 이 스크립트가 아니라 Routine(대화창 도구)이 만든다 — 구글캘린더 API 는 MCP 도구라 파이썬에서 못 부른다.
+                 결과의 「캘린더항목」 에 {row, site, task, due} 로만 넘긴다. Routine 이 mcp Google_Calendar create_event 를 직접 부르고,
+                 성공한 것만 markqueue 로 표시한다(이 스크립트는 등록 성공 여부를 모른다 — marks 에 안 넣는다)
+                 (차장님 2026-09-28 밤 「구글캘린더 1개 더 만들어서 "현장관리" 로, 고르기에서 캘린더 고르면 거기 넣어」)
 
-덮어쓰지 않는다 — 같은 이름 파일이 있으면 「이미 있음」 으로 건너뛰고 그 줄도 markQueue 로 표시한다(또 안 만듦).
-없는 말을 지어내지 않는다 — 본문은 시트의 할일 글 그대로 옮긴다.
+덮어쓰지 않는다 — 작업의뢰서는 같은 이름 파일이 있으면 「이미 있음」. 메일·보고서는 시트에 날짜별로 누적만(겹치는 줄을 지우거나 바꾸지 않는다).
+없는 말을 지어내지 않는다 — 본문은 시트의 할일 글 그대로 옮긴다. 메일 본문은 담당을 특정하지 않고 범용·정중체로만 쓴다(받는 사람은 차장님이 고른다).
 """
 from __future__ import print_function
 import os, sys, io, re, json, datetime
@@ -29,7 +37,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t55_workorder as T55
 import common as C
 
-VERSION = 'v1 2026-09-28'
+VERSION = 'v2 2026-09-28'  # v2 : 메일·보고서는 로컬 파일 대신 시트 「메일」·「보고서」 탭 누적(메일추가·보고서추가) / 캘린더항목 추가(Routine 이 직접 구글캘린더 등록)
 
 
 def rows_of(payload):
@@ -48,7 +56,7 @@ def parse(values):
         if str(markcol).strip():
             continue
         pick = str(pick).strip()
-        if pick not in ('제안서', '보고서', '메일', '작업의뢰서'):
+        if pick not in ('제안서', '보고서', '메일', '작업의뢰서', '캘린더'):
             continue
         out.append({'row': i, 'ymd10': str(date).strip(), 'site': str(site).strip(),
                      'task': re.sub(r'^\s*-\s*', '', str(task).strip()), 'pick': pick, 'from': str(fromtab).strip()})
@@ -85,52 +93,65 @@ def make_workorder(item, out_dir, tpl, idx, today6):
     return xp, '만듦'
 
 
-def make_text(kind, item, out_dir, idx):
-    site, task = item['site'] or '현장 확인', item['task']
-    name = '%s_%s_%d.txt' % (kind, _safe(site), idx)
-    xp = os.path.join(out_dir, name)
-    if os.path.exists(xp):
-        return xp, '이미 있음'
-    if kind == '메일초안':
-        body = '%s 관련 안내드립니다.\n\n%s\n\n감사합니다.\n' % (site, task)
-    else:  # 보고서
-        body = '%s 보고\n\n일자 : %s\n내용 : %s\n' % (site, item['ymd10'] or datetime.date.today().isoformat(), task)
-    with io.open(xp, 'w', encoding='utf-8') as f:
-        f.write(body)
-    return xp, '만듦'
+def mail_body(site, task):
+    """범용·정중체 — 받는 사람을 특정하지 않는다(차장님이 메일에서 직접 고른다, 2026-09-28 밤 확정). 없는 말은 안 붙인다."""
+    return '안녕하십니까,\n\n%s 관련하여 아래와 같이 안내드립니다.\n\n%s\n\n확인 부탁드립니다.\n\n감사합니다.' % (site or '현장 확인', task)
+
+
+def report_body(site, task, ymd10, today_iso):
+    return '%s 보고\n\n일자 : %s\n내용 : %s' % (site or '현장 확인', ymd10 or today_iso, task)
 
 
 def run(payload, out_root=None, template=None, today=None):
     today = today or datetime.date.today().strftime('%y%m%d')
+    today_iso = ('20%s-%s-%s' % (today[:2], today[2:4], today[4:6])) if re.match(r'^\d{6}$', today) else datetime.date.today().isoformat()
     out_root = out_root or C.cfg('out')
     items = parse(rows_of(payload))
     tpl = T55.find_template(template)
     made, marks, skip_prop = [], [], 0
-    n = {'작업의뢰서': 0, '메일': 0, '보고서': 0}
+    mail_rows, report_rows, cal_items = [], [], []
+    n_wo = 0
     for it in items:
         pick = it['pick']
         if pick == '제안서':
             skip_prop += 1
             continue
-        n[pick] += 1
+        if pick == '캘린더':
+            cal_items.append({'row': it['row'], 'site': it['site'], 'task': it['task'], 'due': it['ymd10']})
+            continue
         if pick == '작업의뢰서':
+            n_wo += 1
             d = os.path.join(out_root, '작업의뢰서초안', today)
             os.makedirs(d, exist_ok=True)
-            path, state = make_workorder(it, d, tpl, n[pick], today)
+            path, state = make_workorder(it, d, tpl, n_wo, today)
+            made.append({'row': it['row'], 'pick': pick, 'site': it['site'], 'task': it['task'],
+                         'path': path, 'state': state})
+            if path:
+                marks.append({'row': it['row'], 'text': '%s · %s' % (state, os.path.basename(path))})
         elif pick == '메일':
-            d = os.path.join(out_root, '메일초안', today)
-            os.makedirs(d, exist_ok=True)
-            path, state = make_text('메일초안', it, d, n[pick])
-        else:
-            d = os.path.join(out_root, '보고서', today)
-            os.makedirs(d, exist_ok=True)
-            path, state = make_text('보고서', it, d, n[pick])
-        made.append({'row': it['row'], 'pick': pick, 'site': it['site'], 'task': it['task'],
-                      'path': path, 'state': state})
-        if path:
-            marks.append({'row': it['row'], 'text': '%s · %s' % (state, os.path.basename(path))})
-    return {'ok': True, 'tab': '만들 차례', 'made': made, 'marks': marks, '제안서대기': skip_prop, 'out': out_root,
-            'today': today, 'template': tpl or ''}   # tab 을 넣어둬서 이 결과 json 을 그대로 t53_webapp.py markqueue 에 먹일 수 있게
+            row = [today_iso, it['site'], it['task'], mail_body(it['site'], it['task'])]
+            mail_rows.append(row)
+            made.append({'row': it['row'], 'pick': pick, 'site': it['site'], 'task': it['task'],
+                         'path': '', 'state': '만들 준비(시트 「메일」 탭)'})
+        else:  # 보고서
+            row = [today_iso, it['site'], it['task'], report_body(it['site'], it['task'], it['ymd10'], today_iso)]
+            report_rows.append(row)
+            made.append({'row': it['row'], 'pick': pick, 'site': it['site'], 'task': it['task'],
+                         'path': '', 'state': '만들 준비(시트 「보고서」 탭)'})
+
+    def _doc_addon(tab, rows, pick_name):
+        if not rows:
+            return None
+        rmarks = [{'row': it['row'], 'text': '만듦(시트) · %s 탭' % tab}
+                  for it in items if it['pick'] == pick_name]
+        return {'tab': tab, 'rows': rows, 'markTab': '만들 차례', 'marks': rmarks}
+
+    return {'ok': True, 'tab': '만들 차례', 'made': made, 'marks': marks, '제안서대기': skip_prop,
+            '캘린더항목': cal_items,
+            '메일추가': _doc_addon('메일', mail_rows, '메일'),
+            '보고서추가': _doc_addon('보고서', report_rows, '보고서'),
+            'out': out_root, 'today': today, 'template': tpl or ''}
+    # tab 을 넣어둬서 marks 부분은 그대로 t53_webapp.py markqueue 에, 메일추가·보고서추가 는 그대로 appenddoc 에 먹일 수 있게
 
 
 def main(argv):

@@ -101,6 +101,7 @@ function setup1() {
     ['2026-09-28', 'C현장', '할일4', '', '', '', 'C현장'],        // 남음
     ['', 'C현장', '할일5', '완료', '', '', 'C현장'],               // 완료 → 「완료 기록」
     ['', 'C현장', '할일6', '', '제안서', '', 'C현장'],             // 제안서(v7) → 「만들 차례」
+    ['', 'C현장', '할일7', '', '캘린더', '', 'C현장'],             // 캘린더(v9) → 「만들 차례」
   ]);
 }
 
@@ -110,9 +111,9 @@ let rec = out.tabs[0];
 chk('분류 : 완료 2건', rec.완료 === 2, JSON.stringify(rec));
 chk('분류 : 삭제(아니야) 1건 (v7)', rec.삭제 === 1, JSON.stringify(rec));
 chk('분류 : 답 결정 1건', rec.답결정 === 1, JSON.stringify(rec));
-chk('분류 : 만들차례(제안서) 1건 (v7)', rec.만들차례 === 1, JSON.stringify(rec));
+chk('분류 : 만들차례(제안서+캘린더) 2건 (v9)', rec.만들차례 === 2, JSON.stringify(rec));
 chk('분류 : 남김 2건', rec.남김 === 2, JSON.stringify(rec));
-chk('분류 : 전체 7건', rec.전체 === 7, JSON.stringify(rec));
+chk('분류 : 전체 8건', rec.전체 === 8, JSON.stringify(rec));
 
 let g = SHEETS['답요청']._grid();
 chk('원본 탭 남은 줄 수 = 헤더+2', g.length === 3, '실제 ' + g.length);
@@ -145,8 +146,9 @@ if (pick) {
 }
 if (make) {
   let mkg = make._grid();
-  chk('만들 차례 : 머리줄+1건 (v7)', mkg.length === 2, '실제 ' + mkg.length);
+  chk('만들 차례 : 머리줄+2건 (v9)', mkg.length === 3, '실제 ' + mkg.length);
   chk('만들 차례 : 할일6 이 고르기=제안서 그대로 옮겨감 (v7)', mkg[1][1] === 'C현장' && mkg[1][2] === '할일6' && mkg[1][4] === '제안서', JSON.stringify(mkg[1]));
+  chk('만들 차례 : 할일7 이 고르기=캘린더 그대로 옮겨감 (v9)', mkg[2][1] === 'C현장' && mkg[2][2] === '할일7' && mkg[2][4] === '캘린더', JSON.stringify(mkg[2]));
 }
 let mg = SHEETS['답요청']._merges();
 chk('재병합 호출 있었음(남은 2줄은 날짜·현장이 서로 달라 병합 없음이 정상)', mg.length === 0, JSON.stringify(mg));
@@ -186,8 +188,8 @@ let before = JSON.stringify(SHEETS['답요청']._grid());
 let out3 = km_sweep_({ tabs: ['답요청'], dry: true });
 let after = JSON.stringify(SHEETS['답요청']._grid());
 chk('dry:true 는 시트를 안 바꿈', before === after, '');
-chk('dry:true 도 개수는 셈(완료 2·삭제 1·답결정 1·만들차례 1)',
-    out3.tabs[0].완료 === 2 && out3.tabs[0].삭제 === 1 && out3.tabs[0].답결정 === 1 && out3.tabs[0].만들차례 === 1, JSON.stringify(out3.tabs[0]));
+chk('dry:true 도 개수는 셈(완료 2·삭제 1·답결정 1·만들차례 2)',
+    out3.tabs[0].완료 === 2 && out3.tabs[0].삭제 === 1 && out3.tabs[0].답결정 === 1 && out3.tabs[0].만들차례 === 2, JSON.stringify(out3.tabs[0]));
 chk('dry:true 는 새 탭 4개(완료 기록·삭제된 것·답 결정·만들 차례) 다 안 만듦',
     !SHEETS['완료 기록'] && !SHEETS['삭제된 것'] && !SHEETS['답 결정'] && !SHEETS['만들 차례'], '');
 
@@ -214,12 +216,12 @@ setup1();
 TOASTS = [];
 onOpen({});
 chk('onOpen : 새 탭 4개 다 만들어짐(기본값)', SHEETS['완료 기록'] && SHEETS['삭제된 것'] && SHEETS['답 결정'] && SHEETS['만들 차례'], '');
-chk('onOpen : 완료 2·삭제 1·답결정 1·만들차례 1 실제로 옮겨짐',
+chk('onOpen : 완료 2·삭제 1·답결정 1·만들차례 2 실제로 옮겨짐',
     SHEETS['완료 기록']._grid().length === 3 && SHEETS['삭제된 것']._grid().length === 2 &&
-    SHEETS['답 결정']._grid().length === 2 && SHEETS['만들 차례']._grid().length === 2, '');
+    SHEETS['답 결정']._grid().length === 2 && SHEETS['만들 차례']._grid().length === 3, '');
 chk('onOpen : 토스트로 알림(완료·삭제·답결정·만들차례 다 보임)',
     TOASTS.length === 1 && /완료 기록 2건/.test(TOASTS[0].msg) && /삭제 1건/.test(TOASTS[0].msg) &&
-    /답 결정 1건/.test(TOASTS[0].msg) && /만들 차례 1건/.test(TOASTS[0].msg), JSON.stringify(TOASTS));
+    /답 결정 1건/.test(TOASTS[0].msg) && /만들 차례 2건/.test(TOASTS[0].msg), JSON.stringify(TOASTS));
 
 // 옮길 게 없으면 토스트 없음(조용히 넘어감)
 SHEETS = {};
@@ -278,6 +280,34 @@ chk('markQueue : 2행 J열(10번째)에 적힘', mkGrid[1][9] === '만듦 · 작
 chk('markQueue : 같은 줄의 다른 칸(할일)은 안 건드림', mkGrid[1][2] === '할일6', mkGrid[1]);
 let mkNotFound = km_markQueue_({ tab: '없는탭', marks: [] });
 chk('markQueue : 없는 탭이면 오류', mkNotFound.ok === false && /탭 없음/.test(mkNotFound.error), mkNotFound);
+
+// ── 시험 9 (v9) : appendDoc — 메일·보고서 탭 새로 만들고 누적, 다른 탭 이름은 거절 ──
+SHEETS = {};
+let adOut1 = km_appendDoc_({ tab: '메일', rows: [['2026-09-28', '양양 쏠비치', '- 견적 재확인 메일 보내기', '안녕하십니까,\n\n견적 재확인 메일 보내기']] });
+chk('appendDoc : 탭 없으면 새로 만들고 머리줄(날짜|현장|할일|본문)', SHEETS['메일'] && SHEETS['메일']._grid()[0].join('|') === '날짜|현장|할일|본문', SHEETS['메일'] && SHEETS['메일']._grid()[0]);
+chk('appendDoc : ok:true · n=1 · firstRow=2', adOut1.ok && adOut1.n === 1 && adOut1.firstRow === 2, JSON.stringify(adOut1));
+chk('appendDoc : 줄 내용 그대로 들어감(현장·할일·본문)', SHEETS['메일']._grid()[1][1] === '양양 쏠비치' && SHEETS['메일']._grid()[1][2] === '- 견적 재확인 메일 보내기', SHEETS['메일']._grid()[1]);
+
+let adOut2 = km_appendDoc_({ tab: '메일', rows: [['2026-09-29', '단양디캠프', '- 다른 메일', '본문2']] });
+chk('appendDoc : 두 번째 호출은 덮어쓰지 않고 이어붙임(날짜별 누적)', SHEETS['메일']._grid().length === 3 && SHEETS['메일']._grid()[2][1] === '단양디캠프', SHEETS['메일']._grid());
+
+let adBad = km_appendDoc_({ tab: '아무탭', rows: [['x', 'x', 'x', 'x']] });
+chk('appendDoc : 허용 안 된 탭 이름은 거절(메일·보고서만)', adBad.ok === false && /허용 안 된 탭/.test(adBad.error), adBad);
+chk('appendDoc : 거절되면 탭을 만들지 않음', !SHEETS['아무탭'], '');
+
+// appendDoc + markTab/marks 를 한 요청으로 — append 된 다음에만 「만들 차례」 J열도 같이 표시(원자적으로)
+SHEETS['만들 차례'] = makeSheet('만들 차례', [
+  ['날짜', '현장', '할일', '완료', '고르기', '메모', '현장(걸러보기)', '원본탭', '처리일', '생성결과'],
+  ['2026-09-28', '단양디캠프', '- 보고서 쓰기', '', '보고서', '', '단양디캠프', '오늘 할일', '2026-09-28', ''],
+]);
+let adOut3 = km_appendDoc_({ tab: '보고서', rows: [['2026-09-28', '단양디캠프', '- 보고서 쓰기', '단양디캠프 보고\n\n일자 : 2026-09-28\n내용 : 보고서 쓰기']],
+                             markTab: '만들 차례', marks: [{ row: 2, text: '만듦(시트) · 보고서 탭' }] });
+chk('appendDoc + markTab/marks : ok:true · marked=1', adOut3.ok && adOut3.marked === 1, JSON.stringify(adOut3));
+chk('appendDoc + markTab/marks : 「만들 차례」 J열에도 같이 표시됨', SHEETS['만들 차례']._grid()[1][9] === '만듦(시트) · 보고서 탭', SHEETS['만들 차례']._grid()[1]);
+chk('appendDoc + markTab/marks : 보고서 탭에도 실제로 들어감', SHEETS['보고서'] && SHEETS['보고서']._grid()[1][3].indexOf('단양디캠프 보고') === 0, SHEETS['보고서'] && SHEETS['보고서']._grid()[1]);
+
+let adNoMark = km_appendDoc_({ tab: '메일', rows: [['2026-09-28', 'x', 'x', 'x']], markTab: '없는탭', marks: [{ row: 2, text: 'x' }] });
+chk('appendDoc : markTab 이 없는 탭이면 marked=0(오류로 죽지 않음, append 는 됨)', adNoMark.ok && adNoMark.marked === 0, JSON.stringify(adNoMark));
 
 console.log('\n합계 ' + (OK + NG.length) + '개 중 통과 ' + OK + ' · 실패 ' + NG.length);
 if (NG.length) { console.log('실패 : ' + NG.join(', ')); process.exit(1); }
