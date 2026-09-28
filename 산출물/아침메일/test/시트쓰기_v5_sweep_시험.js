@@ -63,11 +63,13 @@ function makeSheet(name, rows) {
 }
 
 let SHEETS = {};
+let TOASTS = [];
 global.SpreadsheetApp = {
   openById: () => ({
     getSheetByName: (n) => SHEETS[n] || null,
     insertSheet: (n) => { SHEETS[n] = makeSheet(n, []); return SHEETS[n]; },
   }),
+  getActiveSpreadsheet: () => ({ toast: (msg, title, sec) => TOASTS.push({ msg, title, sec }) }),
 };
 global.Utilities = { formatDate: () => '2026-09-28' };
 global.ContentService = { createTextOutput: (s) => ({ setMimeType: () => ({ text: s }) }), MimeType: { JSON: 'json' } };
@@ -161,6 +163,34 @@ SHEETS['답요청'] = makeSheet('답요청', realRows);
 let out5 = km_sweep_({ tabs: ['답요청'], dry: true });
 chk('실제 데이터 dry 시험 : 완료 18건 그대로 나옴', out5.tabs[0].완료 === 18, JSON.stringify(out5.tabs[0]));
 chk('실제 데이터 dry 시험 : 전체 1096행', out5.tabs[0].전체 === 1096, JSON.stringify(out5.tabs[0]));
+
+// ── 시험 6 : onOpen (v6, 새로고침하면 자동 정리) ──────────────
+setup1();
+TOASTS = [];
+onOpen({});
+chk('onOpen : 답요청·오늘 할일·앞으로 할일 3탭 다 처리(기본값)', SHEETS['완료 기록'] && SHEETS['답 결정'], '');
+chk('onOpen : 완료 2건·답결정 1건 실제로 옮겨짐', SHEETS['완료 기록']._grid().length === 3 && SHEETS['답 결정']._grid().length === 2, '');
+chk('onOpen : 토스트로 알림(완료 2건·답 결정 1건)', TOASTS.length === 1 && /완료 기록 2건/.test(TOASTS[0].msg) && /답 결정 1건/.test(TOASTS[0].msg), JSON.stringify(TOASTS));
+
+// 옮길 게 없으면 토스트 없음(조용히 넘어감)
+SHEETS = {};
+SHEETS['답요청'] = makeSheet('답요청', [
+  ['날짜', '현장', '할일', '완료', '고르기', '메모', '현장(걸러보기)'],
+  ['2026-09-28', 'D현장', '할일X', '', '', '', 'D현장'],
+]);
+TOASTS = [];
+onOpen({});
+chk('onOpen : 옮길 게 없으면 토스트 안 띄움', TOASTS.length === 0, JSON.stringify(TOASTS));
+
+// 시트를 못 열어도(오류) onOpen 자체는 죽지 않는다
+const savedOpenById = SpreadsheetApp.openById;
+SpreadsheetApp.openById = () => { throw new Error('강제 오류'); };
+TOASTS = [];
+let threw = false;
+try { onOpen({}); } catch (e) { threw = true; }
+chk('onOpen : 내부에서 오류가 나도 밖으로 안 던짐(시트 열기를 막지 않음)', !threw, '');
+chk('onOpen : 오류면 오류 토스트라도 띄움', TOASTS.length === 1 && /오류/.test(TOASTS[0].msg), JSON.stringify(TOASTS));
+SpreadsheetApp.openById = savedOpenById;
 
 console.log('\n합계 ' + (OK + NG.length) + '개 중 통과 ' + OK + ' · 실패 ' + NG.length);
 if (NG.length) { console.log('실패 : ' + NG.join(', ')); process.exit(1); }

@@ -1,4 +1,8 @@
 /**
+ * KM_시트쓰기 v6 (2026-09-28) — v6 : onOpen 추가 (차장님 「내가 원할 때 새로고침을 하면 옮겨지는 것으로 해」, 2026-09-28)
+ *   onOpen : 「26년 회의록2」 를 열거나(브라우저 새로고침 포함) sweep({}) 을 자동으로 한 번 돌린다. 결과는 화면 아래 토스트로.
+ *            07:00 자동 실행과는 별개 — 차장님이 체크하신 뒤 브라우저를 새로고침하는 순간마다 반영된다(정해진 시각을 기다리지 않는다)
+ *            암호(KM_TOKEN) 없이도 돈다 — 웹 앱 밖에서, doPost 를 거치지 않고 시트 안에서 직접 부른다
  * KM_시트쓰기 v5 (2026-09-28) — v5 : sweep 추가 (차장님 「완료 채크 한것은 삭제 하도록 양방향 소통」 · 「고르기 답 결정」, 2026-09-28)
  *   sweep : 「26년 회의록2」 답요청·오늘 할일·앞으로 할일 3탭에서
  *           완료(D열 체크) 된 줄 → 「완료 기록」 탭으로 옮기고 원본에서 지운다
@@ -44,7 +48,7 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) { return km_out_({ok: false, error: '본문이 JSON 이 아님'}); }
   if (!KM_TOKEN || body.token !== KM_TOKEN) return km_out_({ok: false, error: '암호 틀림'});
   try {
-    if (body.action === 'ping')  return km_out_({ok: true, version: 'v5 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
+    if (body.action === 'ping')  return km_out_({ok: true, version: 'v6 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
     if (body.action === 'read')  return km_out_(km_read_(body));
     if (body.action === 'batch') return km_out_(km_batch_(body));
     if (body.action === 'old26') return km_out_(km_old26_(body));
@@ -312,6 +316,23 @@ function km_master_(ss, rec, link) {
   var content = '[신규] ' + String(rec.preview || '').slice(0, 320);
   m.getRange(2, 1, 1, 8).setValues([['', '', new Date(), rec.tab, rec.person || '', content, link, '']]);
   m.getRange(2, 1, 1, 8).setBackground('#ffffff').setWrap(true);
+}
+
+/** onOpen (v6, 2026-09-28 차장님 「내가 원할 때 새로고침을 하면 옮겨지는 것으로 해」) :
+ *   「26년 회의록2」 를 열 때마다(브라우저 새로고침도 「다시 열기」 라 포함) sweep({}) 을 자동으로 한 번 돌린다.
+ *   07:00 자동 실행과 별개 — 중복으로 돌아도 옮길 게 없으면 그냥 아무 일도 안 한다. 옮긴 게 있을 때만 화면 아래 토스트로 알린다.
+ *   실패해도 시트 자체는 문제없이 열리도록 통째로 감싼다(에러가 나도 열기를 막지 않는다) */
+function onOpen(e) {
+  try {
+    var r = km_sweep_({});
+    var done = 0, pick = 0;
+    (r.tabs || []).forEach(function (t) { done += t.완료 || 0; pick += t.답결정 || 0; });
+    if (done + pick > 0) {
+      SpreadsheetApp.getActiveSpreadsheet().toast('완료 기록 ' + done + '건 · 답 결정 ' + pick + '건 정리했습니다', 'KM 자동 정리', 5);
+    }
+  } catch (err) {
+    try { SpreadsheetApp.getActiveSpreadsheet().toast('자동 정리 중 오류 : ' + err, 'KM', 5); } catch (e2) { /* 토스트도 실패하면 조용히 넘어간다 */ }
+  }
 }
 
 /** 설치 뒤 한 번 눌러 보는 시험 (편집기 위 ▶ 실행). 시트를 바꾸지 않는다 */
