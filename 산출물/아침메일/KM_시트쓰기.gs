@@ -1,4 +1,12 @@
 /**
+ * KM_시트쓰기 v5 (2026-09-28) — v5 : sweep 추가 (차장님 「완료 채크 한것은 삭제 하도록 양방향 소통」 · 「고르기 답 결정」, 2026-09-28)
+ *   sweep : 「26년 회의록2」 답요청·오늘 할일·앞으로 할일 3탭에서
+ *           완료(D열 체크) 된 줄 → 「완료 기록」 탭으로 옮기고 원본에서 지운다
+ *           고르기(E열)="답 결정" 인 줄     → 「답 결정」 탭으로 옮기고 원본에서 지운다 (완료 체크가 더 세다 — 둘 다면 완료 기록으로)
+ *           두 탭은 없으면 새로 만든다(원본과 같은 7칸 + H「원본탭」 + I「처리일」). A·B열 세로 병합은 지운 뒤 다시 계산해 붙인다.
+ *           {dry:true} 면 세기만 하고 시트를 바꾸지 않는다. {tabs:[...]} 로 대상 탭을 고를 수 있다(기본 3탭 전부)
+ *   ★ v4 까지의 「지우는 기능은 없다」 는 이 sweep 하나로 깨졌다 — 답요청·오늘 할일·앞으로 할일 3탭에서만, 완료 기록·답 결정 탭으로
+ *     옮긴 뒤에만 원본 줄을 지운다(그냥 버리지 않는다). 다른 action 은 여전히 지우지 않는다.
  * KM_시트쓰기 v4 (2026-09-27) — v4 : oldStrip (옛 시트 통찰 칸 끝 「/ =====」 구분선 지우기) · 옛 시트 읽기 허용 (확인용)
  * KM_시트쓰기 v3 (2026-09-25)  — 클로드가 부르는 웹 앱. Zapier 없이 0원·무제한.
  *   v3 : read·batch 를 「Google Sheets API」 서비스(편집기 왼쪽 서비스 + 에서 추가)로 — UrlFetch 는 프로젝트에서 API 를 켜야 해서 403 이 났다
@@ -9,9 +17,8 @@
  *   old26  : 옛 「26년 회의록」 현장 탭에 회의 기록 덧붙이기 + 「0.전체 반영모음」 맨 위에 한 줄
  *   oldMerge : 옛 탭 합치기 {merges:[{from,to}]} — to 가 없으면 from 을 to 로 이름 바꿈 / to 가 있으면 from 의 줄(3행~)을 to 끝에 옮기고 from 은 「(합침) from」 으로 이름만 바꿈
  *
- * ★ 지우는 기능은 없다. 허용한 요청 종류만 받는다. 암호(KM_TOKEN)가 맞을 때만 움직인다.
  * ★ 설치 : 확장 프로그램 → Apps Script → 왼쪽 「서비스 +」 → Google Sheets API 추가(식별자 Sheets) → 이 전문 붙여넣기 → KM_TOKEN 칸에 클로드가 드린 암호
- *          → 배포 → 새 배포 → 유형 「웹 앱」 → 실행 : 나 / 액세스 : 모든 사용자 → 배포 → 권한 허용 → 주소 복사해 클로드에게
+ *          → 배포 → 배포 관리 → 연필 → 버전 「새 버전」 → 배포 → 완료  (주소는 그대로 — 「새 배포」 는 하지 않는다)
  */
 
 var KM_TOKEN = '';   // ← 클로드가 드린 암호를 따옴표 안에 (저장소에는 비워 둔다 — 공개 저장소)
@@ -37,12 +44,13 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) { return km_out_({ok: false, error: '본문이 JSON 이 아님'}); }
   if (!KM_TOKEN || body.token !== KM_TOKEN) return km_out_({ok: false, error: '암호 틀림'});
   try {
-    if (body.action === 'ping')  return km_out_({ok: true, version: 'v4 2026-09-27', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
+    if (body.action === 'ping')  return km_out_({ok: true, version: 'v5 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
     if (body.action === 'read')  return km_out_(km_read_(body));
     if (body.action === 'batch') return km_out_(km_batch_(body));
     if (body.action === 'old26') return km_out_(km_old26_(body));
     if (body.action === 'oldMerge') return km_out_(km_oldMerge_(body));
     if (body.action === 'oldStrip') return km_out_(km_oldStrip_(body));
+    if (body.action === 'sweep') return km_out_(km_sweep_(body));
     return km_out_({ok: false, error: '모르는 action : ' + body.action});
   } catch (err) {
     return km_out_({ok: false, error: String(err && err.stack || err)});
@@ -172,6 +180,97 @@ function km_oldStrip_(body) {
   return {ok: true, dry: !!body.dry, fixed: fixed, tabs: tabs};
 }
 
+
+/** sweep (v5, 2026-09-28) : {tabs:['답요청','오늘 할일','앞으로 할일'], dry:true|false}
+ *   답요청·오늘 할일·앞으로 할일 각 탭에서 완료 체크(D열='완료') 된 줄은 「완료 기록」 으로,
+ *   고르기(E열)='답 결정' 인 줄은 「답 결정」 으로 옮기고 원본에서 지운다. 완료가 답 결정보다 세다(둘 다면 완료 기록).
+ *   지운 뒤 A(날짜)·B(현장) 세로 병합을 다시 계산해 붙인다. {dry:true} 면 세기만 하고 시트를 바꾸지 않는다. */
+function km_sweep_(body) {
+  var ss = SpreadsheetApp.openById(KM_IDS.new2);
+  var names = body.tabs || ['답요청', '오늘 할일', '앞으로 할일'];
+  var dry = !!body.dry;
+  var doneTab = dry ? null : km_sweepTab_(ss, '완료 기록');
+  var pickTab = dry ? null : km_sweepTab_(ss, '답 결정');
+  var out = [];
+  names.forEach(function (name) {
+    var sh = ss.getSheetByName(name);
+    if (!sh) { out.push({tab: name, error: '탭 없음'}); return; }
+    var last = sh.getLastRow();
+    var n = last - 1;
+    if (n <= 0) { out.push({tab: name, 전체: 0, 완료: 0, 답결정: 0, 남김: 0}); return; }
+    var vals = sh.getRange(2, 1, n, 7).getValues();
+    var lastA = '', lastB = '';                              // 세로 병합이라 이어지는 줄은 A·B가 빈칸 — 지우기 전에 채워 넣는다
+    for (var f = 0; f < vals.length; f++) {
+      if (vals[f][0] !== '') lastA = vals[f][0]; else vals[f][0] = lastA;
+      if (vals[f][1] !== '') lastB = vals[f][1]; else vals[f][1] = lastB;
+    }
+    var keep = [], doneRows = [], pickRows = [];
+    for (var i = 0; i < vals.length; i++) {
+      var r = vals[i];
+      if (r[3] === true || r[3] === '완료') doneRows.push(r);
+      else if (String(r[4]).trim() === '답 결정') pickRows.push(r);
+      else keep.push(r);
+    }
+    var rec = {tab: name, 전체: vals.length, 완료: doneRows.length, 답결정: pickRows.length, 남김: keep.length};
+    if (!dry && (doneRows.length || pickRows.length)) {
+      sh.getRange(2, 1, n, 2).breakApart();               // 옛 세로 병합 먼저 해제
+      sh.getRange(2, 1, n, 7).clearContent();
+      if (keep.length) sh.getRange(2, 1, keep.length, 7).setValues(keep);
+      if (n > keep.length) sh.deleteRows(2 + keep.length, n - keep.length);
+      km_reMerge_(sh, keep.length);
+      if (doneRows.length) km_sweepAppend_(doneTab, name, doneRows);
+      if (pickRows.length) km_sweepAppend_(pickTab, name, pickRows);
+    }
+    out.push(rec);
+  });
+  return {ok: true, dry: dry, tabs: out};
+}
+
+/** 완료 기록 · 답 결정 탭 — 없으면 만든다(원본 7칸 + H 원본탭 + I 처리일) */
+function km_sweepTab_(ss, name) {
+  var sh = ss.getSheetByName(name);
+  if (!sh) {
+    sh = ss.insertSheet(name);
+    sh.getRange(1, 1, 1, 9).setValues([['날짜', '현장', '할일', '완료', '고르기', '메모', '현장(걸러보기)', '원본탭', '처리일']]);
+    sh.getRange(1, 1, 1, 9).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function km_sweepAppend_(sh, fromName, rows) {
+  var last = sh.getLastRow();
+  var r0 = last + 1;
+  var today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  var out = rows.map(function (r) {
+    var x = r.slice(0, 7);
+    while (x.length < 7) x.push('');
+    x.push(fromName, today);
+    return x;
+  });
+  sh.getRange(r0, 1, out.length, 9).setValues(out).setWrap(true).setVerticalAlignment('top');
+}
+
+/** 지운 뒤 A(날짜)·B(현장) 세로 병합을 남은 n줄(2행부터) 기준으로 다시 계산해 붙인다.
+ *   A 열은 값이 이어지는 만큼, B 열은 같은 A 그룹 안에서 값이 이어지는 만큼(v11 규칙 그대로) */
+function km_reMerge_(sh, n) {
+  if (n <= 0) return;
+  var v = sh.getRange(2, 1, n, 2).getValues();
+  var i = 0;
+  while (i < n) {
+    var j = i;
+    while (j + 1 < n && v[j + 1][0] === v[i][0] && v[i][0] !== '') j++;
+    if (j > i) sh.getRange(2 + i, 1, j - i + 1, 1).merge();
+    var k = i;
+    while (k <= j) {
+      var m = k;
+      while (m + 1 <= j && v[m + 1][1] === v[k][1] && v[k][1] !== '') m++;
+      if (m > k) sh.getRange(2 + k, 2, m - k + 1, 1).merge();
+      k = m + 1;
+    }
+    i = j + 1;
+  }
+}
 
 function km_lastRow_(sh, ncol) {
   var n = sh.getLastRow();

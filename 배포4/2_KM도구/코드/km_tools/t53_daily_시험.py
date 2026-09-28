@@ -287,7 +287,7 @@ try:
     chk('시트 새 줄 G열 = 현장(걸러보기)', all(r.get('COL$G') == r.get('COL$B') for r in aj12) and aj12, aj12)
     pl12 = {'답요청': {'kind': 'date', 'cols': 4, 'values': [['2026-10-01', 'A', '- x', '', '', '', 'A']] * 2}}
     ev = [x['setDataValidation'] for x in T.merge_body(pl12, {'답요청': '5-6'})['requests'] if 'setDataValidation' in x and x['setDataValidation']['rule']['condition']['type'] == 'ONE_OF_LIST']
-    chk('새 줄 E열 ▼목록 = 진행중·아니야·맞아·만들어줘', ev and [v['userEnteredValue'] for v in ev[0]['rule']['condition']['values']] == ['진행중', '아니야', '맞아', '만들어줘'] and ev[0]['range']['startColumnIndex'] == 4, ev)
+    chk('새 줄 E열 ▼목록 = 진행중·아니야·맞아·만들어줘·답 결정 (v13)', ev and [v['userEnteredValue'] for v in ev[0]['rule']['condition']['values']] == ['진행중', '아니야', '맞아', '만들어줘', '답 결정'] and ev[0]['range']['startColumnIndex'] == 4, ev)
 
     print('--- v12 쓰기 한 번 (Zapier 1회)')
     wb, wr = T.write_body(json.load(io.open(sw['파일']['시트계획'], encoding='utf-8')), {'답요청': 108, '오늘 할일': 11, '회의록': 78, '앞으로 할일': 9})
