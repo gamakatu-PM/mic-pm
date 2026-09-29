@@ -326,5 +326,23 @@ let shOut2 = km_setHandover_({ rows: [['브랜치', '다시 씀']] });
 let hg2 = SHEETS['__first__']._grid();
 chk('setHandover : 두 번째 호출은 누적이 아니라 덮어씀(1줄만 남음)', hg2.length === 1 && hg2[0][1] === '다시 씀', hg2);
 
+// ── 시험 11 (v11) : appendLog — 「대화 로그」 탭, 회의록처럼 덧붙이기(안 지움) + supersede 로 예전 줄만 상태 표시 ──
+SHEETS = {};
+let logOut1 = km_appendLog_({ row: ['2026-09-29', 'session-aaa1', '지시', 'A 는 이렇게 하기로 함', '유효'] });
+chk('appendLog : ok:true · 2행(머리줄 다음)에 들어감', logOut1.ok && logOut1.row === 2, JSON.stringify(logOut1));
+let lg1 = SHEETS['대화 로그']._grid();
+chk('appendLog : 머리줄 5칸(날짜|창|종류|내용|상태)', lg1[0].join('|') === '날짜|창|종류|내용|상태', lg1[0]);
+chk('appendLog : 1번째 로그 줄 값 그대로', lg1[1].join('|') === '2026-09-29|session-aaa1|지시|A 는 이렇게 하기로 함|유효', lg1[1]);
+
+let logOut2 = km_appendLog_({ row: ['2026-09-30', 'session-bbb2', '변경', 'A 대신 B 로 바꾸기로 함(차장님 확인)', '유효'], supersede: { row: 2, note: 'A→B 로 바뀜' } });
+let lg2 = SHEETS['대화 로그']._grid();
+chk('appendLog : 두 번째 호출은 누적(1행이 아니라 2행 남음, 안 지움)', lg2.length === 3, lg2);
+chk('appendLog : supersede 는 예전 줄(2행) 상태만 고침, 내용은 그대로 남음', lg2[1][3] === 'A 는 이렇게 하기로 함' && lg2[1][4] === '대체됨→3행 (A→B 로 바뀜)', lg2[1]);
+chk('appendLog : 새 줄(3행)은 유효 그대로', lg2[2][4] === '유효', lg2[2]);
+
+let logOut3 = km_appendLog_({ row: ['2026-10-01', 'session-ccc3', '메모', '세 번째 줄', '유효'] });
+let lg3 = SHEETS['대화 로그']._grid();
+chk('appendLog : 세 번째 호출도 계속 누적(4행)', lg3.length === 4 && logOut3.row === 4, lg3);
+
 console.log('\n합계 ' + (OK + NG.length) + '개 중 통과 ' + OK + ' · 실패 ' + NG.length);
 if (NG.length) { console.log('실패 : ' + NG.join(', ')); process.exit(1); }

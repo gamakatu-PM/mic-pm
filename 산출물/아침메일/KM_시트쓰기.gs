@@ -1,4 +1,9 @@
 /**
+ * KM_시트쓰기 v11 (2026-09-29 아침) — v11 : appendLog 추가 (차장님 「회의록처럼 대화 핵심을 각 창별로 저장, 총괄할 것은 총괄에도」, 2026-09-29)
+ *   새 탭 「대화 로그」(KM_IDS.handover 안, 요약 탭과 같은 시트) — 날짜|창|종류|내용|상태 5칸, 회의록처럼 덧붙이기만(안 지움).
+ *   각 세션(창)마다 자기 세션ID 로 「창」 칸을 채워 남기므로, 서로 다른 창이 반대되는 지시를 해도 섞이지 않고 따로 구분됨.
+ *   supersede 를 같이 주면 예전 줄의 「상태」 칸만 「대체됨→N행」 으로 고친다(그 줄 자체는 지우지 않음 — 무엇이 무엇으로 바뀌었는지 이력이 남는다).
+ *   appendLog : {row:[날짜,창,종류,내용,상태], supersede:{row,note}}
  * KM_시트쓰기 v10 (2026-09-28 밤) — v10 : setHandover 추가 (차장님 「새 창 만들 때마다 인수인계 준비하는 시트」, 2026-09-28 밤)
  *   새 구글시트 「KM 인수인계」(KM_IDS.handover) 요약 1장에 지금 상태를 통째로 덮어쓴다 — 누적 안 함(항상 「지금」만 보여준다).
  *   md 파일(2_창이어가기_vN)은 그대로 상세 기록으로 계속 쓴다 — 이 시트는 그 위에 얹는 "요약 1장"일 뿐, md 를 대신하지 않는다.
@@ -66,7 +71,7 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) { return km_out_({ok: false, error: '본문이 JSON 이 아님'}); }
   if (!KM_TOKEN || body.token !== KM_TOKEN) return km_out_({ok: false, error: '암호 틀림'});
   try {
-    if (body.action === 'ping')  return km_out_({ok: true, version: 'v10 2026-09-28', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
+    if (body.action === 'ping')  return km_out_({ok: true, version: 'v11 2026-09-29', sheetsService: (typeof Sheets !== 'undefined'), now: new Date().toISOString()});
     if (body.action === 'read')  return km_out_(km_read_(body));
     if (body.action === 'batch') return km_out_(km_batch_(body));
     if (body.action === 'old26') return km_out_(km_old26_(body));
@@ -76,6 +81,7 @@ function doPost(e) {
     if (body.action === 'markQueue') return km_out_(km_markQueue_(body));
     if (body.action === 'appendDoc') return km_out_(km_appendDoc_(body));
     if (body.action === 'setHandover') return km_out_(km_setHandover_(body));
+    if (body.action === 'appendLog') return km_out_(km_appendLog_(body));
     return km_out_({ok: false, error: '모르는 action : ' + body.action});
   } catch (err) {
     return km_out_({ok: false, error: String(err && err.stack || err)});
@@ -349,6 +355,32 @@ function km_setHandover_(body) {
     sh.getRange(1, 1, rows.length, 1).setFontWeight('bold');
   }
   return {ok: true, n: rows.length, url: 'https://docs.google.com/spreadsheets/d/' + KM_IDS.handover + '/edit'};
+}
+
+/** appendLog (v11) : {row:[날짜,창,종류,내용,상태], supersede:{row,note}}
+ *   「KM 인수인계」 시트 안 「대화 로그」 탭(요약 탭과 같은 시트, 다른 탭)에 한 줄 덧붙인다 — 회의록처럼 누적, 안 지움.
+ *   탭이 없으면 머리줄(날짜|창|종류|내용|상태)과 함께 새로 만든다.
+ *   supersede.row 를 주면(예전에 적어 둔 줄 번호) 그 줄의 「상태」 칸만 「대체됨→새 줄 번호」 로 고친다 — 그 줄 자체는 지우지 않는다(무엇이 무엇으로
+ *   바뀌었는지 이력이 남아야, 서로 다른 창이 반대로 지시했을 때 어느 것이 최신인지 다음 창이 헷갈리지 않는다). */
+function km_appendLog_(body) {
+  var ss = SpreadsheetApp.openById(KM_IDS.handover);
+  var sh = ss.getSheetByName('대화 로그');
+  if (!sh) {
+    sh = ss.insertSheet('대화 로그');
+    sh.getRange(1, 1, 1, 5).setValues([['날짜', '창', '종류', '내용', '상태']]);
+    sh.getRange(1, 1, 1, 5).setFontWeight('bold');
+    sh.setFrozenRows(1);
+    sh.setColumnWidth(4, 600);
+  }
+  var row = body.row || [];
+  var r0 = sh.getLastRow() + 1;
+  var vals = [String(row[0] || ''), String(row[1] || ''), String(row[2] || ''), String(row[3] || ''), String(row[4] || '유효')];
+  sh.getRange(r0, 1, 1, 5).setValues([vals]).setWrap(true).setVerticalAlignment('top');
+  if (body.supersede && body.supersede.row) {
+    var note = body.supersede.note ? ' (' + body.supersede.note + ')' : '';
+    sh.getRange(body.supersede.row, 5).setValue('대체됨→' + r0 + '행' + note);
+  }
+  return {ok: true, row: r0, url: 'https://docs.google.com/spreadsheets/d/' + KM_IDS.handover + '/edit'};
 }
 
 function km_sweepAppend_(sh, fromName, rows) {

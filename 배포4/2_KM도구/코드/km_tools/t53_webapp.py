@@ -17,6 +17,7 @@
     python t53_webapp.py markqueue <markqueue_YYMMDD.json>       (v5 : t56_makequeue 가 만든 marks 를 「만들 차례」 탭 J열에 적는다 — 웹 앱 v8 필요)
     python t53_webapp.py appenddoc <메일추가_YYMMDD.json>          (v6 : 메일·보고서 탭에 4칸 줄 누적. markTab·marks 를 같이 주면 성공했을 때만 「만들 차례」 J열도 같이 — 웹 앱 v9 필요)
     python t53_webapp.py sethandover <인수인계_YYMMDD.json>        (v7 : 「KM 인수인계」 시트 요약 1장을 통째로 덮어쓴다 — {rows:[[항목,내용],...]}, 누적 안 함, 웹 앱 v10 필요)
+    python t53_webapp.py appendlog <로그_YYMMDD.json>              (v8 : 「KM 인수인계」 시트 「대화 로그」 탭에 한 줄 덧붙인다 — {row:[날짜,창,종류,내용,상태], supersede:{row,note}}, 누적·안 지움, 웹 앱 v11 필요)
 
 read 결과는 Zapier batchGet 과 같은 {valueRanges:[{range, values}]} — t53_sheetmd 가 아니라 t53_daily --done/--radar 가 바로 읽는다.
    (values:batchGet 은 셀 「값」을 주므로 병합 아래 칸은 빈칸 → load_board 가 위 값을 내려 쓴다. 체크박스는 TRUE/FALSE 또는 「완료」)
@@ -25,7 +26,7 @@ read 결과는 Zapier batchGet 과 같은 {valueRanges:[{range, values}]} — t5
 from __future__ import print_function
 import os, sys, io, json
 
-VERSION = 'v7 2026-09-28'   # v7 : sethandover (「KM 인수인계」 요약 1장 통째로 덮어쓰기, 웹 앱 v10 필요) · v6 : appenddoc · v5 : markqueue · v4 : sweep · v3 : strip · read old
+VERSION = 'v8 2026-09-29'   # v8 : appendlog (「대화 로그」 탭 한 줄 덧붙이기, 웹 앱 v11 필요) · v7 : sethandover · v6 : appenddoc · v5 : markqueue · v4 : sweep · v3 : strip · read old
 
 try:
     from urllib.request import Request, urlopen
@@ -100,6 +101,10 @@ def main(argv):
         with io.open(argv[2], 'r', encoding='utf-8') as f:
             body = json.load(f)          # {rows:[[항목,내용],...]} — 「KM 인수인계」 요약 1장. 매번 통째로 덮어씀(누적 안 함)
         out = call('setHandover', body)
+    elif act == 'appendlog':
+        with io.open(argv[2], 'r', encoding='utf-8') as f:
+            body = json.load(f)          # {row:[날짜,창,종류,내용,상태], supersede:{row,note}} — 「대화 로그」 탭에 한 줄. 누적·안 지움
+        out = call('appendLog', body)
     elif act == 'merge':
         with io.open(argv[2], 'r', encoding='utf-8') as f:
             d = json.load(f)
