@@ -362,5 +362,30 @@ try:
     chk('v12.1 답요청 「날짜 미상」 은 위 날짜를 이어받지 않고 ① 맨 끝', True)
 except AssertionError as e:
     chk('v12.1 답요청 「날짜 미상」 은 위 날짜를 이어받지 않고 ① 맨 끝', False, str(e))
+
+print('--- v16 (2026-09-29) 「만들 차례」 탭 → 자료 상태 「제안서 대기 N건」')
+d3 = tempfile.mkdtemp()
+try:
+    write(d3, 'q__meta.json', meta('연합기숙사', '260922', hm='10:00',
+          items=[{'title': '안건', 'bullets': ['내용'], 'decision': '', 'actions': []}], todo=[]))
+    mq = write(d3, 'makequeue.json', {'range': "'만들 차례'!A1:J20", 'values': [
+        ['날짜', '현장', '할일', '완료', '고르기', '메모', '현장(걸러보기)', '원본탭', '처리일', '생성결과'],
+        ['2026. 9. 22', '단양디캠프', '- 체크리스트 준비', '', '제안서', '', '단양디캠프', '답요청', '2026-09-28', ''],
+        ['2026. 9. 22', '연합기숙사', '- 조립비 확인', '', '제안서', '', '연합기숙사', '답요청', '2026-09-28', ''],
+        ['2026. 9. 23', '조선호텔', '- 작업의뢰서 건', '', '작업의뢰서', '', '조선호텔', '답요청', '2026-09-28', '만듦'],
+    ]})
+    chk('count_makequeue : 고르기=제안서 인 줄만 셈(작업의뢰서는 안 셈)', T.count_makequeue(mq) == 2, T.count_makequeue(mq))
+    chk('count_makequeue : 경로 없으면 None', T.count_makequeue('') is None)
+    _t16, s16 = T.run(d3, datetime.date(2026, 9, 23), out=os.path.join(d3, 'out16'), makequeue_path=mq)
+    o16 = io.open(s16['파일']['오늘의정리'], encoding='utf-8').read()
+    chk('자료 상태에 「제안서 대기 2건」 줄이 들어감', '※ 제안서 대기 2건' in o16, o16[:500])
+    chk('stat 에도 제안서대기 저장됨', s16['제안서대기'] == 2, s16.get('제안서대기'))
+    _t16b, s16b = T.run(d3, datetime.date(2026, 9, 23), out=os.path.join(d3, 'out16b'))
+    o16b = io.open(s16b['파일']['오늘의정리'], encoding='utf-8').read()
+    chk('makequeue 안 주면(옛 07:00 그대로) 제안서 줄 안 나옴', '제안서 대기' not in o16b, o16b[:500])
+    chk('makequeue 안 주면 제안서대기 = 0', s16b['제안서대기'] == 0, s16b.get('제안서대기'))
+finally:
+    shutil.rmtree(d3)
+
 print('\n통과 %d / 실패 %d %s' % (OK[0], len(NG), NG or ''))
 sys.exit(1 if NG else 0)

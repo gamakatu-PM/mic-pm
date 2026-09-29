@@ -10,6 +10,7 @@ meta.json 만 읽는다. 클로드(AI)를 전혀 쓰지 않는다 → 사용량 
     python t53_daily.py <meta폴더> --day 260915                                 하루
     python t53_daily.py <meta폴더> --today 260924 --radar <로그.json,확정.json,재검토.json>   4. 신규 현장 레이더 칸 넣기
     python t53_daily.py <meta폴더> --today 260924 --done <답요청.json,오늘할일.json>          v7 시트에 완료 표시한 할 일은 ①② 에서 뺀다
+    python t53_daily.py <meta폴더> --today 260924 --makequeue <만들차례.json>                v16 : 자료 상태에 「제안서 대기 N건」 한 줄 (「만들 차례」 탭 read 결과)
     python t53_daily.py --merge <시트계획.json> "답요청=8-60" "오늘 할일=2-12" "회의록=2-80"   덧붙인 줄 번호로 병합 본문
 
 만드는 것 (v4 추가)
@@ -37,7 +38,8 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v15 2026-09-28'  # v15 : ▼ 9번째 「캘린더」 추가(고르면 웹앱 sweep 이 「만들 차례」 탭으로, 1시간 Routine 이 구글캘린더 "현장관리" 에 직접 등록) / DOC_PICKS 에도 포함
+VERSION = 'v16 2026-09-29'  # v16 : 차장님 「제안서 대기 알림 넣어줘」 — --makequeue 로 「만들 차례」 탭을 읽어 자료 상태에 「제안서 대기 N건」 한 줄 (v17 에 남겨둔 미완 항목, 지금 채움)
+# v15 2026-09-28  # v15 : ▼ 9번째 「캘린더」 추가(고르면 웹앱 sweep 이 「만들 차례」 탭으로, 1시간 Routine 이 구글캘린더 "현장관리" 에 직접 등록) / DOC_PICKS 에도 포함
 # v14 2026-09-28  # v14 : 「만들어줘」→ 제안서·보고서·메일·작업의뢰서 4개로 쪼갬 / 「아니야」는 웹 앱 sweep 이 삭제(메모 이어붙이기 그만둠) / ▼고르신 것 절은 맞아만
 # v13 2026-09-28  # v13 : E열 ▼ 목록에 「답 결정」 추가(고르면 웹 앱 sweep 이 답 결정 탭으로 옮김). 그 밖은 v12.2 그대로
 # v12.2 2026-09-27  # v12.2 : --since YYMMDD — 월요일에 금·토·일 회의를 「어제」 로 함께 (주말 회의가 메일·시트에서 빠지던 것)
@@ -320,6 +322,23 @@ def load_board(path):
 def load_done(path):
     """완료 표시된 할 일 (v7). v11 부터 load_board 를 쓴다."""
     return _done_of(load_board(path))
+
+
+def count_makequeue(path, pick='제안서'):
+    """v16 (2026-09-29) : 「만들 차례」 탭(webapp read 결과)에서 고르기(E열)=pick 인 줄 수.
+       제안서는 t56_makequeue 가 절대 자동으로 안 만들고 이 탭에 계속 쌓이기만 하므로, 답요청 등 3탭 board 와는 별도로 이 탭을 직접 읽어야 진짜 대기 건수가 나온다."""
+    if not path or not os.path.isfile(path):
+        return None
+    with io.open(path, 'r', encoding='utf-8') as f:
+        d = json.load(f)
+    blocks = d.get('valueRanges') if isinstance(d, dict) and 'valueRanges' in d else [d]
+    n = 0
+    for blk in blocks:
+        for row in (blk.get('values') or [])[1:]:
+            row = [str(x) for x in row] + [''] * 5
+            if row[4].strip() == pick:
+                n += 1
+    return n
 
 
 def _done_of(board):
@@ -828,8 +847,10 @@ def build_radar(radar, today):
 
 
 # ── 한 통으로 ─────────────────────────────────────────────
-def build_status(recs_y, yday, rstat, board_on):
-    """v12 : 자료 상태 — 옛 메일의 [ 자료 상태 ] 를 되살림 (9/23 새 메일로 바뀌며 빠졌던 것). 문제가 있으면 줄 앞에 ※"""
+def build_status(recs_y, yday, rstat, board_on, prop_n=None):
+    """v12 : 자료 상태 — 옛 메일의 [ 자료 상태 ] 를 되살림 (9/23 새 메일로 바뀌며 빠졌던 것). 문제가 있으면 줄 앞에 ※
+       v16 (2026-09-29 차장님 「제안서 대기 알림 넣어줘」) : prop_n — 「만들 차례」 탭에서 고르기='제안서' 인 줄 수. 제안서는 절대 자동으로 안 만든다(범위·장수는 판단 필요) —
+       그래서 시트를 안 열어보시면 대기 중인지도 모르셨는데, 이 한 줄로 알려드린다"""
     L = []
     n = len(recs_y)
     L.append('%s%s(%s) 회의록 %d건%s' % ('※ ' if not n else '', '어제' if not (_SPAN and _SPAN[0] != _SPAN[1]) else '지난 근무일 뒤',
@@ -846,6 +867,8 @@ def build_status(recs_y, yday, rstat, board_on):
         L.append('※ 신규 현장 레이더 못 읽음 (4번)')
     else:
         L.append('신규 현장 레이더 : 정상')
+    if prop_n:
+        L.append('※ 제안서 대기 %d건 — 자동으로 안 만듭니다(범위·장수는 대화창에서 직접 여쭙니다)' % prop_n)
     return '\n'.join(L)
 
 
@@ -906,7 +929,7 @@ def build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url='', t4=No
 
 
 # ── 한 번에 ───────────────────────────────────────────────
-def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='', since=None):
+def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='', since=None, makequeue_path=''):
     today = today or datetime.date.today()
     yday = today - datetime.timedelta(days=1)
     yy = yday.strftime('%y%m%d')
@@ -953,7 +976,8 @@ def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='
             t4, rstat = build_radar(load_radar(radar_path), today)
         except Exception as e:
             t4, rstat = '(레이더 결과를 읽지 못함 : %s)' % e, {'읽기실패': str(e)}
-    status = build_status(recs_y, yday, rstat, bool(done_path))
+    prop_n = count_makequeue(makequeue_path) if makequeue_path else None
+    status = build_status(recs_y, yday, rstat, bool(done_path), prop_n)
     urgent = build_urgent(today_items) if done_path else ''
     picks = build_picks()
     one, subject = build_one(t1, t2, t3, rows, picked, recs_y, today, yday, sheet_url, t4, t5, n1c, n2c, len(fut),
@@ -977,7 +1001,7 @@ def run(meta_dir, today=None, out=None, sheet_url='', radar_path='', done_path='
             '시트줄': dict((t, len(plan[t]['values'])) for t in TABS), '레이더': rstat,
             'meta전체': len(recs_all), '어제회의': len(recs_y),
             '어제_현장별': per_site,
-            '①할일': len(rows), '②오늘': len(picked), '완료로뺌': n_done,
+            '①할일': len(rows), '②오늘': len(picked), '완료로뺌': n_done, '제안서대기': prop_n or 0,
             '①지난것': n1c, '▼고르신것': len(_PICK), '만들차례': len([1 for v in _PICK.values() if v[0] in DOC_PICKS]), '②기한지난것': n2c, '⑤앞으로': len(fut), '⑤새로시트에': len(new_fut),
             '완료표시': len(done['pair']) if done else None,
             '건너뜀': skipped, '파일': paths}
@@ -1095,7 +1119,7 @@ def main(argv):
         ranges = dict(a.split('=', 1) for a in argv[3:] if '=' in a)
         print(json.dumps(merge_body(plan, ranges), ensure_ascii=False))
         return 0
-    meta_dir, today, out, sheet, radar, donep, since = argv[1], None, None, '', '', '', None
+    meta_dir, today, out, sheet, radar, donep, since, makequeuep = argv[1], None, None, '', '', '', None, ''
     d_from = d_to = None
     i = 2
     while i < len(argv):
@@ -1109,6 +1133,8 @@ def main(argv):
             radar = argv[i + 1]; i += 2
         elif argv[i] == '--done':                        # --done 답요청.json,오늘할일.json
             donep = argv[i + 1]; i += 2
+        elif argv[i] == '--makequeue':                   # --makequeue 만들차례.json  (v16 : 자료 상태에 「제안서 대기 N건」 한 줄)
+            makequeuep = argv[i + 1]; i += 2
         elif argv[i] == '--since':                       # --since 260925  (월요일 : 금요일부터 어제까지를 「어제」 로)
             since = argv[i + 1]; i += 2
         elif argv[i] == '--from':
@@ -1126,7 +1152,7 @@ def main(argv):
         d_to = d_to or d_from
         _t, stat = run_range(meta_dir, d_from, d_to, out, sheet)
     else:
-        _t, stat = run(meta_dir, today, out, sheet, radar, donep, since)
+        _t, stat = run(meta_dir, today, out, sheet, radar, donep, since, makequeuep)
     print(json.dumps(stat, ensure_ascii=False, indent=1))
     return 0
 
