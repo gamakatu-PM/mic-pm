@@ -28,7 +28,7 @@ r"""★엑셀책 — 회의록 txt 나 도면 pdf 를 이 파일 위에 끌어�
 """
 import os, sys, io, re, csv, json, glob, time, shutil, datetime, traceback
 
-VERSION = 'v1 2026-10-03'
+VERSION = 'v2 2026-10-03'   # v2 : 낱개 파일을 엑셀 한 권(시트별)으로도 묶는다 「0_엑셀책_현장_날짜.xlsx」
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOL = '엑셀책'
 NOTE = []
@@ -450,6 +450,70 @@ def gather(book_dir, since, site):
     return got
 
 
+
+def _sheet_name(used, name):
+    name = re.sub(r'[\\/*?:\[\]]', '_', name)[:28] or '시트'
+    base, i = name, 2
+    while name in used:
+        name = '%s_%d' % (base[:25], i); i += 1
+    used.add(name)
+    return name
+
+
+def one_book(book_dir, site, rows):
+    """목차 + 이번에 만든 csv·xlsx 전부를 시트 하나씩으로 묶은 엑셀 한 권 (값만. 원본 파일은 그대로 둔다)"""
+    from openpyxl.styles import Font, Alignment, PatternFill
+    op = _wb(); wb = op.Workbook(); used = set()
+    ws = wb.active; ws.title = '목차'; used.add('목차')
+    toc_rows = []
+    sheets = []
+    for i, r in enumerate(rows, 1):
+        p = os.path.join(book_dir, r[1]); ext = os.path.splitext(p)[1].lower()
+        stem = os.path.splitext(os.path.basename(p))[0]
+        stem = re.sub(r'_?\d{6}(_\d{4})?', '', stem).strip('_') or stem
+        if ext == '.csv':
+            try:
+                with io.open(p, 'r', encoding='utf-8-sig', errors='replace', newline='') as f:
+                    data = list(csv.reader(f))
+            except Exception:
+                data = []
+            nm = _sheet_name(used, stem)
+            sheets.append((nm, data, r[1]))
+            toc_rows.append([i, r[1], nm, r[4]])
+        elif ext == '.xlsx':
+            try:
+                src = _wb().load_workbook(p, data_only=True)
+                for sws in src.worksheets:
+                    data = [list(x) for x in sws.iter_rows(values_only=True)]
+                    nm = _sheet_name(used, '%s·%s' % (stem[:14], sws.title))
+                    sheets.append((nm, data, r[1]))
+                    toc_rows.append([i, r[1], nm, r[4]])
+            except Exception as e:
+                toc_rows.append([i, r[1], '(못 읽음 %s)' % e, r[4]])
+        else:
+            toc_rows.append([i, r[1], '(엑셀 아님 - 폴더에서 여십시오)', r[4]])
+    write_sheet(ws, ['번호', '파일', '시트', '빈칸 [ ] 개수'], toc_rows, [6, 64, 34, 14])
+    for nm, data, src in sheets:
+        w = wb.create_sheet(nm)
+        w.append(['출처 : %s' % src])
+        w['A1'].font = Font(italic=True, color='FF808080')
+        for row in data:
+            w.append([('' if v is None else v) for v in row])
+        if len(data) >= 1:
+            for c in w[2]:
+                c.font = Font(bold=True); c.fill = PatternFill('solid', fgColor='FFEFEFEF')
+            w.freeze_panes = 'A3'
+        for col in w.columns:
+            width = max((len(str(c.value)) for c in col if c.value is not None), default=8)
+            w.column_dimensions[col[0].column_letter].width = min(max(8, width * 1.2), 60)
+    p = os.path.join(book_dir, '0_엑셀책_%s_%s.xlsx' % (safe_name_(site), time.strftime('%y%m%d')))
+    wb.save(p)
+    return p, len(sheets)
+
+
+def safe_name_(s):
+    return re.sub(r'[\\/:*?"<>|]', '_', str(s))[:40]
+
 def toc_xlsx(book_dir, site, inputs, got, t0):
     op = _wb(); wb = op.Workbook()
     ws = wb.active; ws.title = '목차'
@@ -551,9 +615,16 @@ def main(argv):
     if asks:
         check('클로드에게 줄 부탁서 %d개가 있습니다 (코드가 못 읽은 심볼·없는 단가). 그 파일만 대화창에 주시면 됩니다' % len(asks))
     toc, rows = toc_xlsx(book_dir, site, files, got, t0)
+    try:
+        bookp, nsheet = one_book(book_dir, site, rows)
+        STEPS.append(('묶기', '엑셀 한 권', '완료 (시트 %d장)' % nsheet))
+    except Exception as e:
+        bookp, nsheet = '', 0
+        STEPS.append(('묶기', '엑셀 한 권', '오류 : %s' % e)); check('엑셀 한 권으로 못 묶음 : %s' % e)
     say('')
     say('=' * 70)
-    say(' 끝. 엑셀책 %d개 파일 → %s' % (len(rows), book_dir))
+    say(' 끝. 엑셀 한 권(시트 %d장) : %s' % (nsheet, os.path.basename(bookp)))
+    say('     낱개 파일 %d개 → %s' % (len(rows), book_dir))
     for g, n, r in STEPS:
         say('   %-5s %-26s %s' % (g, n, r))
     if CHECKS:
@@ -571,7 +642,7 @@ def main(argv):
     try:
         if os.name == 'nt':
             os.startfile(book_dir)
-            os.startfile(toc)
+            os.startfile(bookp or toc)
     except Exception:
         pass
     return 0
