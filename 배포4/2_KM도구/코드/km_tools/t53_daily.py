@@ -38,7 +38,7 @@ import os, sys, io, json, re, csv, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import t52_mailbuild as T52
 
-VERSION = 'v16 2026-09-29'  # v16 : 차장님 「제안서 대기 알림 넣어줘」 — --makequeue 로 「만들 차례」 탭을 읽어 자료 상태에 「제안서 대기 N건」 한 줄 (v17 에 남겨둔 미완 항목, 지금 채움)
+VERSION = 'v16.1 2026-10-09'  # v16.1 : 제안서 대기 수에서 J열(생성결과)에 글이 있는 줄(「보류」 등)은 뺀다 — t56 과 같은 기준 · v16 : 차장님 「제안서 대기 알림 넣어줘」 — --makequeue 로 「만들 차례」 탭을 읽어 자료 상태에 「제안서 대기 N건」 한 줄 (v17 에 남겨둔 미완 항목, 지금 채움)
 # v15 2026-09-28  # v15 : ▼ 9번째 「캘린더」 추가(고르면 웹앱 sweep 이 「만들 차례」 탭으로, 1시간 Routine 이 구글캘린더 "현장관리" 에 직접 등록) / DOC_PICKS 에도 포함
 # v14 2026-09-28  # v14 : 「만들어줘」→ 제안서·보고서·메일·작업의뢰서 4개로 쪼갬 / 「아니야」는 웹 앱 sweep 이 삭제(메모 이어붙이기 그만둠) / ▼고르신 것 절은 맞아만
 # v13 2026-09-28  # v13 : E열 ▼ 목록에 「답 결정」 추가(고르면 웹 앱 sweep 이 답 결정 탭으로 옮김). 그 밖은 v12.2 그대로
@@ -335,8 +335,8 @@ def count_makequeue(path, pick='제안서'):
     n = 0
     for blk in blocks:
         for row in (blk.get('values') or [])[1:]:
-            row = [str(x) for x in row] + [''] * 5
-            if row[4].strip() == pick:
+            row = [str(x) for x in row] + [''] * 10
+            if row[4].strip() == pick and not row[9].strip():
                 n += 1
     return n
 

@@ -376,6 +376,12 @@ try:
     ]})
     chk('count_makequeue : 고르기=제안서 인 줄만 셈(작업의뢰서는 안 셈)', T.count_makequeue(mq) == 2, T.count_makequeue(mq))
     chk('count_makequeue : 경로 없으면 None', T.count_makequeue('') is None)
+    mq_hold = write(d3, 'makequeue_hold.json', {'range': "'만들 차례'!A1:J20", 'values': [
+        ['날짜', '현장', '할일', '완료', '고르기', '메모', '현장(걸러보기)', '원본탭', '처리일', '생성결과'],
+        ['2026. 9. 22', '단양디캠프', '- 체크리스트 준비', '', '제안서', '', '단양디캠프', '답요청', '2026-09-28', '보류 · 2026-10-09'],
+        ['2026. 9. 22', '연합기숙사', '- 조립비 확인', '', '제안서', '', '연합기숙사', '답요청', '2026-09-28'],
+    ]})
+    chk('count_makequeue v16.1 : J열(생성결과)에 「보류」 등 글이 있는 줄은 안 셈 · J열 없는 짧은 줄은 셈', T.count_makequeue(mq_hold) == 1, T.count_makequeue(mq_hold))
     _t16, s16 = T.run(d3, datetime.date(2026, 9, 23), out=os.path.join(d3, 'out16'), makequeue_path=mq)
     o16 = io.open(s16['파일']['오늘의정리'], encoding='utf-8').read()
     chk('자료 상태에 「제안서 대기 2건」 줄이 들어감', '※ 제안서 대기 2건' in o16, o16[:500])
