@@ -2,6 +2,14 @@
 
 회사 자료는 포함하지 않은 프로그램 코드입니다. 원본 업무일지는 PC의 기존 OneDrive 폴더를 사용합니다.
 
+## 먼저 공유기록 설치
+
+회사/집 PC의 동일한 OneDrive 기록을 읽고 이어가도록, 로컬에서 먼저 아래 명령을 실행합니다. 사용자가 공유기록 폴더 생성을 요청한 상태입니다.
+
+`python tools/shared-memory/shared_memory.py install --seed-file tools/shared-memory/INITIAL_HANDOFF.txt`
+
+첫 설치 후 `python tools/shared-memory/shared_memory.py read`로 날짜별 기록과 최신 상태를 읽고, 실제 업무일지 연결 작업을 진행합니다. OneDrive가 안 보이는 클라우드에서 공유가 완료됐다고 말하지 않습니다.
+
 ## Windows
 
 1. 이 폴더를 PC의 기존 `2_KM도구/KM_업무일지` 아래에 저장합니다. 기존 파일이 있으면 덮어쓰지 말고 비교합니다.
