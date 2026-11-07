@@ -1,0 +1,7 @@
+__pycache__/
+*.xlsx
+*.xls
+*.csv
+*.jsonl
+data/
+업무일지_백업/
